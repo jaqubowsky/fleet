@@ -8,15 +8,18 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | --- | --- |
 | `rules/` | global rules; `fleet provider` folds them into `agent/AGENTS.md` and `sbx/AGENTS.md` |
 | `agent/` | pi home: settings (generated), extensions, runtime state (ignored) |
-| `agent/extensions/guard.ts` + `host/hooks/guard.sh` | tool-call policy, tested by `host/tests/` |
-| `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: every status change of another agent as a `[fleet]` line |
+| `src/guard/` | the tool-call policy and the pi-to-policy translation, driven by the case corpus in `host/tests/` |
+| `agent/extensions/guard.ts` | the pi hook: trusted tools out, everything else through `src/guard` |
+| `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: another agent settling as a `[fleet]` line |
 | `agent/extensions/statusline.ts` | status line |
 | `profiles/` | `models.json` (providers x roles), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
-| `sbx/` | worker image: `Dockerfile`, `build.sh`, `container/sandbox.md` |
+| `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet provider` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP and heap limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
+| `artifacts/<sandbox>/` | mounted into its container; what a worker leaves for a person, kept after the container goes (ignored) |
+| `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
 
 ## Commands
 
@@ -26,9 +29,11 @@ fleet ls
 fleet peek <sandbox> [--lines 40]
 fleet say <sandbox> <text...>
 fleet exec <sandbox> -- <command...>
+fleet artifacts <sandbox>
 fleet copy <src> <dst>
-fleet land <sandbox> [--repo <path>] [--branch <name>] [--sign]
+fleet land <sandbox> [--repo <path>] [--branch <name>] [--sign] [--push]
 fleet down <sandbox> [--force]
+fleet build
 fleet provider [<name>]
 ```
 
@@ -41,6 +46,6 @@ npm run check     # tsc --noEmit
 
 ## Trust model
 
-Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only. They commit unsigned on the task branch. `fleet land` fetches the branch through the `sandbox-<name>` git remote that sbx registers in the host repo; `--sign` rewrites the commits with the host key, one Touch ID tap per commit. Push, merge, deploy and publication stay with the person.
+Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only. They commit unsigned on the task branch. `fleet land` fetches the branch through the `sandbox-<name>` git remote that sbx registers in the host repo, and refuses one that no longer descends from the branch already here. `--sign` rewrites only the commits origin does not have yet, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` then pushes it and refuses anything that is not a fast-forward, on the user's word alone. Merge, deploy and publication stay with the person.
 
-Node in a container runs with `--max-old-space-size` derived from the sandbox memory, pi-lens keeps at most 2 LSP clients and evicts an idle tsserver after 30 s, and never installs language servers on its own. These three limits are what keeps a container from dying under a monorepo typecheck.
+Node in a container runs with `--max-old-space-size` derived from the sandbox memory, and pi-lens keeps at most 2 LSP clients and evicts an idle tsserver after 30 s. Those two limits are what keeps a container from dying under a monorepo typecheck; installing a language server it needs is the container's own call.

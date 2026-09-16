@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { up } from "./up.ts";
+import { envFiles, up } from "./up.ts";
 
 const repo = "/Users/me/Work/webapp";
 const base = {
@@ -120,4 +120,34 @@ test("up accepts a pi that comes up blocked or working, and fails when nothing c
 test("up refuses a directory that is not a repository", async () => {
 	const io = fakeIo({ ...base, "git rev-parse --show-toplevel": new Error("not a git repository") });
 	await assert.rejects(up({ repo: "/tmp", label: "x", root: "/root" }, io), /not a git repository/);
+});
+
+test("up mounts an artifacts and a cache directory and names both in the environment", async () => {
+	const io = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root" }, io);
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+
+	assert.ok(run.includes("-e") && run.includes("FLEET_ARTIFACTS=/home/me/.pi/artifacts/pi-webapp-web-1"));
+	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
+	assert.deepEqual(run.slice(-5), [repo, "/home/me/.pi/artifacts/pi-webapp-web-1", "/home/me/.pi/cache/webapp", "--", "--approve"]);
+	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/artifacts/pi-webapp-web-1"));
+	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/cache/webapp"));
+});
+
+test("up copies the env files the repo ignores, and skips the probe when there are none", async () => {
+	const withEnv = fakeIo({ ...base, "git ls-files --others --ignored": "apps/api/.env\n.env.docker\n", 'sbx exec pi-webapp-web-1 sh -c printf %s "$WORKSPACE_DIR"': "/w" });
+	await up({ repo, label: "web-1", root: "/root" }, withEnv);
+
+	assert.ok(withEnv.calls.some((c) => c[0] === "sbx" && c[1] === "cp" && c[2] === `${repo}/apps/api/.env` && c[3] === "pi-webapp-web-1:/w/apps/api/.env"));
+	assert.ok(withEnv.lines.some((l) => /copied 2 ignored env file/.test(l)));
+
+	const none = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root" }, none);
+	assert.ok(!none.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
+});
+
+test("env listing takes files at any depth and never a collapsed ignored directory", () => {
+	assert.deepEqual(envFiles("apps/api/.env\n\n.env.docker\n"), ["apps/api/.env", ".env.docker"]);
+	assert.deepEqual(envFiles(".claude/worktrees/agent-a618/\napps/estate/.env.local\n"), ["apps/estate/.env.local"]);
+	assert.deepEqual(envFiles(""), []);
 });

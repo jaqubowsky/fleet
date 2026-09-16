@@ -1,5 +1,3 @@
-const envTarget = '"' + "$" + '{e%.example}"';
-
 export const INSTALL_LOG = "/tmp/fleet-install.log";
 
 export const installScript = [
@@ -7,7 +5,6 @@ export const installScript = [
 	'cd "$WORKSPACE_DIR"',
 	'eval "$(fnm env --shell bash)"',
 	"fnm use --install-if-missing >/dev/null",
-	`git ls-files | grep -E '(^|/)\\.env[^/]*\\.example$' | while read -r e; do [ -e ${envTarget} ] || cp "$e" ${envTarget}; done`,
 	"find . -maxdepth 6 -type f \\( -name yarn.lock -o -name pnpm-lock.yaml -o -name package-lock.json \\) \\",
 	"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | sort | while read -r lock; do",
 	'  root="$(dirname "$lock")"',

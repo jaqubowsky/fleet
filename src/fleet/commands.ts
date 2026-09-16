@@ -44,12 +44,63 @@ export function say(sandbox: string, text: string, io: Io): void {
 	io.log(`${agent}: prompt sent`);
 }
 
+const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
+
+export function execScript(command: string[]): string {
+	return command.length === 1 && SHELL_SYNTAX.test(command[0]) ? command[0] : 'exec "$@"';
+}
+
 export function exec(sandbox: string, command: string[], io: Io): void {
-	io.sbx(["exec", sandbox, "sh", "-c", 'cd "$WORKSPACE_DIR" && exec "$@"', "--", ...command]);
+	io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && ${execScript(command)}`, "--", ...command]);
+}
+
+export function build(root: string, io: Io): void {
+	io.run(`${root}/sbx/build.sh`, []);
 }
 
 export function copy(from: string, to: string, io: Io): void {
 	io.sbx(["cp", from, to]);
+}
+
+type Artifact = { path: string; size: number; mtime: Date };
+
+export function artifactsDir(sandbox: string, io: Io): string {
+	return `${io.home}/.pi/artifacts/${sandbox}`;
+}
+
+function collect(root: string, rel: string, io: Io, found: Artifact[]): Artifact[] {
+	for (const name of io.list(rel ? `${root}/${rel}` : root)) {
+		const path = rel ? `${rel}/${name}` : name;
+		const info = io.stat(`${root}/${path}`);
+		if (!info) continue;
+		if (info.dir) collect(root, path, io, found);
+		else found.push({ path, size: info.size, mtime: info.mtime });
+	}
+
+	return found;
+}
+
+function bytes(size: number): string {
+	if (size < 1024) return `${size}B`;
+	if (size < 1048576) return `${Math.round(size / 1024)}K`;
+	return `${(size / 1048576).toFixed(1)}M`;
+}
+
+function age(mtime: Date, io: Io): string {
+	const minutes = Math.round((io.now().getTime() - mtime.getTime()) / 60000);
+	if (minutes < 60) return `${minutes}m ago`;
+	if (minutes < 1440) return `${Math.round(minutes / 60)}h ago`;
+	return `${Math.round(minutes / 1440)}d ago`;
+}
+
+export function artifacts(sandbox: string, io: Io): string {
+	const root = artifactsDir(sandbox, io);
+	const found = collect(root, "", io, []).sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+	if (!found.length) return `${root}\nnothing left here yet`;
+
+	const width = Math.max(...found.map((f) => f.path.length));
+
+	return [root, ...found.map((f) => `${f.path.padEnd(width)}  ${bytes(f.size).padStart(6)}  ${age(f.mtime, io)}`)].join("\n");
 }
 
 function harvest(sandbox: string, io: Io): string | undefined {
@@ -87,6 +138,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	}
 	const dest = harvest(sandbox, io);
 	io.log(dest ? `${sandbox}: transcripts -> ${dest}` : `${sandbox}: no transcripts (pi never ran a session)`);
+	if (io.list(artifactsDir(sandbox, io)).length) io.log(`${sandbox}: artifacts stay in ${artifactsDir(sandbox, io)}, read them with fleet artifacts ${sandbox}`);
 	const agent = agentFor(agents(io), agentName(sandbox));
 	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);
 	try {

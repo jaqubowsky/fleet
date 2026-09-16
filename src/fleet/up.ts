@@ -28,6 +28,7 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 		create(input, sandbox, origin, memory, io);
 		try {
 			seedSubmodules(io, input.repo, sandbox);
+			seedEnv(io, input.repo, sandbox);
 			if (input.branch) io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")`, "--", input.branch], { quiet: true });
 		} catch (error) {
 			io.sbx(["rm", "-f", sandbox], { quiet: true });
@@ -47,6 +48,10 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 
 function create(input: UpInput, sandbox: string, origin: string, memory: string, io: Io): void {
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
+	const artifacts = `${io.home}/.pi/artifacts/${sandbox}`;
+	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
+	io.mkdir(artifacts);
+	io.mkdir(cache);
 	try {
 		io.sbx(["secret", "set", "github", "--sandbox", sandbox, "--ref", githubRef(origin)], { quiet: true });
 	} catch (error) {
@@ -56,14 +61,36 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 	io.sbx([
 		"run", "-d", "--no-share-skills", "--name", sandbox, "--clone", "--memory", memory,
 		"-e", "SSH_AUTH_SOCK_GATEWAY=",
+		"-e", `FLEET_ARTIFACTS=${artifacts}`,
+		"-e", `FLEET_CACHE=${cache}`,
 		"--kit", `${input.root}/host/kits/no-ssh-agent`,
 		"--kit-arg", `pi.codex_account=${codex.account}`,
 		"--kit-arg", `pi.codex_sentinel=${codex.sentinel}`,
 		"--kit-arg", `pi.node_heap_mb=${nodeHeapMiB(memory)}`,
 		"--kit-arg", `pi.memory_mib=${memoryMiB(memory)}`,
 		...(linear ? ["--static-mcp", linear] : []),
-		`${input.root}/host/kits/pi`, input.repo, "--", "--approve",
+		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, "--", "--approve",
 	]);
+}
+
+export function envFiles(listing: string): string[] {
+	return listing
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line && !line.endsWith("/") && basename(line).startsWith(".env"));
+}
+
+function seedEnv(io: Io, repo: string, sandbox: string): void {
+	const files = envFiles(io.git(["ls-files", "--others", "--ignored", "--exclude-standard", "--", ":(glob)**/.env*", ":(exclude,glob)**/node_modules/**"], repo));
+	if (!files.length) return;
+
+	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	for (const file of files) {
+		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$(dirname "$1")"', "--", `${workspace}/${file}`], { quiet: true });
+		io.sbx(["cp", `${repo}/${file}`, `${sandbox}:${workspace}/${file}`], { quiet: true });
+	}
+
+	io.log(`${sandbox}: copied ${files.length} ignored env file(s) from the host checkout`);
 }
 
 function seedSubmodules(io: Io, repo: string, sandbox: string): void {

@@ -46,6 +46,7 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 			files[path] = body;
 		},
 		list: (dir) => (answer(`list ${dir}`) as string[] | undefined) ?? [],
+		stat: (path) => answer(`stat ${path}`) as { size: number; mtime: Date; dir: boolean } | undefined,
 		append: (path, line) => {
 			calls.push(["append", path, line]);
 		},
@@ -54,6 +55,9 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 		},
 		log: (line) => {
 			lines.push(line);
+		},
+		run: (command, args) => {
+			calls.push(["run", command, ...args]);
 		},
 		sleep: async () => {
 			tick += 1;

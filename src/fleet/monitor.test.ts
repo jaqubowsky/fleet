@@ -29,11 +29,13 @@ test("a transition line only when the status changed", () => {
 	assert.equal(transition("idle", "idle"), undefined);
 });
 
-test("one wake per turn end, none between done and idle", () => {
+test("wake on settling, never on going back to work", () => {
 	assert.equal(shouldWake("working", "done"), true);
 	assert.equal(shouldWake("done", "idle"), false);
 	assert.equal(shouldWake("idle", "done"), false);
-	assert.equal(shouldWake("idle", "working"), true);
+	assert.equal(shouldWake("idle", "working"), false);
 	assert.equal(shouldWake(undefined, "idle"), true);
 	assert.equal(shouldWake("idle", "blocked"), true);
+	assert.equal(shouldWake("working", "unknown"), true);
+	assert.equal(shouldWake(undefined, "unknown"), false);
 });

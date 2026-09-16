@@ -30,7 +30,7 @@ const probe = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && printf';
 test("land fetches from the sandbox remote and stays unsigned by default", () => {
 	const io = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git --no-pager log": "abc N feat: x" });
 	land({ sandbox: "pi-a", repo: "/r" }, io);
-	assert.deepEqual(io.calls.find((c) => c[0] === "git" && c[2] === "fetch"), ["git", "/r", "fetch", "--quiet", "sandbox-pi-a", "+web-1:web-1"]);
+	assert.deepEqual(io.calls.find((c) => c[0] === "git" && c[2] === "fetch"), ["git", "/r", "fetch", "--quiet", "sandbox-pi-a", "web-1:web-1"]);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("-S")));
 	assert.ok(io.lines.some((l) => /--sign/.test(l)));
 });
@@ -67,4 +67,49 @@ test("land --sign with nothing to sign touches no worktree, and a failed rebase 
 	assert.ok(gits.some((g) => g === "rebase --abort"));
 	assert.ok(!gits.some((g) => g.startsWith("update-ref")));
 	assert.ok(gits.at(-1)!.startsWith("worktree remove"));
+});
+
+const landed = { [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" };
+
+test("land --sign signs only the commits origin does not have yet", () => {
+	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": "tip", "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
+	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+
+	assert.ok(gits.includes("fetch --quiet origin web-1"));
+	assert.ok(gits.includes("rev-list --reverse origin/web-1..web-1"));
+});
+
+test("land --sign takes the whole branch when origin has never seen it", () => {
+	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
+	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+
+	assert.ok(gits.includes("rev-list --reverse origin/main..web-1"));
+});
+
+test("land --push never forces, and a rejected push names whose command the force is", () => {
+	const io = fakeIo(landed);
+	land({ sandbox: "pi-a", repo: "/r", push: true }, io);
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+
+	assert.ok(gits.includes("push --quiet -u origin web-1"));
+	assert.ok(!gits.some((g) => /force/.test(g)));
+
+	const rejected = fakeIo({ ...landed, "git push": new Error("! [rejected] web-1 -> web-1 (non-fast-forward)") });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", push: true }, rejected), /non-fast-forward[\s\S]*your own command/);
+});
+
+test("land without --sign or --push never touches the remote", () => {
+	const io = fakeIo(landed);
+	land({ sandbox: "pi-a", repo: "/r" }, io);
+
+	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("origin") && (c.includes("fetch") || c.includes("push"))));
+});
+
+test("land refuses a container branch that no longer descends from the landed one", () => {
+	const io = fakeIo({ ...landed, "git fetch --quiet sandbox-pi-a": new Error("! [rejected] web-1 -> web-1 (non-fast-forward)") });
+
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, io), /signatures included[\s\S]*reset --hard origin\/web-1/);
+	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("--no-pager")));
 });

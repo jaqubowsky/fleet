@@ -12,9 +12,13 @@ const SOCK =
 	process.env.HERDR_SOCK ?? join(os.homedir(), ".config/herdr/herdr.sock");
 const RECONNECT_MS = 3000;
 const TERMINAL = new Set(["done", "idle"]);
+const WAKE = new Set(["done", "idle", "blocked"]);
 
 export function shouldWake(prev: string | undefined, next: string): boolean {
-	return !(TERMINAL.has(prev ?? "") && TERMINAL.has(next));
+	if (next === "unknown") return prev === "working";
+	if (TERMINAL.has(prev ?? "") && TERMINAL.has(next)) return false;
+
+	return WAKE.has(next);
 }
 
 export function pickAgents(
@@ -174,7 +178,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Report every status change of other herdr agents as a [fleet] line. Args: agent names; none = all",
+			"Report other herdr agents settling as a [fleet] line. Args: agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -189,8 +193,8 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch other herdr agents: every status change arrives as a [fleet] <name>: <prev> -> <status> message. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
-		promptSnippet: "watch herdr agents, woken on every status change",
+			"Watch other herdr agents: an agent settling (done, idle, blocked, gone) arrives as a [fleet] <name>: <prev> -> <status> message, and going back to work does not. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
+		promptSnippet: "watch herdr agents, woken when one settles",
 		parameters: {
 			type: "object",
 			properties: {

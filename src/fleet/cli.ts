@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { copy, down, exec, ls, peek, resolveSandbox, say } from "./commands.ts";
+import { artifacts, artifactsDir, build, copy, down, exec, ls, peek, resolveSandbox, say } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
 import { render } from "./provider.ts";
@@ -11,18 +11,22 @@ const root = process.env.FLEET_ROOT ?? `${home}/.pi`;
 const io = realIo(home);
 
 const usage = `usage:
-  fleet up <label> [--repo <path>] [--branch <name>] [--memory 8g]   clone the repo into a container, start pi in a herdr tab, send nothing
-  fleet ls                                                          containers with herdr status, branch and dirty count
-  fleet peek <sandbox> [--lines 40]                                 git status, log, diff --stat and the pane tail
-  <sandbox> is the container name or its herdr agent name (fleet ls shows both)
-  fleet say <sandbox> <text...>                                     send a prompt to the container's pi (logged to agent/fleet-say.log)
-  fleet exec <sandbox> -- <command...>                              run a command in the container workspace
-  fleet copy <src> <dst>                                            sbx cp; one side is <sandbox>:<path>
-  fleet land <sandbox> [--repo <path>] [--branch <name>] [--sign]    import the container branch into the local repo
-  fleet down <sandbox> [--force]                                    harvest transcripts, close the tab, remove the container
-  fleet provider [<name>]                                           switch the model provider; regenerates settings and AGENTS.md`;
+  fleet up <label> [--branch <name>] [--memory 8g]   clone the repo into a container, start pi in a herdr tab, send nothing
+  fleet ls                                           containers with herdr status, branch and dirty count
+  fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
+  fleet say <sandbox> <text...>                      send a prompt to the container's pi (logged to agent/fleet-say.log)
+  fleet exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
+  fleet artifacts <sandbox>                          what the container left for a person, newest first, with size and age
+  fleet copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
+  fleet land <sandbox> [--sign] [--push]             import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
+  fleet down <sandbox> [--force]                     harvest transcripts, close the tab, remove the container; artifacts stay
+  fleet build                                        rebuild the worker image from sbx/Dockerfile and the current skills and rules
+  fleet provider [<name>]                            switch the model provider; regenerates settings and AGENTS.md
 
-const BARE = new Set(["force", "sign"]);
+  <sandbox> is the container name or its herdr agent name, which is the container name without the pi- prefix
+  --repo <path> picks the repository for up and land, and defaults to the current directory`;
+
+const BARE = new Set(["force", "push", "sign"]);
 
 export function flags(args: string[]): { opts: Record<string, string | true>; rest: string[] } {
 	const opts: Record<string, string | true> = {};
@@ -81,20 +85,26 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		exec(sandboxOf(rest[0]), rest.slice(1), io);
 	},
 	copy: (args) => copy(need(args[0], "source"), need(args[1], "destination"), io),
+	artifacts: (args) => io.log(artifacts(sandboxOf(args[0]), io)),
 	land(args) {
 		const { opts, rest } = flags(args);
-		land({ sandbox: sandboxOf(rest[0]), repo: repoOf(opts), branch: opts.branch as string | undefined, sign: opts.sign === true }, io);
+		land({ sandbox: sandboxOf(rest[0]), repo: repoOf(opts), branch: opts.branch as string | undefined, sign: opts.sign === true, push: opts.push === true }, io);
 	},
 	down(args) {
 		const { opts, rest } = flags(args);
 		down(sandboxOf(rest[0]), { force: opts.force === true }, io);
 	},
+	build: () => build(root, io),
 	provider: (args) => render(root, io, args[0]),
 };
 
 if (process.argv[1] && import.meta.filename === process.argv[1]) {
 	const [name, ...rest] = process.argv.slice(2);
-	const command = name ? commands[name] : undefined;
+	if (!name || ["--help", "-h", "help"].includes(name)) {
+		console.log(usage);
+		process.exit(0);
+	}
+	const command = commands[name];
 	if (!command) {
 		console.error(usage);
 		process.exit(2);

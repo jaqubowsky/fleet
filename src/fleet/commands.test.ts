@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { down, ls, peek, resolveSandbox, say } from "./commands.ts";
+import { artifacts, build, down, exec, execScript, ls, peek, resolveSandbox, say } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 
 const running = { "sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] }, "herdr agent list": { result: { agents: [] } } };
@@ -109,4 +109,43 @@ test("resolveSandbox accepts the container name or its agent name and passes unk
 	assert.equal(resolveSandbox("pi-webapp-web-1636", io), "pi-webapp-web-1636");
 	assert.equal(resolveSandbox("webapp-web-1636", io), "pi-webapp-web-1636");
 	assert.equal(resolveSandbox("nope", io), "nope");
+});
+
+test("exec runs a one-argument command line through the shell, argv untouched", () => {
+	assert.equal(execScript(["pwd; echo hi"]), "pwd; echo hi");
+	assert.equal(execScript(["yarn test --run"]), "yarn test --run");
+	assert.equal(execScript(["git"]), 'exec "$@"');
+	assert.equal(execScript(["git", "status", "--short"]), 'exec "$@"');
+
+	const io = fakeIo();
+	exec("pi-a", ["pwd; whoami"], io);
+	assert.deepEqual(io.calls[0], ["sbx", "exec", "pi-a", "sh", "-c", 'cd "$WORKSPACE_DIR" && pwd; whoami', "--", "pwd; whoami"]);
+});
+
+test("artifacts lists every file the container left, newest first, under the folder holding them", () => {
+	const root = "/home/me/.pi/artifacts/pi-a";
+	const io = fakeIo({
+		[`stat ${root}/shots/new-v4.png`]: { size: 400_000, mtime: new Date(Date.UTC(2026, 8, 16, 9, 30)), dir: false },
+		[`stat ${root}/review-log.md`]: { size: 2048, mtime: new Date(Date.UTC(2026, 8, 16, 9, 55)), dir: false },
+		[`stat ${root}/shots`]: { size: 96, mtime: new Date(Date.UTC(2026, 8, 16, 9, 30)), dir: true },
+		[`list ${root}/shots`]: ["new-v4.png"],
+		[`list ${root}`]: ["shots", "review-log.md"],
+	});
+
+	const out = artifacts("pi-a", io).split("\n");
+
+	assert.equal(out[0], root);
+	assert.match(out[1], /^review-log\.md\s+2K\s+5m ago$/);
+	assert.match(out[2], /^shots\/new-v4\.png\s+391K\s+30m ago$/);
+});
+
+test("artifacts says so when the container left nothing", () => {
+	assert.match(artifacts("pi-a", fakeIo()), /nothing left here yet/);
+});
+
+test("build runs the image script and nothing else", () => {
+	const io = fakeIo();
+	build("/root", io);
+
+	assert.deepEqual(io.calls, [["run", "/root/sbx/build.sh"]]);
 });

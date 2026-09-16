@@ -6,7 +6,7 @@
     "fleet": "bin/fleet"
   },
   "scripts": {
-    "test": "node --test 'src/fleet/*.test.ts' && host/tests/run.sh",
+    "test": "node --test 'src/*/*.test.ts' && host/tests/run.sh",
     "check": "tsc --noEmit"
   }
 }

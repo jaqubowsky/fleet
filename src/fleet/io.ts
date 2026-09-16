@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 export type Io = {
@@ -10,9 +10,11 @@ export type Io = {
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
 	list(dir: string): string[];
+	stat(path: string): { size: number; mtime: Date; dir: boolean } | undefined;
 	append(path: string, line: string): void;
 	mkdir(path: string): void;
 	log(line: string): void;
+	run(command: string, args: string[]): void;
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
@@ -46,13 +48,32 @@ export function realIo(home: string): Io {
 		git: (args, cwd) => shell("git", args, { cwd, quiet: true }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),
-		list: (dir) => readdirSync(dir),
+		list: (dir) => {
+			try {
+				return readdirSync(dir);
+			} catch {
+				return [];
+			}
+		},
+		stat: (path) => {
+			try {
+				const info = statSync(path);
+				return { size: info.size, mtime: info.mtime, dir: info.isDirectory() };
+			} catch {
+				return undefined;
+			}
+		},
 		append: (path, line) => {
 			mkdirSync(dirname(path), { recursive: true });
 			appendFileSync(path, `${line}\n`);
 		},
 		mkdir: (path) => mkdirSync(path, { recursive: true }),
 		log: (line) => console.log(line),
+		run: (command, args) => {
+			const result = spawnSync(command, args, { stdio: "inherit" });
+			if (result.error) throw result.error;
+			if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
+		},
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,
