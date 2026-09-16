@@ -1,0 +1,4 @@
+deny	Bash	git commit-tree abc123 -m "x"
+deny	Bash	tree=$(git write-tree); commit=$(printf "m" | GIT_AUTHOR_NAME=x git commit-tree "$tree"); git update-ref refs/heads/main "$commit"
+pass	Bash	git write-tree
+pass	Bash	git commit -m "feat: x"

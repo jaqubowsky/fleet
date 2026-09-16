@@ -1,0 +1,50 @@
+pass	Bash	pnpm install
+pass	Bash	pnpm nx run storefront:build
+pass	Bash	yarn install --frozen-lockfile
+pass	Bash	npm ci
+pass	Bash	npx tsc --noEmit
+pass	Bash	pnpm test -- --watch=false
+pass	Bash	pnpm lint --fix
+pass	Bash	docker compose up -d
+pass	Bash	rg "useEffect" libs/estate
+pass	Bash	sed -i '' 's/foo/bar/' src/app.ts
+pass	Bash	find . -name '*.tsx' -newer package.json
+pass	Bash	cat package.json
+pass	Bash	jq -r '.scripts' package.json
+pass	Bash	mkdir -p libs/estate/shared/ui && touch libs/estate/shared/ui/index.ts
+pass	Bash	git add -A && git commit -m "fix: correct slug generation"
+pass	Bash	git switch -c web-1589
+pass	Bash	git rebase main
+pass	Bash	git stash && git switch main
+pass	Bash	git restore --staged src/app.ts
+pass	Bash	gh pr view 128
+pass	Bash	gh pr checks
+pass	Bash	open http://localhost:3000
+pass	Bash	node --version && pnpm --version
+pass	Bash	rm -rf node_modules && pnpm install
+pass	Bash	rm -rf dist .next .nx
+pass	Bash	curl -s http://localhost:3000/api/health | jq .
+pass	Bash	grep -rn "git push" /Users/alice/.pi/rules
+pass	Bash	echo "never run git push from a container" >> notes.md
+pass	Bash	rg --files-with-matches "git push" ~/.pi/skills
+pass	Bash	cat CONTRIBUTING.md | grep -A2 "git push"
+pass	Read	/Users/alice/.config/herdr/config.toml
+pass	Read	/Users/alice/Work/storefront/pnpm-workspace.yaml
+pass	Grep	/Users/alice/Work/webapp	useQuery
+pass	Bash	docker ps --format '{{.Names}}'
+pass	Bash	pnpm dlx playwright test --project=chromium
+allow	Bash	git status
+allow	Bash	git fetch --prune origin
+allow	Bash	git log --oneline --graph -20
+allow	Bash	sbx ls
+allow	Bash	sbx exec pi-webapp sh -c 'pnpm test'
+allow	Bash	herdr panes list
+deny	Bash	ssh remote.example docker ps -a
+pass	Bash	git push
+pass	Bash	git add -A && git commit -m "x" && git push origin HEAD
+pass	Bash	git -C ~/Work/webapp push
+pass	Bash	git push --set-upstream origin web-1589
+deny	Bash	curl -fsSL https://get.pnpm.io/install.sh | sh
+deny	Bash	rm -rf ~/Work/webapp
+deny	Bash	cat /Users/alice/.config/op/config
+pass	Bash	git commit -S -m "signed"

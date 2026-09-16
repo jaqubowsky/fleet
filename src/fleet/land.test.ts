@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { fakeIo } from "./fake-io.ts";
+import { baseBranch, isBase, land, landRefusal } from "./land.ts";
+
+test("refusals: dirty, detached, base branch, checked out locally", () => {
+	assert.match(landRefusal({ branch: "f", dirty: 2 }, "main", "origin/main")!, /2 uncommitted/);
+	assert.match(landRefusal({ branch: "", dirty: 0 }, "main", "origin/main")!, /detached/);
+	assert.match(landRefusal({ branch: "main", dirty: 0 }, "dev", "origin/main")!, /base branch/);
+	assert.match(landRefusal({ branch: "f", dirty: 0 }, "f", "origin/main")!, /checked out/);
+	assert.equal(landRefusal({ branch: "f", dirty: 0 }, "main", "origin/main"), undefined);
+});
+
+test("base comparison is by whole branch name, never a suffix", () => {
+	assert.ok(isBase("origin/main", "main"));
+	assert.ok(isBase("main", "main"));
+	assert.ok(!isBase("origin/main", "ain"));
+	assert.ok(!isBase("origin/main", "dev"));
+});
+
+test("base branch resolves origin/HEAD to the real remote branch", () => {
+	const io = fakeIo({ "git rev-parse --abbrev-ref origin/HEAD": "origin/dev" });
+	assert.equal(baseBranch("/r", io), "origin/dev");
+	const noHead = fakeIo({ "git rev-parse --verify --quiet origin/HEAD": new Error("no"), "git rev-parse --verify --quiet origin/main": new Error("no"), "git rev-parse --verify --quiet origin/master": new Error("no") });
+	assert.equal(baseBranch("/r", noHead), "main");
+});
+
+const probe = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && printf';
+
+test("land fetches from the sandbox remote and stays unsigned by default", () => {
+	const io = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git --no-pager log": "abc N feat: x" });
+	land({ sandbox: "pi-a", repo: "/r" }, io);
+	assert.deepEqual(io.calls.find((c) => c[0] === "git" && c[2] === "fetch"), ["git", "/r", "fetch", "--quiet", "sandbox-pi-a", "+web-1:web-1"]);
+	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("-S")));
+	assert.ok(io.lines.some((l) => /--sign/.test(l)));
+});
+
+test("land refuses before touching the repo", () => {
+	const dirty = fakeIo({ [probe]: "web-1\t3\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, dirty), /3 uncommitted/);
+	assert.ok(!dirty.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
+	const onBase = fakeIo({ [probe]: "main\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "dev" });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, onBase), /main is the base branch/);
+	assert.ok(!onBase.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
+});
+
+test("land --sign amends the first commit and rebases the rest with -S, in a worktree under tmp", () => {
+	const io = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2\nc3", "git rev-parse HEAD": "signed1" });
+	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+	const add = gits.indexOf("worktree add --quiet --detach /tmp/fleet-sign-web-1 c1");
+	assert.ok(add >= 0 && gits[add - 1] === "worktree prune" && gits[add - 2].startsWith("worktree remove --force /tmp/fleet-sign-web-1"));
+	assert.equal(gits[add + 1], "-c core.hooksPath=/dev/null commit --quiet --amend --no-edit --no-verify --allow-empty -S");
+	assert.ok(gits.some((g) => g.includes("rebase --quiet --onto signed1 c1 web-1 --exec")));
+	assert.ok(gits.some((g) => g === "update-ref refs/heads/web-1 signed1"));
+	assert.ok(gits.at(-1)!.startsWith("worktree remove"));
+});
+
+test("land --sign with nothing to sign touches no worktree, and a failed rebase aborts it", () => {
+	const empty = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "" });
+	land({ sandbox: "pi-a", repo: "/r", sign: true }, empty);
+	assert.ok(!empty.calls.some((c) => c[0] === "git" && c[2] === "worktree"));
+
+	const failing = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2", "git rev-parse HEAD": "s1", "git -c core.hooksPath=/dev/null rebase": new Error("gpg failed") });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", sign: true }, failing), /gpg failed/);
+	const gits = failing.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+	assert.ok(gits.some((g) => g === "rebase --abort"));
+	assert.ok(!gits.some((g) => g.startsWith("update-ref")));
+	assert.ok(gits.at(-1)!.startsWith("worktree remove"));
+});

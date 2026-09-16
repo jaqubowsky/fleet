@@ -1,0 +1,70 @@
+schemaVersion: "2"
+kind: sandbox
+name: pi
+displayName: Pi
+description: pi coding agent on this fleet's hardened image
+args:
+  codex_account:
+    required: true
+    description: ChatGPT account id from the host's ~/.pi/agent/auth.json; pi sends it as ChatGPT-Account-Id
+  codex_sentinel:
+    required: true
+    description: JWT-shaped access-token sentinel carrying codex_account, built by fleet up from the host auth.json; the proxy swaps it for the real bearer
+  node_heap_mb:
+    required: true
+    description: Validated Node old-space heap budget derived from the sandbox memory limit
+  memory_mib:
+    required: true
+    description: Sandbox memory limit in MiB for recovery-time budget validation
+sandbox:
+  image: my-pi:v1
+  entrypoint:
+    - pi
+environment:
+  variables:
+    NODE_OPTIONS: "--max-old-space-size=${{ kit.args.node_heap_mb }}"
+    PI_FLEET_MEMORY_MIB: "${{ kit.args.memory_mib }}"
+    PI_FLEET_ROLE: "worker"
+    PI_LENS_TS_IDLE_EVICT_MS: "30000"
+    PI_LENS_LSP_CLIENT_CEILING: "2"
+    OPENROUTER_API_KEY: "sbx-openrouter-proxy"
+agentInstructions:
+  filename: AGENTS.md
+permissions:
+  network:
+    allow:
+      - chatgpt.com
+      - auth.openai.com
+      - registry.npmjs.org
+      - mcp.context7.com
+      - api.openai.com
+      - openai.com
+      - openrouter.ai
+credentials:
+  - service: openai
+    oauth:
+      tokenEndpoint:
+        host: auth.openai.com
+        path: /oauth/token
+      resourceHosts:
+        - chatgpt.com
+      sentinels:
+        accessToken: "${{ kit.args.codex_sentinel }}"
+        refreshToken: oai-ort01-proxy-managed
+      credentialFile:
+        path: ~/.pi/agent/auth.json
+        structure:
+          openai-codex:
+            type: oauth
+            access: "{{.AccessToken}}"
+            refresh: "{{.RefreshToken}}"
+            expires: "{{.ExpiresAt}}"
+            accountId: "${{ kit.args.codex_account }}"
+setup:
+  install:
+    - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
+      user: "1000"
+      description: Point npm at the sandbox proxy so pi's startup package fetches work
+    - command: 'mkdir -p ~/.pi/agent && printf ''{"mcpServers":{"gateway":{"url":"%s"},"context7":{"url":"https://mcp.context7.com/mcp","headers":{"CONTEXT7_API_KEY":"%s"}}}}\n'' "${MCP_GATEWAY_URL:-}" "${CONTEXT7_API_KEY:-}" > ~/.pi/agent/mcp.json'
+      user: "1000"
+      description: Hand the sandbox MCP gateway and the Context7 placeholder to pi-mcp-adapter

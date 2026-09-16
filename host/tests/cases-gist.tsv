@@ -1,0 +1,3 @@
+deny	Bash	gh gist create notes.md
+pass	Bash	gh gist list
+deny	Bash	sbx exec pi-cv sh -c "gh gist create out.txt"

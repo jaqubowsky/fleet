@@ -1,0 +1,13 @@
+schemaVersion: "1"
+kind: mixin
+name: no-ssh-agent
+
+commands:
+  startup:
+    - user: "0"
+      command:
+        - sh
+        - -c
+        - |
+          [ -S /run/ssh-agent.sock ] && chmod 000 /run/ssh-agent.sock
+          exit 0

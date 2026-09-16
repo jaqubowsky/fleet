@@ -1,0 +1,6 @@
+deny	Bash	op read op://Dev/GitHub/credential
+deny	Bash	op item list
+deny	Bash	op item get "GitHub PAT" --fields credential
+deny	Bash	sbx exec pi-cv sh -c "op read op://x/y/z"
+allow	Bash	sbx secret set github --ref op://Dev/GitHub/credential
+pass	Bash	echo "use op:// references"

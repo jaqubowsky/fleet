@@ -1,0 +1,7 @@
+deny	Bash	cat ~/.pi/agent/auth.json
+deny	Read	/Users/alice/.pi/agent/auth.json
+deny	Bash	jq -r ".\"openai-codex\".access" $HOME/.pi/agent/auth.json
+deny	Bash	security find-generic-password -w -s ChatGPT
+deny	Bash	security dump-keychain
+pass	Bash	security list-keychains
+pass	Bash	cat ~/.pi/agent/settings.json

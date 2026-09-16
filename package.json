@@ -1,0 +1,12 @@
+{
+  "name": "fleet",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "fleet": "bin/fleet"
+  },
+  "scripts": {
+    "test": "node --test 'src/fleet/*.test.ts' && host/tests/run.sh",
+    "check": "tsc --noEmit"
+  }
+}
