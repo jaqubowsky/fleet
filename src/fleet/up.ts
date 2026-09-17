@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
 import { githubRef, linearServer } from "./github.ts";
-import { memoryMiB, nodeHeapMiB } from "./heap.ts";
+import { memoryMiB } from "./heap.ts";
 import type { Io } from "./io.ts";
 import { agentName, sandboxName } from "./name.ts";
 import { agentFor, fleetSandboxes, type Agent, type Sandbox } from "./status.ts";
@@ -56,7 +56,7 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 
 function create(input: UpInput, sandbox: string, origin: string, memory: string, cpus: string, io: Io): void {
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
-	const artifacts = `${io.home}/.pi/artifacts/${sandbox}`;
+	const artifacts = `${io.home}/.sandboxes/${basename(input.repo)}`;
 	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
@@ -75,7 +75,6 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 		"--kit", `${input.root}/host/kits/no-ssh-agent`,
 		"--kit-arg", `pi.codex_account=${codex.account}`,
 		"--kit-arg", `pi.codex_sentinel=${codex.sentinel}`,
-		"--kit-arg", `pi.node_heap_mb=${nodeHeapMiB(memory)}`,
 		"--kit-arg", `pi.memory_mib=${memoryMiB(memory)}`,
 		...(linear ? ["--static-mcp", linear] : []),
 		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, "--", "--approve",

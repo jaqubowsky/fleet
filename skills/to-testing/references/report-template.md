@@ -32,15 +32,15 @@ URL: <tested-url>
 
 ## Artifacts
 
-| Artifact | Criterion | Capture | Viewport |
-| --- | --- | --- | --- |
-| [<file>](<file>) | <one criterion from the matrix> | viewport, or full-page: <reason> | <w>x<h> |
+| Artifact | Criterion | Shows | Capture | Viewport |
+| --- | --- | --- | --- | --- |
+| [<file>](<file>) | <one criterion from the matrix> | <what it shows and where to look; a video, what happens in order> | video, viewport, or full-page: <reason> | <w>x<h> |
 
 None. The audit needed no visual evidence.
 
 ## Runbook changes
 
-<Files under .pi/runbook/ edited during this audit and why, or "none".>
+<Runbook files edited during this audit and why, or "none".>
 
 ## Cleanup
 

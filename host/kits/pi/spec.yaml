@@ -10,9 +10,6 @@ args:
   codex_sentinel:
     required: true
     description: JWT-shaped access-token sentinel carrying codex_account, built by fleet up from the host auth.json; the proxy swaps it for the real bearer
-  node_heap_mb:
-    required: true
-    description: Validated Node old-space heap budget derived from the sandbox memory limit
   memory_mib:
     required: true
     description: Sandbox memory limit in MiB for recovery-time budget validation
@@ -22,7 +19,7 @@ sandbox:
     - pi
 environment:
   variables:
-    NODE_OPTIONS: "--disable-warning=UNDICI-EHPA --max-old-space-size=${{ kit.args.node_heap_mb }}"
+    NODE_OPTIONS: "--disable-warning=UNDICI-EHPA"
     PI_FLEET_MEMORY_MIB: "${{ kit.args.memory_mib }}"
     PI_FLEET_ROLE: "worker"
     PI_LENS_TS_IDLE_EVICT_MS: "30000"

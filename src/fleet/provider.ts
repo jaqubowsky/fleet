@@ -55,6 +55,9 @@ export function render(root: string, io: Io, provider?: string): void {
 		io.log(`${target} <- ${models.activeProvider}`);
 	}
 	const rules = io.list(`${root}/rules`).filter((f) => f.endsWith(".md")).sort().map((name) => ({ name, body: io.read(`${root}/rules/${name}`) ?? "" }));
+	const refs = io.list(`${root}/rules/refs`).filter((f) => f.endsWith(".md")).sort();
+	if (refs.length) io.mkdir(`${root}/agent/refs`);
+	for (const name of refs) io.write(`${root}/agent/refs/${name}`, io.read(`${root}/rules/refs/${name}`) ?? "");
 	const container = [...rules, { name: "sandbox.md", body: io.read(`${root}/sbx/container/sandbox.md`) ?? "" }];
 	for (const [target, sources, exclude] of [["agent/AGENTS.md", rules, []], ["sbx/AGENTS.md", container, CONTAINER_EXCLUDES]] as const) {
 		const text = buildAgents([...sources], [...exclude], io.read);

@@ -19,7 +19,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	const out = await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
 	assert.deepEqual(out, { sandbox: "pi-webapp-web-1", agent: "webapp-web-1", pane: "w1:p9" });
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
-	assert.ok(run.includes("--clone") && run.includes("--static-mcp") && run.includes("pi.node_heap_mb=3072"));
+	assert.ok(run.includes("--clone") && run.includes("--static-mcp") && run.includes("pi.memory_mib=8192"));
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
 	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec");
 	assert.deepEqual(execs[0], ["sbx", "exec", "pi-webapp-web-1", "sh", "-c", 'cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")', "--", "web-1"]);
@@ -127,10 +127,10 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 
-	assert.ok(run.includes("-e") && run.includes("FLEET_ARTIFACTS=/home/me/.pi/artifacts/pi-webapp-web-1"));
+	assert.ok(run.includes("-e") && run.includes("FLEET_ARTIFACTS=/home/me/.sandboxes/webapp"));
 	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
-	assert.deepEqual(run.slice(-5), [repo, "/home/me/.pi/artifacts/pi-webapp-web-1", "/home/me/.pi/cache/webapp", "--", "--approve"]);
-	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/artifacts/pi-webapp-web-1"));
+	assert.deepEqual(run.slice(-5), [repo, "/home/me/.sandboxes/webapp", "/home/me/.pi/cache/webapp", "--", "--approve"]);
+	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.sandboxes/webapp"));
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/cache/webapp"));
 });
 

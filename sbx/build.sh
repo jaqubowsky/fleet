@@ -15,6 +15,7 @@ mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.t
 grep -q "Containers do not push" "$STAGE/agent/extensions/guard.ts" || { echo "build.sh: the bundled guard carries no policy" >&2; exit 1; }
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"
 cp -L "$ROOT/sbx/AGENTS.md" "$STAGE/agent/AGENTS.md"
+cp -RL "$ROOT/rules/refs" "$STAGE/agent/refs"
 cp -L "$HOME/.gitconfig" "$HOME/.gitconfig-work" "$HOME/.gitconfig-alice" "$STAGE/"
 cp -L "$HOME/.config/git/allowed_signers" "$STAGE/"
 find "$STAGE" -name .DS_Store -delete
