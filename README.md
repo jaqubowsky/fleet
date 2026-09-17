@@ -18,13 +18,21 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP and heap limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
-| `artifacts/<sandbox>/` | mounted into its container; what a worker leaves for a person, kept after the container goes (ignored) |
+| `artifacts/<sandbox>/` | mounted into its container; the worker's memory between sessions and what it leaves for a person, kept after the container goes (ignored) |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
+
+## CI=true
+
+Every container runs with `CI=true`, the convention the JavaScript ecosystem uses for "no person is watching this terminal". Test runners read it: `vitest` and `jest` invoked without a subcommand run once and exit instead of entering watch mode.
+
+Without it a repository whose test script is bare `vitest` hangs forever, and a task that never exits is a task the build cache can never store, so the whole gate pays full price on every run. It also turns a silent hang into a result the worker can report.
+
+The cost is that a repository behaves here as it does in its pipeline rather than on a developer machine: snapshots fail instead of updating themselves, and some tools drop their progress output.
 
 ## Commands
 
 ```text
-fleet up <label> [--repo <path>] [--branch <name>] [--memory 8g]
+fleet up <label> [--repo <path>] [--branch <name>] [--memory 8g] [--cpus 4]
 fleet ls
 fleet peek <sandbox> [--lines 40]
 fleet say <sandbox> <text...>

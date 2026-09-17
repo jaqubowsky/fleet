@@ -17,5 +17,11 @@ export const installScript = [
 	"      yarn.lock) if grep -q '^__metadata:' yarn.lock; then YARN_ENABLE_SCRIPTS=true yarn install --immutable; else npm_config_ignore_scripts=false yarn install --frozen-lockfile; fi ;;",
 	'    esac ) >"$log" 2>&1 || { tail -30 "$log"; exit 1; }',
 	"done",
+	"for script in prisma:generate generate codegen; do",
+	`  node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" 2>/dev/null || continue`,
+	'  echo "deps: $script"',
+	'  npm run "$script" >/tmp/deps-generate.log 2>&1 || tail -20 /tmp/deps-generate.log',
+	"  break",
+	"done",
 	"echo deps: ready",
 ].join("\n");

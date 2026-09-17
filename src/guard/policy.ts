@@ -104,7 +104,7 @@ function flatten(subject: string): string {
 	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/['"]/g, " ");
 }
 
-export function decide(tool: string, input: Record<string, unknown>): Decision {
+export function decide(tool: string, input: Record<string, unknown>, worker = false): Decision {
 	const call = read(tool, input);
 	if ("decision" in call) return call;
 	if (!call.subject) return deny("Guard policy error: tool input has no policy subject.");
@@ -113,7 +113,7 @@ export function decide(tool: string, input: Record<string, unknown>): Decision {
 	const scanned = scan(subject);
 	if (HOST_SECRETS.test(scanned)) return deny(CREDENTIAL_STORE);
 	if (HOME_SECRETS.test(scanned) && !DELEGATED.test(subject)) return deny(CREDENTIAL_STORE);
-	if (call.outbound && SECRET_MATERIAL.test(subject)) {
+	if (call.outbound && SECRET_MATERIAL.test(call.subject)) {
 		return deny("Secret material does not leave this machine in a URL, a search query or an MCP argument. If it is a false positive, the human sends it.");
 	}
 
@@ -122,7 +122,7 @@ export function decide(tool: string, input: Record<string, unknown>): Decision {
 	const flat = flatten(subject);
 	const hit = (rule: RegExp): boolean => rule.test(subject) || rule.test(flat);
 
-	if (DELEGATED.test(subject)) {
+	if (worker || DELEGATED.test(subject)) {
 		for (const [rule, reason] of DELEGATED_RULES) {
 			if (hit(rule)) return deny(reason);
 		}

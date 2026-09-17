@@ -126,7 +126,6 @@ RUN sudo chown -R agent:agent /home/agent/.npm
 
 COPY --from=pi-home --chown=agent:agent agent/    /home/agent/.pi/agent/
 COPY --from=pi-home --chown=agent:agent skills/   /home/agent/.pi/skills/
-COPY --from=pi-home --chown=agent:agent guard/    /home/agent/.pi/src/guard/
 COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings.json
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \

@@ -9,3 +9,9 @@ export function parentDir(path: string): string {
 	const index = path.lastIndexOf("/");
 	return index < 0 ? "." : path.slice(0, index);
 }
+
+export function gitdirOf(module: string): string {
+	const up = module.split("/").map(() => "..").join("/");
+
+	return `${up}/.git/modules/${module}`;
+}

@@ -85,7 +85,7 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 	assert.match(out, /M a\.ts/);
 	assert.match(out, /=== last 5 lines\n❯ waiting/);
 	const gone = fakeIo({ "sbx exec pi-a sh -c": "clean", "herdr agent read a": new Error("agent_not_found") });
-	assert.match(peek("pi-a", gone, 5), /\(no agent in a pane\)/);
+	assert.match(peek("pi-a", gone, 5), /no herdr agent named a; the tab may still be coming up/);
 });
 
 test("down probes a stopped container too, so its refusals still apply", () => {
@@ -103,12 +103,11 @@ test("down passes a container whose head is already in the repo, and rethrows a 
 	assert.ok(!broken.calls.some((c) => c[1] === "rm"));
 });
 
-test("resolveSandbox accepts the container name or its agent name and passes unknown names through", () => {
+test("resolveSandbox accepts the container name or its agent name", () => {
 	const io = fakeIo({ "sbx ls --json": { sandboxes: [{ name: "pi-webapp-web-1636", status: "running", workspaces: [] }] } });
 
 	assert.equal(resolveSandbox("pi-webapp-web-1636", io), "pi-webapp-web-1636");
 	assert.equal(resolveSandbox("webapp-web-1636", io), "pi-webapp-web-1636");
-	assert.equal(resolveSandbox("nope", io), "nope");
 });
 
 test("exec runs a one-argument command line through the shell, argv untouched", () => {
@@ -119,7 +118,9 @@ test("exec runs a one-argument command line through the shell, argv untouched", 
 
 	const io = fakeIo();
 	exec("pi-a", ["pwd; whoami"], io);
-	assert.deepEqual(io.calls[0], ["sbx", "exec", "pi-a", "sh", "-c", 'cd "$WORKSPACE_DIR" && pwd; whoami', "--", "pwd; whoami"]);
+	assert.deepEqual(io.calls[0].slice(0, 5), ["sbx", "exec", "pi-a", "sh", "-c"]);
+	assert.ok(String(io.calls[0][5]).endsWith('; pwd; whoami'), String(io.calls[0][5]));
+	assert.deepEqual(io.calls[0].slice(6), ["--", "pwd; whoami"]);
 });
 
 test("artifacts lists every file the container left, newest first, under the folder holding them", () => {
@@ -143,9 +144,51 @@ test("artifacts says so when the container left nothing", () => {
 	assert.match(artifacts("pi-a", fakeIo()), /nothing left here yet/);
 });
 
-test("build runs the image script and nothing else", () => {
-	const io = fakeIo();
+test("build renders the current rules before it bakes them into the image", () => {
+	const io = fakeIo({
+		"list /root/rules": ["core.md"],
+		"read /root/rules/core.md": "# Core\n\n- be exact\n",
+		"read /root/sbx/container/sandbox.md": "# Container\n\n- a fresh rule\n",
+		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "p", providers: { p: { coordinator: "m" } } }),
+		"read /root/profiles/host.json": "{}",
+		"read /root/profiles/sbx.json": "{}",
+	});
 	build("/root", io);
 
-	assert.deepEqual(io.calls, [["run", "/root/sbx/build.sh"]]);
+	assert.match(io.files["/root/sbx/AGENTS.md"] ?? "", /a fresh rule/);
+	assert.deepEqual(io.calls.at(-1), ["run", "/root/sbx/build.sh"]);
+});
+
+test("exec streams what the container prints instead of swallowing it", () => {
+	const io = fakeIo({ ...running, "sbx exec pi-a": "" });
+	exec("pi-a", ["ls -la .env"], io);
+
+	assert.equal(io.sbxOpts.at(-1)?.stream, true);
+});
+
+test("a name that matches no container says so, and names what is running", () => {
+	const io = fakeIo(running);
+
+	assert.equal(resolveSandbox("pi-a", io), "pi-a");
+	assert.throws(() => resolveSandbox("envtest", io), /no fleet container named envtest[\s\S]*pi-a/);
+});
+
+test("artifacts are readable by either name, and after the container is gone", () => {
+	const root = "/home/me/.pi/artifacts/pi-a";
+	const io = fakeIo({
+		[`stat ${root}/note.md`]: { size: 12, mtime: new Date(Date.UTC(2026, 8, 16, 10, 0)), dir: false },
+		[`list ${root}`]: ["note.md"],
+	});
+
+	assert.match(artifacts("a", io), /pi-a[\s\S]*note\.md/);
+	assert.match(artifacts("pi-a", io), /pi-a[\s\S]*note\.md/);
+});
+
+test("exec picks up the repo's own toolchain before running anything", () => {
+	const io = fakeIo(running);
+	exec("pi-a", ["yarn build"], io);
+	const script = String(io.calls[0][5]);
+
+	assert.match(script, /fnm-bash-env\.sh/);
+	assert.ok(script.trimEnd().endsWith("yarn build"), script);
 });

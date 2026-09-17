@@ -6,36 +6,44 @@ import { memoryMiB, nodeHeapMiB } from "./heap.ts";
 import type { Io } from "./io.ts";
 import { agentName, sandboxName } from "./name.ts";
 import { agentFor, fleetSandboxes, type Agent, type Sandbox } from "./status.ts";
-import { parentDir, submodulePaths } from "./submodules.ts";
+import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
-export type UpInput = { repo: string; label: string; branch?: string; memory?: string; root: string };
+export type UpInput = { repo: string; label: string; branch?: string; memory?: string; cpus?: string; root: string };
 type Workspace = { workspace_id: string; label: string };
 type Tab = { tab_id: string; label: string };
 type Pane = { pane_id: string; tab_id: string; agent?: string | null };
 type Created = { result: { workspace?: { workspace_id: string }; root_pane: { pane_id: string } } };
 
 const DETECT_TIMEOUT_MS = 90_000;
+const DEFAULT_CPUS = "4";
 const KNOWN_STATUS = new Set(["idle", "done", "working", "blocked"]);
 
 export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; agent: string; pane: string }> {
 	const memory = input.memory ?? "8g";
+	const cpus = input.cpus ?? DEFAULT_CPUS;
 	input = { ...input, repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo };
 	const sandbox = sandboxName(input.repo, input.label);
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
 	const existing = fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true }))).find((s: Sandbox) => s.name === sandbox);
 	if (!existing) {
-		create(input, sandbox, origin, memory, io);
+		create(input, sandbox, origin, memory, cpus, io);
 		try {
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
+			seedCache(io, input.repo, sandbox);
 			if (input.branch) io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")`, "--", input.branch], { quiet: true });
 		} catch (error) {
 			io.sbx(["rm", "-f", sandbox], { quiet: true });
 			throw new Error(`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`);
 		}
-		io.sbx(["exec", sandbox, "sh", "-c", `setsid nohup bash -c "$1" >${INSTALL_LOG} 2>&1 </dev/null &`, "--", installScript], { quiet: true });
-		io.log(`${sandbox}: created; dependencies install in the background, log ${INSTALL_LOG} in the container`);
+		const locks = lockfiles(io.git(["ls-files", "--", ":(glob)**/yarn.lock", ":(glob)**/pnpm-lock.yaml", ":(glob)**/package-lock.json"], input.repo));
+		if (locks) {
+			io.sbx(["exec", sandbox, "sh", "-c", `setsid nohup bash -c "$1" >${INSTALL_LOG} 2>&1 </dev/null &`, "--", installScript], { quiet: true });
+			io.log(`${sandbox}: created; ${locks} lockfile(s) install in the background, log ${INSTALL_LOG} in the container`);
+		} else {
+			io.log(`${sandbox}: created; no lockfile in the repository, so nothing installs`);
+		}
 	}
 
 	const { pane, running } = openPane(io, basename(input.repo), agent);
@@ -46,7 +54,7 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 	return { sandbox, agent, pane };
 }
 
-function create(input: UpInput, sandbox: string, origin: string, memory: string, io: Io): void {
+function create(input: UpInput, sandbox: string, origin: string, memory: string, cpus: string, io: Io): void {
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
 	const artifacts = `${io.home}/.pi/artifacts/${sandbox}`;
 	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
@@ -59,8 +67,9 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 	}
 	const linear = linearServer(origin);
 	io.sbx([
-		"run", "-d", "--no-share-skills", "--name", sandbox, "--clone", "--memory", memory,
+		"run", "-d", "--no-share-skills", "--name", sandbox, "--clone", "--memory", memory, "--cpus", cpus,
 		"-e", "SSH_AUTH_SOCK_GATEWAY=",
+		"-e", "CI=true",
 		"-e", `FLEET_ARTIFACTS=${artifacts}`,
 		"-e", `FLEET_CACHE=${cache}`,
 		"--kit", `${input.root}/host/kits/no-ssh-agent`,
@@ -71,6 +80,10 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 		...(linear ? ["--static-mcp", linear] : []),
 		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, "--", "--approve",
 	]);
+}
+
+export function lockfiles(listing: string): number {
+	return listing.split("\n").filter((line) => line.trim()).length;
 }
 
 export function envFiles(listing: string): string[] {
@@ -93,6 +106,36 @@ function seedEnv(io: Io, repo: string, sandbox: string): void {
 	io.log(`${sandbox}: copied ${files.length} ignored env file(s) from the host checkout`);
 }
 
+export function cacheStore(path: string): string {
+	return path.replace(/^\.\//, "").replace(/\//g, "-");
+}
+
+export function cachePaths(repo: string, io: Io): string[] {
+	const declared = [
+		[`${repo}/turbo.json`, ".turbo/cache"],
+		[`${repo}/nx.json`, ".nx/cache"],
+	];
+
+	return declared.filter(([config]) => io.read(config) !== undefined).map(([, path]) => path);
+}
+
+function seedCache(io: Io, repo: string, sandbox: string): void {
+	const cache = `${io.home}/.pi/cache/${basename(repo)}`;
+	const listed = io.read(`${cache}/paths`);
+	const paths = listed ? listed.split("\n").map((line) => line.trim()).filter(Boolean) : cachePaths(repo, io);
+	if (!paths.length) return;
+	if (!listed) io.write(`${cache}/paths`, `${paths.join("\n")}\n`);
+
+	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	for (const path of paths) {
+		const store = `${cache}/${cacheStore(path)}`;
+		io.mkdir(store);
+		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$(dirname "$2")" && rm -rf "$2" && ln -sfn "$1" "$2"', "--", store, `${workspace}/${path}`], { quiet: true });
+	}
+
+	io.log(`${sandbox}: ${paths.join(", ")} now live in ${cache}`);
+}
+
 function seedSubmodules(io: Io, repo: string, sandbox: string): void {
 	const modules = submodulePaths(io.git(["submodule", "status"], repo));
 	if (!modules.length) return;
@@ -103,6 +146,8 @@ function seedSubmodules(io: Io, repo: string, sandbox: string): void {
 		io.sbx(["cp", `${repo}/${module}`, `${sandbox}:${workspace}/${parentDir(module)}/`], { quiet: true });
 		io.sbx(["cp", `${repo}/.git/modules/${module}`, `${sandbox}:${workspace}/.git/modules/${parentDir(module)}/`], { quiet: true });
 		io.sbx(["exec", sandbox, "sh", "-c", 'sudo chown -R agent:agent "$1" "$2" && rm -rf "$1/node_modules"', "--", `${workspace}/${module}`, `${workspace}/.git/modules/${module}`], { quiet: true });
+		io.sbx(["exec", sandbox, "sh", "-c", 'printf "gitdir: %s\\n" "$1" > "$2"', "--", gitdirOf(module), `${workspace}/${module}/.git`], { quiet: true });
+		io.sbx(["exec", sandbox, "sh", "-c", 'cd "$1" && git submodule init "$2"', "--", workspace, module], { quiet: true });
 	}
 }
 

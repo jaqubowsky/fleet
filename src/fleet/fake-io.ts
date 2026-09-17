@@ -2,8 +2,9 @@ import type { Io } from "./io.ts";
 
 export type Call = [string, ...string[]];
 
-export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Call[]; lines: string[]; files: Record<string, string> } {
+export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] } {
 	const calls: Call[] = [];
+	const sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] = [];
 	const lines: string[] = [];
 	const files: Record<string, string> = {};
 	const answer = (key: string): unknown => {
@@ -22,8 +23,10 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 		files,
 		home: "/home/me",
 		tmp: "/tmp",
-		sbx: (args) => {
+		sbxOpts,
+		sbx: (args, opts) => {
 			calls.push(["sbx", ...args]);
+			sbxOpts.push(opts);
 			return text(`sbx ${args.join(" ")}`);
 		},
 		herdr: <T>(args: string[]) => {

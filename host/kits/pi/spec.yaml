@@ -28,8 +28,6 @@ environment:
     PI_LENS_TS_IDLE_EVICT_MS: "30000"
     PI_LENS_LSP_CLIENT_CEILING: "2"
     OPENROUTER_API_KEY: "sbx-openrouter-proxy"
-agentInstructions:
-  filename: AGENTS.md
 permissions:
   network:
     allow:

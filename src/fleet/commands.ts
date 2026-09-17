@@ -1,4 +1,5 @@
 import type { Io } from "./io.ts";
+import { render } from "./provider.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { agentName } from "./name.ts";
 import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
@@ -14,7 +15,11 @@ function sandboxes(io: Io): Sandbox[] {
 }
 
 export function resolveSandbox(name: string, io: Io): string {
-	return sandboxes(io).find((s) => s.name === name || agentName(s.name) === name)?.name ?? name;
+	const all = sandboxes(io);
+	const hit = all.find((s) => s.name === name || agentName(s.name) === name);
+	if (hit) return hit.name;
+
+	throw new Error(`no fleet container named ${name}; running: ${all.map((s) => s.name).join(", ") || "none"}`);
 }
 
 export function ls(io: Io): string {
@@ -32,7 +37,7 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	try {
 		tail = io.herdrText(["agent", "read", agentName(sandbox), "--source", "recent-unwrapped", "--lines", String(lines)]);
 	} catch {
-		tail = "(no agent in a pane)";
+		tail = `(no herdr agent named ${agentName(sandbox)}; the tab may still be coming up)`;
 	}
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
@@ -51,10 +56,12 @@ export function execScript(command: string[]): string {
 }
 
 export function exec(sandbox: string, command: string[], io: Io): void {
-	io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && ${execScript(command)}`, "--", ...command]);
+	const toolchain = '{ [ -r /etc/fnm-bash-env.sh ] && . /etc/fnm-bash-env.sh; } >/dev/null 2>&1 || true';
+	io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && ${toolchain}; ${execScript(command)}`, "--", ...command], { stream: true });
 }
 
 export function build(root: string, io: Io): void {
+	render(root, io);
 	io.run(`${root}/sbx/build.sh`, []);
 }
 
@@ -65,7 +72,10 @@ export function copy(from: string, to: string, io: Io): void {
 type Artifact = { path: string; size: number; mtime: Date };
 
 export function artifactsDir(sandbox: string, io: Io): string {
-	return `${io.home}/.pi/artifacts/${sandbox}`;
+	const direct = `${io.home}/.pi/artifacts/${sandbox}`;
+	if (sandbox.startsWith("pi-") || io.stat(direct)) return direct;
+
+	return `${io.home}/.pi/artifacts/pi-${sandbox}`;
 }
 
 function collect(root: string, rel: string, io: Io, found: Artifact[]): Artifact[] {

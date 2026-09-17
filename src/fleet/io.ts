@@ -3,7 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statS
 import { dirname } from "node:path";
 
 export type Io = {
-	sbx(args: string[], opts?: { quiet?: boolean }): string;
+	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean }): string;
 	herdr<T = unknown>(args: string[]): T;
 	herdrText(args: string[]): string;
 	git(args: string[], cwd: string): string;
@@ -21,12 +21,12 @@ export type Io = {
 	tmp: string;
 };
 
-export function shell(cmd: string, args: string[], opts: { quiet?: boolean; cwd?: string } = {}): string {
+export function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
 	const result = spawnSync(cmd, args, {
 		cwd: opts.cwd,
 		input: "",
 		encoding: "utf8",
-		stdio: ["pipe", "pipe", opts.quiet ? "pipe" : "inherit"],
+		stdio: ["pipe", opts.stream ? "inherit" : "pipe", opts.quiet ? "pipe" : "inherit"],
 	});
 	if (result.error) throw result.error;
 	if (result.status !== 0) {

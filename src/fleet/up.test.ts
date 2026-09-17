@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { envFiles, up } from "./up.ts";
+import { cacheStore, envFiles, up } from "./up.ts";
 
 const repo = "/Users/me/Work/webapp";
 const base = {
@@ -15,7 +15,7 @@ const base = {
 };
 
 test("up creates the container, switches the branch, starts the install in the background, opens a tab and sends no prompt", async () => {
-	const io = fakeIo(base);
+	const io = fakeIo({ ...base, "git ls-files -- :(glob)**/yarn.lock": "yarn.lock" });
 	const out = await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
 	assert.deepEqual(out, { sandbox: "pi-webapp-web-1", agent: "webapp-web-1", pane: "w1:p9" });
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
@@ -25,7 +25,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	assert.deepEqual(execs[0], ["sbx", "exec", "pi-webapp-web-1", "sh", "-c", 'cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")', "--", "web-1"]);
 	assert.match(execs[1][5], /^setsid nohup bash -c "\$1" >\/tmp\/fleet-install\.log/);
 	assert.match(execs[1][7], /yarn install --frozen-lockfile/);
-	assert.ok(io.lines.some((l) => /dependencies install in the background/.test(l)));
+	assert.ok(io.lines.some((l) => /1 lockfile\(s\) install in the background/.test(l)));
 	assert.deepEqual(io.calls.find((c) => c[1] === "pane"), ["herdr", "pane", "run", "w1:p9", "HERDR_AGENT=pi sbx run --name pi-webapp-web-1 -- --approve"]);
 	assert.ok(!io.calls.some((c) => c[1] === "agent" && c[2] === "prompt"));
 	assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", "webapp-web-1"]);
@@ -46,7 +46,7 @@ test("up removes the container when setup fails", async () => {
 });
 
 test("up copies every submodule and its git metadata into the clone, then drops host node_modules", async () => {
-	const io = fakeIo({ ...base, "git submodule status": " 1495ab0 packages/pdf-generator (v1)\n", "sbx exec pi-webapp-web-1 sh -c printf": repo });
+	const io = fakeIo({ ...base, "git submodule status": " 1495ab0 packages/pdf-generator (v1)\n", "sbx exec pi-webapp-web-1 sh -c printf": repo, "git ls-files -- :(glob)**/yarn.lock": "yarn.lock" });
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	const cps = io.calls.filter((c) => c[0] === "sbx" && c[1] === "cp").map((c) => c.slice(2));
 	assert.deepEqual(cps, [
@@ -150,4 +150,50 @@ test("env listing takes files at any depth and never a collapsed ignored directo
 	assert.deepEqual(envFiles("apps/api/.env\n\n.env.docker\n"), ["apps/api/.env", ".env.docker"]);
 	assert.deepEqual(envFiles(".claude/worktrees/agent-a618/\napps/estate/.env.local\n"), ["apps/estate/.env.local"]);
 	assert.deepEqual(envFiles(""), []);
+});
+
+test("a repository without a lockfile starts no install and says so", async () => {
+	const io = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[3] === "sh" && String(c[5]).includes("fleet-install")));
+	assert.ok(io.lines.some((l) => /no lockfile/.test(l)));
+});
+
+test("a seeded submodule is registered so the clone sees it as a submodule", async () => {
+	const io = fakeIo({ ...base, "git submodule status": " 1495ab0 packages/pdf-generator (v1)\n", "sbx exec pi-webapp-web-1 sh -c printf": repo });
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const registered = io.calls.find((c) => c[0] === "sbx" && String(c[5] ?? "").includes("gitdir:"))!;
+	assert.ok(registered, "the submodule was never registered");
+	assert.deepEqual(registered.slice(6), ["--", "../../.git/modules/packages/pdf-generator", `${repo}/packages/pdf-generator/.git`]);
+});
+
+test("a seeded submodule is registered in the clone, not left as untracked work", async () => {
+	const io = fakeIo({ ...base, "git submodule status": " 1495ab0 packages/pdf-generator (v1)\n", "sbx exec pi-webapp-web-1 sh -c printf": repo, "git ls-files -- :(glob)**/yarn.lock": "yarn.lock" });
+	await up({ repo, label: "web-1", root: "/root" }, io);
+	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").map((c) => String(c[5]));
+
+	assert.ok(execs.some((s) => s.includes("gitdir:")), "no .git file written");
+	assert.ok(execs.some((s) => s.includes("git submodule init")), "the submodule was never registered");
+});
+
+test("the build cache is linked by the fleet, not by whoever reads the rules", async () => {
+	const io = fakeIo({ ...base, "sbx exec pi-webapp-web-1 sh -c printf": repo, "read /Users/me/Work/webapp/turbo.json": "{}" });
+	await up({ repo, label: "web-1", root: "/root" }, io);
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+
+	assert.ok(run.includes("CI=true"), "the container does not announce itself as a non-interactive environment");
+	assert.deepEqual(run.slice(run.indexOf("--cpus"), run.indexOf("--cpus") + 2), ["--cpus", "4"], "the container was not given a core budget");
+	assert.ok(!run.some((a) => String(a).startsWith("YARN_CACHE_FOLDER")), "the package manager cache was put on the shared mount");
+	assert.ok(!run.some((a) => String(a).startsWith("npm_config_cache")), "the package manager cache was put on the shared mount");
+	assert.equal(io.files["/home/me/.pi/cache/webapp/paths"], ".turbo/cache\n");
+	const link = io.calls.find((c) => c[0] === "sbx" && String(c[5] ?? "").includes("ln -sfn"))!;
+	assert.deepEqual(link.slice(6), ["--", "/home/me/.pi/cache/webapp/.turbo-cache", `${repo}/.turbo/cache`]);
+});
+
+test("a cache path keeps one store whether or not it was written with a leading dot-slash", () => {
+	assert.equal(cacheStore(".turbo/cache"), ".turbo-cache");
+	assert.equal(cacheStore("./.turbo/cache"), ".turbo-cache");
+	assert.equal(cacheStore("apps/web/.turbo/cache"), "apps-web-.turbo-cache");
 });

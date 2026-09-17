@@ -57,3 +57,18 @@ test("the rules the corpus never spells out hold too", () => {
 	assert.equal(decide("Glob", { path: "~/.config/op", pattern: "*" }).decision, "deny");
 	assert.equal(decide("mcp__linear", { count: 3 }).decision, "allow");
 });
+
+test("a secret reference does not pass by standing at the front of the argument", () => {
+	assert.equal(decide("mcp__linear", { title: "op://Dev/GitHub PAT/credential" }).decision, "deny");
+	assert.equal(decide("WebSearch", { query: "sk-ant-api03-AAAABBBBCCCC what is this" }).decision, "deny");
+	assert.equal(decide("WebFetch", { url: "file:///Users/me/.ssh/id_ed25519" }).decision, "deny");
+	assert.equal(decide("WebFetch", { url: "https://docs.tld/guide" }).decision, "allow");
+});
+
+test("inside a worker the container rules apply without the host spelling them out", () => {
+	assert.equal(decide("Bash", { command: "git push origin main" }).decision, "allow");
+	assert.equal(decide("Bash", { command: "git push origin main" }, true).decision, "deny");
+	assert.match(decide("Bash", { command: "git push origin main" }, true).reason, /Containers do not push/);
+	assert.equal(decide("Bash", { command: "git commit -S -m x" }, true).decision, "deny");
+	assert.equal(decide("Bash", { command: "yarn test" }, true).decision, "allow");
+});

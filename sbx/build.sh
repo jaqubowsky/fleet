@@ -6,13 +6,14 @@ ROOT="$HOME/.pi"
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/pi-sbx-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 
-mkdir -p "$STAGE/agent" "$STAGE/guard" "$STAGE/skills"
+mkdir -p "$STAGE/agent" "$STAGE/skills"
 for skill in analyze-task implement tdd two-axis-review to-testing diagnosing-bugs resolving-merge-conflicts babysit-pr agent-browser unslop writing-for-agents how; do
   cp -RL "$ROOT/skills/$skill" "$STAGE/skills/"
 done
-mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/guard.ts" "$ROOT/agent/extensions/statusline.ts" "$STAGE/agent/extensions/"
+mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.ts" "$STAGE/agent/extensions/"
+"$ROOT/agent/npm/node_modules/esbuild/bin/esbuild" "$ROOT/agent/extensions/guard.ts" --bundle --platform=node --format=esm --log-level=warning --outfile="$STAGE/agent/extensions/guard.ts"
+grep -q "Containers do not push" "$STAGE/agent/extensions/guard.ts" || { echo "build.sh: the bundled guard carries no policy" >&2; exit 1; }
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"
-cp -L "$ROOT/src/guard/policy.ts" "$ROOT/src/guard/translate.ts" "$STAGE/guard/"
 cp -L "$ROOT/sbx/AGENTS.md" "$STAGE/agent/AGENTS.md"
 cp -L "$HOME/.gitconfig" "$HOME/.gitconfig-work" "$HOME/.gitconfig-alice" "$STAGE/"
 cp -L "$HOME/.config/git/allowed_signers" "$STAGE/"

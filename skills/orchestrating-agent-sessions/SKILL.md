@@ -21,7 +21,7 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 | rebuild the image | `fleet build` | the docker build output, and what the image now carries |
 | switch models | `fleet provider [<name>]` | files rewritten; host sees it after `/reload` |
 
-The repository inside a container is a private clone, so writes there stay there until `fleet land`. Two host directories are mounted alongside it, at the same absolute path inside as outside: `~/.pi/artifacts/<sandbox>` for what the worker leaves for a person, and `~/.pi/cache/<repo>` for what is expensive to rebuild. Both outlive the container, so screenshots and reports survive `fleet down`.
+The repository inside a container is a private clone, so writes there stay there until `fleet land`. Two host directories are mounted alongside it, at the same absolute path inside as outside: `~/.pi/artifacts/<sandbox>` for what the worker keeps between sessions and leaves for a person, and `~/.pi/cache/<repo>` for what is expensive to rebuild. Both outlive the container, so screenshots and reports survive `fleet down`.
 
 ## Watching
 

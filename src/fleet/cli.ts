@@ -11,7 +11,7 @@ const root = process.env.FLEET_ROOT ?? `${home}/.pi`;
 const io = realIo(home);
 
 const usage = `usage:
-  fleet up <label> [--branch <name>] [--memory 8g]   clone the repo into a container, start pi in a herdr tab, send nothing
+  fleet up <label> [--branch <name>] [--memory 8g] [--cpus 4]   clone the repo into a container, start pi in a herdr tab, send nothing
   fleet ls                                           containers with herdr status, branch and dirty count
   fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
   fleet say <sandbox> <text...>                      send a prompt to the container's pi (logged to agent/fleet-say.log)
@@ -69,7 +69,7 @@ function repoOf(opts: Record<string, string | true>): string {
 const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async up(args) {
 		const { opts, rest } = flags(args);
-		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, memory: opts.memory as string | undefined, root }, io);
+		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
 	},
 	ls: () => io.log(ls(io)),
 	peek(args) {
@@ -85,7 +85,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		exec(sandboxOf(rest[0]), rest.slice(1), io);
 	},
 	copy: (args) => copy(need(args[0], "source"), need(args[1], "destination"), io),
-	artifacts: (args) => io.log(artifacts(sandboxOf(args[0]), io)),
+	artifacts: (args) => io.log(artifacts(need(args[0], "sandbox"), io)),
 	land(args) {
 		const { opts, rest } = flags(args);
 		land({ sandbox: sandboxOf(rest[0]), repo: repoOf(opts), branch: opts.branch as string | undefined, sign: opts.sign === true, push: opts.push === true }, io);

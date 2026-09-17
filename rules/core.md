@@ -70,7 +70,7 @@
 2. (A) Done = that check run after LAST change, output read. Review before final commit proves previous commit, not this one
 3. (A) Improvement work: same number before and after. No baseline -> no improvement claim, say so
 4. (A) Report what ran, what it printed, what did not run
-5. (A) Run checks through the project's declared task runner and scripts (turbo/nx, package.json). Raw binaries (npx tsc, npx eslint) bypass the project's cache and incremental state; use them only when no script exists, scoped to changed files
+5. (A) Run checks through the project's declared scripts, scoped to the question: a runner filter for one package, a path for one file. Cache and incremental state key on the script, so reach for a raw binary only when no script takes that argument
 
 ## Git
 
