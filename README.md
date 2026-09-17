@@ -15,10 +15,10 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `profiles/` | `models.json` (providers x roles), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
 | `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet provider` |
-| `host/kits/` | sbx kits: pi (proxy credentials, LSP and heap limits), no-ssh-agent |
+| `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
-| `artifacts/<sandbox>/` | mounted into its container; the worker's memory between sessions and what it leaves for a person, kept after the container goes (ignored) |
+| `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`; the workers' shared memory between sessions and what they leave for a person, kept after the container goes (outside this repo) |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
 
 ## CI=true
@@ -37,7 +37,7 @@ fleet ls
 fleet peek <sandbox> [--lines 40]
 fleet say <sandbox> <text...>
 fleet exec <sandbox> -- <command...>
-fleet artifacts <sandbox>
+fleet artifacts [--repo <path>]
 fleet copy <src> <dst>
 fleet land <sandbox> [--repo <path>] [--branch <name>] [--sign] [--push]
 fleet down <sandbox> [--force]

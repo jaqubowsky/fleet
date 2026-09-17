@@ -50,7 +50,7 @@ export function land(input: LandInput, io: Io): void {
 	if (input.push) push(input.repo, branch, io);
 }
 
-export function remoteBranch(repo: string, branch: string, io: Io): string | undefined {
+function remoteBranch(repo: string, branch: string, io: Io): string | undefined {
 	try {
 		io.git(["fetch", "--quiet", "origin", branch], repo);
 	} catch {}
@@ -61,7 +61,7 @@ export function remoteBranch(repo: string, branch: string, io: Io): string | und
 	}
 }
 
-export function push(repo: string, branch: string, io: Io): void {
+function push(repo: string, branch: string, io: Io): void {
 	try {
 		io.git(["push", "--quiet", "-u", "origin", branch], repo);
 	} catch (error) {
@@ -70,7 +70,7 @@ export function push(repo: string, branch: string, io: Io): void {
 	io.log(`${branch} -> origin`);
 }
 
-export function sign(repo: string, branch: string, from: string, io: Io): void {
+function sign(repo: string, branch: string, from: string, io: Io): void {
 	const commits = io.git(["rev-list", "--reverse", `${from}..${branch}`], repo).split("\n").filter(Boolean);
 	if (!commits.length) return;
 	const worktree = `${io.tmp}/fleet-sign-${branch.replace(/[^a-z0-9_-]+/gi, "-")}`;

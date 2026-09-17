@@ -1,7 +1,6 @@
 ---
 name: brain-dump
 description: 'Capture knowledge into the second brain''s inbox (raw/inbox/) for later ingestion. Handles four source types: current-conversation insights, an article URL (fetched and cleaned), a YouTube link (audio via yt-dlp, transcribed with Whisper; manual subs as fast path), or a local PDF (text via pdftotext). Use when the user wants to save a takeaway, article, video, or PDF to their knowledge base.'
-argument-hint: "[url | youtube-link | optional topic]"
 ---
 
 Capture a source into the second brain's inbox at
@@ -10,13 +9,13 @@ Capture a source into the second brain's inbox at
 starts with a short origin header: source (repo/conversation, URL, or video
 link), date, one-line context.
 
-Input: $ARGUMENTS. Decide the capture mode by its shape:
+Input: the text the user appended after this skill. Decide the capture mode by its shape:
 
 ## 1. Article URL (http/https, not YouTube)
 
 1. Run `defuddle <url>` and save stdout: clean article extraction, no
    boilerplate (content, not your summary: the wiki synthesis happens
-   later, at /ingest).
+   later, at /skill:ingest).
 2. Record the URL and fetch date in the origin header.
 
 ## 2. YouTube link
@@ -38,7 +37,7 @@ errors ("charge pt" for ChatGPT, "Mid Journey" for Midjourney) that propagate in
 1. Extract the text: `pdftotext -layout "<file>" -` and capture stdout.
 2. Clean it mechanically: drop page headers/footers and hyphenation
    artifacts, join broken lines into paragraphs. Content, not your summary:
-   do not paraphrase; synthesis happens at /ingest.
+   do not paraphrase; synthesis happens at /skill:ingest.
 3. Record the source file path in the origin header.
 
 ## 4. No argument, or a topic phrase
@@ -51,10 +50,10 @@ useful commands or snippets: NOT a transcript. One note per distinct topic.
 
 - Do NOT touch `wiki/`: no `index.md`, `log.md`, or page edits from here.
   The inbox is the only write surface outside the knowledge-base repo;
-  synthesis happens there via `/ingest`, which sweeps unprocessed `raw/`
+  synthesis happens there via `/skill:ingest`, which sweeps unprocessed `raw/`
   files automatically.
 - If the inbox is not writable (e.g. a read-only sandbox mount), print the
   full note in the reply instead and tell the user to save it from a host
   session.
-- Finish by reminding the user: run `/ingest` in `~/my-knowledge-base` to
+- Finish by reminding the user: run `/skill:ingest` in `~/my-knowledge-base` to
   fold the capture into the wiki.

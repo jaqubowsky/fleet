@@ -28,7 +28,7 @@ The `grep -F -f` is the whole filter: keep a clone pair only when at least one s
 
 ## What the flags do
 
-Verified against jscpd 5.0.16. Re-check against the installed version before trusting the details.
+Verified against jscpd 5.2.0, the version the container image installs. Re-check when `jscpd --version` prints another.
 
 - `--ignore` takes **comma-separated plain globs**. Brace expansion is not supported: `**/{a,b}/**` silently matches nothing. Inside a git repo `.gitignore` is honoured by default, so `node_modules`, `dist` and `coverage` need no entry.
 - `--cross-formats js-ts` catches the same logic living in a `.js` and a `.ts` file, which the default per-format pass never compares.

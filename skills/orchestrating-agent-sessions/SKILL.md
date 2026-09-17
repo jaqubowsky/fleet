@@ -14,14 +14,14 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 | what did it do | `fleet peek <sandbox>` | git status, log, diff --stat, install log, pane tail |
 | send it this | `fleet say <sandbox> "<text>"` | prompt logged and sent |
 | run something inside | `fleet exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
-| what it left for me | `fleet artifacts <sandbox>` | the folder, then its files newest first with size and age |
+| what it left for me | `fleet artifacts [--repo <path>]` | the folder, then its files newest first with size and age |
 | get one file out | `fleet copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `fleet land <sandbox> [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks |
 | close it | `fleet down <sandbox>` | where the transcripts and the artifacts stayed |
 | rebuild the image | `fleet build` | the docker build output, and what the image now carries |
 | switch models | `fleet provider [<name>]` | files rewritten; host sees it after `/reload` |
 
-The repository inside a container is a private clone, so writes there stay there until `fleet land`. Two host directories are mounted alongside it, at the same absolute path inside as outside: `~/.pi/artifacts/<sandbox>` for what the worker keeps between sessions and leaves for a person, and `~/.pi/cache/<repo>` for what is expensive to rebuild. Both outlive the container, so screenshots and reports survive `fleet down`.
+The repository inside a container is a private clone, so writes there stay there until `fleet land`. Two host directories are mounted alongside it, at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo) for what workers keep between sessions and leave for a person, and `~/.pi/cache/<repo>` for what is expensive to rebuild. Both outlive the container, so screenshots and reports survive `fleet down`.
 
 ## Watching
 

@@ -42,7 +42,7 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 
 The right decomposition depends on the question. Use your judgment. Narrow questions: 2 explorers is fine. Broad subsystems: up to 4.
 
-Launch every explorer as a `scout` sub-agent, all in the same turn so they run concurrently.
+Launch every explorer as a `scout` sub-agent, all in the same turn so they run concurrently. If `scout` is unavailable, say so in the answer before starting, then explore inline.
 
 Each explorer gets the same base prompt from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer should:
 - Start broad: find for relevant directories, grep for key types/interfaces/class names

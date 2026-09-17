@@ -1,6 +1,6 @@
 ---
 name: to-testing
-description: 'Browser acceptance audit of a finished change. Use after implementation and review when the changed behavior is reachable through a web UI. Produces a report with evidence and stops at ready-for-human-approval. Manual: /skill:to-testing.'
+description: 'Browser acceptance audit of a finished change. Use after implementation and review when the changed behavior is reachable through a web UI. Produces a report with evidence and stops at ready-for-human-approval.'
 ---
 
 # To testing

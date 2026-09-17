@@ -1,6 +1,6 @@
 import type { Io } from "./io.ts";
 
-export type Call = [string, ...string[]];
+type Call = [string, ...string[]];
 
 export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] } {
 	const calls: Call[] = [];

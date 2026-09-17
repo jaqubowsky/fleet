@@ -2,11 +2,14 @@ import { basename } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
 import { githubRef, linearServer } from "./github.ts";
-import { memoryMiB } from "./heap.ts";
 import type { Io } from "./io.ts";
 import { agentName, sandboxName } from "./name.ts";
 import { agentFor, fleetSandboxes, type Agent, type Sandbox } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
+
+export function artifactsDir(repo: string, io: Io): string {
+	return `${io.home}/.sandboxes/${basename(repo)}`;
+}
 
 export type UpInput = { repo: string; label: string; branch?: string; memory?: string; cpus?: string; root: string };
 type Workspace = { workspace_id: string; label: string };
@@ -56,7 +59,7 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 
 function create(input: UpInput, sandbox: string, origin: string, memory: string, cpus: string, io: Io): void {
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
-	const artifacts = `${io.home}/.sandboxes/${basename(input.repo)}`;
+	const artifacts = artifactsDir(input.repo, io);
 	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
@@ -75,13 +78,12 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 		"--kit", `${input.root}/host/kits/no-ssh-agent`,
 		"--kit-arg", `pi.codex_account=${codex.account}`,
 		"--kit-arg", `pi.codex_sentinel=${codex.sentinel}`,
-		"--kit-arg", `pi.memory_mib=${memoryMiB(memory)}`,
 		...(linear ? ["--static-mcp", linear] : []),
 		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, "--", "--approve",
 	]);
 }
 
-export function lockfiles(listing: string): number {
+function lockfiles(listing: string): number {
 	return listing.split("\n").filter((line) => line.trim()).length;
 }
 
@@ -109,7 +111,7 @@ export function cacheStore(path: string): string {
 	return path.replace(/^\.\//, "").replace(/\//g, "-");
 }
 
-export function cachePaths(repo: string, io: Io): string[] {
+function cachePaths(repo: string, io: Io): string[] {
 	const declared = [
 		[`${repo}/turbo.json`, ".turbo/cache"],
 		[`${repo}/nx.json`, ".nx/cache"],

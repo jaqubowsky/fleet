@@ -9,7 +9,7 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating: negatives, numbers, dates, comparisons, attributions, citations, paths, code behavior (read or run first), lib APIs. Plausibility and memory are not evidence
 4. Have opinion. Verdict, not neutral pro/con list. Every recommendation: what it optimizes for + >=1 real downside
 5. Measurable criteria only. clean/robust/scalable/coupled carry no weight. "better" needs a number
-6. Prose style is skill `unslop`, applied to every reply. No em dash, straight quotes, no decorative emoji, sentence case headings
+6. Prose style is skill `unslop`, applied to every reply. Sentence case headings
 7. Chat in user language. Committed artifacts in English: docs, AGENTS.md, ADR, spec, ticket, commit subject, identifier
 8. Work that changes files and runs longer than one step -> restate in three lines: goal, boundaries, done-check. Then start. No approval wait. Read-only work starts without ceremony
 9. Text going to a person (Slack, PR comment, Linear comment, standup) -> skill `tone`, then skill `unslop`
@@ -19,9 +19,9 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 1. Search wide, keep the diff narrow. AI overcodes by default
 2. Smallest code standing after the change. Remove the cause and everything it kills, once grep finds no consumer; a gutted field left in place is a trap for the next reader. New module, helper, middleware, flag or extra layer only after the inline fix fails a requirement you can name. Other finding -> name it, leave it. Critical one -> stop, say what breaks, ask
 3. Defensive code (guard, retry, fallback, backup) only for a failure this run showed or the user named. Types forbid it in-process -> no guard, no test; data crossing a boundary is validated there, once
-4. Script or new command only where Autonomy 5 asks for one; data migration only when the state cannot be reached through the app
-5. Repo carries only what the task needs. README, note, report, committed artifact: on request or a skill's demand. What a task produces and the repo must not carry (report, screenshots, transcript) goes to `$FLEET_ARTIFACTS`, never the working tree
-6. No comments. Ever. Needed comment = wrong name or wrong structure. A lint gate demanding one loses: report what the gate printed, leave it red. Comments in untouched code stay
+4. Script or new command only where Autonomy 5 asks for one, or a throwaway harness the diagnosis deletes before the report; data migration only when the state cannot be reached through the app
+5. Repo carries only what the task needs. README, note, report, committed artifact: on request or a skill's demand. What a task produces and the repo must not carry (report, screenshots, transcript) goes to the artifacts directory: `$FLEET_ARTIFACTS` in a container, `~/.sandboxes/<repo>/` on the host. Never the working tree
+6. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A lint gate demanding one loses: report what the gate printed, leave it red. Comments in untouched code stay
 7. Guard clauses first. No else after return. No happy path nested in if
 8. Blank line between logical steps. Never first or last line of a block
 9. Name a value if: changeable decision (threshold/limit/duration), repeats in file, meaning invisible at use, crosses system boundary. Else literal
@@ -52,10 +52,9 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 
 1. Conventional commit, single line: `type(scope): subject`. No body, no footer
 2. Subject imperative, lowercase, no trailing period, <=50 chars
-3. One logical change per commit, cut as the work happens. Never rebuild history by undoing finished work
-4. Commit or push only when asked. On main -> branch first
-5. Conflict: always resolve, never `--abort`. Procedure: skill `resolving-merge-conflicts`
-6. Force/delete/mirror push and signing-off stay user's own command
+3. Commit once the work is done, split into logical commits, one change each. Never rebuild history by undoing finished work
+4. Conflict: always resolve, never `--abort`. Procedure: skill `resolving-merge-conflicts`
+5. Force/delete/mirror push and signing-off stay user's own command
 
 ## Decisions
 
@@ -69,7 +68,7 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 2. Blocked -> name blocker, cheapest question that unblocks, what you do if no answer. Never guess, never idle quiet
 3. While a background job or sub-agent runs, do the next piece that does not depend on it. A wake is information, not a turn
 4. Irreversible or outward-facing (push, deploy, migration, delete, message to person, closing a workspace or container) -> stop, ask. Every time
-5. Check run by hand twice -> script or hook. Third manual run = defect in setup
+5. The same command run by hand twice -> script or hook before the third run, in the artifacts directory of Coding 5 unless the repo owns it. A third manual run = defect in setup
 6. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: push, deploy, migration on real env, delete branch/container/remote, message person, post Linear, change external contract, pick business rule sans evidence
 7. Before any stage (analysis, ticket split, review, acceptance test) check the artifact that stage already owes: existing analysis, spec, tickets, commits, prior review, prior QA, task source, branch + dirty state. Resume from first incomplete stage
 

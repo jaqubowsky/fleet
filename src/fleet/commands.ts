@@ -2,6 +2,7 @@ import type { Io } from "./io.ts";
 import { render } from "./provider.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { agentName } from "./name.ts";
+import { artifactsDir } from "./up.ts";
 import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
 
 type Agents = { result: { agents: Agent[] } };
@@ -71,13 +72,6 @@ export function copy(from: string, to: string, io: Io): void {
 
 type Artifact = { path: string; size: number; mtime: Date };
 
-export function artifactsDir(sandbox: string, io: Io): string {
-	const direct = `${io.home}/.pi/artifacts/${sandbox}`;
-	if (sandbox.startsWith("pi-") || io.stat(direct)) return direct;
-
-	return `${io.home}/.pi/artifacts/pi-${sandbox}`;
-}
-
 function collect(root: string, rel: string, io: Io, found: Artifact[]): Artifact[] {
 	for (const name of io.list(rel ? `${root}/${rel}` : root)) {
 		const path = rel ? `${rel}/${name}` : name;
@@ -103,8 +97,8 @@ function age(mtime: Date, io: Io): string {
 	return `${Math.round(minutes / 1440)}d ago`;
 }
 
-export function artifacts(sandbox: string, io: Io): string {
-	const root = artifactsDir(sandbox, io);
+export function artifacts(repo: string, io: Io): string {
+	const root = artifactsDir(repo, io);
 	const found = collect(root, "", io, []).sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 	if (!found.length) return `${root}\nnothing left here yet`;
 
@@ -148,7 +142,8 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	}
 	const dest = harvest(sandbox, io);
 	io.log(dest ? `${sandbox}: transcripts -> ${dest}` : `${sandbox}: no transcripts (pi never ran a session)`);
-	if (io.list(artifactsDir(sandbox, io)).length) io.log(`${sandbox}: artifacts stay in ${artifactsDir(sandbox, io)}, read them with fleet artifacts ${sandbox}`);
+	const repo = entry.workspaces[0];
+	if (repo && io.list(artifactsDir(repo, io)).length) io.log(`${sandbox}: artifacts stay in ${artifactsDir(repo, io)}, read them with fleet artifacts --repo ${repo}`);
 	const agent = agentFor(agents(io), agentName(sandbox));
 	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);
 	try {

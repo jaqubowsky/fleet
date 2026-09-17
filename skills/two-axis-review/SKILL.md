@@ -8,7 +8,7 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 - **Standards**: does the code conform to this repo's documented coding standards?
 - **Spec**: does the code faithfully implement the originating ticket / spec?
 
-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings. With no sub-agent tool available, run them sequentially and keep their findings strictly separate.
+Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings. If the `reviewer` sub-agent is unavailable, say so in the final report before starting, then run both axes yourself and keep their findings strictly separate.
 
 ## Process
 

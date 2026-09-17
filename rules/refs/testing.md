@@ -16,7 +16,7 @@ Reached from `rules/core.md` when a test is written, changed or read.
 4. No private method tests. Painful through public API = missing unit, extract it
 5. Verification order: output > state > communication. Mocks only for side effects invisible in state and output
 6. Shared or volatile dependency -> double. Private, in-process, deterministic -> real object
-7. Bug report -> regression test first. Show the red, wait for go-ahead, then touch production code
+7. Bug report -> regression test first. Show the red; production code after the go-ahead, or at once under rule 16
 8. Red = production code wrong until proven otherwise. Quote failure, name cause before editing
 9. Red from import error or TypeError says nothing about behavior. Fix mechanics, get real red
 10. While red never weaken test: no value copied from actual, no loosened matcher, no skip/only, no raised timeout, no renamed scenario

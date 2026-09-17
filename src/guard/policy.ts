@@ -58,7 +58,7 @@ const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`(git\s+config[^|;&]*gpgsign\s+(false|no|0)|git[^|;&]*\s-c\s*commit\.gpg[sS]ign=(false|no|0)|git\s+commit[^|;&]*--no-gpg-sign)`), "Every commit on this Mac is signed, and the Touch ID prompt is the evidence a person was here. Turning signing off removes that evidence."],
 	[command(String.raw`gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(create|merge|close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`), "gh writing to the remote is a push by another name. The human opens the PR and runs the release."],
 	[command(String.raw`(curl|wget|base64)\b[^|]*\|\s*(sudo\s+)?(ba|z|da|k)?sh\b`), "Piping a download into a shell is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
-	[command(String.raw`(curl|wget)\b[^|]*\|\s*(sudo\s+)?(python3?|node|ruby|perl|php)\b`), "Piping a download into an interpreter is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
+	[command(String.raw`(curl|wget)\b[^|]*\|\s*(sudo\s+)?(python3?|node|ruby|perl|php)\s*(-\s*)?($|[;&|)])`), "Piping a download into an interpreter is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
 ];
 
 const RECURSIVE_RM = command(String.raw`rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`);
@@ -66,6 +66,7 @@ const RM_PROTECTED = command(String.raw`rm\s[^;&|]*\s${PROTECTED}`);
 const RM_ROOTS = command(String.raw`rm\s[^;&|]*\s${ROOTS}`);
 const ORCHESTRATION = /(^|[;&|]|&&)\s*(sbx|herdr)(\s|$)/;
 const SSH = command(String.raw`ssh(\s|$)`);
+const SSH_LOCAL = command(String.raw`ssh\s+-(V|G|Q)\b`);
 const READ_ONLY_GIT = /(^|[;&|]|&&)\s*git\s+(status|log|diff|show|fetch|ls-remote|ls-files|branch|rev-parse|remote|blame|describe|shortlog)\b/;
 
 const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
@@ -138,7 +139,7 @@ export function decide(tool: string, input: Record<string, unknown>, worker = fa
 	}
 
 	if (ORCHESTRATION.test(subject)) return allow("sbx/herdr orchestration.");
-	if (hit(SSH)) return deny("Remote shell access is outside this local-only Pi fleet.");
+	if (hit(SSH) && !hit(SSH_LOCAL)) return deny("Remote shell access is outside this local-only Pi fleet.");
 	if (READ_ONLY_GIT.test(subject)) return allow("Read-only git.");
 
 	return allow("Allowed by Bash policy.");

@@ -3,17 +3,13 @@ import type { Io } from "./io.ts";
 
 export type Models = {
 	activeProvider: string;
-	providers: Record<string, Record<string, unknown>>;
+	providers: Record<string, Record<string, string>>;
 };
 
-export function roles(models: Models, provider = models.activeProvider): Record<string, string> {
-	const row = models.providers[provider];
-	if (!row) throw new Error(`unknown provider: ${provider}`);
-	const out: Record<string, string> = {};
-	for (const [key, value] of Object.entries(row)) {
-		if (typeof value === "string") out[key] = value;
-	}
-	return out;
+function roles(models: Models): Record<string, string> {
+	const row = models.providers[models.activeProvider];
+	if (!row) throw new Error(`unknown provider: ${models.activeProvider}`);
+	return row;
 }
 
 export function renderSettings(template: string, models: Models): string {
@@ -60,7 +56,7 @@ export function render(root: string, io: Io, provider?: string): void {
 	for (const name of refs) io.write(`${root}/agent/refs/${name}`, io.read(`${root}/rules/refs/${name}`) ?? "");
 	const container = [...rules, { name: "sandbox.md", body: io.read(`${root}/sbx/container/sandbox.md`) ?? "" }];
 	for (const [target, sources, exclude] of [["agent/AGENTS.md", rules, []], ["sbx/AGENTS.md", container, CONTAINER_EXCLUDES]] as const) {
-		const text = buildAgents([...sources], [...exclude], io.read);
+		const text = buildAgents([...sources], [...exclude]);
 		io.write(`${root}/${target}`, text);
 		io.log(`${target}: ${text.split("\n").length} lines`);
 	}

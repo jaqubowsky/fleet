@@ -2,15 +2,15 @@
 set -uo pipefail
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+pi_root="$(dirname "$(readlink -f "$(command -v pi)")")/../.."
 
-skills=0
-for skill in "$dir"/../../skills/*/SKILL.md; do
-  out="$(PI_OFFLINE=1 pi --no-extensions --no-context-files --no-tools --no-skills --skill "$skill" --help 2>&1 | grep -E '^(Warning|Error)')"
-  [ -z "$out" ] && continue
-  skills=$((skills + 1))
-  printf 'FAIL  skill  %s: %s\n' "$(basename "$(dirname "$skill")")" "$out"
-done
-printf 'skills: %d failed to load\n' "$skills"
+node --input-type=module -e '
+const { loadSkillsFromDir } = await import(process.argv[1]);
+const { skills, diagnostics } = loadSkillsFromDir({ dir: process.argv[2], source: "path" });
+for (const d of diagnostics) process.stderr.write(`FAIL  skill  ${d.path}: ${d.message}\n`);
+process.stdout.write(`skills: ${skills.length} loaded, ${diagnostics.length} failed\n`);
+process.exitCode = diagnostics.length === 0 ? 0 : 1;
+' "$pi_root/dist/index.js" "$dir/../../skills"; skills=$?
 
 node "$dir/extension_syntax_test.mjs"; syntax=$?
 

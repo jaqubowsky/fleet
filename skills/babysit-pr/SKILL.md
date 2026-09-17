@@ -101,6 +101,8 @@ fleet land --sign --push <sandbox>
 fleet say <sandbox> "pushed, run the next round"
 ```
 
+Both run on the user's word, or the `fleet say` inside the follow mode of Fleet rule 3.
+
 A rejected push means someone rewrote history. Show the user; forcing is their own command.
 
 Posting the rejections is the user's call, because the host reaches GitHub through its own credential rather than the container's. The review log already holds them, one line per finding, and a line pasted into a thread opens with `[pi / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing.

@@ -21,7 +21,7 @@ export type Io = {
 	tmp: string;
 };
 
-export function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
+function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
 	const result = spawnSync(cmd, args, {
 		cwd: opts.cwd,
 		input: "",

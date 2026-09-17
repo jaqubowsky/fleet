@@ -15,16 +15,15 @@
 /agent/auth.json
 /agent/trust.json
 /agent/npm/
-/agent/git/
 /agent/bin/
 /agent/models-store.json
 /agent/extensions/herdr-agent-state.ts
 /agent/settings.json
 /agent/AGENTS.md
+/agent/refs/
 /sbx/agent-settings.json
 /sbx/AGENTS.md
 node_modules/
 *.log
-*.tsbuildinfo
 .DS_Store
 .claude/

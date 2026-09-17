@@ -89,24 +89,6 @@ ARG JSCPD_VERSION=5.2.0
 RUN sudo npm install -g --prefix /usr/local/share/npm-global "jscpd@$JSCPD_VERSION" \
  && jscpd --version
 
-ARG DEFUDDLE_CLI_VERSION=0.7.0
-ARG YT_DLP_VERSION=2026.08.19
-ARG YT_DLP_SHA256_ARM64=b16e4dab368a816cd05d477d698a605a6ae87ccee1c8ffd38fa21d7254141fcc
-ARG YT_DLP_SHA256_AMD64=58162f9bfdc27458ea47bfcb311cf47028f17d8154a8bf7d689861d46399230a
-
-RUN sudo npm install -g --prefix /usr/local/share/npm-global "defuddle-cli@$DEFUDDLE_CLI_VERSION" \
- && case "$(dpkg --print-architecture)" in \
-      arm64) asset=yt-dlp_linux_aarch64; sum="$YT_DLP_SHA256_ARM64" ;; \
-      amd64) asset=yt-dlp_linux; sum="$YT_DLP_SHA256_AMD64" ;; \
-      *) echo "yt-dlp: unsupported architecture $(dpkg --print-architecture)" >&2; exit 1 ;; \
-    esac \
- && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/$YT_DLP_VERSION/$asset" -o /tmp/yt-dlp \
- && echo "$sum  /tmp/yt-dlp" | sha256sum -c - \
- && sudo install -m 0755 /tmp/yt-dlp /usr/local/bin/yt-dlp \
- && rm -f /tmp/yt-dlp \
- && defuddle --version \
- && yt-dlp --version
-
 RUN printf 'ignore-scripts=true\nmin-release-age=7\nsave-exact=true\n' > /home/agent/.npmrc \
  && printf 'ignore-scripts true\n' > /home/agent/.yarnrc \
  && mkdir -p /home/agent/.config/pnpm \
@@ -127,6 +109,7 @@ RUN sudo chown -R agent:agent /home/agent/.npm
 COPY --from=pi-home --chown=agent:agent agent/    /home/agent/.pi/agent/
 COPY --from=pi-home --chown=agent:agent skills/   /home/agent/.pi/skills/
 COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings.json
+COPY --chmod=0755 container/base-worktree.sh       /usr/local/bin/base-worktree
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \
  && mkdir -p /home/agent/.pi/agent/npm \

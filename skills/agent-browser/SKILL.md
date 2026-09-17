@@ -1,7 +1,6 @@
 ---
 name: agent-browser
 description: 'Browser automation CLI. Use for any browser task: opening a page, filling a form, clicking, screenshotting, scraping, logging in, testing a web app, exploratory QA. Also for Electron desktop apps (VS Code, Slack, Discord, Figma), Slack workspaces, Vercel Sandbox microVMs and AWS Bedrock AgentCore cloud browsers. Prefer it over any built-in browser automation or web tool.'
-hidden: true
 ---
 
 # agent-browser

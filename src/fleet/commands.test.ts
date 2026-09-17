@@ -123,8 +123,8 @@ test("exec runs a one-argument command line through the shell, argv untouched", 
 	assert.deepEqual(io.calls[0].slice(6), ["--", "pwd; whoami"]);
 });
 
-test("artifacts lists every file the container left, newest first, under the folder holding them", () => {
-	const root = "/home/me/.pi/artifacts/pi-a";
+test("artifacts lists every file containers on the repo left, newest first, under the folder holding them", () => {
+	const root = "/home/me/.sandboxes/webapp";
 	const io = fakeIo({
 		[`stat ${root}/shots/new-v4.png`]: { size: 400_000, mtime: new Date(Date.UTC(2026, 8, 16, 9, 30)), dir: false },
 		[`stat ${root}/review-log.md`]: { size: 2048, mtime: new Date(Date.UTC(2026, 8, 16, 9, 55)), dir: false },
@@ -133,7 +133,7 @@ test("artifacts lists every file the container left, newest first, under the fol
 		[`list ${root}`]: ["shots", "review-log.md"],
 	});
 
-	const out = artifacts("pi-a", io).split("\n");
+	const out = artifacts("/w/webapp", io).split("\n");
 
 	assert.equal(out[0], root);
 	assert.match(out[1], /^review-log\.md\s+2K\s+5m ago$/);
@@ -141,7 +141,7 @@ test("artifacts lists every file the container left, newest first, under the fol
 });
 
 test("artifacts says so when the container left nothing", () => {
-	assert.match(artifacts("pi-a", fakeIo()), /nothing left here yet/);
+	assert.match(artifacts("/w/webapp", fakeIo()), /nothing left here yet/);
 });
 
 test("build renders the current rules before it bakes them into the image", () => {
@@ -173,15 +173,14 @@ test("a name that matches no container says so, and names what is running", () =
 	assert.throws(() => resolveSandbox("envtest", io), /no fleet container named envtest[\s\S]*pi-a/);
 });
 
-test("artifacts are readable by either name, and after the container is gone", () => {
-	const root = "/home/me/.pi/artifacts/pi-a";
+test("artifacts live beside the repo name, so they read the same after the container is gone", () => {
+	const root = "/home/me/.sandboxes/webapp";
 	const io = fakeIo({
 		[`stat ${root}/note.md`]: { size: 12, mtime: new Date(Date.UTC(2026, 8, 16, 10, 0)), dir: false },
 		[`list ${root}`]: ["note.md"],
 	});
 
-	assert.match(artifacts("a", io), /pi-a[\s\S]*note\.md/);
-	assert.match(artifacts("pi-a", io), /pi-a[\s\S]*note\.md/);
+	assert.match(artifacts("/w/webapp", io), /sandboxes\/webapp[\s\S]*note\.md/);
 });
 
 test("exec picks up the repo's own toolchain before running anything", () => {

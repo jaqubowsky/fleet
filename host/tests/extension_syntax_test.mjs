@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const root = "/Users/alice/.pi";
+const root = join(import.meta.dirname, "../..");
 const extensionRoot = join(root, "agent/extensions");
 const moduleRoot = join(root, "agent/npm/node_modules");
 const esbuild = join(moduleRoot, "esbuild/bin/esbuild");

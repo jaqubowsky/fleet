@@ -10,9 +10,6 @@ args:
   codex_sentinel:
     required: true
     description: JWT-shaped access-token sentinel carrying codex_account, built by fleet up from the host auth.json; the proxy swaps it for the real bearer
-  memory_mib:
-    required: true
-    description: Sandbox memory limit in MiB for recovery-time budget validation
 sandbox:
   image: my-pi:v1
   entrypoint:
@@ -20,7 +17,6 @@ sandbox:
 environment:
   variables:
     NODE_OPTIONS: "--disable-warning=UNDICI-EHPA"
-    PI_FLEET_MEMORY_MIB: "${{ kit.args.memory_mib }}"
     PI_FLEET_ROLE: "worker"
     PI_LENS_TS_IDLE_EVICT_MS: "30000"
     PI_LENS_LSP_CLIENT_CEILING: "2"

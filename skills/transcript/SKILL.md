@@ -1,7 +1,6 @@
 ---
 name: transcript
 description: 'Use when a recording has to become text - a local audio or video file (mp3, m4a, wav, mp4, mov...), a YouTube or other online video link, a lecture, podcast, meeting, interview or voice note - and when the user asks to transcribe, subtitle or write out what was said.'
-argument-hint: "<file-or-url> [destination]"
 ---
 
 # Transcript
@@ -11,7 +10,7 @@ write the text where the user wants it. No cloud, no upload.
 
 ## Inputs
 
-`$ARGUMENTS` holds a source and an optional destination.
+The text the user appended after this skill holds a source and an optional destination.
 
 - **Source** (required): a path to a local audio/video file, or a URL to an
   online video. Missing or nonexistent path, no URL: ask for it and stop.
@@ -61,7 +60,7 @@ write the text where the user wants it. No cloud, no upload.
    name the path that failed instead of silently picking another one.
 
 Destination inside `~/my-knowledge-base/raw/inbox/`: finish by reminding the
-user to run `/ingest` in that repo to fold the transcript into the wiki.
+user to run `/skill:ingest` in that repo to fold the transcript into the wiki.
 
 ## Common mistakes
 

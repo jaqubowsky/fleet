@@ -19,7 +19,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	const out = await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
 	assert.deepEqual(out, { sandbox: "pi-webapp-web-1", agent: "webapp-web-1", pane: "w1:p9" });
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
-	assert.ok(run.includes("--clone") && run.includes("--static-mcp") && run.includes("pi.memory_mib=8192"));
+	assert.ok(run.includes("--clone") && run.includes("--static-mcp") && !run.some((a) => /memory_mib/.test(a)));
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
 	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec");
 	assert.deepEqual(execs[0], ["sbx", "exec", "pi-webapp-web-1", "sh", "-c", 'cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")', "--", "web-1"]);

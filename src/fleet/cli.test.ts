@@ -3,10 +3,15 @@ import { test } from "node:test";
 import { flags } from "./cli.ts";
 
 test("flags: values, bare booleans, -- passthrough", () => {
-	assert.deepEqual(flags(["x", "--repo", "/r", "--sign", "--", "npm", "--version"]), { opts: { repo: "/r", sign: true }, rest: ["x", "npm", "--version"] });
+	assert.deepEqual(flags(["x", "--repo", "/r", "--sign", "--", "npm", "--version"], ["repo", "sign"]), { opts: { repo: "/r", sign: true }, rest: ["x", "npm", "--version"] });
 });
 
 test("a value flag without a value is an error, never true", () => {
-	assert.throws(() => flags(["x", "--branch"]), /missing value for --branch/);
-	assert.throws(() => flags(["x", "--branch", "--memory", "8g"]), /missing value for --branch/);
+	assert.throws(() => flags(["x", "--branch"], ["branch"]), /missing value for --branch/);
+	assert.throws(() => flags(["x", "--branch", "--memory", "8g"], ["branch", "memory"]), /missing value for --branch/);
+});
+
+test("an option the command does not take is refused instead of ignored", () => {
+	assert.throws(() => flags(["--help"], []), /unknown option --help/);
+	assert.throws(() => flags(["--repo", "/r"], ["lines"]), /unknown option --repo/);
 });
