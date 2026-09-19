@@ -39,7 +39,7 @@ const SETTINGS: [string, string][] = [
 	["profiles/host.json", "agent/settings.json"],
 	["profiles/sbx.json", "sbx/agent-settings.json"],
 ];
-const CONTAINER_EXCLUDES = ["delegation.md", "env.md"];
+const CONTAINER_EXCLUDES = ["host.md"];
 
 export function render(root: string, io: Io, provider?: string): void {
 	const path = `${root}/profiles/models.json`;
