@@ -12,7 +12,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `agent/extensions/guard.ts` | the pi hook: trusted tools out, everything else through `src/guard` |
 | `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: another agent settling as a `[fleet]` line |
 | `agent/extensions/statusline.ts` | status line |
-| `profiles/` | `models.json` (providers x roles), `host.json` and `sbx.json` templates |
+| `profiles/` | `models.json` (providers x roles, each role a model and its thinking level), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
 | `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet provider` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |
@@ -20,6 +20,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
 | `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`; the workers' shared memory between sessions and what they leave for a person, kept after the container goes (outside this repo) |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
+| `audits/` | what skill `audit-harness` leaves: a ledger of audited transcripts and one report per run (ignored) |
 
 ## CI=true
 
