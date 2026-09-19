@@ -124,7 +124,7 @@ Rules for the report:
 - No sentence about your own process. Not "I read", not "this changes my earlier conclusion". State the conclusion that holds now.
 - A finding that needs a paragraph is two findings, or it belongs in Out of scope.
 - At most one small ASCII diagram, and only when the flow has three or more hops and the labels carry the meaning.
-- Detail beyond these slots goes to the ticket or a file, when asked for.
+- Detail beyond these slots goes to the ticket, or, when asked for, to a file in `$FLEET_ARTIFACTS`. `.issues/` belongs to `to-spec` and `to-tickets`.
 
 ## Rationalizations
 

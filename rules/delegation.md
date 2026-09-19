@@ -9,6 +9,6 @@ Sub-agents come from the `pi-subagents` extension. A skill that says "spawn a su
 
 # Asking
 
-1. `ask_user_question` only when the reading is unclear and the answers lead to materially different work. Never to confirm a plan, never for what the repo or a command can answer. A skill that names its own confirmation gate (seams in `tdd`, the split in `to-tickets`, the spec in `to-spec`) keeps it
+1. `ask_user_question` only when the reading is unclear and the answers lead to materially different work. Never to confirm a plan, never for what the repo or a command can answer.
 2. One dialog, up to four questions, each with the option you recommend first and one real downside per option
 3. Print mode has no dialog: state the assumption and continue
