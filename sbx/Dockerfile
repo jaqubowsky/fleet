@@ -48,24 +48,28 @@ RUN case "$(dpkg --print-architecture)" in \
  && fnm --version
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
-ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/local/bin/chromium
 
-ARG PLAYWRIGHT_VERSION=1.63.0
+ARG PLAYWRIGHT_CLI_VERSION=0.1.20
 
-RUN sudo -E npm install -g --prefix /usr/local/share/npm-global "playwright@$PLAYWRIGHT_VERSION" \
- && sudo -E /usr/local/share/npm-global/bin/playwright install --with-deps chromium \
+RUN sudo npm install -g --prefix /usr/local/share/npm-global "@playwright/cli@$PLAYWRIGHT_CLI_VERSION" \
+ && sudo -E /usr/local/share/npm-global/bin/playwright-cli install-browser --with-deps chromium \
  && sudo rm -rf /var/lib/apt/lists/* \
- && sudo chmod -R a+rwX "$PLAYWRIGHT_BROWSERS_PATH"
+ && sudo chmod -R a+rwX "$PLAYWRIGHT_BROWSERS_PATH" \
+ && sudo chown -R agent:agent /home/agent/.cache
 
-ARG AGENT_BROWSER_VERSION=0.37.1
+RUN sudo ln -sf "$PLAYWRIGHT_BROWSERS_PATH"/ffmpeg-*/ffmpeg-linux /usr/local/bin/ffmpeg \
+ && sudo ln -sf /usr/local/share/npm-global/lib/node_modules/@playwright/cli/node_modules/playwright-core/cli.js /usr/local/bin/playwright-core \
+ && ffmpeg -hide_banner -version | head -1 \
+ && playwright-core --version
 
-RUN chrome="$(ls -d "$PLAYWRIGHT_BROWSERS_PATH"/chromium-*/chrome-linux*/chrome 2>/dev/null | head -1)" \
- && [ -x "$chrome" ] \
- && printf '#!/bin/sh\nexec "%s" --no-sandbox "$@"\n' "$chrome" \
-    | sudo tee "$AGENT_BROWSER_EXECUTABLE_PATH" >/dev/null \
- && sudo chmod +x "$AGENT_BROWSER_EXECUTABLE_PATH" \
- && sudo npm install -g --prefix /usr/local/share/npm-global --allow-scripts=agent-browser "agent-browser@$AGENT_BROWSER_VERSION" \
- && agent-browser doctor --json
+RUN printf '{"outputDir":"/tmp/playwright-cli","browser":{"browserName":"chromium"}}' \
+    | sudo tee /etc/playwright-cli.json >/dev/null \
+ && PLAYWRIGHT_MCP_CONFIG=/etc/playwright-cli.json playwright-cli open about:blank \
+ && playwright-cli close \
+ && test -d /tmp/playwright-cli \
+ && rm -rf /tmp/playwright-cli
+
+ENV PLAYWRIGHT_MCP_CONFIG=/etc/playwright-cli.json
 
 RUN printf '%s\n' \
       'case ":$PATH:" in' \
@@ -104,10 +108,13 @@ RUN sudo apt-get update \
  && sudo ln -sf /usr/local/share/npm-global/bin/pi /usr/local/bin/pi \
  && pi --version
 
-RUN sudo chown -R agent:agent /home/agent/.npm
-
 COPY --from=pi-home --chown=agent:agent agent/    /home/agent/.pi/agent/
 COPY --from=pi-home --chown=agent:agent skills/   /home/agent/.pi/skills/
+
+RUN cp -r /usr/local/share/npm-global/lib/node_modules/@playwright/cli/skills/playwright-cli \
+      /home/agent/.pi/skills/playwright-cli \
+ && test -r /home/agent/.pi/skills/playwright-cli/SKILL.md
+
 COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings.json
 COPY --chmod=0755 container/base-worktree.sh       /usr/local/bin/base-worktree
 
