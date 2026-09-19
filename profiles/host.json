@@ -1,7 +1,7 @@
 {
   "defaultProvider": "{{provider}}",
   "defaultModel": "{{models.coordinator}}",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "{{thinking.coordinator}}",
   "defaultProjectTrust": "ask",
   "tuiMode": "fullscreen",
   "fullscreenExitOutput": "resume-hint",
@@ -12,10 +12,10 @@
   "skills": ["~/.pi/skills"],
   "subagents": {
     "agentOverrides": {
-      "worker": { "model": "{{provider}}/{{models.worker}}", "thinking": "medium" },
-      "reviewer": { "model": "{{provider}}/{{models.reviewer}}", "thinking": "medium" },
-      "scout": { "model": "{{provider}}/{{models.scout}}", "thinking": "low" },
-      "researcher": { "model": "{{provider}}/{{models.researcher}}", "thinking": "low" }
+      "reviewer": { "model": "{{provider}}/{{models.reviewer}}", "thinking": "{{thinking.reviewer}}" },
+      "scout": { "model": "{{provider}}/{{models.scout}}", "thinking": "{{thinking.scout}}" },
+      "researcher": { "model": "{{provider}}/{{models.researcher}}", "thinking": "{{thinking.researcher}}" },
+      "worker": { "disabled": true }
     }
   },
   "packages": [

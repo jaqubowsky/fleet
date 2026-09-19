@@ -5,7 +5,7 @@ import { render } from "./provider.ts";
 
 test("render switches the provider, writes both settings and both AGENTS.md", () => {
 	const io = fakeIo({
-		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "a", providers: { a: { coordinator: "m1", worker: "w1" }, b: { coordinator: "m2", worker: "w2" } } }),
+		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "a", providers: { a: { coordinator: { model: "m1", thinking: "high" }, worker: { model: "w1", thinking: "high" } }, b: { coordinator: { model: "m2", thinking: "max" }, worker: { model: "w2", thinking: "max" } } } }),
 		"read /root/profiles/host.json": '{"m":"{{provider}}/{{models.coordinator}}"}',
 		"read /root/profiles/sbx.json": '{"m":"{{models.worker}}"}',
 		"list /root/rules": ["env.md", "core.md", "delegation.md"],
@@ -24,7 +24,7 @@ test("render switches the provider, writes both settings and both AGENTS.md", ()
 
 test("render copies the disclosed refs next to AGENTS.md and keeps them out of it", () => {
 	const io = fakeIo({
-		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "a", providers: { a: { coordinator: "m1", worker: "w1" } } }),
+		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "a", providers: { a: { coordinator: { model: "m1", thinking: "high" }, worker: { model: "w1", thinking: "high" } } } }),
 		"read /root/profiles/host.json": '{"m":"{{models.coordinator}}"}',
 		"read /root/profiles/sbx.json": '{"m":"{{models.worker}}"}',
 		"list /root/rules/refs": ["testing.md", "architecture.md"],

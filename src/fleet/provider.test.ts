@@ -5,8 +5,16 @@ import { renderSettings, withActiveProvider, type Models } from "./provider.ts";
 const models: Models = {
 	activeProvider: "openrouter",
 	providers: {
-		openrouter: { coordinator: "glm", worker: "glm-w", scout: "glm-s" },
-		"openai-codex": { coordinator: "gpt-c", worker: "gpt-w", scout: "gpt-s" },
+		openrouter: {
+			coordinator: { model: "glm", thinking: "high" },
+			worker: { model: "glm-w", thinking: "high" },
+			scout: { model: "glm-s", thinking: "low" },
+		},
+		"openai-codex": {
+			coordinator: { model: "gpt-c", thinking: "max" },
+			worker: { model: "gpt-w", thinking: "max" },
+			scout: { model: "gpt-s", thinking: "low" },
+		},
 	},
 };
 
@@ -15,8 +23,12 @@ test("renders provider and role tokens", () => {
 	assert.equal(out, '{"p":"openrouter","m":"openrouter/glm-w"}');
 });
 
+test("renders the thinking level of a role", () => {
+	assert.equal(renderSettings('{"t":"{{thinking.scout}}"}', models), '{"t":"low"}');
+});
+
 test("missing role fails", () => {
-	assert.throws(() => renderSettings('{"m":"{{models.reviewer}}"}', models), /no openrouter model for role reviewer/);
+	assert.throws(() => renderSettings('{"m":"{{models.reviewer}}"}', models), /no openrouter entry for role reviewer/);
 });
 
 test("unknown token fails", () => {

@@ -1,12 +1,14 @@
 import { buildAgents } from "./agents.ts";
 import type { Io } from "./io.ts";
 
+export type Role = { model: string; thinking: string };
+
 export type Models = {
 	activeProvider: string;
-	providers: Record<string, Record<string, string>>;
+	providers: Record<string, Record<string, Role>>;
 };
 
-function roles(models: Models): Record<string, string> {
+function roles(models: Models): Record<string, Role> {
 	const row = models.providers[models.activeProvider];
 	if (!row) throw new Error(`unknown provider: ${models.activeProvider}`);
 	return row;
@@ -17,10 +19,10 @@ export function renderSettings(template: string, models: Models): string {
 	const map = roles(models);
 	const rendered = template
 		.replaceAll("{{provider}}", provider)
-		.replace(/\{\{models\.([a-z-]+)\}\}/g, (_, role: string) => {
-			const model = map[role];
-			if (!model) throw new Error(`no ${provider} model for role ${role}`);
-			return model;
+		.replace(/\{\{(models|thinking)\.([a-z-]+)\}\}/g, (_, field: string, role: string) => {
+			const entry = map[role];
+			if (!entry) throw new Error(`no ${provider} entry for role ${role}`);
+			return field === "models" ? entry.model : entry.thinking;
 		});
 	const left = rendered.match(/\{\{[^}]+\}\}/);
 	if (left) throw new Error(`unresolved token: ${left[0]}`);
