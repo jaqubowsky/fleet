@@ -1,6 +1,6 @@
 ---
 name: two-axis-review
-description: 'Review the changes since a fixed point (commit, branch, tag, or merge-base) on two axes: the repo''s documented coding standards, and the originating spec/ticket. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".'
+description: 'Reviewing a diff against a fixed point on two axes: this repo''s documented standards, and the ticket or spec the work came from. Use when the user asks to review a branch, a PR or work in progress, and after the last commit of a piece of work before it is handed over. Runs the axes as parallel sub-agents, each with its own brief, and aggregates what they find.'
 ---
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:

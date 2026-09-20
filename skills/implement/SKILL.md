@@ -1,6 +1,6 @@
 ---
 name: implement
-description: 'Implement a piece of work described by a local spec or ticket file under .issues/. Use when the user asks to implement a spec, a ticket, or the next ticket of a feature.'
+description: 'Building a ticket, spec or analysis file into working code, one ticket per context. Use when the user hands one to implement or asks for the next ticket of a feature. Carries the frontier order, the gate named before the first edit, and the review that closes it.'
 ---
 
 # Implement
@@ -17,7 +17,7 @@ Implement the work described by the user in the spec or tickets.
 
 4. **Name the gate.** Before the first edit, state the command that will prove this ticket done and the one-line reason it is the right command. The ticket's acceptance criteria are the source; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 9 re-runs, so name it now, not later.
 
-5. **Build with TDD** at the pre-agreed seams, using the `tdd` skill.
+5. **Build at the pre-agreed seams.** Read skill `tdd` before the first test and run its loop: one seam, one red, one implementation.
 
 6. Run typechecking regularly and single test files regularly. The full suite belongs to step 9, not here.
 

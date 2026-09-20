@@ -1,6 +1,6 @@
 ---
 name: analyze-task
-description: 'Use when the user asks to analyze a task, issue, ticket, bug report, or feature specification before implementation, diagnose reported behavior, or determine the required changes and scope, including Linear tickets and mixed bug-and-feature requests.'
+description: 'Turning a ticket, bug report or feature request into an evidence-backed analysis before any code is written. Use when the user asks what a piece of work involves, what is really broken, or how big it is. Ends at a proposal: the accepted specification, the defects the same flow carries, and what stays out of scope.'
 ---
 
 # Analyze task
