@@ -37,7 +37,7 @@ If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The ma
 │       └── docs/adr/
 ```
 
-Create files lazily: only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
+Create files lazily: only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed. With several contexts, infer which one the current topic belongs to; when that is unclear, ask.
 
 ## During the session
 
@@ -72,3 +72,7 @@ Only offer to create an ADR when all three are true:
 3. **The result of a real trade-off**: there were genuine alternatives and you picked one for specific reasons
 
 If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+
+## Done
+
+Every term the session settled is in `CONTEXT.md` before the session ends, and every decision that met the three tests has an ADR or a one-line note saying which test it failed. A term still carrying two meanings at the end is reported as unsettled, with the question that would settle it.

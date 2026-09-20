@@ -1,6 +1,6 @@
 ---
 name: how
-description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, onboarding mental models. Can critique architecture."
+description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"), and when the user asks for the architectural problems or improvements of a subsystem."
 ---
 
 # How
@@ -40,7 +40,7 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 - Explorer 2: request path and enforcement
 - Explorer 3: configuration and metrics infrastructure
 
-The right decomposition depends on the question. Use your judgment. Narrow questions: 2 explorers is fine. Broad subsystems: up to 4.
+The right decomposition depends on the question. Default to three explorers: two when the subsystem sits in one package, four when it spans services or processes.
 
 Launch every explorer as a `scout` sub-agent, all in the same turn so they run concurrently. If `scout` is unavailable, say so in the answer before starting, then explore inline.
 
@@ -73,19 +73,11 @@ The explainer gets all explorers' findings and writes the human-facing explanati
 
 Present the explainer's output to the user. You may lightly edit for clarity or add context from the conversation, but don't substantially rewrite. The explainer's communication is the product.
 
-### Output format
+The output structure (Overview, Key concepts, How it works, Where things live, Gotchas) lives in `references/explainer-prompt.md`, the one place both paths read it from.
 
-Follow this structure, adapted to the question. Not every section is needed for every question.
+### Done
 
-**Overview.** 1-2 paragraphs. What it is, what it does, why it exists. Enough to decide whether to keep reading.
-
-**Key concepts.** The important types, services, or abstractions. Brief definition of each. Not exhaustive, just the ones needed to understand the rest.
-
-**How it works.** The core of the explanation. Walk through the flow: what triggers it, what happens step by step, where data goes, the decision points. Prose, not pseudocode. Reference specific files and functions so the reader can go look, but don't dump code blocks unless a snippet is genuinely necessary.
-
-**Where things live.** A brief map of the relevant files/directories. Not every file, just the ones needed to start working in this area.
-
-**Gotchas.** Non-obvious or surprising things that would trip someone up. Historical context that explains why something looks weird. Known sharp edges.
+Every hop from trigger to outcome is named, with no step hand-waved; every concept the explanation uses is defined before it is used; every claim points at a file the reader can open. A hop you could not trace is named as untraced rather than smoothed over, and a question you reinterpreted is stated as the interpretation you answered.
 
 ## Critique mode
 
@@ -115,3 +107,5 @@ Categorize findings:
 - **Dismissed.** Wrong, missing context, or style preference
 
 Present the explanation first (from Step 1), then the critique verdict below it. The explanation should stand on its own; someone who just wants to understand the system shouldn't wade through critique.
+
+Done when every critic finding carries one of the four verdicts, and each **Act on** finding names the cost of the change beside the problem.

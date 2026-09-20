@@ -1,6 +1,7 @@
 ---
 name: transcript
 description: 'Use when a recording has to become text - a local audio or video file (mp3, m4a, wav, mp4, mov...), a YouTube or other online video link, a lecture, podcast, meeting, interview or voice note - and when the user asks to transcribe, subtitle or write out what was said.'
+compatibility: Requires mlx-whisper on Apple silicon, yt-dlp for online sources, and uv for the parakeet-mlx fallback
 ---
 
 # Transcript

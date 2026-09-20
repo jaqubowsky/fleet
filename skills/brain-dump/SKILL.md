@@ -1,6 +1,7 @@
 ---
 name: brain-dump
-description: 'Capture knowledge into the second brain''s inbox (raw/inbox/) for later ingestion. Handles four source types: current-conversation insights, an article URL (fetched and cleaned), a YouTube link (audio via yt-dlp, transcribed with Whisper; manual subs as fast path), or a local PDF (text via pdftotext). Use when the user wants to save a takeaway, article, video, or PDF to their knowledge base.'
+description: 'Capture a source into the second brain''s inbox (raw/inbox/) for later ingestion. Use when the user wants to save an article URL, a YouTube video, a local PDF or a takeaway from this conversation to their knowledge base.'
+compatibility: Requires defuddle, yt-dlp and pdftotext, plus write access to ~/my-knowledge-base/raw/inbox/
 ---
 
 Capture a source into the second brain's inbox at
@@ -48,10 +49,9 @@ useful commands or snippets: NOT a transcript. One note per distinct topic.
 
 ## Rules (all modes)
 
-- Do NOT touch `wiki/`: no `index.md`, `log.md`, or page edits from here.
-  The inbox is the only write surface outside the knowledge-base repo;
-  synthesis happens there via `/skill:ingest`, which sweeps unprocessed `raw/`
-  files automatically.
+- `raw/inbox/` is the only write surface from here: `wiki/`, its `index.md`
+  and its `log.md` are written inside the knowledge-base repo by
+  `/skill:ingest`, which sweeps unprocessed `raw/` files automatically.
 - If the inbox is not writable (e.g. a read-only sandbox mount), print the
   full note in the reply instead and tell the user to save it from a host
   session.

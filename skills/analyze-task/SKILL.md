@@ -1,6 +1,6 @@
 ---
 name: analyze-task
-description: 'Turning a ticket, bug report or feature request into an evidence-backed analysis before any code is written. Use when the user asks what a piece of work involves, what is really broken, or how big it is. Ends at a proposal: the accepted specification, the defects the same flow carries, and what stays out of scope.'
+description: 'Turning a ticket, bug report or feature request into an evidence-backed analysis before any code is written. Use when the user asks what a piece of work involves, what is really broken, or how big it is.'
 ---
 
 # Analyze task
@@ -9,7 +9,7 @@ description: 'Turning a ticket, bug report or feature request into an evidence-b
 
 Produce an evidence-backed requirements analysis: the accepted specification, the evidenced defects that impair use of the same flow, and worthwhile improvements to the code being touched.
 
-This workflow ends at a proposal. Do not implement, do not update tickets, do not start work unless separately asked. Reproduction tests, harnesses and reversible probes are allowed within existing permissions. Keep diagnostic artifacts identifiable, remove temporary instrumentation before handover, report anything retained. Pass this boundary to every delegated agent.
+This workflow ends at a proposal; implementation, ticket updates and the work itself start on a separate request. Reproduction tests, harnesses and reversible probes are allowed within existing permissions. Keep diagnostic artifacts identifiable, remove temporary instrumentation before handover, report anything retained. Pass this boundary to every delegated agent.
 
 ## Read the sources before reading the code
 
@@ -128,29 +128,8 @@ Rules for the report:
 
 ## Rationalizations
 
+Each row quotes an analysis written without this document, on a ticket whose linked issue was a defect in the same flow.
+
 | Excuse | Reality |
 | --- | --- |
-| "The description covers it" | Comments and linked issues amend scope. Read them, then say so. |
-| "The linked issue is probably unrelated" | One level deep is cheap. Decide after reading, not before. |
-| "No docs in this repo" | You have not looked until you checked README, ADRs and the touched files' history. |
-| "That ADR is old" | An ADR is overturned in writing, with the driver named. Silence is not an overturn. |
-| "The defect predates the ticket" | Reachability during use of the flow decides scope, not the ticket's age. |
-| "It is obviously broken" | Obvious still needs code or runtime evidence. |
-| "I spent hours on this" | Investigation time is not coverage, and sunk cost is not scope. |
-| "It would be cleaner to also refactor X" | Proximity is not a reason. Report it, keep it out of scope. |
-| "I might as well fix it while I am here" | The workflow ends at analysis. Fixing is a separate request. |
-| "The reader should see how thorough I was" | Thoroughness shows in the findings. A transcript of the search is noise. |
-| "This source deserves its own paragraph" | It gets a table row, or it did not change a decision. |
-
-## Red flags
-
-- Scope taken from the ticket title.
-- No source list, or a source list without the ones you could not open.
-- A recommendation from a comment silently promoted to a requirement.
-- A cause claimed without an executed reproduction.
-- A reachable user-facing defect dropped because the ticket omits it.
-- An unrelated cleanup presented as required work.
-- Any edit to production code.
-- A section walking through the sources you read.
-- A prose paragraph where a table row fits.
-- A report longer than one screen.
+| "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |

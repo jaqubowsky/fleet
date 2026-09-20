@@ -1,6 +1,6 @@
 ---
 name: implement
-description: 'Building a ticket, spec or analysis file into working code, one ticket per context. Use when the user hands one to implement or asks for the next ticket of a feature. Carries the frontier order, the gate named before the first edit, and the review that closes it.'
+description: 'Building a ticket, spec or analysis file into working code, one ticket per context. Use when the user hands one to implement or asks for the next ticket of a feature.'
 ---
 
 # Implement

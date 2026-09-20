@@ -1,6 +1,7 @@
 ---
 name: to-testing
-description: 'Browser acceptance audit of a finished change. Use after implementation and review when the changed behavior is reachable through a web UI. Walks the change and its siblings for regressions against the base branch, and reports with evidence for a person to approve.'
+description: 'Browser acceptance audit of a finished change. Use after implementation and review when the changed behavior is reachable through a web UI.'
+compatibility: Requires a container that can start the project's app, plus playwright-cli for the browser session
 ---
 
 # To testing

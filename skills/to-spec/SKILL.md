@@ -1,9 +1,11 @@
 ---
 name: to-spec
-description: 'Turn the current conversation into a feature spec written to a local markdown file under .issues/<feature-slug>/spec.md: no interview, just synthesis of what was already discussed. Use when the user wants a spec for a single feature from the current context. Skip a single bounded patch (one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test): that goes straight to TDD, no spec.'
+description: 'Turn the current conversation into a feature spec at .issues/<feature-slug>/spec.md. Use when the user wants a spec for a single feature from the current context.'
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do NOT interview the user: just synthesize what you already know.
+A single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
+
+This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Synthesize what you already know; the interview belongs to `grilling`.
 
 The spec is written as a **local markdown file**, not published to a hosted issue tracker.
 
@@ -72,8 +74,6 @@ A list of implementation decisions that were made. This can include:
 - Specific interactions
 
 Add the alternatives that were turned down, one line each with the reason, so the next session does not rediscover a dead end.
-
-Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
 
 Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts: not a working demo, just the important bits.
 

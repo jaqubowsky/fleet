@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: 'Writing or changing a test, or fixing a bug that needs one. Use before the first test of a feature, ticket or fix, when a red test has to be diagnosed, and when green arrives on the first run. Carries the seam agreement, the red-green loop, what a good test is and where it belongs.'
+description: 'Writing or changing a test, or fixing a bug that needs one. Use before the first test of a feature, ticket or fix, when a red test has to be diagnosed, and when green arrives on the first run.'
 ---
 
 # Test-Driven Development

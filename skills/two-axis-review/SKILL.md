@@ -1,6 +1,7 @@
 ---
 name: two-axis-review
-description: 'Reviewing a diff against a fixed point on two axes: this repo''s documented standards, and the ticket or spec the work came from. Use when the user asks to review a branch, a PR or work in progress, and after the last commit of a piece of work before it is handed over. Runs the axes as parallel sub-agents, each with its own brief, and aggregates what they find.'
+description: 'Reviewing a diff against a fixed point on two axes: this repo''s documented standards, and the ticket or spec the work came from. Use when the user asks to review a branch, a PR or work in progress, and after the last commit of a piece of work before it is handed over.'
+compatibility: Requires git, jscpd through npx for clone detection, and the `reviewer` sub-agent to run the two axes
 ---
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
@@ -77,6 +78,10 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 Present both reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings: the axes are deliberately separate (see _Why two axes_).
 
 End with a one-line summary: total findings per axis and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+
+### 7. Done
+
+Every file the diff touches carries a verdict on both axes, every clone pair from step 4 is ruled on (extract or stays copied, with the reason), and an axis that could not run is named with what it would have needed. The review proves the commit it ran against: a fix landing after it means another commit and another run.
 
 ## Why two axes
 

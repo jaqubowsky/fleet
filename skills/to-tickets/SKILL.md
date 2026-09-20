@@ -1,9 +1,11 @@
 ---
 name: to-tickets
-description: 'Break a plan, spec, or the current conversation into tracer-bullet tickets written as local markdown files under .issues/<feature-slug>/, each declaring its blocking edges. Use when the user wants to convert a plan into tickets, create implementation tickets, or break down work. Skip work that fits a single bounded patch (one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test): no ticket split, straight to TDD.'
+description: 'Break a plan, spec or the current conversation into tracer-bullet tickets under .issues/<feature-slug>/. Use when the user wants to convert a plan into tickets, create implementation tickets, or break down work.'
 ---
 
 # To Tickets
+
+Work that fits a single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
 
 Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet vertical slices, each declaring the tickets that **block** it. Tickets are written as **local markdown files** under `.issues/<feature-slug>/`, not published to a hosted issue tracker.
 
@@ -60,7 +62,7 @@ Pick a `<feature-slug>` for the overall plan (kebab-case, derived from the plan/
 
 Write one file per approved ticket at `.issues/<feature-slug>/<NN>-<slug>.md`, numbered from `01` in **dependency order** (blockers first), so the numbering itself reflects implementation order and "Blocked by" can reference real filenames. One ticket per file, never a single combined file.
 
-Set `Status: ready-for-agent` unless instructed otherwise: the tickets are agent-grabbable by construction.
+Set `Status: ready-for-agent`, so the tickets are agent-grabbable by construction; a status the user named replaces it.
 
 <ticket-template>
 
@@ -90,6 +92,6 @@ The end-to-end behaviour this ticket makes work, from the user's perspective: no
 
 Avoid specific file paths or code snippets in ticket bodies, they go stale fast. A path under Sources is the exception: it is an anchor, so date it and say to re-locate by symbol name if it moved. Second exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.
 
-Do NOT close or modify the parent spec/plan file.
+The parent spec or plan stays as it is; the ticket files are the only files this skill writes.
 
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom. Work the frontier one ticket at a time with the `implement` skill, clearing context between tickets.

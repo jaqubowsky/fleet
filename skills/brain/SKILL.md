@@ -17,3 +17,8 @@ Question: the text the user appended after this skill
 3. The knowledge base is read-only from this session. If the answer revealed
    a gap or produced a synthesis worth keeping, suggest running `/skill:ingest` in
    the knowledge-base repo instead of writing to it directly.
+
+Done when every claim in the answer carries the page it came from and that
+page's `raw/` source, or the answer says plainly that the wiki holds nothing
+on the topic. A page that contradicts the codebase is reported with both,
+and the codebase wins.

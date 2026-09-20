@@ -5,7 +5,7 @@ description: 'Use when something is broken, throwing, failing or slow, when the 
 
 # Diagnosing Bugs
 
-A discipline for hard bugs. Skip phases only when explicitly justified.
+A discipline for hard bugs, one phase gate at a time.
 
 ## The rule
 
@@ -14,6 +14,8 @@ A discipline for hard bugs. Skip phases only when explicitly justified.
 The failure this skill prevents is reading code, forming a theory, and patching against it. That path produces fixes that cannot be falsified, which is why the second one fails too.
 
 **Two strikes and you are in this skill.** A second failed fix for the same symptom means the diagnosis was never grounded, so stop patching and enter at Phase 1 regardless of how the bug was reported. Say that you are doing it and why.
+
+The failed patches stay in place until the loop is red: a revert is a change like any other, and it goes out with the real fix, proven by the same loop. A patch that is harmful on its own (a retry on a call not shown to be idempotent) is reverted as its own fix, with its own check.
 
 When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
 
@@ -179,28 +181,15 @@ The tell is the shape of the failures rather than their number: each fix works l
 
 Say it to the user in those terms, name the coupling you keep colliding with, and put the structural change on the table before writing more code.
 
-## Red flags
-
-- "Let me just try changing X and see."
-- "It's probably the cache / the race / the null." (before the loop exists)
-- "The repro is manual, but I understand the bug well enough."
-- "I'll write the test after I confirm the fix works."
-- "Only one hypothesis is plausible here."
-- "Let me fix these two things at once."
-- A fix has landed and you cannot name the command that proves it.
-
-Each of these means: back to the phase you skipped.
-
 ## Rationalizations
+
+Each row quotes a plan written without this document, on a bug two patches had already failed to fix.
 
 | Excuse | Reality |
 |---|---|
-| "The bug is obvious, the process is overkill" | Then the loop costs two minutes. Bugs that were genuinely obvious don't reach a second failed fix. |
-| "No time for a harness, it's urgent" | Guess-and-check is slower and gives no signal for when it's done. Under pressure the loop is the short path. |
-| "I can't automate this one, it's visual" | That's the HITL loop, not an exemption. #10 in Phase 1. |
-| "Reading the code is faster than instrumenting" | Reading tells you what the code should do. The bug lives where it doesn't. |
-| "The test can wait, I'll verify by hand" | Hand-verifying a fix you just wrote confirms your expectation, not the behaviour. |
-| "One more attempt and I'll have it" | After two, the diagnosis is missing. After three, the structure is wrong. |
+| "The repro says one thing: state shared across requests. That is what the next 20 minutes go after." | A symptom's shape names a class of cause, not a cause. The loop goes red on the symptom first; the class is Phase 3 material, ranked against its siblings. |
+| "The first hit in the submit-to-confirmation path is the suspect." | A grep locates the seam the loop drives. A suspect is a hypothesis, and a hypothesis before red is the failure this skill prevents. |
+| "Fix the cause the grep and the red test point at" at 17:52, with the freeze at 18:00 | The loop earns a fix only after it is red, minimised and the hypothesis tested against it. A red test plus a theory is Phase 2, and the fix at 17:52 is patch three. |
 
 ## Quick reference
 

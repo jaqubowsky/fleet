@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: 'Answering an open pull request round after round: wait out CI and the review bots, fix what is real, reply to what is not. Use when the user says to babysit or watch a pushed PR, and again each time a new round of findings or a red check lands. Done is every check green and every finding answered, not the first quiet moment.'
+description: 'Answering an open pull request round after round. Use when the user says to babysit or watch a pushed PR, and again each time a new round of findings or a red check lands.'
 ---
 
 # Babysit a pull request
