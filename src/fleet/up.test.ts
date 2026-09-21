@@ -129,7 +129,14 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 
 	assert.ok(run.includes("-e") && run.includes("FLEET_ARTIFACTS=/home/me/.sandboxes/webapp"));
 	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
-	assert.deepEqual(run.slice(-5), [repo, "/home/me/.sandboxes/webapp", "/home/me/.pi/cache/webapp", "--", "--approve"]);
+	assert.deepEqual(run.slice(-6), [
+		repo,
+		"/home/me/.sandboxes/webapp",
+		"/home/me/.pi/cache/webapp",
+		"/home/me/my-knowledge-base:ro",
+		"--",
+		"--approve",
+	]);
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.sandboxes/webapp"));
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/cache/webapp"));
 });

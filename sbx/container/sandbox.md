@@ -10,6 +10,7 @@ You are the worker. The repository here is a private clone at the same absolute 
 4. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one
 5. `sudo` works, so install any tool the repo does not declare, and name in your report what you added
 6. The env files the host checkout carries are copied in at creation, so one missing here is missing there too: say so instead of inventing values
+7. The host wiki at `/Users/alice/my-knowledge-base` is mounted read-only at the same path; use the `brain` skill for recorded decisions and do not write to it
 
 ## Evidence
 

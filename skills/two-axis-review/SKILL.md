@@ -35,7 +35,7 @@ Look for the originating spec, in this order:
 
 Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, or `AGENTS.md`.
 
-Then the personal knowledge base at `/Users/alice/my-knowledge-base/wiki/`: read its `index.md` first (Second brain rule 1). Inside a container that path is absent: skip the wiki, say so in the report, and review from the repo standards and the smell baseline alone. Four pages bear on the verdict of any review, whatever the diff touches:
+Then the personal knowledge base at `/Users/alice/my-knowledge-base/wiki/`: read its `index.md` first (Second brain rule 1). Four pages bear on the verdict of any review, whatever the diff touches:
 
 | Page | What it decides |
 | --- | --- |

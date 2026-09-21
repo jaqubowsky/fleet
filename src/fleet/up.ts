@@ -21,6 +21,14 @@ const DETECT_TIMEOUT_MS = 90_000;
 const DEFAULT_CPUS = "4";
 const KNOWN_STATUS = new Set(["idle", "done", "working", "blocked"]);
 
+function parseSandboxList(text: string): { sandboxes?: Sandbox[] } {
+	try {
+		return JSON.parse(text) as { sandboxes?: Sandbox[] };
+	} catch (error) {
+		throw new Error("sbx ls returned invalid JSON", { cause: error });
+	}
+}
+
 export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; agent: string; pane: string }> {
 	const memory = input.memory ?? "8g";
 	const cpus = input.cpus ?? DEFAULT_CPUS;
@@ -28,7 +36,7 @@ export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; age
 	const sandbox = sandboxName(input.repo, input.label);
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
-	const existing = fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true }))).find((s: Sandbox) => s.name === sandbox);
+	const existing = fleetSandboxes(parseSandboxList(io.sbx(["ls", "--json"], { quiet: true }))).find((s: Sandbox) => s.name === sandbox);
 	if (!existing) {
 		create(input, sandbox, origin, memory, cpus, io);
 		try {
@@ -61,6 +69,7 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
 	const artifacts = artifactsDir(input.repo, io);
 	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
+	const knowledgeBase = `${io.home}/my-knowledge-base`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
 	try {
@@ -79,7 +88,7 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 		"--kit-arg", `pi.codex_account=${codex.account}`,
 		"--kit-arg", `pi.codex_sentinel=${codex.sentinel}`,
 		...(linear ? ["--static-mcp", linear] : []),
-		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, "--", "--approve",
+		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, `${knowledgeBase}:ro`, "--", "--approve",
 	]);
 }
 
@@ -183,7 +192,9 @@ async function waitForAgent(io: Io, pane: string): Promise<void> {
 		try {
 			const status = io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent.agent_status ?? "";
 			if (KNOWN_STATUS.has(status)) return;
-		} catch {}
+		} catch (error) {
+			if (!(error instanceof Error) || !error.message.includes("agent_not_found")) throw error;
+		}
 		await io.sleep(2000);
 	}
 	throw new Error(`pi did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`);

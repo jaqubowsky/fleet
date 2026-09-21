@@ -20,6 +20,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
 | `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`; the workers' shared memory between sessions and what they leave for a person, kept after the container goes (outside this repo) |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
+| `~/my-knowledge-base/` | mounted read-only into every container at the same absolute path; read by the `brain` skill |
 | `audits/` | what skill `audit-harness` leaves: a ledger of audited transcripts and one report per run (ignored) |
 
 ## CI=true

@@ -74,7 +74,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-REQUIRED SUB-SKILL: use `brain` after the code analysis. Inside a container the wiki is absent: skip this step and say so. Compare recorded decisions with the proposal, cite wiki pages and their sources, report missing knowledge or access honestly. Wiki advice challenges the approach; it does not make a recommendation mandatory.
+REQUIRED SUB-SKILL: use `brain` after the code analysis. Compare recorded decisions with the proposal, cite wiki pages and their sources, report missing knowledge or access honestly. Wiki advice challenges the approach; it does not make a recommendation mandatory.
 
 REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
 
