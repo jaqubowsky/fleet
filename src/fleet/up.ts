@@ -70,7 +70,7 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 	}
 	const linear = linearServer(origin);
 	io.sbx([
-		"run", "-d", "--no-share-skills", "--name", sandbox, "--clone", "--memory", memory, "--cpus", cpus,
+		"run", "-d", "--skills=off", "--name", sandbox, "--clone", "--memory", memory, "--cpus", cpus,
 		"-e", "SSH_AUTH_SOCK_GATEWAY=",
 		"-e", "CI=true",
 		"-e", `FLEET_ARTIFACTS=${artifacts}`,
