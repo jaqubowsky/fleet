@@ -17,7 +17,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet render` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
-| `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
+| `skills/` | `shared/` loads on both sides, `host/` only in this session, `container/` only in the image; `profiles/host.json` and `sbx/build.sh` read the directories |
 | `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`, kept after the container goes (outside this repo). `<sandbox>/` inside it is the task directory: `task.md` and `status.md` from `fleet up`, the files each skill owns, and `logs/` with pi's sessions (`PI_CODING_AGENT_SESSION_DIR`) and the `usage.json` that `fleet down` sums from them |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
 | `~/my-knowledge-base/` | mounted read-only into every container at the same absolute path; read by the `brain` skill |

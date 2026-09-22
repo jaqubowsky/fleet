@@ -7,8 +7,8 @@ STAGE="$(mktemp -d "${TMPDIR:-/tmp}/pi-sbx-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 
 mkdir -p "$STAGE/agent" "$STAGE/skills"
-for skill in analyze-task implement tdd two-axis-review to-testing diagnosing-bugs resolving-merge-conflicts babysit-pr unslop tone writing-for-agents how brain; do
-	cp -RL "$ROOT/skills/$skill" "$STAGE/skills/"
+for skill in "$ROOT"/skills/shared/* "$ROOT"/skills/container/*; do
+	cp -RL "$skill" "$STAGE/skills/"
 done
 mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.ts" "$STAGE/agent/extensions/"
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"

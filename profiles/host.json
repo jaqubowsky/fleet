@@ -9,7 +9,7 @@
   "quietStartup": true,
   "hideThinkingBlock": true,
   "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 },
-  "skills": ["~/.pi/skills"],
+  "skills": ["~/.pi/skills/shared", "~/.pi/skills/host"],
   "subagents": {
     "agentOverrides": {
       "reviewer": { "model": "{{providers.reviewer}}/{{models.reviewer}}", "thinking": "{{thinking.reviewer}}" },
