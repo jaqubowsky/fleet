@@ -37,11 +37,21 @@
     <header class="topbar">
       <div class="topbar-row">
         <h1 id="session-name">Pi remote</h1>
-        <span id="status" class="pill">Connecting</span>
-        <span id="connection" class="dot" aria-hidden="true"></span>
-        <button id="notify" class="ghost" type="button" hidden>Notify</button>
+        <span id="status" class="chip">Connecting</span>
+        <span id="connection" class="dot" title="Connecting"></span>
+        <button id="notify" class="quiet" type="button" hidden>Notify</button>
+        <button
+          id="detail-toggle"
+          class="icon"
+          type="button"
+          aria-expanded="false"
+          aria-controls="facts"
+          aria-label="Session detail"
+        >
+          <span aria-hidden="true">&#8250;</span>
+        </button>
       </div>
-      <ul id="facts" class="facts" aria-label="Session"></ul>
+      <ul id="facts" class="facts" aria-label="Session detail" hidden></ul>
     </header>
 
     <p id="banner" class="banner" hidden></p>
@@ -82,7 +92,8 @@
             </button>
           </div>
           <span class="spacer"></span>
-          <button id="abort" class="ghost" type="button" disabled>Stop</button
+          <button id="abort" class="secondary" type="button" disabled>
+            Stop</button
           ><button id="send" class="primary" type="submit" disabled>
             Send
           </button>

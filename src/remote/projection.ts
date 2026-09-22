@@ -18,7 +18,11 @@ export type Header = {
 	cost?: number;
 	queued: boolean;
 };
-export type Message = { role: "user" | "assistant"; blocks: Block[] };
+export type Message = {
+	role: "user" | "assistant";
+	blocks: Block[];
+	at?: number;
+};
 
 const ENTRY_LIMIT = 1024;
 const MESSAGE_LIMIT = 64;
@@ -168,7 +172,14 @@ export function message(value: unknown): Message | undefined {
 					})
 					.filter((block): block is Block => block !== undefined)
 					.slice(0, BLOCK_LIMIT);
-	return { role: item.role, blocks: blocks.filter(filled) };
+	const at = typeof item.timestamp === "number" && Number.isFinite(item.timestamp)
+		? item.timestamp
+		: undefined;
+	return {
+		role: item.role,
+		blocks: blocks.filter(filled),
+		...(at === undefined ? {} : { at }),
+	};
 }
 
 const filled = (block: Block) => block.kind === "tool" || block.text !== "";

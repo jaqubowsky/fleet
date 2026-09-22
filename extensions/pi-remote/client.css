@@ -21,14 +21,18 @@
 	--step-4: 16px;
 	--step-5: 24px;
 	--step-6: 32px;
-	--radius-1: 6px;
-	--radius-2: 10px;
-	--radius-3: 16px;
+	--radius: 6px;
+	--radius-shell: 12px;
 	--radius-pill: 999px;
+	--control: 44px;
+	--control-pad: 14px;
+	--gutter: 16px;
+	--shadow: 0 6px 18px rgb(0 0 0 / 0.12);
 	--text-xs: 11px;
 	--text-sm: 13px;
 	--text-md: 15px;
 	--text-lg: 17px;
+	--line: 1.5;
 	--sans:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui,
 		sans-serif;
@@ -69,7 +73,7 @@ body {
 	background: var(--bg);
 	color: var(--text);
 	font:
-		var(--text-md) / 1.6 var(--sans);
+		var(--text-md) / var(--line) var(--sans);
 	overflow-wrap: anywhere;
 }
 h1,
@@ -117,7 +121,7 @@ button:disabled {
 	position: sticky;
 	top: 0;
 	z-index: 3;
-	padding: calc(var(--step-2) + env(safe-area-inset-top)) var(--step-4)
+	padding: calc(var(--step-2) + env(safe-area-inset-top)) var(--gutter)
 		var(--step-2);
 	border-bottom: 1px solid var(--border);
 	background: color-mix(in srgb, var(--bg) 92%, transparent);
@@ -142,7 +146,7 @@ button:disabled {
 	font-size: var(--text-md);
 	font-weight: 600;
 }
-.pill {
+.chip {
 	flex: none;
 	padding: 2px var(--step-2);
 	border-radius: var(--radius-pill);
@@ -152,13 +156,13 @@ button:disabled {
 	letter-spacing: 0.02em;
 	text-transform: lowercase;
 }
-.pill[data-state="running"] {
+.chip[data-state="running"] {
 	color: var(--accent);
 }
-.pill[data-state="waiting for terminal"] {
+.chip[data-state="waiting for terminal"] {
 	color: var(--warning);
 }
-.pill[data-state="reconnecting"] {
+.chip[data-state="reconnecting"] {
 	color: var(--danger);
 }
 .dot {
@@ -174,7 +178,8 @@ body[data-connected="true"] .dot {
 .facts {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--step-1) var(--step-3);
+	gap: var(--step-1) var(--step-4);
+	padding-top: var(--step-2);
 	padding: 0;
 	list-style: none;
 	font-size: var(--text-xs);
@@ -202,9 +207,9 @@ body[data-connected="true"] .dot {
 	z-index: 2;
 	max-width: var(--column);
 	margin: var(--step-2) auto 0;
-	padding: var(--step-2) var(--step-4);
+	padding: var(--step-2) var(--gutter);
 	border: 1px solid var(--border);
-	border-radius: var(--radius-2);
+	border-radius: var(--radius);
 	background: var(--surface);
 	color: var(--muted);
 	font-size: var(--text-sm);
@@ -217,10 +222,10 @@ body[data-connected="true"] .dot {
 .thread {
 	max-width: var(--column);
 	margin-inline: auto;
-	padding: var(--step-5) var(--step-4) 0;
+	padding: var(--step-5) var(--gutter) 0;
 	display: flex;
 	flex-direction: column;
-	gap: var(--step-5);
+	gap: var(--step-6);
 }
 .empty {
 	padding: var(--step-6) 0;
@@ -235,7 +240,7 @@ body[data-connected="true"] .dot {
 .activity {
 	display: flex;
 	flex-direction: column;
-	gap: var(--step-5);
+	gap: var(--step-6);
 }
 .activity:empty {
 	display: none;
@@ -252,17 +257,25 @@ body[data-connected="true"] .dot {
 .turn[data-role="user"] .markdown {
 	max-width: 85%;
 	padding: var(--step-2) var(--step-3);
-	border-radius: var(--radius-3);
+	border-radius: var(--radius-shell);
 	background: var(--raised);
 }
 .turn-label {
+	display: flex;
+	align-items: baseline;
+	gap: var(--step-2);
 	font-size: var(--text-xs);
-	letter-spacing: 0.06em;
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	color: var(--muted);
 }
+.turn-label time {
+	letter-spacing: 0;
+	text-transform: none;
+	opacity: 0.75;
+}
 .turn[data-role="user"] .turn-label {
-	display: none;
+	justify-content: flex-end;
 }
 .turn[data-streaming="true"] .markdown > :last-child::after {
 	content: "";
@@ -292,8 +305,10 @@ body[data-connected="true"] .dot {
 .markdown h4,
 .markdown h5,
 .markdown h6 {
-	font-size: var(--text-md);
+	margin-top: var(--step-1);
+	font-size: var(--text-lg);
 	font-weight: 600;
+	letter-spacing: -0.01em;
 }
 .markdown ul,
 .markdown ol {
@@ -320,7 +335,7 @@ body[data-connected="true"] .dot {
 .markdown td code,
 .markdown th code {
 	padding: 1px var(--step-1);
-	border-radius: var(--radius-1);
+	border-radius: var(--radius);
 	background: var(--raised);
 }
 .markdown hr {
@@ -353,7 +368,7 @@ body[data-connected="true"] .dot {
 	margin: 0;
 	min-width: 0;
 	border: 1px solid var(--border);
-	border-radius: var(--radius-2);
+	border-radius: var(--radius);
 	background: var(--surface);
 	overflow: hidden;
 }
@@ -387,7 +402,7 @@ body[data-connected="true"] .dot {
 
 .tool {
 	border: 1px solid var(--border);
-	border-radius: var(--radius-2);
+	border-radius: var(--radius);
 	background: var(--surface);
 	overflow: hidden;
 }
@@ -483,23 +498,17 @@ body[data-connected="true"] .dot {
 .jump {
 	position: fixed;
 	left: 50%;
-	bottom: var(--dock);
+	bottom: calc(var(--dock) + var(--step-2));
 	z-index: 4;
 	translate: -50% 0;
-	padding: 0 var(--step-4);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-pill);
-	background: var(--surface);
-	color: var(--text);
-	font-size: var(--text-sm);
-	box-shadow: 0 6px 20px rgb(0 0 0 / 0.14);
+	box-shadow: var(--shadow);
 }
 
 .dock {
 	position: fixed;
 	inset: auto 0 0;
 	z-index: 5;
-	padding: var(--step-2) var(--step-4)
+	padding: var(--step-2) var(--gutter)
 		calc(var(--step-2) + env(safe-area-inset-bottom));
 	border-top: 1px solid var(--border);
 	background: color-mix(in srgb, var(--bg) 94%, transparent);
@@ -517,13 +526,14 @@ body[data-connected="true"] .dot {
 }
 .composer textarea {
 	width: 100%;
-	min-height: 44px;
+	min-height: var(--control);
 	max-height: 40svh;
-	padding: var(--step-2) var(--step-3);
+	padding: var(--step-3);
 	border: 1px solid var(--border);
-	border-radius: var(--radius-2);
+	border-radius: var(--radius-shell);
 	background: var(--surface);
 	color: var(--text);
+	line-height: var(--line);
 	resize: none;
 }
 .row {
@@ -534,37 +544,62 @@ body[data-connected="true"] .dot {
 .delivery {
 	display: flex;
 	border: 1px solid var(--border);
-	border-radius: var(--radius-pill);
+	border-radius: var(--radius);
 	overflow: hidden;
 }
 .delivery button {
-	min-height: 44px;
-	padding: 0 var(--step-3);
 	border: 0;
 	background: none;
 	color: var(--muted);
-	font-size: var(--text-sm);
 }
 .delivery button[aria-pressed="true"] {
 	background: var(--raised);
 	color: var(--text);
 }
-.ghost {
-	padding: 0 var(--step-3);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-pill);
-	background: none;
-	color: var(--muted);
+.primary,
+.secondary,
+.quiet,
+.icon,
+.jump,
+.delivery button {
+	height: var(--control);
+	min-height: var(--control);
+	padding: 0 var(--control-pad);
+	border-radius: var(--radius);
 	font-size: var(--text-sm);
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 .primary {
-	padding: 0 var(--step-4);
-	border: 0;
-	border-radius: var(--radius-pill);
+	border: 1px solid var(--accent);
 	background: var(--accent);
 	color: var(--accent-ink);
-	font-size: var(--text-sm);
 	font-weight: 600;
+}
+.secondary,
+.jump {
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text);
+}
+.quiet {
+	border: 1px solid transparent;
+	background: none;
+	color: var(--muted);
+}
+.icon {
+	width: var(--control);
+	padding: 0;
+	border: 1px solid transparent;
+	background: none;
+	color: var(--muted);
+	font-size: var(--text-lg);
+}
+.icon[aria-expanded="true"] span {
+	display: block;
+	rotate: 90deg;
 }
 .feedback,
 .note {

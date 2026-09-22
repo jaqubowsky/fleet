@@ -96,7 +96,9 @@ function render(next) {
 			? undefined
 			: "Your terminal is reconnecting. The transcript below is the last thing Pi sent.",
 	);
-	$("facts").replaceChildren(...facts(next.header));
+	const detail = facts(next.header);
+	$("facts").replaceChildren(...detail);
+	$("detail-toggle").hidden = detail.length === 0;
 	$("empty").hidden =
 		next.transcript.length > 0 ||
 		Boolean(next.assistant) ||
@@ -126,7 +128,18 @@ function turn(message, streaming) {
 	if (streaming) article.dataset.streaming = "true";
 	const heading = document.createElement("p");
 	heading.className = "turn-label";
-	heading.textContent = message.role === "user" ? "You" : "Pi";
+	const who = document.createElement("span");
+	who.textContent = message.role === "user" ? "You" : "Pi";
+	heading.append(who);
+	if (message.at !== undefined) {
+		const when = document.createElement("time");
+		when.dateTime = new Date(message.at).toISOString();
+		when.textContent = new Date(message.at).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+		heading.append(when);
+	}
 	article.append(
 		heading,
 		...message.blocks.map((block) =>
@@ -351,6 +364,12 @@ for (const button of document.querySelectorAll(".delivery button"))
 		for (const other of document.querySelectorAll(".delivery button"))
 			other.setAttribute("aria-pressed", String(other === button));
 	});
+$("detail-toggle").addEventListener("click", () => {
+	const open = $("facts").hidden;
+	$("facts").hidden = !open;
+	$("detail-toggle").setAttribute("aria-expanded", String(open));
+	dock();
+});
 $("jump").addEventListener("click", scrollToLatest);
 window.addEventListener("scroll", () => {
 	if (atBottom()) $("jump").hidden = true;

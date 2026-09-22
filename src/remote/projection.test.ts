@@ -234,3 +234,17 @@ test("a cut result says how much was cut", () => {
 	assert.ok(block.result.length <= 4096, `result stays inside 4096`);
 	assert.ok(block.result.startsWith("aaa") && block.result.endsWith("aaa"));
 });
+
+test("a message carries the time it happened", () => {
+	const at = Date.UTC(2026, 8, 22, 19, 4, 5);
+
+	const [dated] = transcript([
+		{ type: "message", message: { role: "user", content: "hi", timestamp: at } },
+	]);
+	const [undated] = transcript([
+		{ type: "message", message: { role: "user", content: "hi" } },
+	]);
+
+	assert.equal(dated.at, at);
+	assert.equal("at" in undated, false);
+});
