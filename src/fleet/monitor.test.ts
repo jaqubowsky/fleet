@@ -47,11 +47,15 @@ function monitorRuntime(t: TestContext) {
 		await new Promise((resolve) => setImmediate(resolve));
 		return { tools, messages, notices };
 	};
-	const settle = async (pane = "worker:pane") => {
-		for (const socket of sockets) socket.emit("data", Buffer.from(JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } }) + "\n"));
+	const status = async (next: string, pane = "worker:pane") => {
+		for (const socket of sockets) socket.emit("data", Buffer.from(JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: next } }) + "\n"));
 		await new Promise((resolve) => setImmediate(resolve));
 	};
-	return { home, start, settle };
+	const settle = async (pane = "worker:pane") => {
+		await status("idle", pane);
+		await new Promise((resolve) => setTimeout(resolve, 1100));
+	};
+	return { home, start, settle, status };
 }
 
 test("only the invoking Pi session receives automatic fleet notifications", async (t) => {
@@ -80,6 +84,19 @@ test("explicit fleet watch delivers a follow-up turn without waiting for user in
 
 	assert.equal(watcher.messages.length, 1);
 	assert.deepEqual(watcher.messages[0].options, { deliverAs: "followUp", triggerTurn: true });
+});
+
+test("a transient idle between active turns does not wake the host", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = await runtime.start("session-a");
+	await watcher.tools.fleet_watch.execute("call", { agents: "worker" });
+
+	await runtime.status("idle");
+	await runtime.status("working");
+	await new Promise((resolve) => setTimeout(resolve, 1100));
+
+	assert.deepEqual(watcher.messages, []);
+	assert.deepEqual(watcher.notices, []);
 });
 
 test("different containers wake independently while an identical transition stays deduplicated", async (t) => {

@@ -16,6 +16,7 @@ type Frame = {
 const SOCK =
 	process.env.HERDR_SOCK ?? join(os.homedir(), ".config/herdr/herdr.sock");
 const RECONNECT_MS = 3000;
+const SETTLE_MS = 1000;
 const LOG_POLL_MS = 2000;
 const STALL_TICK_MS = 60_000;
 const STALL_MS = 20 * 60_000;
@@ -81,6 +82,10 @@ export default function (pi: any) {
 	const names = new Map<string, string>();
 	const since = new Map<string, number>();
 	const rang = new Map<string, number>();
+	const settling = new Map<
+		string,
+		{ timer: ReturnType<typeof setTimeout>; from: string | undefined }
+	>();
 	const selfPane = process.env.HERDR_PANE_ID ?? "";
 	const log = join(os.homedir(), EVENTS_LOG);
 
@@ -89,7 +94,14 @@ export default function (pi: any) {
 		since.set(pane, Date.now());
 		rang.set(pane, Date.now());
 	};
+	const cancelSettling = (pane: string) => {
+		const pending = settling.get(pane);
+		if (!pending) return;
+		clearTimeout(pending.timer);
+		settling.delete(pane);
+	};
 	const forget = (pane: string) => {
+		cancelSettling(pane);
 		status.delete(pane);
 		names.delete(pane);
 		since.delete(pane);
@@ -129,13 +141,29 @@ export default function (pi: any) {
 			status.size ? `watching ${status.size}` : undefined,
 		);
 	};
-	const wake = async (name: string, change: string) => {
-		const text = `[fleet] ${name}: ${change}\n${await statusOf(name)}`;
+	const wake = async (name: string, change: string, valid = () => true) => {
+		const details = await statusOf(name);
+		if (!valid()) return;
+		const text = `[fleet] ${name}: ${change}\n${details}`;
 		pi.sendMessage(
 			{ customType: "fleet", content: text, display: true },
 			{ deliverAs: "followUp", triggerTurn: true },
 		);
 		pi.ui?.notify?.(`[fleet] ${name}: ${change}`, "info");
+	};
+	const settle = (pane: string, name: string, prev: string | undefined) => {
+		const earlier = settling.get(pane);
+		if (earlier) clearTimeout(earlier.timer);
+		const from = earlier?.from ?? prev;
+		const timer = setTimeout(() => {
+			settling.delete(pane);
+			const current = status.get(pane);
+			if (!current || !TERMINAL.has(current)) return;
+			const change = transition(from, current);
+			if (change)
+				void wake(name, change, () => TERMINAL.has(status.get(pane) ?? ""));
+		}, SETTLE_MS);
+		settling.set(pane, { timer, from });
 	};
 
 	const listAgents = async (wanted: string[]): Promise<Agent[] | undefined> => {
@@ -152,6 +180,7 @@ export default function (pi: any) {
 		gen++;
 		sock?.destroy();
 		sock = undefined;
+		for (const pane of settling.keys()) cancelSettling(pane);
 		status.clear();
 		names.clear();
 		since.clear();
@@ -241,11 +270,17 @@ export default function (pi: any) {
 					continue;
 				}
 				const next = frame.data?.agent_status ?? "unknown";
-				const change = transition(status.get(pane), next);
+				const previous = status.get(pane);
+				const change = transition(previous, next);
 				if (!change) continue;
-				const wakeable = shouldWake(status.get(pane), next);
+				const wakeable = shouldWake(previous, next);
 				track(pane, next);
 				publish();
+				if (TERMINAL.has(next)) {
+					if (wakeable || settling.has(pane)) settle(pane, who, previous);
+					continue;
+				}
+				cancelSettling(pane);
 				if (wakeable) void wake(who, change);
 			}
 		});
