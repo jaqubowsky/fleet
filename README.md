@@ -12,7 +12,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `agent/extensions/guard.ts` | the pi hook on this Mac: trusted tools out, everything else through `src/guard`. Containers run without it |
 | `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: another agent settling as a `[fleet]` line |
 | `agent/extensions/statusline.ts` | status line |
-| `profiles/` | `models.json` (one row per seat: `host`, `sbx`, `reviewer`, each a `<provider>/<model>` and a thinking level), `host.json` and `sbx.json` templates |
+| `profiles/` | `models.json` (one row per seat: `host`, `sbx`, `reviewer`, `explorer`, each a `<provider>/<model>` and a thinking level), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
 | `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet render` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |

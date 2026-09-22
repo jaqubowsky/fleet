@@ -1,6 +1,6 @@
 # Critic Prompt Template
 
-Each critique pass follows this template. Fill in the placeholders and hold the lens for the whole pass.
+Build each critic's brief from this template. Fill in the placeholders.
 
 ---
 

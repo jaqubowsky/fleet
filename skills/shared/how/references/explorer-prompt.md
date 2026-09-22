@@ -1,6 +1,6 @@
 # Explorer Prompt Template
 
-Each explorer pass follows this template. Fill in the placeholders and keep the pass to its slice.
+Build each explorer's brief from this template. Fill in the placeholders.
 
 ---
 

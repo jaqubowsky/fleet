@@ -21,6 +21,10 @@
       "two-axis-reviewer": {
         "model": "{{providers.reviewer}}/{{models.reviewer}}",
         "thinking": "{{thinking.reviewer}}"
+      },
+      "explorer": {
+        "model": "{{providers.explorer}}/{{models.explorer}}",
+        "thinking": "{{thinking.explorer}}"
       }
     }
   },

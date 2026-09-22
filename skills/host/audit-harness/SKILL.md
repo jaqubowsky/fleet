@@ -20,14 +20,14 @@ The newest `audits/*.md` carries the findings of the last run into step 4: every
 
 ## 3. Scorecard per session
 
-One scorecard per session, written by you from the transcript, the commit and [references/extract.md](references/extract.md), in this shape:
+One `explorer` per session, all in the same turn. The brief: the paths, the commit, [references/extract.md](references/extract.md), and this shape as its done-check:
 
 - header: path, side, model, task in one line, outcome (finished, died, stopped by the user)
 - each rule: `held`, `broken` or `not exercised`; the first two with one quote and its transcript line
 - each skill the task matched: `SKILL.md` read at which line, before or after the user named it; steps skipped
 - friction with counts: a command repeated three or more times, tool errors, guard denials (correct or false positive), fleet refusals, user corrections verbatim
 
-Done when every rule has a verdict and every `broken` has a line number.
+Done when every rule has a verdict and every `broken` has a line number. An explorer without one is sent back for it.
 
 ## 4. Findings
 

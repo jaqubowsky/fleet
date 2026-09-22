@@ -10,7 +10,7 @@ Explore the codebase to answer "how does X work?" questions. Produce clear archi
 Two modes:
 
 1. **Explain** (default). Explore the codebase and produce a clear explanation
-2. **Critique.** Explain first, then take several distinct critique passes to identify architectural issues
+2. **Critique.** Explain first, then run parallel critics to independently identify architectural issues
 
 ## Explain mode
 
@@ -28,9 +28,9 @@ Identify the scope. If ambiguous, state your best-guess interpretation before ex
 **Assess complexity to decide the approach:**
 
 - **Simple** (a single module, a small utility, a narrow question like "how does function X work"): skip explorer agents; the explainer explores and explains in a single pass. Go to Step 2b.
-- **Complex** (a subsystem spanning multiple files/services, a cross-cutting feature, a full architectural overview): take one explorer pass per slice first, then synthesize. Go to Step 2a.
+- **Complex** (a subsystem spanning multiple files/services, a cross-cutting feature, a full architectural overview): run parallel `explorer` sub-agents first, then synthesize. Go to Step 2a.
 
-When in doubt, lean simple. Add explorer passes when the direct explanation hits a wall.
+When in doubt, lean simple. Add explorers when the direct explanation hits a wall.
 
 ### Step 2a. Explore (complex questions only)
 
@@ -42,16 +42,16 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 
 The right decomposition depends on the question. Default to three explorers: two when the subsystem sits in one package, four when it spans services or processes.
 
-Run every explorer yourself, one after another, each as its own pass over the code with its own notes; the passes stay separate until Step 3.
+Launch every explorer as an `explorer` sub-agent, all in the same turn so they run concurrently.
 
-Each pass follows `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each pass:
+Each explorer gets the brief from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer:
 - Start broad: find for relevant directories, grep for key types/interfaces/class names
 - Follow the thread: from an entry point, trace the call chain (callers, callees, data flow, type definitions)
 - Read the actual code, don't guess from file names
 - Stop when it can describe the full path from input to output (or trigger to effect) without hand-waving any step
 - Note things that are surprising, non-obvious, or that a newcomer would get wrong
 
-Each pass ends in structured findings: components found, flow traced, files read, anything non-obvious. Overlap between passes is fine; Step 3 reconciles.
+Each explorer returns structured findings: components found, flow traced, files read, anything non-obvious. Overlap between explorers is fine; Step 3 reconciles.
 
 Then proceed to Step 3.
 
@@ -65,7 +65,7 @@ Proceed to Step 4.
 
 ### Step 3. Synthesize (complex questions only)
 
-With every pass done, synthesize their findings into one coherent explanation.
+Once all explorers return, synthesize their findings yourself into one coherent explanation.
 
 Read `references/explainer-prompt.md` for the template and write the human-facing explanation from all the findings (output format below): reconcile overlaps, resolve contradictions, weave the slices into one picture.
 
@@ -87,9 +87,9 @@ Triggered when the user asks for architectural issues, problems, or improvements
 
 Run the full explain flow above (Steps 1-4). You must understand the architecture before critiquing it.
 
-### Step 2. Critique passes
+### Step 2. Spawn critics
 
-After the explanation is complete, run 3-4 critique passes yourself, one per lens (for example: coupling and boundaries, failure modes and operability, data model and invariants, evolution and deletability), each written down before the next starts so they stay distinct.
+After the explanation is complete, launch 3-4 critics as `explorer` sub-agents in the same turn so they run concurrently. Give each a distinct lens (for example: coupling and boundaries, failure modes and operability, data model and invariants, evolution and deletability) so they do not converge on the same finding.
 
 Read `references/critic-prompt.md` for the prompt template. Each critic gets:
 1. The explanation from Step 1 (so they don't re-explore)
