@@ -45,6 +45,6 @@ TAR="${TMPDIR:-/tmp}/my-pi.tar"
 docker buildx build --provenance=false --sbom=false \
 	--build-context pi-home="$STAGE" \
 	--output "type=docker,dest=$TAR" -t my-pi:v1 .
-sbx template rm my-pi:v1 2>/dev/null || true
+sbx template rm my-pi:v1 --force 2>/dev/null </dev/null || sbx template rm my-pi:v1 2>/dev/null </dev/null || true
 sbx template load "$TAR"
 rm -f "$TAR"
