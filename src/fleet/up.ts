@@ -22,17 +22,11 @@ export function taskDir(repo: string, sandbox: string, io: Io): string {
 	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
-const TASK_STATUS = "status: new\nattention: none\npr: none\n\n## Plan\n- [ ] \n";
+const TASK_STATUS = "status: new\nattention: none\n\n## Plan\n- [ ] \n";
 
-function taskBrief(label: string, branch: string | undefined): string {
-	return `# ${label}\n\nSource: none\nBranch: ${branch ?? "none"}\n\n## Goal\n\n## Requirements\n- \n\n## Constraints\n- none\n\n## Acceptance criteria\n- [ ] \n`;
-}
-
-function layoutTask(dir: string, input: UpInput, io: Io): void {
+function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);
-	for (const [name, body] of [["task.md", taskBrief(input.label, input.branch)], ["status.md", TASK_STATUS]]) {
-		if (io.read(`${dir}/${name}`) === undefined) io.write(`${dir}/${name}`, body);
-	}
+	if (io.read(`${dir}/status.md`) === undefined) io.write(`${dir}/status.md`, TASK_STATUS);
 }
 
 export function piArgs(model: string | undefined, resume: boolean): string {
@@ -91,7 +85,7 @@ export async function up(
 		parseSandboxList(io.sbx(["ls", "--json"], { quiet: true })),
 	).find((s: Sandbox) => s.name === sandbox);
 	const task = taskDir(input.repo, sandbox, io);
-	layoutTask(task, input, io);
+	layoutTask(task, io);
 	if (!existing) {
 		create(input, sandbox, origin, memory, cpus, io);
 		try {

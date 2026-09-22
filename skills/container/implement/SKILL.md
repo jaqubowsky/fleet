@@ -13,7 +13,7 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 2. **Claim it.** Set `Status: claimed` in the ticket file and save before any work.
 
-3. **Load context.** `task.md`, `analysis.md` and `status.md` from the task directory, the parent spec (`spec.md` beside `issues/`) if it exists, plus `CONTEXT.md` and any ADRs touching the area.
+3. **Load context.** `analysis.md` and `status.md` from the task directory, the parent spec (`spec.md` beside `issues/`) if it exists, plus `CONTEXT.md` and any ADRs touching the area.
 
 4. **Name the gate.** Before the first edit, state the command that will prove this ticket done and the one-line reason it is the right command. The ticket's acceptance criteria are the source; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 9 re-runs, so name it now, not later. Set `status: implementing` in `status.md`.
 

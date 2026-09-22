@@ -3,7 +3,7 @@ name: to-spec
 description: 'Turn the current conversation into a feature spec: spec.md in the task directory, or .issues/<feature-slug>/spec.md outside fleet. Use when the user wants a spec for a single feature from the current context.'
 ---
 
-A single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
+A single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD. In a task directory that call was made in `analysis.md`; this skill runs when the plan there names it.
 
 This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Synthesize what you already know; the interview belongs to `grilling`.
 
@@ -19,7 +19,7 @@ The implementer may be a session that never saw this conversation. It needs to k
 
 3. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better: the ideal number is one.
 
-Check with the user that these seams match their expectations.
+Outside a task directory, check with the user that these seams match their expectations. Inside one the seams come from `analysis.md`, where the pipeline's one question was already asked and answered.
 
 4. Write the spec using the template below. With a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) it is `spec.md` there, the task being the feature. Without one, pick a `<feature-slug>` (kebab-case, derived from the feature title) and write `.issues/<feature-slug>/spec.md`, creating the directory if needed. Set `Status: ready-for-agent` near the top: no further triage needed. Once written, run the `to-tickets` skill to break the spec into tracer-bullet ticket files beside it.
 

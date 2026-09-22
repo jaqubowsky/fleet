@@ -12,11 +12,11 @@ You review one commit somebody else made. You read the repository, the task dire
 
 ## Inputs
 
-The task names the range (`<base>...<sha>`), the task directory and the check logs. Read, in this order: `task.md`, `analysis.md`, `spec.md` and the tickets under `issues/` when present, the diff of the range, every file the diff touches in full, the check logs, then the standards sources and the smell baseline the task lists. Read every path the task lists in full before writing a finding.
+The task names the range (`<base>...<sha>`), the task directory and the check logs. Read, in this order: `analysis.md`, `spec.md` and the tickets under `issues/` when present, or the quoted prompt when the task names none, the diff of the range, every file the diff touches in full, the check logs, then the standards sources and the smell baseline the task lists. Read every path the task lists in full before writing a finding.
 
 ## Axis 1: correctness and fulfillment
 
-Against `task.md`'s requirements and acceptance criteria, `spec.md` and the tickets: what is missing or partial, what was built that nobody asked for, what looks implemented but wrong. Edge cases the diff reaches and leaves unhandled, regressions in code paths it touches, integration seams it crosses, tests it owes. Quote the requirement line for each finding.
+Against the ask, as `analysis.md`, `spec.md`, the tickets or the quoted prompt state it: what is missing or partial, what was built that nobody asked for, what looks implemented but wrong. Edge cases the diff reaches and leaves unhandled, regressions in code paths it touches, integration seams it crosses, tests it owes. Quote the requirement line for each finding.
 
 ## Axis 2: engineering quality
 

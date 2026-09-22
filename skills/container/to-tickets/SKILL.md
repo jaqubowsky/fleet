@@ -54,7 +54,7 @@ Ask the user:
 - Are the blocking edges correct: does each ticket only depend on tickets that genuinely gate it?
 - Should any tickets be merged or split further?
 
-Iterate until the user approves the breakdown.
+Iterate until the user approves the breakdown. In a task directory the breakdown was proposed and answered in `analysis.md` as the pipeline's one question: take the split from there and write the tickets; a change to it is a change to `analysis.md` first.
 
 ### 5. Write the tickets to local files
 

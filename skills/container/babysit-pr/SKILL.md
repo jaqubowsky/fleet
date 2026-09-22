@@ -76,7 +76,7 @@ Base: main
 - checks: Quality Checks success, CodeRabbit success
 ```
 
-7. **Commit and hand back.** In `status.md`: `status: pr-open`, `pr:` the number and URL, `attention:` what only the host or the user can do next. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
+7. **Commit and hand back.** In `status.md`: `status: pr-open`, `attention:` what only the host or the user can do next; the number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
 
 ## A stale base
 

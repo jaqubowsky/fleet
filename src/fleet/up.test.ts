@@ -493,8 +493,8 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
 
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`));
-	assert.match(io.files[`${task}/task.md`], /^# web-1\n[\s\S]*Branch: web-1\n[\s\S]*## Acceptance criteria/);
-	assert.match(io.files[`${task}/status.md`], /^status: new\nattention: none\npr: none\n\n## Plan\n/);
+	assert.equal(io.files[`${task}/task.md`], undefined);
+	assert.match(io.files[`${task}/status.md`], /^status: new\nattention: none\n\n## Plan\n/);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 
