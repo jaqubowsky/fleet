@@ -4,6 +4,7 @@ import test from "node:test";
 import remoteExtension, {
 	type Context,
 	type RemoteAPI,
+	type Widget,
 } from "../../agent/extensions/pi-remote/index.ts";
 import { processRuntime } from "./runtime.ts";
 
@@ -21,7 +22,7 @@ function session(id: string) {
 	let command: Parameters<RemoteAPI["registerCommand"]>[1];
 	const sent: string[] = [];
 	const notices: string[] = [];
-	let widget: string[] | undefined;
+	let widget: Widget | undefined;
 	let stale = false;
 	let name = id;
 	const active = () => {
@@ -70,6 +71,10 @@ function session(id: string) {
 		sent,
 		notices,
 		widget: () => widget,
+		widgetLines: (width = 80) =>
+			typeof widget === "function"
+				? widget(undefined, undefined).render(width)
+				: widget,
 		setName: (value: string) => {
 			name = value;
 		},
@@ -146,9 +151,11 @@ test("extension controls a process runtime across fresh factories", {
 		/original/,
 	);
 	await current.command("link");
-	assert.ok(
-		current.widget()?.some((line) => line.includes(`#${identity.token}`)),
-	);
+	const widgetLines = current.widgetLines();
+	assert.equal(typeof current.widget(), "function");
+	assert.ok(widgetLines && widgetLines.length > 10);
+	assert.ok(widgetLines.join("").includes(`#${identity.token}`));
+	assert.ok(widgetLines.every((line) => !line.includes("widget truncated")));
 	assert.equal(current.notices.join("\n").includes(identity.token), false);
 	await current.command("status");
 	assert.ok(

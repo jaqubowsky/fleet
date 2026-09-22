@@ -3,6 +3,13 @@ import qrcode from "qrcode-terminal";
 import { processRuntime } from "../../../src/remote/runtime.ts";
 import { inspectServe } from "../../../src/remote/tailscale.ts";
 
+export type Widget =
+	| string[]
+	| ((
+			tui: unknown,
+			theme: unknown,
+	  ) => { render(width: number): string[]; invalidate(): void });
+
 export type Context = {
 	mode: string;
 	sessionManager: {
@@ -14,7 +21,7 @@ export type Context = {
 	abort(): void;
 	ui: {
 		notify(text: string, level?: "info" | "warning" | "error"): void;
-		setWidget(key: string, lines: string[] | undefined): void;
+		setWidget(key: string, content: Widget | undefined): void;
 	};
 };
 type Event = { type: string; reason?: string };
@@ -139,16 +146,29 @@ export default function remoteExtension(pi: RemoteAPI) {
 				return;
 			}
 			const url = `${serve.url ?? identity.origin}/#${identity.token}`;
-			qrcode.generate(url, { small: true }, (code) =>
-				ctx.ui.setWidget("pi-remote", [
+			qrcode.generate(url, { small: true }, (code) => {
+				const lines = [
 					serve.url
 						? "Scan on your tailnet phone"
 						: "Loopback only. Configure Tailscale Serve for phone access.",
+					...code.trimEnd().split("\n"),
 					url,
-					...code.split("\n"),
 					"Run /remote status to hide this credential.",
-				]),
-			);
+				];
+				ctx.ui.setWidget("pi-remote", () => ({
+					render(width) {
+						const limit = Math.max(1, width - 2);
+						return lines.flatMap((line) => {
+							if (line.length <= limit) return [line];
+							const chunks: string[] = [];
+							for (let offset = 0; offset < line.length; offset += limit)
+								chunks.push(line.slice(offset, offset + limit));
+							return chunks;
+						});
+					},
+					invalidate() {},
+				}));
+			});
 		},
 	});
 }
