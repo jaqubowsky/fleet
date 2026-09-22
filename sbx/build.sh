@@ -10,7 +10,7 @@ mkdir -p "$STAGE/agent" "$STAGE/skills"
 for skill in "$ROOT"/skills/shared/* "$ROOT"/skills/container/*; do
 	cp -RL "$skill" "$STAGE/skills/"
 done
-mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.ts" "$STAGE/agent/extensions/"
+mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.ts" "$ROOT/agent/extensions/handoff-on-error.ts" "$STAGE/agent/extensions/"
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"
 cp -L "$ROOT/sbx/AGENTS.md" "$STAGE/agent/AGENTS.md"
 cp -RL "$ROOT/rules/refs" "$STAGE/agent/refs"
