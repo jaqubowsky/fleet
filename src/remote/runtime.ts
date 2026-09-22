@@ -10,6 +10,7 @@ import {
 	content,
 	fit,
 	header,
+	MESSAGE_LIMIT,
 	message,
 	record,
 	settle,
@@ -99,7 +100,9 @@ export class RemoteRuntime {
 			case "message_end": {
 				const projected = message(event.message);
 				if (projected)
-					this.messages = fit([...this.messages, projected].slice(-64));
+					this.messages = fit(
+						[...this.messages, projected].slice(-MESSAGE_LIMIT),
+					);
 				if (projected?.role === "assistant") this.assistant = undefined;
 				break;
 			}

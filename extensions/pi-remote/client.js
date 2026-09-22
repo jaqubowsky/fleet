@@ -16,7 +16,10 @@ let previousStatus;
 function controls() {
 	const control = snapshot?.control !== false;
 	document.body.dataset.connected = String(connected);
-	$("connection").title = connected ? "Live" : "Offline";
+	if (!connected) {
+		$("status").textContent = "offline";
+		$("status").dataset.state = "offline";
+	}
 	$("send").disabled = !connected || sending || !snapshot?.session;
 	$("abort").disabled = !connected || sending || !snapshot?.session;
 	$("command").hidden = !control;
@@ -250,6 +253,7 @@ function codeBlock(node) {
 	const name = document.createElement("span");
 	name.textContent = language ?? "text";
 	const copy = document.createElement("button");
+	copy.className = "quiet";
 	copy.type = "button";
 	copy.textContent = "Copy";
 	copy.addEventListener("click", async () => {

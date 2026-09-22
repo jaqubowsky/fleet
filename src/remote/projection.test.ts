@@ -236,15 +236,24 @@ test("a cut result says how much was cut", () => {
 });
 
 test("a message carries the time it happened", () => {
-	const at = Date.UTC(2026, 8, 22, 19, 4, 5);
+	const iso = "2026-09-21T12:01:43Z";
+	const live = Date.UTC(2026, 8, 22, 19, 4, 5);
 
-	const [dated] = transcript([
-		{ type: "message", message: { role: "user", content: "hi", timestamp: at } },
+	const [replayed] = transcript([
+		{ type: "message", timestamp: iso, message: { role: "user", content: "hi" } },
+	]);
+	const [streamed] = transcript([
+		{ type: "message", message: { role: "user", content: "hi", timestamp: live } },
 	]);
 	const [undated] = transcript([
 		{ type: "message", message: { role: "user", content: "hi" } },
 	]);
+	const [absurd] = transcript([
+		{ type: "message", message: { role: "user", content: "hi", timestamp: 1e18 } },
+	]);
 
-	assert.equal(dated.at, at);
+	assert.equal(replayed.at, Date.parse(iso));
+	assert.equal(streamed.at, live);
 	assert.equal("at" in undated, false);
+	assert.equal("at" in absurd, false, "a time no Date can hold is dropped");
 });

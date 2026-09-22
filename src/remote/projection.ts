@@ -25,7 +25,7 @@ export type Message = {
 };
 
 const ENTRY_LIMIT = 1024;
-const MESSAGE_LIMIT = 64;
+export const MESSAGE_LIMIT = 64;
 const BLOCK_LIMIT = 32;
 const TEXT_LIMIT = 4096;
 const SUMMARY_LIMIT = 200;
@@ -156,7 +156,18 @@ export function settle(
 	};
 }
 
-export function message(value: unknown): Message | undefined {
+const DATE_LIMIT = 8_640_000_000_000_000;
+
+function moment(...candidates: unknown[]): number | undefined {
+	for (const value of candidates) {
+		const at = typeof value === "string" ? Date.parse(value) : value;
+		if (typeof at === "number" && Number.isFinite(at) && Math.abs(at) <= DATE_LIMIT)
+			return at;
+	}
+	return undefined;
+}
+
+export function message(value: unknown, at?: unknown): Message | undefined {
 	const item = record(value);
 	if (item.role !== "user" && item.role !== "assistant") return;
 	const blocks: Block[] =
@@ -172,13 +183,11 @@ export function message(value: unknown): Message | undefined {
 					})
 					.filter((block): block is Block => block !== undefined)
 					.slice(0, BLOCK_LIMIT);
-	const at = typeof item.timestamp === "number" && Number.isFinite(item.timestamp)
-		? item.timestamp
-		: undefined;
+	const when = moment(item.timestamp, at);
 	return {
 		role: item.role,
 		blocks: blocks.filter(filled),
-		...(at === undefined ? {} : { at }),
+		...(when === undefined ? {} : { at: when }),
 	};
 }
 
@@ -200,7 +209,7 @@ export function transcript(entries: unknown[]): Message[] {
 				);
 			continue;
 		}
-		const projected = message(value);
+		const projected = message(value, item.timestamp);
 		if (!projected) continue;
 		for (const block of projected.blocks)
 			if (block.kind === "tool") pending.set(block.id, block);

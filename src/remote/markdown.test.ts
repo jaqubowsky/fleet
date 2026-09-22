@@ -194,7 +194,7 @@ test("a fenced block carries its code and language untouched", () => {
 });
 
 test("emphasis strikethrough breaks escapes and entities read as written", () => {
-	const source = "*soft* ~~gone~~ a\\*b AT&T &amp; co";
+	const source = "*soft* ~~gone~~ a\\*b AT&T &amp; &#x41;&#66; co";
 
 	const [paragraph] = parse(source);
 
@@ -207,7 +207,7 @@ test("emphasis strikethrough breaks escapes and entities read as written", () =>
 			{ tag: "del", attributes: {}, children: [{ text: "gone" }] },
 			{ text: " a" },
 			{ text: "*" },
-			{ text: "b AT&T & co" },
+			{ text: "b AT&T & AB co" },
 		],
 	});
 });
@@ -225,7 +225,7 @@ test("an image reaches the phone as its alt text", () => {
 });
 
 test("an entity that names no character stays on the page as text", () => {
-	const source = "budget &#9999999; and &#xFFFFFFF; and &nope; survive";
+	const source = "budget &#9999999; and &#x110000; and &nope; survive";
 
 	const [paragraph] = parse(source);
 
@@ -233,7 +233,7 @@ test("an entity that names no character stays on the page as text", () => {
 		tag: "p",
 		attributes: {},
 		children: [
-			{ text: "budget &#9999999; and &#xFFFFFFF; and &nope; survive" },
+			{ text: "budget &#9999999; and &#x110000; and &nope; survive" },
 		],
 	});
 });
