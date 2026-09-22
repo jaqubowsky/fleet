@@ -13,10 +13,14 @@ let controller;
 let delivery = "followUp";
 
 function controls() {
+	const control = snapshot?.control !== false;
 	document.body.dataset.connected = String(connected);
+	document.body.dataset.control = String(control);
 	$("connection").textContent = connected ? "Live" : "Offline";
 	$("send").disabled = !connected || sending || !snapshot?.session;
 	$("abort").disabled = !connected || sending || !snapshot?.session;
+	$("command").hidden = !control;
+	$("view-note").hidden = control;
 }
 const BOTTOM = 48;
 const atBottom = () =>
@@ -208,7 +212,8 @@ async function connect() {
 	}
 }
 async function send(action) {
-	if (!connected || sending || !snapshot?.session) return;
+	if (!connected || sending || !snapshot?.session || snapshot.control === false)
+		return;
 	sending = true;
 	controls();
 	const text = $("text").value;

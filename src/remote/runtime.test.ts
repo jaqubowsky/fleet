@@ -427,3 +427,40 @@ test("a host that exposes nothing gets an empty header", async (t) => {
 
 	assert.deepEqual(snapshot.header, { queued: false });
 });
+
+test("the view link shows everything and controls nothing", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	remote.bind(Symbol(), binding("shared"));
+	await remote.start(0);
+	const { origin, token, view } = remote.identity()!;
+	const as = (credential: string) => ({
+		Authorization: `Bearer ${credential}`,
+	});
+	const command = (credential: string) =>
+		fetch(`${origin}/command`, {
+			method: "POST",
+			headers: { ...as(credential), "Content-Type": "application/json" },
+			body: JSON.stringify({ generation: 1, action: "abort" }),
+		});
+
+	const seen: Response = await fetch(`${origin}/bootstrap`, {
+		headers: as(view),
+	});
+	const held: Response = await fetch(`${origin}/bootstrap`, {
+		headers: as(token),
+	});
+
+	assert.ok(/^[a-f0-9]{64}$/.test(view), "view link has 256 random bits");
+	assert.notEqual(view, token);
+	assert.equal(seen.status, 200);
+	assert.equal((await seen.json()).control, false);
+	assert.equal((await held.json()).control, true);
+	assert.equal((await command(view)).status, 403);
+	assert.equal((await command(token)).status, 202);
+	const watching = await fetch(`${origin}/events`, { headers: as(view) });
+	assert.equal(watching.status, 200);
+	await watching.body!.cancel();
+	await remote.stop();
+	await assert.rejects(fetch(`${origin}/bootstrap`, { headers: as(view) }));
+});

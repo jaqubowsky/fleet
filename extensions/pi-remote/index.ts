@@ -114,9 +114,10 @@ export default function remoteExtension(pi: RemoteAPI) {
 	pi.registerCommand("remote", {
 		description: "Remote control: start [port], stop, status, link, help",
 		handler: async (args, ctx) => {
-			const [action = "help", portText, ...rest] = args.trim().split(/\s+/);
+			const [action = "help", argument, ...rest] = args.trim().split(/\s+/);
 			if (ctx.mode === "tui") ctx.ui.setWidget("pi-remote", undefined);
-			if (rest.length || (portText && action !== "start")) {
+			const viewOnly = action === "link" && argument === "--view";
+			if (rest.length || (argument && action !== "start" && !viewOnly)) {
 				ctx.ui.notify("Use /remote help", "warning");
 				return;
 			}
@@ -127,7 +128,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 				return;
 			}
 			if (action === "start") {
-				const port = portText === undefined ? 8787 : Number(portText);
+				const port = argument === undefined ? 8787 : Number(argument);
 				if (!Number.isInteger(port) || port < 1 || port > 65535) {
 					ctx.ui.notify("Port must be 1..65535", "error");
 					return;
@@ -174,7 +175,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 				}
 			} else if (action !== "status" && action !== "link") {
 				ctx.ui.notify(
-					"/remote start [port] | stop | status | link\nDefault port 8787. Tailscale Serve is configured manually. Link shows a private QR in this terminal. Treat it as a password. Remote input can run tools with this process's permissions. Only stop or process exit ends remote control.",
+					"/remote start [port] | stop | status | link [--view]\nDefault port 8787. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords. Remote input can run tools with this process's permissions. Only stop or process exit ends remote control.",
 				);
 				return;
 			}
@@ -195,12 +196,14 @@ export default function remoteExtension(pi: RemoteAPI) {
 				);
 				return;
 			}
-			const url = `${serve.url ?? identity.origin}/#${identity.token}`;
+			const url = `${serve.url ?? identity.origin}/#${viewOnly ? identity.view : identity.token}`;
 			qrcode.generate(url, { small: true }, (code) => {
 				const lines = [
-					serve.url
-						? "Scan on your tailnet phone"
-						: "Loopback only. Configure Tailscale Serve for phone access.",
+					viewOnly
+						? "View only. This link watches and cannot send."
+						: serve.url
+							? "Scan on your tailnet phone"
+							: "Loopback only. Configure Tailscale Serve for phone access.",
 					...code.trimEnd().split("\n"),
 					url,
 					"Run /remote status to hide this credential.",

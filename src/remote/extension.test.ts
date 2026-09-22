@@ -211,6 +211,13 @@ test("extension controls a process runtime across fresh factories", {
 	assert.ok(widgetLines && widgetLines.length > 10);
 	assert.ok(widgetLines.join("").includes(`#${identity.token}`));
 	assert.ok(widgetLines.every((line) => !line.includes("widget truncated")));
+	await current.command("link --view");
+	const viewLines = current.widgetLines();
+	assert.ok(viewLines && viewLines.join("").includes(`#${identity.view}`));
+	assert.ok(
+		viewLines && !viewLines.join("").includes(identity.token),
+		"the view link never carries the control credential",
+	);
 	assert.equal(current.notices.join("\n").includes(identity.token), false);
 	await current.command("status");
 	assert.ok(

@@ -33,6 +33,7 @@ export type Assets = Readonly<Record<string, { type: string; body: string }>>;
 export class RemoteRuntime {
 	private server?: Server;
 	private token?: string;
+	private view?: string;
 	private origin?: string;
 	private starting?: Promise<void>;
 	private stopping?: Promise<void>;
@@ -44,7 +45,7 @@ export class RemoteRuntime {
 	private messages: Message[] = [];
 	private assistant?: Message;
 	private tools: ToolBlock[] = [];
-	private clients = new Set<ServerResponse>();
+	private clients = new Map<ServerResponse, boolean>();
 	private heartbeat?: ReturnType<typeof setInterval>;
 	private update?: ReturnType<typeof setTimeout>;
 	private assets: Assets = {};
@@ -128,9 +129,10 @@ export class RemoteRuntime {
 		if (!this.update) this.update = setTimeout(() => this.broadcast(), 100);
 	}
 
-	snapshot() {
+	snapshot(control = true) {
 		return {
 			version: 2,
+			control,
 			generation: this.generation,
 			revision: this.revision,
 			session: this.binding
@@ -150,6 +152,7 @@ export class RemoteRuntime {
 		if (this.server) return;
 		this.assets = assets;
 		this.token = randomBytes(32).toString("hex");
+		this.view = randomBytes(32).toString("hex");
 		const server = createServer({ maxHeaderSize: 8192 }, (req, res) => {
 			void this.handle(req, res).catch(() => {
 				if (res.headersSent) res.destroy();
@@ -169,7 +172,7 @@ export class RemoteRuntime {
 				this.server = server;
 				this.origin = `http://127.0.0.1:${address.port}`;
 				this.heartbeat = setInterval(() => {
-					for (const client of this.clients)
+					for (const client of this.clients.keys())
 						this.write(client, ": heartbeat\n\n");
 				}, 15000);
 				this.heartbeat.unref();
@@ -180,6 +183,7 @@ export class RemoteRuntime {
 			await this.starting;
 		} catch (error) {
 			this.token = undefined;
+			this.view = undefined;
 			throw error;
 		} finally {
 			this.starting = undefined;
@@ -187,8 +191,8 @@ export class RemoteRuntime {
 	}
 
 	identity() {
-		return this.origin && this.token
-			? { origin: this.origin, token: this.token }
+		return this.origin && this.token && this.view
+			? { origin: this.origin, token: this.token, view: this.view }
 			: undefined;
 	}
 
@@ -207,12 +211,13 @@ export class RemoteRuntime {
 		clearInterval(this.heartbeat);
 		clearTimeout(this.update);
 		this.update = undefined;
-		for (const client of this.clients) client.destroy();
+		for (const client of this.clients.keys()) client.destroy();
 		this.clients.clear();
 		const server = this.server;
 		this.server = undefined;
 		this.origin = undefined;
 		this.token = undefined;
+		this.view = undefined;
 		if (server) {
 			server.closeAllConnections();
 			await new Promise<void>((resolve, reject) =>
@@ -225,8 +230,15 @@ export class RemoteRuntime {
 		clearTimeout(this.update);
 		this.update = undefined;
 		this.revision++;
-		const frame = `event: snapshot\ndata: ${JSON.stringify(this.snapshot())}\n\n`;
-		for (const client of this.clients) this.write(client, frame);
+		const frames = new Map(
+			[true, false].map((control) => [control, this.frame(control)]),
+		);
+		for (const [client, control] of this.clients)
+			this.write(client, frames.get(control)!);
+	}
+
+	private frame(control: boolean) {
+		return `event: snapshot\ndata: ${JSON.stringify(this.snapshot(control))}\n\n`;
 	}
 
 	private write(client: ServerResponse, frame: string) {
@@ -234,6 +246,23 @@ export class RemoteRuntime {
 			client.destroy();
 			this.clients.delete(client);
 		} else client.write(frame);
+	}
+
+	private authorize(authorization?: string): boolean | undefined {
+		const actual = Buffer.from(authorization ?? "");
+		for (const [credential, control] of [
+			[this.token, true],
+			[this.view, false],
+		] as const) {
+			if (!credential) continue;
+			const expected = Buffer.from(`Bearer ${credential}`);
+			if (
+				expected.length === actual.length &&
+				timingSafeEqual(expected, actual)
+			)
+				return control;
+		}
+		return undefined;
 	}
 
 	private json(res: ServerResponse, status: number, body: unknown) {
@@ -267,17 +296,11 @@ export class RemoteRuntime {
 			res.end(asset.body);
 			return;
 		}
-		const expected = Buffer.from(`Bearer ${this.token}`);
-		const actual = Buffer.from(req.headers.authorization ?? "");
-		if (
-			!this.token ||
-			expected.length !== actual.length ||
-			!timingSafeEqual(expected, actual)
-		) {
+		const control = this.authorize(req.headers.authorization);
+		if (control === undefined)
 			return this.json(res, 401, { error: "Unauthorized" });
-		}
 		if (req.method === "GET" && path === "/bootstrap")
-			return this.json(res, 200, this.snapshot());
+			return this.json(res, 200, this.snapshot(control));
 		if (req.method === "GET" && path === "/events") {
 			if (this.clients.size >= 8)
 				return this.json(res, 429, { error: "Too many clients" });
@@ -286,16 +309,15 @@ export class RemoteRuntime {
 				"X-Accel-Buffering": "no",
 				Connection: "keep-alive",
 			});
-			this.clients.add(res);
+			this.clients.set(res, control);
 			res.on("close", () => this.clients.delete(res));
-			this.write(
-				res,
-				`event: snapshot\ndata: ${JSON.stringify(this.snapshot())}\n\n`,
-			);
+			this.write(res, this.frame(control));
 			return;
 		}
 		if (req.method !== "POST" || path !== "/command")
 			return this.json(res, 404, { error: "Not found" });
+		if (!control)
+			return this.json(res, 403, { error: "This link is view-only" });
 		if (req.headers["content-type"] !== "application/json")
 			return this.json(res, 415, { error: "Expected JSON" });
 		const owner = this.owner;
