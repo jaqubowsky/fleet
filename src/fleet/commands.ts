@@ -4,7 +4,7 @@ import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, taskDir } from "./up.ts";
-import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
+import { agentFor, checkoutProbe, elapsed, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 type Agents = { result: { agents: Agent[] } };
@@ -29,7 +29,18 @@ export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
 		const checkout = s.status === "running" ? parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true })) : { branch: "?", dirty: 0, head: "" };
-		return { sandbox: s.name, status: s.status, agent: agentFor(live, agentName(s.name))?.agent_status ?? "gone", branch: checkout.branch, dirty: checkout.dirty };
+		const repo = s.workspaces[0];
+		const usage = repo ? sessionUsage(taskDir(repo, s.name, io), checkout.branch, repo, io) : undefined;
+		const started = usage?.runs[0]?.started_at;
+		return {
+			sandbox: s.name,
+			status: s.status,
+			agent: agentFor(live, agentName(s.name))?.agent_status ?? "gone",
+			branch: checkout.branch,
+			dirty: checkout.dirty,
+			age: started ? elapsed(new Date(started), io.now()) : undefined,
+			cost: usage ? `$${usage.totals.cost.toFixed(2)}` : undefined,
+		};
 	});
 	return formatRows(rows);
 }

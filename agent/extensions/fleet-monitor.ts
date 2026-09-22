@@ -4,7 +4,7 @@ import os from "node:os";
 import { basename, join } from "node:path";
 import { EVENTS_LOG, eventAgents } from "../../src/fleet/events.ts";
 import { agentName } from "../../src/fleet/name.ts";
-import { brief } from "../../src/fleet/status.ts";
+import { commitsProbe, wake as wakeText } from "../../src/fleet/status.ts";
 
 type Agent = { name?: string; pane_id?: string; agent_status?: string };
 type SandboxRow = { name: string; workspaces: string[] };
@@ -97,18 +97,24 @@ export default function (pi: any) {
 	const statusOf = async (agent: string): Promise<string> => {
 		const out = await pi.exec("sbx", ["ls", "--json"]).catch(() => undefined);
 		const text = typeof out === "string" ? out : (out?.stdout ?? "");
-		let dir: string | undefined;
+		let rows: SandboxRow[] = [];
 		try {
-			dir = taskDirOf(os.homedir(), JSON.parse(text)?.sandboxes ?? [], agent);
+			rows = JSON.parse(text)?.sandboxes ?? [];
 		} catch {
-			dir = undefined;
+			rows = [];
 		}
-		if (!dir) return brief(undefined);
-		try {
-			return brief(readFileSync(`${dir}/status.md`, "utf8"));
-		} catch {
-			return brief(undefined);
-		}
+		const dir = taskDirOf(os.homedir(), rows, agent);
+		const sandbox = rows.find((s) => agentName(s.name) === agent)?.name;
+		if (!dir || !sandbox) return wakeText(undefined, undefined, "");
+		const read = (file: string) => {
+			try {
+				return readFileSync(`${dir}/${file}`, "utf8");
+			} catch {
+				return undefined;
+			}
+		};
+		const commits = await pi.exec("sbx", ["exec", sandbox, "sh", "-c", commitsProbe]).catch(() => undefined);
+		return wakeText(read("status.md"), read("review.md"), typeof commits === "string" ? commits : (commits?.stdout ?? ""));
 	};
 
 	const publish = () => {

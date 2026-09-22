@@ -232,3 +232,17 @@ test("exec picks up the repo's own toolchain before running anything", () => {
 	assert.match(script, /fnm-bash-env\.sh/);
 	assert.ok(script.trimEnd().endsWith("yarn build"), script);
 });
+
+test("ls shows how long a container has worked and what it cost", () => {
+	const task = "/home/me/.sandboxes/r/pi-a";
+	const req = (at: string) => JSON.stringify({ type: "message", timestamp: at, message: { role: "assistant", model: "m", usage: { input: 10, output: 1, cacheRead: 0, cacheWrite: 0, cost: { total: 0.21 } }, content: [] } });
+	const io = fakeIo({
+		...running,
+		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
+		[`stat ${task}/logs/sessions/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
+		[`read ${task}/logs/sessions/s1.jsonl`]: [req("2026-09-16T09:30:00Z"), req("2026-09-16T09:40:00Z")].join("\n"),
+	});
+
+	assert.equal(ls(io), "pi-a  running  gone     web-1  30m  $0.42");
+});
