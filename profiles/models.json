@@ -5,12 +5,12 @@
       "thinking": "high"
     },
     "sbx": {
-      "model": "openai-codex/gpt-5.6-sol",
-      "thinking": "high"
+      "model": "openai-codex/gpt-6-astra",
+      "thinking": "low"
     },
     "reviewer": {
-      "model": "openai-codex/gpt-5.6-sol",
-      "thinking": "xhigh"
+      "model": "openai-codex/gpt-6-astra",
+      "thinking": "medium"
     },
     "explorer": {
       "model": "openai-codex/gpt-5.6-luna",
