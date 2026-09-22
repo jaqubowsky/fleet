@@ -7,7 +7,16 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="referrer" content="no-referrer" />
-    <meta name="theme-color" content="#101714" />
+    <meta
+      name="theme-color"
+      content="#f7faf7"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#101714"
+      media="(prefers-color-scheme: dark)"
+    />
     <title>Pi remote</title>
     <link
       rel="stylesheet"
@@ -44,6 +53,7 @@
           <p id="session-id" class="session-id">Waiting for your terminal</p>
         </div>
         <p id="status" class="status-badge" role="status">Connecting</p>
+        <ul id="facts" class="facts" aria-label="Session facts"></ul>
       </section>
       <main class="conversation">
         <div class="section-heading">
@@ -61,6 +71,9 @@
         <div id="transcript" aria-label="Conversation messages"></div>
         <section id="activity" aria-label="Live activity"></section>
       </main>
+      <button id="jump" class="jump" type="button" hidden>
+        Latest<span aria-hidden="true">&darr;</span>
+      </button>
       <footer class="composer-wrap">
         <form id="command" class="composer">
           <div class="composer-heading">
@@ -75,6 +88,13 @@
             placeholder="What would you like to work on?"
           ></textarea>
           <div class="composer-toolbar">
+            <div class="delivery" role="group" aria-label="How the message is delivered">
+              <button type="button" data-mode="steer" aria-pressed="false">
+                Steer
+              </button><button type="button" data-mode="followUp" aria-pressed="true">
+                Queue
+              </button>
+            </div>
             <div class="buttons">
               <button id="abort" class="abort-button" type="button" disabled>
                 <span class="stop-icon" aria-hidden="true"></span>Abort</button

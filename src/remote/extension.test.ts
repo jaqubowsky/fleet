@@ -30,13 +30,34 @@ function session(id: string) {
 	};
 	const context: Context = {
 		mode: "tui",
+		cwd: "/Users/someone/work",
+		model: { id: "claude-opus-5", name: "Opus 5" },
+		getContextUsage: () => ({ tokens: 4270, contextWindow: 10000, percent: 42.7 }),
+		hasPendingMessages: () => true,
 		sessionManager: {
 			getSessionId: () => {
 				active();
 				return id;
 			},
 			getSessionName: () => name,
-			getBranch: () => [],
+			getBranch: () => [
+				{
+					type: "message",
+					message: {
+						role: "assistant",
+						content: [{ type: "text", text: "hi" }],
+						usage: { cost: { total: 0.5 } },
+					},
+				},
+				{
+					type: "message",
+					message: {
+						role: "assistant",
+						content: [{ type: "text", text: "again" }],
+						usage: { cost: { total: 0.25 } },
+					},
+				},
+			],
 		},
 		isIdle: () => {
 			active();
@@ -131,6 +152,13 @@ test("renaming preserves live activity and pending phone commands", async (t) =>
 		},
 	]);
 	assert.equal(after.generation, before.generation);
+	assert.deepEqual(after.header, {
+		cwd: "/Users/someone/work",
+		model: "Opus 5",
+		percent: 43,
+		cost: 0.75,
+		queued: true,
+	});
 });
 
 test("extension controls a process runtime across fresh factories", {

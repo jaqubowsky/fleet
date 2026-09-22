@@ -10,6 +10,7 @@ let snapshot;
 let connected = false;
 let sending = false;
 let controller;
+let delivery = "followUp";
 
 function controls() {
 	document.body.dataset.connected = String(connected);
@@ -17,13 +18,40 @@ function controls() {
 	$("send").disabled = !connected || sending || !snapshot?.session;
 	$("abort").disabled = !connected || sending || !snapshot?.session;
 }
+const BOTTOM = 48;
+const atBottom = () =>
+	window.innerHeight + window.scrollY >= document.body.scrollHeight - BOTTOM;
+
+function facts(header) {
+	if (!header) return [];
+	const rows = [
+		["model", header.model],
+		["context", header.percent === undefined ? "" : `${header.percent}%`],
+		["cost", header.cost === undefined ? "" : `$${header.cost.toFixed(2)}`],
+		["cwd", header.cwd],
+		["queued", header.queued ? "yes" : ""],
+	];
+	return rows
+		.filter(([, value]) => value)
+		.map(([label, value]) => {
+			const item = document.createElement("li");
+			const name = document.createElement("span");
+			name.textContent = label;
+			const body = document.createElement("strong");
+			body.textContent = value;
+			item.append(name, body);
+			return item;
+		});
+}
 function render(next) {
+	const follow = atBottom();
 	snapshot = next;
 	$("session-name").textContent = next.session?.name ?? "Session changing";
 	$("session-id").textContent =
 		next.session?.id ?? "Reconnecting to your terminal";
 	$("status").textContent = next.status;
 	$("status").dataset.state = next.status;
+	$("facts").replaceChildren(...facts(next.header));
 	$("empty").hidden =
 		next.transcript.length > 0 ||
 		Boolean(next.assistant) ||
@@ -39,6 +67,12 @@ function render(next) {
 		...next.tools.filter((block) => !settled.has(block.id)).map(tool),
 	);
 	controls();
+	if (follow) scrollToLatest();
+	else $("jump").hidden = false;
+}
+function scrollToLatest() {
+	window.scrollTo({ top: document.body.scrollHeight });
+	$("jump").hidden = true;
 }
 function turn(message, note) {
 	const article = document.createElement("article");
@@ -200,7 +234,17 @@ async function send(action) {
 }
 $("command").addEventListener("submit", (event) => {
 	event.preventDefault();
-	void send("followUp");
+	void send(delivery);
+});
+for (const button of document.querySelectorAll(".delivery button"))
+	button.addEventListener("click", () => {
+		delivery = button.dataset.mode;
+		for (const other of document.querySelectorAll(".delivery button"))
+			other.setAttribute("aria-pressed", String(other === button));
+	});
+$("jump").addEventListener("click", scrollToLatest);
+window.addEventListener("scroll", () => {
+	if (atBottom()) $("jump").hidden = true;
 });
 $("abort").addEventListener("click", () => {
 	void send("abort");

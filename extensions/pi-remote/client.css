@@ -630,3 +630,97 @@ textarea:focus-visible {
 	font-family: ui-monospace, "SF Mono", Menlo, monospace;
 	font-size: 0.9em;
 }
+.facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 14px;
+	width: 100%;
+	margin: 10px 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 12px;
+}
+.facts li {
+	display: flex;
+	align-items: baseline;
+	gap: 5px;
+	min-width: 0;
+}
+.facts span {
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.facts strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+.delivery {
+	display: flex;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	overflow: hidden;
+}
+.delivery button {
+	min-height: 38px;
+	padding: 0 14px;
+	border: 0;
+	background: none;
+	color: var(--muted);
+	font-size: 13px;
+}
+.delivery button[aria-pressed="true"] {
+	background: var(--border);
+	color: var(--text);
+}
+.jump {
+	position: sticky;
+	bottom: 96px;
+	align-self: center;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 16px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--text);
+}
+@media (max-width: 430px) {
+	.app {
+		padding: 0 max(16px, env(safe-area-inset-left))
+			0 max(16px, env(safe-area-inset-right));
+	}
+	.app-header {
+		padding: max(16px, env(safe-area-inset-top)) 0 16px;
+	}
+}
+@media (prefers-color-scheme: light) {
+	:root {
+		color-scheme: light;
+		--background: #f7faf7;
+		--surface: #ffffff;
+		--border: #d3ded4;
+		--text: #14200f;
+		--muted: #5b6b5d;
+		--accent: #2f6b34;
+	}
+	.composer {
+		border-color: var(--border);
+	}
+	.diff [data-change="added"] {
+		color: #256b2a;
+	}
+	.diff [data-change="removed"] {
+		color: #9b2c2c;
+	}
+	.tool[data-state="error"] {
+		border-color: #c05a5a;
+	}
+	.tool[data-state="error"] .tool-state {
+		color: #c05a5a;
+	}
+}

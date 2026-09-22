@@ -13,6 +13,10 @@ export type Widget =
 
 export type Context = {
 	mode: string;
+	cwd?: string;
+	model?: { id?: string; name?: string };
+	getContextUsage?(): { percent: number | null } | undefined;
+	hasPendingMessages?(): boolean;
 	sessionManager: {
 		getSessionId(): string;
 		getSessionName(): string | undefined;
@@ -44,6 +48,21 @@ export type RemoteAPI = {
 	): void;
 };
 
+function spent(entries: unknown[]): number | undefined {
+	let total = 0;
+	let seen = false;
+	for (const entry of entries) {
+		const cost = (
+			entry as { message?: { usage?: { cost?: { total?: unknown } } } }
+		)?.message?.usage?.cost?.total;
+		if (typeof cost === "number" && Number.isFinite(cost)) {
+			total += cost;
+			seen = true;
+		}
+	}
+	return seen ? total : undefined;
+}
+
 export default function remoteExtension(pi: RemoteAPI) {
 	const runtime = processRuntime();
 	let owner = Symbol("remote binding");
@@ -54,6 +73,13 @@ export default function remoteExtension(pi: RemoteAPI) {
 			name: ctx.sessionManager.getSessionName() ?? "Untitled",
 			entries: ctx.sessionManager.getBranch(),
 			idle: () => ctx.isIdle(),
+			header: () => ({
+				cwd: ctx.cwd,
+				model: ctx.model?.name ?? ctx.model?.id,
+				percent: ctx.getContextUsage?.()?.percent ?? undefined,
+				cost: spent(ctx.sessionManager.getBranch()),
+				queued: ctx.hasPendingMessages?.() ?? false,
+			}),
 			abort: () => ctx.abort(),
 			send: (text, mode) =>
 				pi.sendUserMessage(

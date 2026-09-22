@@ -11,6 +11,13 @@ export type ToolBlock = {
 	diff?: string;
 };
 export type Block = TextBlock | ToolBlock;
+export type Header = {
+	cwd?: string;
+	model?: string;
+	percent?: number;
+	cost?: number;
+	queued: boolean;
+};
 export type Message = { role: "user" | "assistant"; blocks: Block[] };
 
 const ENTRY_LIMIT = 1024;
@@ -200,4 +207,24 @@ function fit(messages: Message[]): Message[] {
 		kept.unshift(messages[index]);
 	}
 	return kept;
+}
+
+const rounded = (value: unknown, places: number): number | undefined =>
+	typeof value === "number" && Number.isFinite(value)
+		? Number(value.toFixed(places))
+		: undefined;
+
+export function header(value: unknown): Header {
+	const item = record(value);
+	const cwd = text(item.cwd, 256);
+	const model = text(item.model, 128);
+	const percent = rounded(item.percent, 0);
+	const cost = rounded(item.cost, 2);
+	return {
+		...(cwd ? { cwd } : {}),
+		...(model ? { model } : {}),
+		...(percent === undefined ? {} : { percent }),
+		...(cost === undefined ? {} : { cost }),
+		queued: item.queued === true,
+	};
 }

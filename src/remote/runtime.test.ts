@@ -13,6 +13,7 @@ function binding(id: string, received: string[] = []): Binding {
 			},
 		],
 		idle: () => true,
+		header: () => ({}),
 		send: (text, mode) => {
 			received.push(`${mode}:${text}`);
 		},
@@ -386,3 +387,43 @@ test(
 		await reconnected.close();
 	},
 );
+
+test("the phone header says where the session stands", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, {
+		...binding("headed"),
+		header: () => ({
+			cwd: "/Users/someone/work",
+			model: "claude-opus-5",
+			percent: 42.7,
+			cost: 1.2345,
+			queued: true,
+		}),
+	});
+	await remote.start(0);
+	const client = await connect(remote);
+
+	const snapshot = await (await client.get("/bootstrap")).json();
+
+	assert.deepEqual(snapshot.header, {
+		cwd: "/Users/someone/work",
+		model: "claude-opus-5",
+		percent: 43,
+		cost: 1.23,
+		queued: true,
+	});
+});
+
+test("a host that exposes nothing gets an empty header", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	remote.bind(Symbol(), { ...binding("bare"), header: () => ({}) });
+	await remote.start(0);
+	const client = await connect(remote);
+
+	const snapshot = await (await client.get("/bootstrap")).json();
+
+	assert.deepEqual(snapshot.header, { queued: false });
+});

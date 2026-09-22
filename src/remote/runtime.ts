@@ -8,11 +8,13 @@ import {
 import {
 	call,
 	content,
+	header,
 	message,
 	record,
 	settle,
 	text,
 	transcript,
+	type Header,
 	type Message,
 	type ToolBlock,
 } from "./projection.ts";
@@ -22,6 +24,7 @@ export type Binding = {
 	name: string;
 	entries: unknown[];
 	idle(): boolean;
+	header(): Partial<Header>;
 	send(text: string, mode: "prompt" | "steer" | "followUp"): void;
 	abort(): void;
 };
@@ -134,6 +137,7 @@ export class RemoteRuntime {
 				? { id: text(this.binding.id, 128), name: text(this.binding.name, 256) }
 				: null,
 			status: this.status,
+			header: this.binding ? header(this.binding.header()) : null,
 			transcript: this.messages,
 			assistant: this.assistant,
 			tools: this.tools,

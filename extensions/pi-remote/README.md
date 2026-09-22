@@ -18,7 +18,9 @@ For Tailscale 1.102.4 on macOS, the one-time command for the default port is:
 
 The extension only runs `serve status --json`. It never applies the command. It recognizes a root HTTPS proxy to this exact listener on a `.ts.net` host, with Funnel disabled. Inspect existing Serve configuration before applying the command, since it may replace an existing root handler. Your phone must be on the same tailnet. The QR and URL grant access to the transcript and the agent's tools; treat them as a password.
 
-The phone always sends messages as `followUp`. While Pi is working, they wait until the current run finishes; when Pi is idle, they start a new run. There is no delivery-mode selector. The HTTP protocol still supports prompt and steer for other clients.
+The composer chooses how a message is delivered. Queue sends it as `followUp`: while Pi is working it waits for the current run to finish, and when Pi is idle it starts a new run. Steer sends it as `steer`, into the run that is going. Queue is the default. The HTTP protocol also supports `prompt` for other clients.
+
+The header shows what the pi context exposes: the model, context use as a percentage, the session cost summed over the branch, the working directory, and whether Pi is holding queued messages. A field the host does not expose is left out rather than shown as zero. New output scrolls into view only when you are already at the bottom; otherwise a Latest button appears and takes you there.
 
 Abort delegates to Pi's current context. In the inspected Pi 0.85.1 terminal implementation, this interrupts the run and restores pending messages to the terminal editor, not the phone. It does not undo completed tool actions or stop the remote server. SDK hosts can bind a different abort handler.
 
@@ -32,7 +34,7 @@ The phone keeps its token only in memory, removes the fragment from browser hist
 
 Public static assets: `/`, `/client.js`, `/client.css`, `/markdown.js`, `/vendor/marked.js`, `/vendor/highlight.js`, `/vendor/highlight-dark.css` and `/vendor/highlight-light.css`. The two libraries are `marked` 18.0.5 and highlight.js 11.9.0 as `@highlightjs/cdn-assets`, which is the same release packaged as one browser-ready file; both are exact-pinned at the repository root and read from `node_modules` at start, and nothing is fetched from a CDN at runtime. Every other path is authenticated:
 
-- `GET /bootstrap`: version 2 snapshot, generation, session id/name, status, transcript and live assistant and tool state. A message is an ordered list of blocks: text, or a tool call carrying its id, name, one-line summary, state, result and, for an edit, a unified diff. A tool result never appears as a row of its own; it joins its call by tool-call id inside the turn that ran it.
+- `GET /bootstrap`: version 2 snapshot, generation, session id/name, status, header, transcript and live assistant and tool state. A message is an ordered list of blocks: text, or a tool call carrying its id, name, one-line summary, state, result and, for an edit, a unified diff. A tool result never appears as a row of its own; it joins its call by tool-call id inside the turn that ran it.
 - `GET /events`: native HTTP SSE snapshots, with a complete snapshot on every connection. No historical replay or unbounded event journal. Heartbeats every 15 seconds; updates coalesced to at most 10 per second.
 - `POST /command`: JSON `{ generation, action, text }`. Actions are `prompt`, `steer`, `followUp`, and `abort`. Abort omits text. Prompt is rejected while busy. Input is plain text, not remote slash-command dispatch.
 
