@@ -310,7 +310,9 @@ test("snapshots and connected phones have finite bounds", async (t) => {
 	);
 	const snapshot = await (await client.get("/bootstrap")).json();
 	assert.equal(snapshot.transcript.length, 64);
-	assert.equal(snapshot.transcript[0].blocks[0].text.length, 4096);
+	const oldest = snapshot.transcript[0].blocks[0].text;
+	assert.ok(oldest.length <= 4096, `text stays inside 4096, got ${oldest.length}`);
+	assert.match(oldest, /\n… \d+ characters omitted …\n/);
 	const phones: Awaited<ReturnType<typeof stream>>[] = [];
 	for (let i = 0; i < 8; i++) phones.push(await stream(remote));
 	t.after(() => Promise.all(phones.map((phone) => phone.close())));

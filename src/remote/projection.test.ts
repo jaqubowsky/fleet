@@ -215,3 +215,22 @@ test("a worst-case session still fits the snapshot budget", () => {
 		);
 	assert.ok(size <= 524_288, `snapshot stays inside 512 KiB, got ${size}`);
 });
+
+test("a cut result says how much was cut", () => {
+	const [block] = transcript([
+		assistant([
+			{ type: "toolCall", id: "c1", name: "bash", arguments: { command: "x" } },
+		]),
+		result({
+			toolCallId: "c1",
+			toolName: "bash",
+			content: [{ type: "text", text: "a".repeat(10_000) }],
+			isError: false,
+		}),
+	])[0].blocks;
+
+	assert.equal(block.kind, "tool");
+	assert.match(block.result, /\n… \d+ characters omitted …\n/);
+	assert.ok(block.result.length <= 4096, `result stays inside 4096`);
+	assert.ok(block.result.startsWith("aaa") && block.result.endsWith("aaa"));
+});

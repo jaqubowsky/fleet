@@ -27,10 +27,12 @@ export function record(value: unknown): Record<string, unknown> {
 		: {};
 }
 
+export function mask(value: unknown): string {
+	return typeof value === "string" ? value.replace(SECRETS, "[redacted]") : "";
+}
+
 export function text(value: unknown, limit = TEXT_LIMIT): string {
-	return typeof value === "string"
-		? value.replace(SECRETS, "[redacted]").slice(0, limit)
-		: "";
+	return mask(value).slice(0, limit);
 }
 
 const omitted = (count: number) => `\n… ${count} characters omitted …\n`;
@@ -55,7 +57,7 @@ export function content(value: unknown): string {
 			.slice(0, 64)
 			.map((block) => {
 				const item = record(block);
-				return item.type === "text" ? text(item.text) : "";
+				return item.type === "text" ? mask(item.text) : "";
 			})
 			.filter(Boolean)
 			.join("\n"),
@@ -116,7 +118,7 @@ export function call(value: unknown): ToolBlock {
 	const item = record(value);
 	const name = text(item.name, 128);
 	const args = record(item.arguments);
-	const diff = name === "edit" ? clamp(text(edited(args))) : "";
+	const diff = name === "edit" ? clamp(mask(edited(args))) : "";
 	return {
 		kind: "tool",
 		id: text(item.id, 128),
@@ -134,7 +136,7 @@ export function settle(
 	result: unknown,
 	details: unknown,
 ): ToolBlock {
-	const patch = text(record(details).patch);
+	const patch = mask(record(details).patch);
 	return {
 		...block,
 		state: isError ? "error" : "done",
@@ -148,12 +150,12 @@ export function message(value: unknown): Message | undefined {
 	if (item.role !== "user" && item.role !== "assistant") return;
 	const blocks: Block[] =
 		typeof item.content === "string"
-			? [{ kind: "text", text: text(item.content) }]
+			? [{ kind: "text", text: clamp(mask(item.content)) }]
 			: (Array.isArray(item.content) ? item.content : [])
 					.map((entry) => {
 						const part = record(entry);
 						if (part.type === "text")
-							return { kind: "text", text: text(part.text) } as Block;
+							return { kind: "text", text: clamp(mask(part.text)) } as Block;
 						if (part.type === "toolCall") return call(part);
 						return undefined;
 					})

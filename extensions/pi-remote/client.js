@@ -29,9 +29,14 @@ function render(next) {
 		Boolean(next.assistant) ||
 		next.tools.length > 0;
 	$("transcript").replaceChildren(...next.transcript.map((item) => turn(item)));
+	const settled = new Set(
+		next.transcript.flatMap((item) =>
+			item.blocks.filter((block) => block.kind === "tool").map((block) => block.id),
+		),
+	);
 	$("activity").replaceChildren(
 		...(next.assistant ? [turn(next.assistant, "streaming")] : []),
-		...next.tools.map(tool),
+		...next.tools.filter((block) => !settled.has(block.id)).map(tool),
 	);
 	controls();
 }
@@ -48,18 +53,56 @@ function turn(message, note) {
 	);
 	return article;
 }
+const ICONS = {
+	bash: "$",
+	read: "▤",
+	write: "✎",
+	edit: "✎",
+	ls: "▤",
+	grep: "⌕",
+	find: "⌕",
+	web_search: "⌕",
+	fetch_content: "↓",
+	source_check: "↓",
+	get_search_content: "↓",
+	subagent: "⊕",
+};
+const STATES = { running: "", done: "✓", error: "!" };
+
 function tool(block) {
-	const card = document.createElement("div");
+	const card = document.createElement("details");
 	card.className = "tool";
 	card.dataset.state = block.state;
+	const head = document.createElement("summary");
+	const icon = document.createElement("span");
+	icon.className = "tool-icon";
+	icon.textContent = ICONS[block.name] ?? "•";
 	const name = document.createElement("strong");
 	name.textContent = block.name;
 	const summary = document.createElement("span");
+	summary.className = "tool-summary";
 	summary.textContent = block.summary;
-	card.append(name, summary);
+	const state = document.createElement("span");
+	state.className = "tool-state";
+	state.textContent = STATES[block.state] ?? "";
+	head.append(icon, name, summary, state);
+	card.append(head);
+	if (block.diff) card.append(diff(block.diff));
 	if (block.result) card.append(output(block.result));
-	if (block.diff) card.append(output(block.diff));
+	if (!block.diff && !block.result) card.append(output("No output yet."));
 	return card;
+}
+function diff(text) {
+	const pre = document.createElement("pre");
+	pre.className = "diff";
+	for (const line of text.split("\n")) {
+		const row = document.createElement("span");
+		row.dataset.change =
+			line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : "kept";
+		row.textContent = `${line}\n`;
+		pre.append(row);
+	}
+	return pre;
 }
 function output(text) {
 	const pre = document.createElement("pre");
