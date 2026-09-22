@@ -25,10 +25,10 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 
 | Question | Read |
 | --- | --- |
-| where is it, does it need anyone, which commit, which PR | `status.md` |
+| where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
+| which commits | `fleet ls` for the branch and its dirty count, `git log <base>..<branch>` after `fleet land` |
 | what did the analysis find | `analysis.md` |
-| what did the reviewer find | `review.md` |
-| what is being handed over | `handoff.md` |
+| what did the reviewer find, which checks ran with which exit | `review.md` |
 | what is happening on the PR | `pr.md` |
 | what is it doing this minute, before `status.md` moved | `fleet peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |

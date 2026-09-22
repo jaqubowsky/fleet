@@ -31,8 +31,8 @@ test("a garbled dirty count reads as zero rather than NaN", () => {
 });
 
 test("a status brief is the header line plus the next open plan item", () => {
-	const status = "status: implementing\nattention: none\ncommit: 3b2e0f5\npr: none\n\n## Plan\n- [x] restore endpoint\n- [ ] frontend error mapping\n- [ ] review\n";
-	assert.equal(brief(status), "status: implementing | attention: none | commit: 3b2e0f5 | pr: none\nnext: frontend error mapping");
+	const status = "status: implementing\nattention: none\npr: none\n\n## Plan\n- [x] restore endpoint\n- [ ] frontend error mapping\n- [ ] review\n";
+	assert.equal(brief(status), "status: implementing | attention: none | pr: none\nnext: frontend error mapping");
 	assert.equal(brief("status: done\n\n## Plan\n- [x] all\n"), "status: done\nnext: nothing left");
 	assert.equal(brief(undefined), "status: no status.md");
 });

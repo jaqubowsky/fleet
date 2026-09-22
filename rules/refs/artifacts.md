@@ -4,12 +4,11 @@ One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo
 
 ```text
 task.md        what to do: goal, requirements, constraints, acceptance criteria   host or analyze-task
-status.md      where it stands: status, attention, commit, pr, plan checklist    every skill on its way out
+status.md      where it stands: status, attention, pr, plan; risks at the end    every skill, as its last write
 analysis.md    what the repo and the problem turned out to be                    analyze-task
 spec.md        feature spec                                                       to-spec
 issues/        NN-<slug>.md tickets                                               to-tickets, implement
-review.md      reviewer findings against one commit                              two-axis-review
-handoff.md     what the host gets: commits, verification, risks                   the agent, at ready-for-host or blocked
+review.md      reviewer findings and the checks read, against one commit         two-axis-review
 pr.md          pull request rounds                                                babysit-pr
 to-testing/    <run-id>/report.md and its recordings                              to-testing
 logs/          sessions/, usage.json, <skill>-<id>/ evidence                      pi, fleet down, any skill
@@ -43,33 +42,17 @@ Branch: <branch>
 ```md
 status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked | done
 attention: none | <one sentence naming what a person has to decide or provide>
-commit: <sha7 | none>
 pr: none | #<n> <URL>
 
 ## Plan
 - [x] <step>
 - [ ] <step>
-```
 
-The first unchecked step is the current work. `attention` is the line a person reads; `blocked` comes with an `attention` sentence. The file ends with the plan.
+## Risks
+- <what was not verified, or none>
 
-## handoff.md
-
-```md
-# Handoff
-
-Status: ready-for-host | blocked
-Branch: <branch>, head <sha7>, base <branch>@<sha7>
-Commits:
-- <sha7> <subject>
-
-## Done
-## Decisions
-## Verification
-- review: review.md, verdict <OK | OK with notes | BLOCK>
-- tests: `<command>`, exit <n>
-- browser: to-testing/<run-id>/report.md | not run
-## Not verified and risks
 ## Uncommitted
 - none | <file>, <reason>
 ```
+
+The first unchecked step is the current work. `attention` is the line a person reads; `blocked` comes with an `attention` sentence. The commit lives in git: `fleet ls` and `git log` on the branch read it. `## Risks` and `## Uncommitted` appear at `ready-for-host` and `blocked`; the verification behind them is `review.md` and the logs it cites.

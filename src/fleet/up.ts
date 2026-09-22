@@ -22,7 +22,7 @@ export function taskDir(repo: string, sandbox: string, io: Io): string {
 	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
-const TASK_STATUS = "status: new\nattention: none\ncommit: none\npr: none\n\n## Plan\n- [ ] \n";
+const TASK_STATUS = "status: new\nattention: none\npr: none\n\n## Plan\n- [ ] \n";
 
 function taskBrief(label: string, branch: string | undefined): string {
 	return `# ${label}\n\nSource: none\nBranch: ${branch ?? "none"}\n\n## Goal\n\n## Requirements\n- \n\n## Constraints\n- none\n\n## Acceptance criteria\n- [ ] \n`;
