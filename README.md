@@ -24,11 +24,11 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `omp/` | OMP profiles, its host extension entry, statusline, herdr state reporter, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: the one CLI with its harness set |
-| `deploy.sh` | installs this repository at `~/harness` and wires every harness home to it |
+| `sync.sh` | brings every harness home, link, image and setting in line with this repository and removes what nothing uses; prints the plan, `--apply` makes it |
 | `inventory.md` | facts outside this repo: tokens, MCP servers, model logins, network policy |
 | `BOOTSTRAP.md` | setting this Mac up from nothing |
 
-The harness homes hold only rendered files and runtime state: `~/.pi` (`agent/settings.json`, `agent/AGENTS.md`, `agent/refs/`, `agent/agents/`, `skills/`), `~/.omp` (the same with `agent/config.yml`), `~/.claude` (`rules/`, `skills/`, `agents/`, `CLAUDE.md`). Edit here and run `render`; never edit a home.
+The harness homes hold only rendered files and runtime state: `~/.pi` (`agent/settings.json`, `agent/AGENTS.md`, `agent/refs/`, `agent/agents/`, `skills/`), `~/.omp` (the same with `agent/config.yml`), `~/.claude` (`rules/`, `skills/`, `agents/`, `CLAUDE.md`). Edit here and run `./sync.sh --apply`; never edit a home. Render replaces `skills/`, `rules/`, `agents/` and `agent/refs/` whole, so a file removed here is gone there too.
 
 ## Commands
 
