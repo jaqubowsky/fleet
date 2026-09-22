@@ -98,7 +98,7 @@ RUN printf 'ignore-scripts=true\nmin-release-age=7\nsave-exact=true\n' > /home/a
  && mkdir -p /home/agent/.config/pnpm \
  && printf 'minimumReleaseAge: 10080\nblockExoticSubdeps: true\n' > /home/agent/.config/pnpm/config.yaml
 
-ARG PI_VERSION=0.85.1
+ARG PI_VERSION=0.87.1
 
 RUN sudo apt-get update \
  && sudo apt-get install -y --no-install-recommends fd-find jq \
