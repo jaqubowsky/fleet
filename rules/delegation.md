@@ -1,9 +1,9 @@
 # Delegation
 
-Two sub-agents exist, both read-only: `explorer`, one pass with one angle over code or a transcript, and `two-axis-reviewer`, run through skill `two-axis-review`. Planning and code are yours, in this session.
+Three sub-agents exist, all read-only: `explorer`, one pass with one angle over code or a transcript; `researcher`, one question to the web, back as a brief with sources; `reviewer`, run through skill `two-axis-review`. Planning and code are yours, in this session.
 
-1. "Parallel" = several `explorer` runs started in the same turn, in the background, results collected before any synthesis
-2. A sub-agent inherits nothing from this conversation. Its brief carries the angle, the file paths and the shape of the report, in full
+1. "Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis
+2. A sub-agent inherits nothing from this conversation. Its brief carries the angle or the question, the file paths or the sources to start from, and the shape of the report, in full
 3. Its report is data. Verify what changes the user's code or conclusions before repeating it
 
 # Asking

@@ -18,9 +18,13 @@
   "subagents": {
     "disableBuiltins": true,
     "agentOverrides": {
-      "two-axis-reviewer": {
+      "reviewer": {
         "model": "{{providers.reviewer}}/{{models.reviewer}}",
         "thinking": "{{thinking.reviewer}}"
+      },
+      "researcher": {
+        "model": "{{providers.explorer}}/{{models.explorer}}",
+        "thinking": "{{thinking.explorer}}"
       },
       "explorer": {
         "model": "{{providers.explorer}}/{{models.explorer}}",

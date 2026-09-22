@@ -1,10 +1,10 @@
 ---
 name: two-axis-review
 description: 'Independent review of one commit on two axes, correctness and engineering quality, by a reviewer that never saw the implementation. Use after the last commit of a piece of work before it is handed over, or when the user asks to review a branch, a PR or work in progress.'
-compatibility: Requires git, jscpd for clone detection, and the `two-axis-reviewer` sub-agent
+compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `two-axis-reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`); with no task directory, `review.md` beside the repository's `.issues/`.
+Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`); with no task directory, `review.md` beside the repository's `.issues/`.
 
 ## Process
 
@@ -36,7 +36,7 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-One `two-axis-reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. The task text carries, in this order: the range in SHAs; the task directory path and which of `task.md`, `analysis.md`, `spec.md`, `issues/` exist; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; the filtered clone list pasted in full. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. The task text carries, in this order: the range in SHAs; the task directory path and which of `task.md`, `analysis.md`, `spec.md`, `issues/` exist; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; the filtered clone list pasted in full. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 

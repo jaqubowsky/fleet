@@ -1,5 +1,5 @@
 ---
-name: two-axis-reviewer
+name: reviewer
 description: Independent review of one candidate commit on two axes, correctness and engineering quality, written to review.md
 tools: read, grep, find, ls
 thinking: high
