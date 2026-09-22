@@ -59,6 +59,10 @@ export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness =
 			const body = files[from] ?? (answer(`read ${from}`) as string | undefined);
 			if (body !== undefined) files[to] = body;
 		},
+		remove: (path) => {
+			calls.push(["remove", path]);
+			for (const file of Object.keys(files)) if (file === path || file.startsWith(`${path}/`)) delete files[file];
+		},
 		list: (dir) => (answer(`list ${dir}`) as string[] | undefined) ?? [],
 		stat: (path) => answer(`stat ${path}`) as { size: number; mtime: Date; dir: boolean } | undefined,
 		append: (path, line) => {

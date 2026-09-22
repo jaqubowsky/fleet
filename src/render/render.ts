@@ -1,5 +1,5 @@
 import type { Io } from "../fleet/io.ts";
-import type { Harness } from "../harness.ts";
+import type { Harness, HarnessName } from "../harness.ts";
 
 export type Seat = "host" | "container";
 export type SeatModel = { model: string; thinking: string };
@@ -202,7 +202,14 @@ function claude(r: Renderer): void {
 	]);
 }
 
+export const OWNED: Record<HarnessName, string[]> = {
+	pi: ["skills", "agent/refs", "agent/agents"],
+	omp: ["skills", "agent/refs", "agent/agents"],
+	claude: ["rules", "skills", "agents"],
+};
+
 export function render(input: RenderInput, io: Io): void {
+	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
 	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", "extensions/statusline.ts", []);
 	else if (input.harness.name === "omp")

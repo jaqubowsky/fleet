@@ -60,6 +60,20 @@ test("claude keeps one file per rule, its own tool names and CLAUDE.md", () => {
 	assert.equal(io.files["/stage/home/rules/host.md"], undefined);
 });
 
+test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
+	const io = fakeIo(sources(), HARNESSES.claude);
+	io.files["/home/skills/retired/SKILL.md"] = "old";
+	io.files["/home/rules/env.md"] = "old";
+	io.files["/home/settings.json"] = "{}";
+
+	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
+
+	assert.equal(io.files["/home/skills/retired/SKILL.md"], undefined);
+	assert.equal(io.files["/home/rules/env.md"], undefined);
+	assert.equal(io.files["/home/settings.json"], "{}");
+	assert.equal(io.files["/home/rules/core.md"], "# Core\nask with AskUserQuestion\n");
+});
+
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
 		const out = mkdtempSync(join(tmpdir(), `render-${name}-`));

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Harness } from "../harness.ts";
 
@@ -11,6 +11,7 @@ export type Io = {
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
 	copy(from: string, to: string): void;
+	remove(path: string): void;
 	list(dir: string): string[];
 	stat(path: string): { size: number; mtime: Date; dir: boolean } | undefined;
 	append(path: string, line: string): void;
@@ -61,6 +62,7 @@ export function realIo(home: string, harness: Harness): Io {
 			copyFileSync(from, to);
 			chmodSync(to, statSync(from).mode);
 		},
+		remove: (path) => rmSync(path, { recursive: true, force: true }),
 		list: (dir) => {
 			try {
 				return readdirSync(dir);
