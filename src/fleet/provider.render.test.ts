@@ -17,10 +17,27 @@ test("render writes both settings and both AGENTS.md", () => {
 
 	render("/root", io);
 
-	assert.equal(io.files["/root/agent/settings.json"], '{"m":"openai-codex/m1"}');
-	assert.equal(io.files["/root/sbx/agent-settings.json"], '{"p":"openrouter","m":"z-ai/w1"}');
+	assert.deepEqual(JSON.parse(io.files["/root/agent/settings.json"]), { m: "openai-codex/m1" });
+	assert.deepEqual(JSON.parse(io.files["/root/sbx/agent-settings.json"]), { p: "openrouter", m: "z-ai/w1" });
 	assert.equal(io.files["/root/agent/AGENTS.md"], "# Core\n\n# Delegation\n\n# Host\n");
 	assert.equal(io.files["/root/sbx/AGENTS.md"], "# Core\n\n# Delegation\n\n# Container\n");
+});
+
+test("a seat file overrides the shared settings key by key", () => {
+	const io = fakeIo({
+		"read /root/profiles/models.json": JSON.stringify({ seats: { host: { model: "openai-codex/m1", thinking: "high" }, sbx: { model: "openai-codex/w1", thinking: "low" } } }),
+		"read /root/profiles/settings.json": '{"theme":"dark","trust":"ask","subagents":{"a":1}}',
+		"read /root/profiles/host.json": '{"m":"{{models.host}}"}',
+		"read /root/profiles/sbx.json": '{"m":"{{models.sbx}}","trust":"always"}',
+		"list /root/rules": ["core.md"],
+		"read /root/rules/core.md": "# Core",
+		"read /root/sbx/container/sandbox.md": "# Container",
+	});
+
+	render("/root", io);
+
+	assert.deepEqual(JSON.parse(io.files["/root/agent/settings.json"]), { theme: "dark", trust: "ask", subagents: { a: 1 }, m: "m1" });
+	assert.deepEqual(JSON.parse(io.files["/root/sbx/agent-settings.json"]), { theme: "dark", trust: "always", subagents: { a: 1 }, m: "w1" });
 });
 
 test("render copies the disclosed refs next to AGENTS.md and keeps them out of it", () => {

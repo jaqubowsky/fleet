@@ -3,35 +3,8 @@
   "defaultModel": "{{models.sbx}}",
   "defaultThinkingLevel": "{{thinking.sbx}}",
   "defaultProjectTrust": "always",
-  "tuiMode": "fullscreen",
-  "fullscreenExitOutput": "resume-hint",
-  "theme": "dark",
-  "quietStartup": true,
-  "hideThinkingBlock": true,
   "showCacheMissNotices": true,
-  "compaction": {
-    "enabled": true,
-    "reserveTokens": 16384,
-    "keepRecentTokens": 20000
-  },
   "skills": ["~/.pi/skills"],
-  "subagents": {
-    "disableBuiltins": true,
-    "agentOverrides": {
-      "reviewer": {
-        "model": "{{providers.reviewer}}/{{models.reviewer}}",
-        "thinking": "{{thinking.reviewer}}"
-      },
-      "researcher": {
-        "model": "{{providers.explorer}}/{{models.explorer}}",
-        "thinking": "{{thinking.explorer}}"
-      },
-      "explorer": {
-        "model": "{{providers.explorer}}/{{models.explorer}}",
-        "thinking": "{{thinking.explorer}}"
-      }
-    }
-  },
   "packages": [
     "npm:pi-web-access@0.28.0",
     "npm:pi-subagents@0.66.0",

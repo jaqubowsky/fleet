@@ -5,14 +5,6 @@ export const TRUSTED = new Set([
 	"ast_grep_dump",
 	"fleet_watch",
 	"fleet_unwatch",
-	"create_goal",
-	"get_goal",
-	"update_goal",
-	"set_goal_tasks",
-	"update_goal_task",
-	"goal_question",
-	"goal_questionnaire",
-	"propose_goal_draft",
 ]);
 
 const READ_TOOLS = new Set([

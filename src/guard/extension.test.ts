@@ -27,23 +27,6 @@ test("the extension blocks what the policy denies and stays out of the way other
 	assert.match(unknown?.reason ?? "", /Unknown tool policy: telepathy/);
 });
 
-test("goal tracking reaches nothing outside its own state, so the extension lets it through", () => {
-	const guard = handler();
-
-	const tools = [
-		"create_goal",
-		"get_goal",
-		"update_goal",
-		"set_goal_tasks",
-		"update_goal_task",
-		"goal_question",
-		"goal_questionnaire",
-		"propose_goal_draft",
-	];
-
-	for (const tool of tools) assert.equal(guard({ toolName: tool, input: {} }), undefined, tool);
-});
-
 test("a denied command comes back blocked with the reason the policy gave", () => {
 	const guard = handler();
 

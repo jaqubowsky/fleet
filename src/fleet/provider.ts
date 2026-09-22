@@ -33,8 +33,10 @@ const CONTAINER_EXCLUDES = ["host.md"];
 
 export function render(root: string, io: Io): void {
 	const models = JSON.parse(io.read(`${root}/profiles/models.json`) ?? "{}") as Models;
+	const base = JSON.parse(renderSettings(io.read(`${root}/profiles/settings.json`) ?? "{}", models));
 	for (const [template, target] of SETTINGS) {
-		io.write(`${root}/${target}`, renderSettings(io.read(`${root}/${template}`) ?? "", models));
+		const seat = JSON.parse(renderSettings(io.read(`${root}/${template}`) ?? "{}", models));
+		io.write(`${root}/${target}`, `${JSON.stringify({ ...base, ...seat }, null, 2)}\n`);
 		io.log(target);
 	}
 	const rules = io.list(`${root}/rules`).filter((f) => f.endsWith(".md")).sort().map((name) => ({ name, body: io.read(`${root}/rules/${name}`) ?? "" }));

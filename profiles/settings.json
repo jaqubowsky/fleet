@@ -1,0 +1,16 @@
+{
+  "tuiMode": "fullscreen",
+  "fullscreenExitOutput": "resume-hint",
+  "theme": "dark",
+  "quietStartup": true,
+  "hideThinkingBlock": true,
+  "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 },
+  "subagents": {
+    "disableBuiltins": true,
+    "agentOverrides": {
+      "reviewer": { "model": "{{providers.reviewer}}/{{models.reviewer}}", "thinking": "{{thinking.reviewer}}" },
+      "explorer": { "model": "{{providers.explorer}}/{{models.explorer}}", "thinking": "{{thinking.explorer}}" },
+      "researcher": { "model": "{{providers.researcher}}/{{models.researcher}}", "thinking": "{{thinking.researcher}}" }
+    }
+  }
+}
