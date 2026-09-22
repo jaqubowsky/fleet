@@ -56,13 +56,11 @@ Grouped by the seam they trace to. Omit when every criterion passed.
 
 ## Artifacts
 
-Trace: [trace.zip](trace.zip) — the whole walk.
-
 | Artifact | Criterion | Shows | Capture | Viewport |
 | --- | --- | --- | --- | --- |
 | [<file>](<file>) | <one criterion from the matrix> | <what it shows and where to look; a video, what happens in order> | video, viewport, or full-page: <reason> | <w>x<h> |
 
-None beyond the trace. The audit needed no further visual evidence.
+None. The criterion matrix carries the evidence this audit needed.
 
 ## Runbook changes
 

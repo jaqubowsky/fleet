@@ -59,7 +59,7 @@ Use only test identities the runbook names or credentials the sandbox already ho
 
 Load the `playwright-cli` skill before the first action: it carries the command reference this file does not repeat, at the version this image installed. A container that does not carry it is a stale image, and the run is `blocked` on it.
 
-A config file carries what the audit depends on, so none of it rides on a command the walk has to remember: `outputDir` takes the CLI's own scratch — a snapshot file per command, and the traces — into a subdirectory, leaving the run's directory to the evidence a person opens, and the viewport is a context option, so a context the CLI restarts mid-run comes back at the same size.
+A config file carries what the audit depends on, so none of it rides on a command the walk has to remember: `outputDir` takes the CLI's own scratch, a snapshot file per command, into a subdirectory, leaving the run's directory to the evidence a person opens, and the viewport is a context option, so a context the CLI restarts mid-run comes back at the same size.
 
 ```json
 {
@@ -92,9 +92,7 @@ An action waits for itself and for nothing after it: `find`, `eval` and `screens
 
 ## Evidence
 
-Tracing runs across the whole walk: `tracing-start` before the first action, `tracing-stop` at cleanup. The trace carries a DOM snapshot before and after every action, a screenshot per step, the network with bodies and the console, so a criterion that fails arrives with the state that produced it. `tracing-stop` leaves a directory and the viewer reads a zip, so cleanup packs one beside the report: `(cd <artifact-dir>/cli/traces && python3 -m zipfile -c ../../trace.zip .)`.
-
-A trace holds full request and response bodies, so it stays in the artifact folder and goes to no service. The report names it as an artifact and leaves opening it to the person.
+Evidence is a screenshot per criterion, taken at the state that decides its verdict, named `<NN>-<criterion-slug>.png` beside the report; a failed criterion gets the screenshot of the failure and, where the cause is not on screen, the console or the response that shows it, copied as text. Tracing stays off: a trace records every action with a screenshot, the page's resources and full request bodies, hundreds of megabytes a person never opens, while the screenshots and the videos below are what the report cites.
 
 Record video for every criterion that takes more than one action: a form driven field by field, a flow crossing screens, motion, ordering, transient state. Caption it in the report with what happens, in order. Bring whatever names the subject of the action into frame first, so the recording shows which row, record or document changed. A video is a replay of the settled flow, not the walk that found it: [recording a flow](recording.md).
 
@@ -124,13 +122,13 @@ A run ends one of two ways.
 
 **Incidental** is what the walk hits outside every criterion: a console error on a route it only passed through, an identity that dead-ends, a defect on a neighbouring screen. It goes to the report's "Incidental findings" section with the route and the evidence that produced it, and it moves no verdict.
 
-**Crashed** is the instrument, not the change. `Target crashed` ends the trace and empties the page, so reopen, start tracing again, and let the report name the criteria walked after the gap as the ones carrying no trace. Inside `run-code` it arrives as a script waiting out its timeout rather than as an error, so a replay that goes quiet is a crashed page. A criterion whose evidence spans the crash is walked again; one that cannot be is `unreachable`, and a crash that repeats in the same flow puts the run `blocked` on the environment.
+**Crashed** is the instrument, not the change. `Target crashed` empties the page, so reopen and walk the criterion again. Inside `run-code` it arrives as a script waiting out its timeout rather than as an error, so a replay that goes quiet is a crashed page. A criterion whose evidence spans the crash is walked again; one that cannot be is `unreachable`, and a crash that repeats in the same flow puts the run `blocked` on the environment.
 
 Before a criterion is `regressed`, drive the same flow against the base checkout and record both observations. `base-worktree <merge-base>` prints the path to one: a detached worktree with every ignored path symlinked back, so it carries the `node_modules` and `.env` the application needs to start. Broken there too makes it `pre-existing`: a finding this branch inherited, not a fault it introduced.
 
 Status is `ready-for-human-approval` when every criterion passed, `failed` when any is `failed`, `not-implemented` or `regressed`, and `blocked` when the run stopped early. A `coverage-gap` keeps the run approvable and goes to the report's "Coverage gaps" section, so the person approves knowing what this audit could not prove. Writing the test that closes a gap belongs to `tdd`, never to this audit.
 
-Cleanup runs on every exit: `tracing-stop`, `playwright-cli close`, then `run.sh stop` or the prose stop commands, then confirm with a request per port that nothing answers. The stop script's own report is not that confirmation, and a port still answering takes the surviving pid by name.
+Cleanup runs on every exit: `playwright-cli close`, then `run.sh stop` or the prose stop commands, then confirm with a request per port that nothing answers. The stop script's own report is not that confirmation, and a port still answering takes the surviving pid by name.
 
 Evidence of every criterion the run observed moves in beside the report; a `blocked` run keeps the evidence of the blocker alone. `git status --porcelain` comes back as clean as the checkout proof recorded it: anything the CLI left in the working tree is removed, and the report says the output directory did not hold.
 

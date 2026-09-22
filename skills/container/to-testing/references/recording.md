@@ -1,6 +1,6 @@
 # Recording a flow
 
-A video is a replay, not the walk. The walk discovers the locators and leaves the trace behind it; the video re-runs the settled flow once, at a pace a person can follow. The installed `playwright-cli` skill's video reference carries the overlay API and the exact flags.
+A video is a replay, not the walk. The walk discovers the locators and leaves the screenshots behind it; the video re-runs the settled flow once, at a pace a person can follow. The installed `playwright-cli` skill's video reference carries the overlay API and the exact flags.
 
 Note the locators while walking a criterion, then write the flow as a file and run it with `run-code --filename`. Three things that file carries and a command-by-command recording cannot:
 
