@@ -18,22 +18,11 @@ const sessions = {
 
 test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
-	steer("pi-webapp-web-1", 'zrób analizę "x"', {}, io);
+	steer("pi-webapp-web-1", 'zrób analizę "x"', io);
 	assert.equal(io.calls[0][0], "append");
 	assert.match(io.calls[0][2], /webapp-web-1 "zrób analizę \\"x\\""/);
 	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "webapp-web-1", 'zrób analizę "x"']);
 	assert.deepEqual(io.lines, ["webapp-web-1: steered"]);
-});
-
-test("steer --wait returns once the container settles, with its status brief", () => {
-	const io = fakeIo({
-		...running,
-		"herdr agent prompt a": { result: { agent: { agent_status: "idle" } } },
-		[`read ${task}/status.md`]: "status: implementing\nattention: none\ncommit: 3b2e0f5\npr: none\n\n## Plan\n- [ ] review\n",
-	});
-	steer("pi-a", "run the review", { wait: true }, io);
-	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "a", "run the review", "--wait"]);
-	assert.deepEqual(io.lines, ["a: idle\nstatus: implementing | attention: none | commit: 3b2e0f5 | pr: none\nnext: review"]);
 });
 
 test("down refuses a dirty container without --force", () => {

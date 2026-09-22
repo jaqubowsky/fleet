@@ -14,7 +14,7 @@ const usage = `usage:
   fleet up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, lay out the task directory, start pi in a herdr tab, send nothing
   fleet ls                                           containers with herdr status, branch and dirty count
   fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
-  fleet steer <sandbox> <text...> [--wait]           steer the container's pi: delivered after its current tool call; --wait returns when it settles, with its status.md brief
+  fleet steer <sandbox> <text...>                    steer the container's pi: delivered after its current tool call; fleet_watch reports when it settles
   fleet exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   fleet artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   fleet copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
@@ -26,7 +26,7 @@ const usage = `usage:
   <sandbox> is the container name or its herdr agent name, which is the container name without the pi- prefix
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
 
-const BARE = new Set(["force", "push", "sign", "wait"]);
+const BARE = new Set(["force", "push", "sign"]);
 
 export function flags(args: string[], allowed: string[]): { opts: Record<string, string | true>; rest: string[] } {
 	const opts: Record<string, string | true> = {};
@@ -81,9 +81,9 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		io.log(peek(sandboxOf(rest[0]), io, Number(opts.lines ?? 40)));
 	},
 	steer(args) {
-		const { opts, rest } = flags(args, ["wait"]);
+		const { rest } = flags(args, []);
 		const [sandbox, ...text] = rest;
-		steer(sandboxOf(sandbox), need(text.join(" "), "text"), { wait: opts.wait === true }, io);
+		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io);
 	},
 	exec(args) {
 		const { rest } = flags(args, []);

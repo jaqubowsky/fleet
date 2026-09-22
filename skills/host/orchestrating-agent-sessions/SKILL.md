@@ -12,8 +12,7 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 | put up a container for ticket X | `fleet up <label> --repo <path> [--branch <name>] [--base <name>] [--model <provider/id:thinking>]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); pi waiting, no prompt sent |
 | what is running | `fleet ls` | one line per container: status, herdr state, branch, dirty count |
 | what is it doing this minute | `fleet peek <sandbox>` | git status, log, diff --stat, install log, pane tail |
-| send it this | `fleet steer <sandbox> "<text>"` | steered; pi takes it after its current tool call |
-| drive it: send this and act on the outcome | `fleet steer <sandbox> "<text>" --wait` | the settled state and the `status.md` brief |
+| send it this | `fleet steer <sandbox> "<text>"` | steered; pi takes it after its current tool call, and `fleet_watch` wakes you when it settles |
 | run something inside | `fleet exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `fleet artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | get one file out | `fleet copy <sandbox>:<path> <local>` | local path |
@@ -42,9 +41,9 @@ The repository inside a container is a private clone, so writes there stay there
 
 `fleet_watch`, or `/fleet-watch [names]` typed by the user, watches the agents that exist when it runs, so call it again after every `fleet up`.
 
-- A settling agent arrives as `[fleet] <name>: <prev> -> <status>` plus the `status.md` brief, with your next prompt: information for the turn you were taking anyway. Going back to work is silent.
+- A settling agent wakes you with `[fleet] <name>: <prev> -> <status>` plus the `status.md` brief. The wake turn is one line, the agent and its change, then either the next steer when the task is yours to drive or the end of the turn. Going back to work is silent.
 - `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means pi died in it; read the tab.
-- A container you drive is driven with `fleet steer --wait`; the `[fleet]` line is for the ones you only watch.
+- Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 
 ## When it refuses
 

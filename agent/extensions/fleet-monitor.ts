@@ -93,7 +93,7 @@ export default function (pi: any) {
 		const text = `[fleet] ${name}: ${change}\n${await statusOf(name)}`;
 		pi.sendMessage(
 			{ customType: "fleet", content: text, display: true },
-			{ deliverAs: "nextTurn" },
+			{ deliverAs: "nextTurn", triggerTurn: true },
 		);
 		pi.ui?.notify?.(`[fleet] ${name}: ${change}`, "info");
 	};
@@ -217,7 +217,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Watch other herdr agents; a settling one lands as a [fleet] line at your next prompt. Args: agent names; none = all",
+			"Watch other herdr agents; a settling one wakes this session with a [fleet] line. Args: agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -232,8 +232,8 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) becomes a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header, delivered with your next prompt and triggering nothing. To act on a container you drive, use fleet steer --wait instead of waiting for this line. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
-		promptSnippet: "watch herdr agents; a settling one is a line at your next prompt",
+			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) wakes this session with a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header; that turn is where you act on it. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
+		promptSnippet: "watch herdr agents; a settling one wakes this session with a [fleet] line",
 		parameters: {
 			type: "object",
 			properties: {
