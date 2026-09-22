@@ -24,7 +24,7 @@ One short file per name above `logs/`. Top-level files are current state, never 
 ## status.md
 
 ```md
-status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked | done
+status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked
 attention: none | <one sentence naming what a person has to decide or provide>
 
 ## Summary
