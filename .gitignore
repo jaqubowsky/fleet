@@ -4,3 +4,4 @@ audits/
 .DS_Store
 .claude/
 *.bak
+__pycache__/
