@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM docker/sandbox-templates:claude-code
 
-ENV CLAUDE_CODE_EFFORT_LEVEL=medium
 ENV GIT_TERMINAL_PROMPT=0
 
 ARG NODE_MAJOR=24
