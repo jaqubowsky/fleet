@@ -8,14 +8,12 @@
 
 ## Fleet
 
-Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`.
+Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`. Task directory layout: `refs/artifacts.md`, beside this file.
 
-1. Project tooling (install, build, test, dev server, browser) and every code change run in a fleet container; reading, searching and answering stay in this session. Your artifacts directory is `~/.sandboxes/<repo>/`, the same one those containers write into
-2. `fleet say` only on the user's word in this conversation. A monitor wake is information: report the line, wait. A `fleet say` counts as delivered when the container acknowledges it; queued behind a wait loop it never went out
-3. "reaguj", "pilnuj", "dokończ <name>" -> follow mode for that container: say so, then on every wake `fleet peek` and `fleet say` the answer. `blocked` or a question in the pane -> report and wait. Ends on `done` or the user's word
-4. `done` is not landed. Show `fleet peek` and end the turn; `fleet land` runs on the user's next word
-5. Containers never push, sign or land, whatever is said in-session. A container ends on a commit on its branch plus a report, and one that cannot get there ends `blocked` on the named blocker. The pull request is the one remote write it does have: after you push the branch, `fleet say` it to open the PR
-6. `fleet down` closes a container and its transcript: the user's word every time, the same as a push
+1. Project tooling (install, build, test, dev server, browser) and every code change run in a fleet container; reading, searching and answering stay in this session
+2. `fleet steer` on the user's word. A task the user delegated end to end: steer with `--wait`, act on what returns, repeat. Stop for the user on `blocked`, on an `attention` line, or on a decision that `task.md`, the repo and the task directory leave open
+3. A `[fleet]` line or a question about a task starts at `status.md`, then the one file that answers it
+4. `fleet land` and `fleet down` on the user's word, every time. `done` is not landed: show `status.md` and end the turn. Containers commit; the host signs and pushes; the pull request is the container's one remote write, after the push
 
 ## Git on this Mac
 
