@@ -32,6 +32,9 @@ export type Binding = {
 };
 export type Assets = Readonly<Record<string, { type: string; body: string }>>;
 
+const CLIENT_LIMIT = 8;
+const VIEW_LIMIT = 4;
+
 export class RemoteRuntime {
 	private server?: Server;
 	private token?: string;
@@ -307,7 +310,8 @@ export class RemoteRuntime {
 		if (req.method === "GET" && path === "/bootstrap")
 			return this.json(res, 200, this.snapshot(control));
 		if (req.method === "GET" && path === "/events") {
-			if (this.clients.size >= 8)
+			const viewers = [...this.clients.values()].filter((held) => !held).length;
+			if (this.clients.size >= CLIENT_LIMIT || (!control && viewers >= VIEW_LIMIT))
 				return this.json(res, 429, { error: "Too many clients" });
 			res.writeHead(200, {
 				"Content-Type": "text/event-stream",

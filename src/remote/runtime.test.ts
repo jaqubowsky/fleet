@@ -534,3 +534,25 @@ test("a finished tool reports how it ended", async (t) => {
 		},
 	]);
 });
+
+test("view-only phones never take the last stream from the control link", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	remote.bind(Symbol(), binding("shared"));
+	await remote.start(0);
+	const { origin, token, view } = remote.identity()!;
+	const open = async (credential: string) => {
+		const response: Response = await fetch(`${origin}/events`, {
+			headers: { Authorization: `Bearer ${credential}` },
+		});
+		if (response.body) t.after(() => response.body!.cancel().catch(() => {}));
+		return response.status;
+	};
+
+	const watching = [];
+	for (let seat = 0; seat < 4; seat++) watching.push(await open(view));
+
+	assert.deepEqual(watching, [200, 200, 200, 200], "four viewers are welcome");
+	assert.equal(await open(view), 429, "the fifth viewer is turned away");
+	assert.equal(await open(token), 200, "the control link still gets a stream");
+});
