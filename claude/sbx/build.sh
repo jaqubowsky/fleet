@@ -51,6 +51,6 @@ docker buildx build --provenance=false --sbom=false \
   --build-arg "CLAUDE_UPDATE_BUST=$(date +%Y%m%d)" \
   --build-context claude-home="$STAGE" \
   --output "type=docker,dest=$TAR" -t my-claude:v1 "$RENDERED/context"
-sbx template rm my-claude:v1 2>/dev/null || true
+sbx template rm my-claude:v1 --force 2>/dev/null </dev/null || sbx template rm my-claude:v1 2>/dev/null </dev/null || true
 sbx template load "$TAR"
 rm -f "$TAR"
