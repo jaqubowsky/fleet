@@ -41,7 +41,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	);
 	assert.equal(run[run.indexOf("--memory") + 1], "8g");
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
-	assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.pi/agent/fleet-events.log" && / up webapp-web-1$/.test(c[2])));
+	assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.pi/agent/fleet-events.log" && / up webapp-web-1 session=$/.test(c[2])));
 	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec");
 	assert.deepEqual(execs[0], [
 		"sbx",

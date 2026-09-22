@@ -75,6 +75,8 @@ export function taskDirOf(
 export default function (pi: any) {
 	let sock: net.Socket | undefined;
 	let gen = 0;
+	let sessionId: string | undefined;
+	let ticker: ReturnType<typeof setInterval> | undefined;
 	const status = new Map<string, string>();
 	const names = new Map<string, string>();
 	const since = new Map<string, number>();
@@ -105,7 +107,7 @@ export default function (pi: any) {
 		}
 		const dir = taskDirOf(os.homedir(), rows, agent);
 		const sandbox = rows.find((s) => agentName(s.name) === agent)?.name;
-		if (!dir || !sandbox) return wakeText(undefined, undefined, "");
+		if (!dir || !sandbox) return wakeText(undefined, "");
 		const read = (file: string) => {
 			try {
 				return readFileSync(`${dir}/${file}`, "utf8");
@@ -114,7 +116,7 @@ export default function (pi: any) {
 			}
 		};
 		const commits = await pi.exec("sbx", ["exec", sandbox, "sh", "-c", commitsProbe]).catch(() => undefined);
-		return wakeText(read("status.md"), read("review.md"), typeof commits === "string" ? commits : (commits?.stdout ?? ""));
+		return wakeText(read("status.md"), typeof commits === "string" ? commits : (commits?.stdout ?? ""));
 	};
 
 	const publish = () => {
@@ -131,7 +133,7 @@ export default function (pi: any) {
 		const text = `[fleet] ${name}: ${change}\n${await statusOf(name)}`;
 		pi.sendMessage(
 			{ customType: "fleet", content: text, display: true },
-			{ deliverAs: "nextTurn", triggerTurn: true },
+			{ deliverAs: "followUp", triggerTurn: true },
 		);
 		pi.ui?.notify?.(`[fleet] ${name}: ${change}`, "info");
 	};
@@ -184,7 +186,7 @@ export default function (pi: any) {
 		} catch {
 			return;
 		}
-		const agents = eventAgents(text, selfPane);
+		const agents = eventAgents(text, sessionId);
 		if (agents.length) void adopt(agents);
 	};
 
@@ -310,7 +312,7 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch herdr agents beyond the ones this session put up or steered, which are watched by themselves. An agent settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying its status.md header, the commits on its branch and the review verdict; that turn is where you act on it. Pass the sandbox name from fleet ls; empty string = every agent but this one.",
+			"Watch herdr agents beyond the ones this session put up or steered, which are watched by themselves. An agent settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying a bounded projection of status.md (status, attention, summary, next step) and recent commits; that turn is where you act on it. Pass the sandbox name from fleet ls; empty string = every agent but this one.",
 		promptSnippet: "watch herdr agents; a settling one wakes this session with a [fleet] line",
 		parameters: {
 			type: "object",
@@ -341,9 +343,12 @@ export default function (pi: any) {
 			return { content: [{ type: "text", text: "fleet: stopped" }] };
 		},
 	});
-	const ticker = setInterval(ring, STALL_TICK_MS);
-	sweep();
-	watchFile(log, { interval: LOG_POLL_MS }, sweep);
+	pi.on("session_start", (_event: unknown, ctx: any) => {
+		sessionId = ctx.sessionManager.getSessionId();
+		ticker = setInterval(ring, STALL_TICK_MS);
+		sweep();
+		watchFile(log, { interval: LOG_POLL_MS }, sweep);
+	});
 	pi.on("session_shutdown", () => {
 		stop();
 		clearInterval(ticker);

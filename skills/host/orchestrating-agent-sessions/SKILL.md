@@ -41,11 +41,12 @@ The repository inside a container is a private clone, so writes there stay there
 
 ## Watching
 
-Every container this session put up or steered is under watch by itself, from the log `fleet up` and `fleet steer` write, and a session restart picks the live ones back up. `fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, is for the rest: containers someone else drives, by the sandbox name `fleet ls` prints; no name watches every agent.
+Only the Pi session that ran `fleet up` or `fleet steer` auto-watches that container: the event carries the shell's `PI_SESSION_ID`, matched against the extension's current session ID. Resuming that same session restores its watches. Legacy or ownerless events never auto-watch. `fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every agent.
 
 A watched container working on without settling wakes you with `working <n>m without settling`, and again while it goes on. That wake is a `fleet peek`, then either a steer that names what to stop or the end of the turn.
 
-- A settling agent wakes you with `[fleet] <name>: <prev> -> <status>`, then the `status.md` brief, the commits on its branch and the review verdict when `review.md` exists. The wake turn is one line, the agent and its change, then either the next steer when the task is yours to drive or the end of the turn. Going back to work is silent.
+- A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.
+- A settling agent wakes you with `[fleet] <name>: <prev> -> <status>`, then a bounded projection of `status.md`: status, attention, summary, next step, followed by recent commits. Each container wakes independently. The message points into durable task state; `status.md` remains canonical. The wake turn is one line, the agent and its change, then either the next steer when the task is yours to drive or the end of the turn. Going back to work is silent.
 - `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means pi died in it; read the tab.
 - Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 

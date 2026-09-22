@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
+import { EventEmitter } from "node:events";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import net from "node:net";
+import os from "node:os";
+import { join } from "node:path";
+import fleetMonitor from "../../agent/extensions/fleet-monitor.ts";
+import { logEvent } from "./events.ts";
+import { fakeIo } from "./fake-io.ts";
 import {
 	taskDirOf,
 	pickAgents,
@@ -7,6 +15,91 @@ import {
 	stalled,
 	transition,
 } from "../../agent/extensions/fleet-monitor.ts";
+
+function monitorRuntime(t: TestContext) {
+	const home = mkdtempSync(join(os.tmpdir(), "fleet-monitor-"));
+	mkdirSync(join(home, ".pi/agent"), { recursive: true });
+	t.mock.method(os, "homedir", () => home);
+	const previous = process.env.HERDR_PANE_ID;
+	delete process.env.HERDR_PANE_ID;
+	t.after(() => { if (previous !== undefined) process.env.HERDR_PANE_ID = previous; rmSync(home, { recursive: true, force: true }); });
+	const sockets: EventEmitter[] = [];
+	t.mock.method(net, "createConnection", () => {
+		const socket = Object.assign(new EventEmitter(), { destroyed: false, write() {}, destroy() { this.destroyed = true; } });
+		sockets.push(socket);
+		return socket as unknown as net.Socket;
+	});
+	const start = async (sessionId: string, agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }]) => {
+		const events: Record<string, (...args: any[]) => any> = {};
+		const tools: Record<string, { execute: (...args: any[]) => any }> = {};
+		const messages: { message: { content: string }; options: { deliverAs: string; triggerTurn: boolean } }[] = [];
+		const notices: string[] = [];
+		fleetMonitor({
+			on: (name: string, fn: any) => { events[name] = fn; },
+			registerTool: (tool: any) => { tools[tool.name] = tool; },
+			registerCommand() {},
+			exec: async (command: string) => ({ stdout: command === "herdr" ? JSON.stringify({ result: { agents } }) : '{"sandboxes":[]}' }),
+			sendMessage: (message: any, options: any) => messages.push({ message, options }),
+			ui: { setStatus() {}, notify: (text: string) => notices.push(text) },
+		});
+		t.after(() => events.session_shutdown());
+		await events.session_start?.({}, { sessionManager: { getSessionId: () => sessionId } });
+		await new Promise((resolve) => setImmediate(resolve));
+		return { tools, messages, notices };
+	};
+	const settle = async (pane = "worker:pane") => {
+		for (const socket of sockets) socket.emit("data", Buffer.from(JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } }) + "\n"));
+		await new Promise((resolve) => setImmediate(resolve));
+	};
+	return { home, start, settle };
+}
+
+test("only the invoking Pi session receives automatic fleet notifications", async (t) => {
+	const runtime = monitorRuntime(t);
+	const io = Object.assign(fakeIo(), { sessionId: "session-a" });
+	logEvent(io, "up", "worker");
+	writeFileSync(join(runtime.home, ".pi/agent/fleet-events.log"), io.calls[0][2] + "\n");
+	const a = await runtime.start("session-a");
+	const b = await runtime.start("session-b");
+
+	await runtime.settle();
+
+	assert.equal(a.messages.length, 1);
+	assert.match(a.messages[0].message.content, /^\[fleet\] worker:/);
+	assert.equal(a.notices.length, 1);
+	assert.deepEqual(b.messages, []);
+	assert.deepEqual(b.notices, []);
+});
+
+test("explicit fleet watch delivers a follow-up turn without waiting for user input", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = await runtime.start("session-b");
+
+	await watcher.tools.fleet_watch.execute("call", { agents: "worker" });
+	await runtime.settle();
+
+	assert.equal(watcher.messages.length, 1);
+	assert.deepEqual(watcher.messages[0].options, { deliverAs: "followUp", triggerTurn: true });
+});
+
+test("different containers wake independently while an identical transition stays deduplicated", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = await runtime.start("session-a", [
+		{ name: "first", pane_id: "first:pane", agent_status: "working" },
+		{ name: "second", pane_id: "second:pane", agent_status: "working" },
+	]);
+	await watcher.tools.fleet_watch.execute("call", { agents: "first second" });
+
+	await runtime.settle("first:pane");
+	await runtime.settle("first:pane");
+	await runtime.settle("second:pane");
+
+	assert.equal(watcher.messages.length, 2);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] first: working -> idle\nstatus:/);
+	assert.match(watcher.messages[1].message.content, /^\[fleet\] second: working -> idle\nstatus:/);
+	assert.doesNotMatch(watcher.messages[0].message.content, /second/);
+	for (const { options } of watcher.messages) assert.deepEqual(options, { deliverAs: "followUp", triggerTurn: true });
+});
 
 test("watch everyone but self, or only the named agents", () => {
 	const agents = [

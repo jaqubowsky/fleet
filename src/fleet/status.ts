@@ -17,13 +17,20 @@ export function parseCheckout(text: string): { branch: string; dirty: number; he
 
 export const checkoutProbe = 'cd "$WORKSPACE_DIR" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)"';
 
+function bounded(text: string, limit: number): string {
+	const compact = text.trim().replace(/\s+/g, " ");
+	return compact.length > limit ? `${compact.slice(0, limit - 3)}...` : compact;
+}
+
 export function brief(statusMd: string | undefined): string {
-	if (statusMd === undefined) return "status: no status.md";
-	const lines = statusMd.split("\n");
-	const header = lines.filter((l) => /^(status|attention|now): /.test(l)).join(" | ");
-	const last = lines.filter((l) => l.startsWith("- ")).at(-1)?.slice(2) ?? "nothing yet";
-	const sections = statusMd.split(/(?=^## )/m).filter((section) => /^## (Summary|Next step)\n/.test(section)).map((section) => section.trim()).join("\n\n");
-	return `${header}\n${sections ? `${sections}\n` : ""}last: ${last}`;
+	const sections = statusMd?.replace(/\r\n/g, "\n").split(/^## /m) ?? [];
+	const section = (name: string) => sections.find((part) => part.startsWith(`${name}\n`))?.slice(name.length + 1).trim() || "not recorded";
+	return [
+		`status: ${bounded(statusMd?.match(/^status: (.*)$/m)?.[1] ?? (statusMd === undefined ? "no status.md" : "not recorded"), 80)}`,
+		`attention: ${bounded(statusMd?.match(/^attention: (.*)$/m)?.[1] ?? "not recorded", 300)}`,
+		`summary: ${bounded(section("Summary"), 600)}`,
+		`next step: ${bounded(section("Next step"), 300)}`,
+	].join("\n");
 }
 
 export function formatRows(rows: Row[]): string {
@@ -36,15 +43,9 @@ export function formatRows(rows: Row[]): string {
 
 export const commitsProbe = 'cd "$WORKSPACE_DIR" && base="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)" && git log --oneline "$base"..HEAD 2>/dev/null | head -5';
 
-export function verdict(reviewMd: string | undefined): string | undefined {
-	return reviewMd?.split("\n").find((l) => l.startsWith("Verdict: "))?.slice(9);
-}
-
-export function wake(statusMd: string | undefined, reviewMd: string | undefined, commits: string): string {
-	const lines = [brief(statusMd), `commits: ${commits.trim().split("\n").filter(Boolean).join("; ") || "none"}`];
-	const v = verdict(reviewMd);
-	if (v) lines.push(`review: ${v}`);
-	return lines.join("\n");
+export function wake(statusMd: string | undefined, commits: string): string {
+	const recent = commits.split("\n").filter((line) => line.trim()).slice(0, 5).map((line) => bounded(line, 120));
+	return `${brief(statusMd)}\ncommits: ${recent.join("; ") || "none"}`;
 }
 
 export function elapsed(from: Date, to: Date): string {

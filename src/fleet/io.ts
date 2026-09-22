@@ -20,6 +20,7 @@ export type Io = {
 	home: string;
 	tmp: string;
 	pane: string;
+	sessionId?: string;
 };
 
 function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
@@ -43,7 +44,11 @@ export function realIo(home: string): Io {
 		sbx: (args, opts) => shell("sbx", args, opts),
 		herdr: <T>(args: string[]) => {
 			const out = shell("herdr", args, { quiet: true });
-			return (out ? JSON.parse(out) : {}) as T;
+			try {
+				return (out ? JSON.parse(out) : {}) as T;
+			} catch (cause) {
+				throw new Error("herdr returned invalid JSON", { cause });
+			}
 		},
 		herdrText: (args) => shell("herdr", args, { quiet: true }),
 		git: (args, cwd) => shell("git", args, { cwd, quiet: true }),
@@ -80,5 +85,6 @@ export function realIo(home: string): Io {
 		home,
 		tmp: process.env.TMPDIR ?? "/tmp",
 		pane: process.env.HERDR_PANE_ID ?? "-",
+		sessionId: process.env.PI_SESSION_ID,
 	};
 }
