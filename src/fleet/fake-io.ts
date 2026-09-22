@@ -8,7 +8,9 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 	const lines: string[] = [];
 	const files: Record<string, string> = {};
 	const answer = (key: string): unknown => {
-		const hit = Object.keys(answers).find((k) => key.startsWith(k));
+		const hit = Object.keys(answers)
+			.filter((k) => key.startsWith(k) && !key.slice(k.length).startsWith("/"))
+			.sort((a, b) => b.length - a.length)[0];
 		return hit === undefined ? undefined : answers[hit];
 	};
 	const text = (key: string): string => {

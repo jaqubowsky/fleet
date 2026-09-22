@@ -2,8 +2,9 @@ import type { Io } from "./io.ts";
 import { render } from "./provider.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { agentName } from "./name.ts";
-import { artifactsDir } from "./up.ts";
+import { artifactsDir, taskDir } from "./up.ts";
 import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
+import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 type Agents = { result: { agents: Agent[] } };
 
@@ -43,11 +44,11 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function say(sandbox: string, text: string, io: Io): void {
+export function steer(sandbox: string, text: string, io: Io): void {
 	const agent = agentName(sandbox);
-	io.append(`${io.home}/.pi/agent/fleet-say.log`, `${io.now().toISOString()} ${agent} ${JSON.stringify(text)}`);
+	io.append(`${io.home}/.pi/agent/fleet-steer.log`, `${io.now().toISOString()} ${agent} ${JSON.stringify(text)}`);
 	io.herdr(["agent", "prompt", agent, text]);
-	io.log(`${agent}: prompt sent`);
+	io.log(`${agent}: steered`);
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
@@ -97,27 +98,67 @@ function age(mtime: Date, io: Io): string {
 	return `${Math.round(minutes / 1440)}d ago`;
 }
 
-export function artifacts(repo: string, io: Io): string {
-	const root = artifactsDir(repo, io);
-	const found = collect(root, "", io, []).sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-	if (!found.length) return `${root}\nnothing left here yet`;
+type Line = { indent: string; name: string; detail: string };
 
-	const width = Math.max(...found.map((f) => f.path.length));
-
-	return [root, ...found.map((f) => `${f.path.padEnd(width)}  ${bytes(f.size).padStart(6)}  ${age(f.mtime, io)}`)].join("\n");
+function entries(dir: string, io: Io): { files: Artifact[]; dirs: string[] } {
+	const files: Artifact[] = [];
+	const dirs: string[] = [];
+	for (const name of io.list(dir)) {
+		const info = io.stat(`${dir}/${name}`);
+		if (!info) continue;
+		if (info.dir) dirs.push(name);
+		else files.push({ path: name, size: info.size, mtime: info.mtime });
+	}
+	files.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+	dirs.sort();
+	return { files, dirs };
 }
 
-function harvest(sandbox: string, io: Io): string | undefined {
-	const stamp = io.now().toISOString().replace(/[-:]/g, "").slice(0, 15);
-	const dest = `${io.home}/.pi/sandbox-transcripts/${sandbox}-${stamp}`;
-	io.mkdir(`${io.home}/.pi/sandbox-transcripts`);
-	try {
-		io.sbx(["cp", `${sandbox}:/home/agent/.pi/agent/sessions`, dest], { quiet: true });
-	} catch (error) {
-		if (!/not found/.test((error as Error).message)) throw error;
-		return undefined;
+function fileLine(indent: string, f: Artifact, io: Io): Line {
+	return { indent, name: f.path, detail: `${bytes(f.size).padStart(6)}  ${age(f.mtime, io)}` };
+}
+
+function folderLine(indent: string, dir: string, name: string, io: Io): Line {
+	const inside = collect(`${dir}/${name}`, "", io, []);
+	return { indent, name: `${name}/`, detail: `${inside.length} files  ${bytes(inside.reduce((sum, f) => sum + f.size, 0))}` };
+}
+
+function isTask(dir: string, io: Io): boolean {
+	return io.stat(`${dir}/status.md`) !== undefined;
+}
+
+export function artifacts(repo: string, io: Io): string {
+	const root = artifactsDir(repo, io);
+	const top = entries(root, io);
+	const tasks = top.dirs.filter((d) => isTask(`${root}/${d}`, io));
+	const lines: Line[] = [];
+	for (const task of tasks) {
+		lines.push({ indent: "", name: `${task}/`, detail: "" });
+		const inside = entries(`${root}/${task}`, io);
+		lines.push(...inside.files.map((f) => fileLine("  ", f, io)), ...inside.dirs.map((d) => folderLine("  ", `${root}/${task}`, d, io)));
 	}
-	return dest;
+	lines.push(...top.dirs.filter((d) => !tasks.includes(d)).map((d) => folderLine("", root, d, io)), ...top.files.map((f) => fileLine("", f, io)));
+	if (!lines.length) return `${root}\nnothing left here yet`;
+
+	const width = Math.max(...lines.map((l) => l.name.length));
+
+	return [root, ...lines.map((l) => (l.detail ? `${l.indent}${l.name.padEnd(width)}  ${l.detail}` : `${l.indent}${l.name}`))].join("\n");
+}
+
+function sessionUsage(task: string, branch: string, repo: string | undefined, io: Io): Summary | undefined {
+	const files = collect(`${task}/logs/sessions`, "", io, [])
+		.filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/"))
+		.sort((a, b) => a.path.localeCompare(b.path));
+	if (!files.length) return undefined;
+	const entries = files.flatMap((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""));
+	const first = entries.find((e) => e.type === "message" && e.message?.role === "assistant")?.timestamp;
+	const commits = repo && first && branch
+		? io.git(["log", "--format=%h\t%cI", `--since=${first}`, branch], repo).split("\n").filter(Boolean).map((line) => {
+				const [sha, at] = line.split("\t");
+				return { sha, at };
+			})
+		: [];
+	return summarize(entries, commits);
 }
 
 function landed(head: string, repo: string | undefined, io: Io): boolean {
@@ -140,10 +181,16 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	if (!landed(checkout.head, entry.workspaces[0], io) && !opts.force) {
 		throw new Error(`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run fleet land first or pass --force to discard`);
 	}
-	const dest = harvest(sandbox, io);
-	io.log(dest ? `${sandbox}: transcripts -> ${dest}` : `${sandbox}: no transcripts (pi never ran a session)`);
 	const repo = entry.workspaces[0];
-	if (repo && io.list(artifactsDir(repo, io)).length) io.log(`${sandbox}: artifacts stay in ${artifactsDir(repo, io)}, read them with fleet artifacts --repo ${repo}`);
+	const task = taskDir(repo ?? "", sandbox, io);
+	const summary = sessionUsage(task, checkout.branch, repo, io);
+	if (summary) {
+		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
+		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
+	} else {
+		io.log(`${sandbox}: no session in ${task}/logs/sessions (pi never ran)`);
+	}
+	if (repo && io.list(artifactsDir(repo, io)).length) io.log(`${sandbox}: artifacts stay in ${task}, read them with fleet artifacts --repo ${repo}`);
 	const agent = agentFor(agents(io), agentName(sandbox));
 	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);
 	try {

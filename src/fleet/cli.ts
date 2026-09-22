@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { artifacts, build, copy, down, exec, ls, peek, resolveSandbox, say } from "./commands.ts";
+import { artifacts, build, copy, down, exec, ls, peek, resolveSandbox, steer } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
 import { render } from "./provider.ts";
@@ -14,12 +14,12 @@ const usage = `usage:
   fleet up <label> [--branch <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, lay out its task directory, start pi in a herdr tab, send nothing
   fleet ls                                           containers with herdr status, branch and dirty count
   fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
-  fleet say <sandbox> <text...>                      send a prompt to the container's pi (logged to agent/fleet-say.log)
+  fleet steer <sandbox> <text...>                    steer the container's pi: delivered after its current tool call (logged to agent/fleet-steer.log)
   fleet exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
-  fleet artifacts [--repo <path>]                    what containers on that repo left for a person, newest first, with size and age
+  fleet artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   fleet copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
   fleet land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
-  fleet down <sandbox> [--force]                     harvest transcripts, close the tab, remove the container; artifacts stay
+  fleet down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
   fleet build                                        rebuild the worker image from sbx/Dockerfile and the current skills and rules
   fleet render                                       rewrite both settings files and both AGENTS.md from profiles and rules
 
@@ -80,9 +80,9 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const { opts, rest } = flags(args, ["lines"]);
 		io.log(peek(sandboxOf(rest[0]), io, Number(opts.lines ?? 40)));
 	},
-	say(args) {
+	steer(args) {
 		const [sandbox, ...text] = args;
-		say(sandboxOf(sandbox), need(text.join(" "), "text"), io);
+		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io);
 	},
 	exec(args) {
 		const { rest } = flags(args, []);

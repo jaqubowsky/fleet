@@ -18,7 +18,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
-| `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`; the workers' shared memory between sessions and what they leave for a person, kept after the container goes (outside this repo) |
+| `~/.sandboxes/<repo>/` | mounted into every container on that repo as `$FLEET_ARTIFACTS`, kept after the container goes (outside this repo). `<sandbox>/` inside it is the task directory: `task.md` and `status.md` from `fleet up`, the files each skill owns, and `logs/` with pi's sessions (`PI_CODING_AGENT_SESSION_DIR`) and the `usage.json` that `fleet down` sums from them |
 | `cache/<repo>/` | mounted into every container on that repo; what is expensive to rebuild (ignored) |
 | `~/my-knowledge-base/` | mounted read-only into every container at the same absolute path; read by the `brain` skill |
 | `audits/` | what skill `audit-harness` leaves: a ledger of audited transcripts and one report per run (ignored) |
@@ -34,10 +34,10 @@ The cost is that a repository behaves here as it does in its pipeline rather tha
 ## Commands
 
 ```text
-fleet up <label> [--repo <path>] [--branch <name>] [--memory 8g] [--cpus 4]
+fleet up <label> [--repo <path>] [--branch <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]
 fleet ls
 fleet peek <sandbox> [--lines 40]
-fleet say <sandbox> <text...>
+fleet steer <sandbox> <text...>
 fleet exec <sandbox> -- <command...>
 fleet artifacts [--repo <path>]
 fleet copy <src> <dst>

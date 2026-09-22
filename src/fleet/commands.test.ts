@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { artifacts, build, down, exec, execScript, ls, peek, resolveSandbox, say } from "./commands.ts";
+import { artifacts, build, down, exec, execScript, ls, peek, resolveSandbox, steer } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 
 const running = { "sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] }, "herdr agent list": { result: { agents: [] } } };
+const task = "/home/me/.sandboxes/r/pi-a";
+const request = (at: string, cacheRead: number) => JSON.stringify({ type: "message", timestamp: at, message: { role: "assistant", model: "m", usage: { input: 10, output: 1, cacheRead, cacheWrite: 0, cost: { total: 0.01 } }, content: [] } });
+const sessions = {
+	[`list ${task}/logs/sessions`]: ["--r--"],
+	[`stat ${task}/logs/sessions/--r--`]: { size: 0, mtime: new Date(0), dir: true },
+	[`list ${task}/logs/sessions/--r--`]: ["2026-09-21T12-01-18-932Z_s1.jsonl", "subagent-artifacts"],
+	[`stat ${task}/logs/sessions/--r--/2026-09-21T12-01-18-932Z_s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
+	[`stat ${task}/logs/sessions/--r--/subagent-artifacts`]: { size: 0, mtime: new Date(0), dir: true },
+	[`read ${task}/logs/sessions/--r--/2026-09-21T12-01-18-932Z_s1.jsonl`]: [request("2026-09-21T12:02:02Z", 0), request("2026-09-21T12:02:16Z", 90)].join("\n"),
+	"git log --format=%h\t%cI --since=2026-09-21T12:02:02Z web-1": "abc1234\t2026-09-21T12:02:10Z",
+};
 
-test("say logs the prompt before sending it", () => {
+test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
-	say("pi-webapp-web-1", 'zrób analizę "x"', io);
+	steer("pi-webapp-web-1", 'zrób analizę "x"', io);
 	assert.equal(io.calls[0][0], "append");
 	assert.match(io.calls[0][2], /webapp-web-1 "zrób analizę \\"x\\""/);
 	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "webapp-web-1", 'zrób analizę "x"']);
@@ -25,8 +36,8 @@ test("down refuses a container whose commits never reached the repo", () => {
 	assert.ok(!io.calls.some((c) => c[1] === "rm"));
 });
 
-test("down harvests, closes the tab, then removes", () => {
-	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "herdr agent list": { result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "a" }] } } });
+test("down sums the task's sessions into usage.json, closes the tab, then removes", () => {
+	const io = fakeIo({ ...running, ...sessions, "sbx exec pi-a sh -c": "web-1\t0\tabc", "herdr agent list": { result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "a" }] } } });
 	down("pi-a", {}, io);
 	const order = io.calls.map((c) => c.slice(0, 3).join(" "));
 	const at = (prefix: string) => {
@@ -34,29 +45,33 @@ test("down harvests, closes the tab, then removes", () => {
 		assert.ok(i >= 0, `${prefix} was called`);
 		return i;
 	};
-	assert.ok(at("git /r cat-file") < at("mkdir /home/me/.pi/sandbox-transcripts"));
-	assert.ok(at("mkdir /home/me/.pi/sandbox-transcripts") < at("sbx cp pi-a:/home/agent/.pi/agent/sessions"));
-	assert.ok(at("sbx cp pi-a:/home/agent/.pi/agent/sessions") < at("herdr tab close"));
+	assert.ok(at("git /r cat-file") < at(`write ${task}/logs/usage.json`));
+	assert.ok(at(`write ${task}/logs/usage.json`) < at("herdr tab close"));
 	assert.ok(at("herdr tab close") < at("sbx rm -f"));
-	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "cp" && c[3].startsWith("/home/me/.pi/sandbox-transcripts/pi-a-2026")));
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.totals.requests, 2);
+	assert.deepEqual(usage.runs[0].commits, ["abc1234"]);
+	assert.ok(io.lines.some((l) => l === `pi-a: usage 2 requests, 1 run(s), cache hit 82% (1 miss), 0 compaction(s), 0 model change(s), cost 0.02 -> ${task}/logs/usage.json`), io.lines.join("\n"));
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
-test("down continues when the container holds no transcripts", () => {
-	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx cp pi-a:": new Error('ERROR: path "/home/agent/.pi/agent/sessions" not found in container') });
+test("down says so when pi never wrote a session", () => {
+	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc" });
 	down("pi-a", {}, io);
-	assert.ok(io.lines.some((l) => /no transcripts/.test(l)));
+	assert.ok(io.lines.some((l) => /pi-a: no session in .*pi-a\/logs\/sessions/.test(l)));
+	assert.ok(!io.calls.some((c) => c[0] === "write"));
 	assert.ok(io.calls.some((c) => c[1] === "rm"));
 });
 
 test("down treats a failed secret cleanup after removal as a warning, and a failed removal as an error", () => {
-	const gone = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx cp pi-a:": new Error("not found"), "sbx rm -f pi-a": new Error("sbx rm failed (1)\nscoped secret cleanup failed: Keychain Error") });
+	const gone = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx rm -f pi-a": new Error("sbx rm failed (1)\nscoped secret cleanup failed: Keychain Error") });
 	let calls = 0;
 	const ls = gone.sbx;
 	gone.sbx = (args, opts) => (args[0] === "ls" && ++calls > 1 ? JSON.stringify({ sandboxes: [] }) : ls(args, opts));
 	down("pi-a", {}, gone);
 	assert.ok(gone.lines.some((l) => /removed, but sbx reported: .*Keychain/.test(l)));
 
-	const stuck = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx cp pi-a:": new Error("not found"), "sbx rm -f pi-a": new Error("sbx rm failed (1)\ncontainer busy") });
+	const stuck = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx rm -f pi-a": new Error("sbx rm failed (1)\ncontainer busy") });
 	assert.throws(() => down("pi-a", {}, stuck), /container busy/);
 });
 
@@ -93,14 +108,10 @@ test("down probes a stopped container too, so its refusals still apply", () => {
 	assert.throws(() => down("pi-a", {}, io), /1 uncommitted/);
 });
 
-test("down passes a container whose head is already in the repo, and rethrows a real harvest failure", () => {
+test("down passes a container whose head is already in the repo", () => {
 	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc" });
 	down("pi-a", {}, io);
 	assert.deepEqual(io.calls.find((c) => c[0] === "git"), ["git", "/r", "cat-file", "-e", "abc^{commit}"]);
-
-	const broken = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc", "sbx cp pi-a:": new Error("sbx cp failed (1)\ndaemon unreachable") });
-	assert.throws(() => down("pi-a", {}, broken), /daemon unreachable/);
-	assert.ok(!broken.calls.some((c) => c[1] === "rm"));
 });
 
 test("resolveSandbox accepts the container name or its agent name", () => {
@@ -123,21 +134,50 @@ test("exec runs a one-argument command line through the shell, argv untouched", 
 	assert.deepEqual(io.calls[0].slice(6), ["--", "pwd; whoami"]);
 });
 
-test("artifacts lists every file containers on the repo left, newest first, under the folder holding them", () => {
+test("artifacts shows each task's files flat and folds its folders into one line each", () => {
 	const root = "/home/me/.sandboxes/webapp";
+	const t = `${root}/pi-webapp-web-1`;
+	const file = (size: number, minutesAgo: number) => ({ size, mtime: new Date(Date.UTC(2026, 8, 16, 10, 0 - minutesAgo)), dir: false });
+	const dir = { size: 96, mtime: new Date(0), dir: true };
 	const io = fakeIo({
-		[`stat ${root}/shots/new-v4.png`]: { size: 400_000, mtime: new Date(Date.UTC(2026, 8, 16, 9, 30)), dir: false },
-		[`stat ${root}/review-log.md`]: { size: 2048, mtime: new Date(Date.UTC(2026, 8, 16, 9, 55)), dir: false },
-		[`stat ${root}/shots`]: { size: 96, mtime: new Date(Date.UTC(2026, 8, 16, 9, 30)), dir: true },
-		[`list ${root}/shots`]: ["new-v4.png"],
-		[`list ${root}`]: ["shots", "review-log.md"],
+		[`list ${root}`]: ["pi-webapp-web-1", "runbook", "plan.md"],
+		[`stat ${root}/plan.md`]: file(2048, 5),
+		[`stat ${root}/runbook`]: dir,
+		[`list ${root}/runbook`]: ["run.sh", "features"],
+		[`stat ${root}/runbook/run.sh`]: file(300, 900),
+		[`stat ${root}/runbook/features`]: dir,
+		[`list ${root}/runbook/features`]: ["rmk.md"],
+		[`stat ${root}/runbook/features/rmk.md`]: file(100, 900),
+		[`stat ${t}`]: dir,
+		[`list ${t}`]: ["status.md", "task.md", "review.md", "logs", "to-testing"],
+		[`stat ${t}/status.md`]: file(200, 1),
+		[`stat ${t}/task.md`]: file(800, 60),
+		[`stat ${t}/review.md`]: file(3000, 30),
+		[`stat ${t}/logs`]: dir,
+		[`list ${t}/logs`]: ["usage.json", "sessions"],
+		[`stat ${t}/logs/usage.json`]: file(5000, 1),
+		[`stat ${t}/logs/sessions`]: dir,
+		[`list ${t}/logs/sessions`]: ["s.jsonl"],
+		[`stat ${t}/logs/sessions/s.jsonl`]: file(4_000_000, 1),
+		[`stat ${t}/to-testing`]: dir,
+		[`list ${t}/to-testing`]: ["20260921-1505"],
+		[`stat ${t}/to-testing/20260921-1505`]: dir,
+		[`list ${t}/to-testing/20260921-1505`]: ["report.md", "walk.webm"],
+		[`stat ${t}/to-testing/20260921-1505/report.md`]: file(1000, 40),
+		[`stat ${t}/to-testing/20260921-1505/walk.webm`]: file(9_000_000, 40),
 	});
 
-	const out = artifacts("/w/webapp", io).split("\n");
-
-	assert.equal(out[0], root);
-	assert.match(out[1], /^review-log\.md\s+2K\s+5m ago$/);
-	assert.match(out[2], /^shots\/new-v4\.png\s+391K\s+30m ago$/);
+	assert.deepEqual(artifacts("/w/webapp", io).split("\n"), [
+		root,
+		"pi-webapp-web-1/",
+		"  status.md            200B  1m ago",
+		"  review.md              3K  30m ago",
+		"  task.md              800B  1h ago",
+		"  logs/              2 files  3.8M",
+		"  to-testing/        2 files  8.6M",
+		"runbook/           2 files  400B",
+		"plan.md                2K  5m ago",
+	]);
 });
 
 test("artifacts says so when the container left nothing", () => {
