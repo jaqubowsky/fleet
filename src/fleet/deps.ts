@@ -24,4 +24,13 @@ export const installScript = [
 	"  break",
 	"done",
 	"echo deps: ready",
+	'base="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)"',
+	'sha="$(git merge-base HEAD "$base" 2>/dev/null || git rev-parse HEAD)"',
+	'gate="${FLEET_CACHE:-/tmp}/gate/$sha"',
+	'if [ "$(git rev-parse HEAD)" = "$sha" ] && [ ! -f "$gate/typecheck.exit" ] && node -e "process.exit(require(\'./package.json\').scripts?.typecheck ? 0 : 1)" 2>/dev/null; then',
+	'  mkdir -p "$gate"',
+	'  echo "gate: typecheck of the base $sha into $gate"',
+	'  if npm run typecheck >"$gate/typecheck.log" 2>&1; then echo 0 >"$gate/typecheck.exit"; else echo $? >"$gate/typecheck.exit"; fi',
+	'  echo "gate: typecheck exit $(cat "$gate/typecheck.exit")"',
+	"fi",
 ].join("\n");
