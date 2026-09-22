@@ -556,3 +556,58 @@ test("view-only phones never take the last stream from the control link", async 
 	assert.equal(await open(view), 429, "the fifth viewer is turned away");
 	assert.equal(await open(token), 200, "the control link still gets a stream");
 });
+
+test("the whole frame stays inside the documented budget", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("loaded"));
+	await remote.start(0);
+	const client = await connect(remote);
+	const filler = "z".repeat(200_000);
+	const blocks = (turn: number) => [
+		{ type: "text", text: filler },
+		...Array.from({ length: 40 }, (_, slot) => ({
+			type: "toolCall",
+			id: `f${turn}-${slot}`,
+			name: "edit",
+			arguments: {
+				path: filler,
+				edits: [{ oldText: filler, newText: filler }],
+			},
+		})),
+	];
+
+	for (let turn = 0; turn < 64; turn++)
+		remote.publish(owner, {
+			type: "message_end",
+			message: { role: "assistant", content: blocks(turn) },
+		});
+	remote.publish(owner, {
+		type: "message_update",
+		message: { role: "assistant", content: blocks(99) },
+	});
+	for (let slot = 0; slot < 16; slot++)
+		remote.publish(owner, {
+			type: "tool_execution_end",
+			toolCallId: `live-${slot}`,
+			toolName: "edit",
+			args: { path: filler, edits: [{ oldText: filler, newText: filler }] },
+			isError: false,
+			result: {
+				content: [{ type: "text", text: filler }],
+				details: { patch: filler },
+			},
+		});
+
+	const frame = await (await client.get("/bootstrap")).text();
+
+	assert.ok(
+		JSON.parse(frame).transcript.length > 0,
+		"the newest turn survives the squeeze",
+	);
+	assert.ok(
+		frame.length <= 524_288,
+		`the whole frame stays inside 512 KiB, got ${frame.length}`,
+	);
+});

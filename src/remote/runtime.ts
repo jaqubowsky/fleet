@@ -11,6 +11,7 @@ import {
 	fit,
 	header,
 	MESSAGE_LIMIT,
+	SNAPSHOT_LIMIT,
 	message,
 	record,
 	settle,
@@ -138,6 +139,10 @@ export class RemoteRuntime {
 	}
 
 	snapshot(control = true) {
+		const live = JSON.stringify({
+			assistant: this.assistant,
+			tools: this.tools,
+		}).length;
 		return {
 			version: 2,
 			control,
@@ -148,7 +153,7 @@ export class RemoteRuntime {
 				: null,
 			status: this.status,
 			header: this.binding ? header(this.binding.header()) : null,
-			transcript: this.messages,
+			transcript: fit(this.messages, SNAPSHOT_LIMIT - live),
 			assistant: this.assistant,
 			tools: this.tools,
 		};

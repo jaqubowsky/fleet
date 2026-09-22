@@ -29,7 +29,7 @@ export const MESSAGE_LIMIT = 64;
 const BLOCK_LIMIT = 32;
 const TEXT_LIMIT = 4096;
 const SUMMARY_LIMIT = 200;
-const SNAPSHOT_LIMIT = 524_288;
+export const SNAPSHOT_LIMIT = 524_288;
 const SECRETS = new RegExp(SECRET_MATERIAL.source, "g");
 
 export function record(value: unknown): Record<string, unknown> {
@@ -218,12 +218,12 @@ export function transcript(entries: unknown[]): Message[] {
 	return fit(messages.slice(-MESSAGE_LIMIT));
 }
 
-export function fit(messages: Message[]): Message[] {
+export function fit(messages: Message[], budget = SNAPSHOT_LIMIT): Message[] {
 	const kept: Message[] = [];
 	let total = 0;
 	for (let index = messages.length - 1; index >= 0; index--) {
 		total += JSON.stringify(messages[index]).length + 1;
-		if (total > SNAPSHOT_LIMIT && kept.length) break;
+		if (total > budget && kept.length) break;
 		kept.unshift(messages[index]);
 	}
 	return kept;
