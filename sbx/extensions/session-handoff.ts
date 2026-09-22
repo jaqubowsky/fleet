@@ -2,8 +2,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export default function (pi: any) {
+type MutationQueue = <T>(path: string, mutation: () => Promise<T>) => Promise<T>;
+
+export default async function (pi: any, mutationQueue?: MutationQueue) {
 	if (!process.env.FLEET_ARTIFACTS || !process.env.SANDBOX_NAME) return;
+	const sdk = "@earendil-works/pi-coding-agent";
+	const mutate: MutationQueue = mutationQueue ?? (await import(sdk)).withFileMutationQueue;
 	const taskDirectory = join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME);
 	const statusFile = join(taskDirectory, "status.md");
 	const agentDir = process.env.PI_CODING_AGENT_DIR?.replace(/^~(?=\/|$)/, homedir()) ?? join(homedir(), ".pi", "agent");
@@ -30,13 +34,16 @@ export default function (pi: any) {
 		return previous;
 	};
 
-	pi.on("input", (event: { text: string; source: string }) => {
-		if (event.source === "extension" || !requested || queued) return;
-		approved = event.text.trim() === approval;
-		if (!approved) {
-			attention(previousAttention);
-			requested = false;
-		}
+	pi.on("input", async (event: { text: string; source: string }) => {
+		if (event.source === "extension") return;
+		await mutate(statusFile, async () => {
+			if (!requested || queued) return;
+			approved = event.text.trim() === approval;
+			if (!approved) {
+				attention(previousAttention);
+				requested = false;
+			}
+		});
 	});
 
 	pi.registerTool({
@@ -45,15 +52,17 @@ export default function (pi: any) {
 		description: `At an appropriate handoff point, keep durable artifacts current, then call session_handoff to publish a suggestion in status.md and wait. The user or authorized host must reply exactly "${approval}". Call session_handoff again after that explicit approval to queue a fresh session. The new session stays idle with an empty editor and only hidden optional task-directory context.`,
 		parameters: { type: "object", properties: {}, additionalProperties: false },
 		async execute() {
-			if (!requested) {
-				previousAttention = attention(`session handoff requested; reply "${approval}" to approve`);
-				requested = true;
-			}
-			if (!approved || queued) return { content: [{ type: "text", text: `Handoff suggestion recorded in status.md. Waiting for "${approval}" from the user or authorized host; no session switch started.` }], terminate: true };
-			approved = false;
-			queued = true;
-			pi.sendUserMessage("/session-handoff", { deliverAs: "followUp", expandPromptTemplates: true });
-			return { content: [{ type: "text", text: "Approved handoff queued." }], terminate: true };
+			return mutate(statusFile, async () => {
+				if (!requested) {
+					previousAttention = attention(`session handoff requested; reply "${approval}" to approve`);
+					requested = true;
+				}
+				if (!approved || queued) return { content: [{ type: "text", text: `Handoff suggestion recorded in status.md. Waiting for "${approval}" from the user or authorized host; no session switch started.` }], terminate: true };
+				approved = false;
+				queued = true;
+				pi.sendUserMessage("/session-handoff", { deliverAs: "followUp", expandPromptTemplates: true });
+				return { content: [{ type: "text", text: "Approved handoff queued." }], terminate: true };
+			});
 		},
 	});
 
@@ -73,9 +82,10 @@ export default function (pi: any) {
 						content: `Previous task directory: ${JSON.stringify(taskDirectory)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`,
 						display: false,
 					}, { triggerTurn: false });
+					await mutate(statusFile, async () => attention("session handoff complete; fresh session idle"));
 				},
 			});
-			attention(result.cancelled ? "session handoff cancelled; still in the previous session" : "session handoff complete; fresh session idle");
+			if (result.cancelled) await mutate(statusFile, async () => attention("session handoff cancelled; still in the previous session"));
 		},
 	});
 

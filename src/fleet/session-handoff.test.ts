@@ -8,7 +8,7 @@ import { fakeIo } from "./fake-io.ts";
 import { render } from "./provider.ts";
 import { brief } from "./status.ts";
 
-function runtime(t: TestContext, settings = "{}") {
+async function runtime(t: TestContext, settings = "{}") {
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
 	t.after(() => rmSync(dir, { recursive: true, force: true }));
 	const taskDirectory = dir;
@@ -48,12 +48,12 @@ function runtime(t: TestContext, settings = "{}") {
 			return { cancelled: false };
 		},
 	};
-	handoff({
+	await handoff({
 		on: (name: string, fn: any) => { events[name] = fn; },
 		registerCommand: (name: string, command: any) => { commands[name] = command; },
 		registerTool: (tool: any) => { tools[tool.name] = tool; },
 		sendUserMessage: (text: string, options: any) => queued.push({ text, options }),
-	});
+	}, async (_path, mutation) => mutation());
 	return {
 		ctx, commands, tools, queued, messages, taskDirectory, status,
 		usage: (value: typeof tokens) => { tokens = value; },
@@ -73,7 +73,7 @@ function runtime(t: TestContext, settings = "{}") {
 }
 
 test("context threshold adds only a neutral system advisory", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 
 	for (const tokens of [undefined, null, 249999]) {
 		r.usage(tokens);
@@ -99,7 +99,7 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 		"read /root/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
 	});
 	render("/root", io);
-	const r = runtime(t, io.files["/root/sbx/agent-settings.json"]);
+	const r = await runtime(t, io.files["/root/sbx/agent-settings.json"]);
 
 	r.usage(83);
 	assert.equal(await r.prompt(), undefined);
@@ -108,7 +108,7 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 });
 
 test("a suggestion reaches the host attention line without duplicating task content", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 
 	const result = await r.call();
 
@@ -120,16 +120,16 @@ test("a suggestion reaches the host attention line without duplicating task cont
 });
 
 test("only explicit external approval permits the tool to queue the command", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 	await r.commands["session-handoff"].handler("", r.ctx);
 	await r.call();
-	r.input("Approve session handoff", "extension");
+	await r.input("Approve session handoff", "extension");
 	await r.call();
 	assert.deepEqual(r.queued, []);
-	r.input("No, keep working");
+	await r.input("No, keep working");
 	await r.call();
 	assert.deepEqual(r.queued, []);
-	r.input("Approve session handoff");
+	await r.input("Approve session handoff");
 	const result = await r.call();
 	await r.call();
 
@@ -139,9 +139,9 @@ test("only explicit external approval permits the tool to queue the command", as
 });
 
 test("approved handoff leaves only hidden optional context in the idle replacement", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 	await r.call();
-	r.input("Approve session handoff", "rpc");
+	await r.input("Approve session handoff", "rpc");
 	await r.call();
 	await r.commands["session-handoff"].handler("", r.ctx);
 
@@ -161,9 +161,9 @@ test("approved handoff leaves only hidden optional context in the idle replaceme
 });
 
 test("the follow-up command waits for the old tool turn to finish", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 	await r.call();
-	r.input("Approve session handoff");
+	await r.input("Approve session handoff");
 	await r.call();
 	const finish = r.busy();
 	const command = r.commands["session-handoff"].handler("", r.ctx);
@@ -175,9 +175,9 @@ test("the follow-up command waits for the old tool turn to finish", async (t) =>
 });
 
 test("cancelled replacement consumes approval and reports that it stayed put", async (t) => {
-	const r = runtime(t);
+	const r = await runtime(t);
 	await r.call();
-	r.input("Approve session handoff");
+	await r.input("Approve session handoff");
 	await r.call();
 	r.cancel();
 	await r.commands["session-handoff"].handler("", r.ctx);

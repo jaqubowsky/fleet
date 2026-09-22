@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fakeIo } from "../../src/fleet/fake-io.ts";
 import { render } from "../../src/fleet/provider.ts";
 
-const { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, SessionManager, SettingsManager } = await import(process.argv[2]);
+const { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, createEditTool, SessionManager, SettingsManager } = await import(process.argv[2]);
 const root = join(import.meta.dirname, "../..");
 const io = fakeIo(Object.fromEntries(["settings", "models", "host", "sbx"].map((name) => [
 	`read /root/profiles/${name}.json`, readFileSync(join(root, `profiles/${name}.json`), "utf8"),
@@ -70,8 +70,26 @@ for (const seat of ["host", "sbx"]) {
 			assert.ok(tool);
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), true);
 			assert.equal(extensions.some((extension) => extension.handlers.has("before_agent_start")), true);
-			await tool.execute("request", {});
+			const readStarted = Promise.withResolvers();
+			const finishRead = Promise.withResolvers();
+			const edit = createEditTool(dir, { operations: {
+				access: async () => {},
+				readFile: async (path) => {
+					const snapshot = readFileSync(path);
+					readStarted.resolve();
+					await finishRead.promise;
+					return snapshot;
+				},
+				writeFile: async (path, content) => { writeFileSync(path, content); },
+			} });
+			const editing = edit.execute("update-summary", { path: "task/status.md", edits: [{ oldText: "Ready for review.", newText: "Ready for independent review." }] });
+			await readStarted.promise;
+			const requesting = tool.execute("request", {});
+			await new Promise((resolve) => setImmediate(resolve));
+			finishRead.resolve();
+			await Promise.all([editing, requesting]);
 			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff requested/);
+			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /Ready for independent review\./);
 			assert.equal(runtime.session, old);
 			assert.equal(replacement, undefined);
 			await old.extensionRunner.emitInput("Approve session handoff", undefined, "rpc");
