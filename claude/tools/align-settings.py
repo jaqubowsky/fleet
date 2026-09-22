@@ -12,7 +12,7 @@ from pathlib import Path
 HOME = Path.home()
 REPO = Path(__file__).resolve().parents[2]
 USER_SETTINGS = HOME / ".claude" / "settings.json"
-TEMPLATE_SETTINGS = REPO / "claude" / "sbx" / "settings.json"
+HOST_SEAT = REPO / "claude" / "profiles" / "models.json"
 MANAGED_SETTINGS = Path("/Library/Application Support/ClaudeCode/managed-settings.json")
 REFERENCE = REPO / "claude" / "managed-settings.json"
 HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
@@ -36,6 +36,12 @@ def dump(data):
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
+def seat(name):
+    entry = load(HOST_SEAT)["seats"][name]
+
+    return entry["model"].split("/", 1)[1], entry["thinking"]
+
+
 def fix_user(data):
     changes = []
     data["$schema"] = "https://json.schemastore.org/claude-code-settings.json"
@@ -45,24 +51,11 @@ def fix_user(data):
         plugins[LSP_PLUGIN] = True
         changes.append(f"{LSP_PLUGIN} enabled (it was installed but off)")
 
-    return changes
-
-
-def fix_template(data):
-    changes = []
-
-    if "includeCoAuthoredBy" in data:
-        del data["includeCoAuthoredBy"]
-        changes.append("removed includeCoAuthoredBy (deprecated, attribution.commit already empty)")
-
-    env = data.get("env", {})
-    if "CLAUDE_CODE_EFFORT_LEVEL" in env:
-        del env["CLAUDE_CODE_EFFORT_LEVEL"]
-        changes.append("removed env.CLAUDE_CODE_EFFORT_LEVEL (effortLevel and the Dockerfile ENV already set it)")
-
-    if data.get("attribution") != ATTRIBUTION:
-        data["attribution"] = dict(ATTRIBUTION)
-        changes.append("attribution aligned with managed settings")
+    model, effort = seat("host")
+    for key, value in (("model", model), ("effortLevel", effort)):
+        if data.get(key) != value:
+            data[key] = value
+            changes.append(f"{key} set to {value} from the host seat")
 
     return changes
 
@@ -223,13 +216,12 @@ def process(path, fixer, apply_changes, root=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Align the three Claude Code settings files.")
+    parser = argparse.ArgumentParser(description="Align the Claude Code settings files this repository owns.")
     parser.add_argument("--apply", action="store_true", help="write the changes (default: dry run)")
     args = parser.parse_args()
 
     pending = [
         process(USER_SETTINGS, fix_user, args.apply),
-        process(TEMPLATE_SETTINGS, fix_template, args.apply),
         install_link(HOOK_SOURCE, HOOK_TARGET, args.apply),
         install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
         install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),

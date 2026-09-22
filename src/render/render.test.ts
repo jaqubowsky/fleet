@@ -60,6 +60,38 @@ test("claude keeps one file per rule, its own tool names and CLAUDE.md", () => {
 	assert.equal(io.files["/stage/home/rules/host.md"], undefined);
 });
 
+test("claude agents and container settings take their seat's model and effort", () => {
+	const io = fakeIo(
+		sources({
+			"read /root/claude/fragments/agent-explorer.md":
+				"tools: Read, Grep\nmodel: {{models.explorer}}\neffort: {{thinking.explorer}}\n",
+			"read /root/claude/profiles/models.json": JSON.stringify({
+				seats: {
+					sbx: { model: "anthropic/claude-opus-5-5[1m]", thinking: "xhigh" },
+					explorer: { model: "anthropic/claude-sonnet-5", thinking: "high" },
+				},
+			}),
+			"read /root/claude/profiles/settings.json": '{"$schema":"x"}',
+			"read /root/claude/profiles/sbx.json":
+				'{"model":"{{models.sbx}}","effortLevel":"{{thinking.sbx}}"}',
+		}),
+		HARNESSES.claude,
+	);
+
+	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
+
+	assert.equal(
+		io.files["/home/agents/explorer.md"],
+		"---\nname: explorer\ntools: Read, Grep\nmodel: claude-sonnet-5\neffort: high\n---\n",
+	);
+	assert.deepEqual(JSON.parse(io.files["/stage/context/settings.json"]!), {
+		$schema: "x",
+		model: "claude-opus-5-5[1m]",
+		effortLevel: "xhigh",
+	});
+});
+
 test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
 	const io = fakeIo(sources(), HARNESSES.claude);
 	io.files["/home/skills/retired/SKILL.md"] = "old";

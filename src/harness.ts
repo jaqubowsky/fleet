@@ -121,7 +121,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			reload: "in its next session",
 			"delegation.parallel": "\"Parallel\" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis",
 			"model.flag": "<opus|sonnet|model id>",
-			"models.row": "| switch models for new containers | `cfleet build` after editing `model` in `claude/sbx/settings.json` in the harness repo, or `--model` on one `cfleet up` | the image carries it; the host session keeps its own `/model` |",
+			"models.row": "| switch models for new containers | `cfleet render` then `cfleet build` after editing `claude/profiles/models.json` in the harness repo, or `--model` on one `cfleet up` | the image carries it; the host takes it from `align-settings.py --apply` |",
 		},
 	},
 };

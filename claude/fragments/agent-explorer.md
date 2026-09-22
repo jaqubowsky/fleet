@@ -1,2 +1,3 @@
 tools: Read, Grep, Glob
-model: sonnet
+model: {{models.explorer}}
+effort: {{thinking.explorer}}

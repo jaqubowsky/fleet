@@ -56,15 +56,30 @@ export function seatSettings(io: Io, root: string, harness: Harness, template: s
 	return `${JSON.stringify({ ...base, ...seat }, null, 2)}\n`;
 }
 
+export function seatTokens(io: Io, root: string, harness: Harness): Record<string, string> {
+	const models = JSON.parse(io.read(`${root}/${harness.name}/profiles/models.json`) ?? "{}") as Models;
+	const tokens: Record<string, string> = {};
+	for (const [seat, entry] of Object.entries(models.seats ?? {})) {
+		const parts = qualified(seat, entry);
+		tokens[`providers.${seat}`] = parts.provider;
+		tokens[`models.${seat}`] = parts.model;
+		tokens[`thinking.${seat}`] = entry.thinking;
+	}
+	return tokens;
+}
+
 export type RenderInput = { root: string; harness: Harness; seat: Seat; out: string };
 
 class Renderer {
 	readonly input: RenderInput;
 	readonly io: Io;
 
+	readonly seats: Record<string, string>;
+
 	constructor(input: RenderInput, io: Io) {
 		this.input = input;
 		this.io = io;
+		this.seats = seatTokens(io, input.root, input.harness);
 	}
 
 	get own(): string {
@@ -75,7 +90,7 @@ class Renderer {
 		const { root, harness } = this.input;
 		const body = this.io.read(`${root}/${path}`);
 		if (body === undefined) throw new Error(`missing ${root}/${path}`);
-		const tokens = { ...harness.tokens, root };
+		const tokens = { ...harness.tokens, ...this.seats, root };
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
 			return where === undefined ? undefined : renderText(this.io.read(where) ?? "", tokens, () => undefined, where);
@@ -191,11 +206,11 @@ function claude(r: Renderer): void {
 	r.agents("home/agents");
 	r.skills(true, "home/skills");
 	r.put("home/CLAUDE.md", r.text("claude/CLAUDE.md"));
+	r.put("context/settings.json", r.settings("sbx.json"));
 	r.extra([
 		["claude/statusline.mjs", "home/statusline.mjs"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
-		["claude/sbx/settings.json", "context/settings.json"],
 		["claude/sbx/Dockerfile", "context/Dockerfile"],
 		["claude/sbx/.dockerignore", "context/.dockerignore"],
 		["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],

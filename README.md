@@ -62,7 +62,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 | Error handoff | `agent_end` with `stopReason: error` | the same | `StopFailure` hook | each agent's own error event |
 | Phone control | `extensions/pi-remote` over Tailscale Serve | not loaded | Remote Control, a product setting | OMP lacks `agent_settled` and `session_info_changed`; Claude ships its own |
 | Statusline | `extensions/statusline.ts` | `omp/extensions/statusline.ts` on OMP's footer keys | `claude/statusline.mjs` | three different status APIs |
-| Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | `model` in `claude/sbx/settings.json`, `--model` per container | only pi and OMP read model seats |
+| Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | seats in `claude/profiles/models.json`, `--model` per container | all three read model seats; Claude also takes `effort` per agent, and `CLAUDE_CODE_SUBAGENT_MODEL` stays unset so a sub-agent keeps its own (anthropics/claude-code#10993) |
 | Transcripts | written into the task directory as they happen | the same | copied out of the container by `cfleet down` | Claude Code has no session directory setting |
 | Cost in `usage.json` | from the session's own cost records | the same | tokens only | Claude transcripts carry no cost |
 | Host sandbox | none | none | macOS sandbox from root-owned managed settings | only Claude Code has one |

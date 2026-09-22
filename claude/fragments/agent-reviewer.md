@@ -1,2 +1,3 @@
 tools: Read, Grep, Glob
-model: opus
+model: {{models.reviewer}}
+effort: {{thinking.reviewer}}

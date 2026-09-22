@@ -1,2 +1,3 @@
 tools: WebSearch, WebFetch
-model: sonnet
+model: {{models.researcher}}
+effort: {{thinking.researcher}}

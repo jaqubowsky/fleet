@@ -1,0 +1,24 @@
+{
+  "seats": {
+    "host": {
+      "model": "anthropic/claude-opus-5-5[1m]",
+      "thinking": "xhigh"
+    },
+    "sbx": {
+      "model": "anthropic/claude-opus-5-5[1m]",
+      "thinking": "xhigh"
+    },
+    "reviewer": {
+      "model": "anthropic/claude-opus-5-5",
+      "thinking": "xhigh"
+    },
+    "explorer": {
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "high"
+    },
+    "researcher": {
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "high"
+    }
+  }
+}

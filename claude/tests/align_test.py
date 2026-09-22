@@ -47,6 +47,22 @@ entry = data["hooks"]["PreToolUse"][0]
 
 check("missing entry is registered on the full matcher", entry["matcher"] == align.HOOK_MATCHER)
 
+kept = {
+    "language": "Polish",
+    "statusLine": {"type": "command", "command": "node ~/.claude/statusline.mjs"},
+    "enabledPlugins": {align.LSP_PLUGIN: True},
+}
+data = {**kept, "model": "opus", "effortLevel": "medium"}
+changes = align.fix_user(data)
+model, effort = align.seat("host")
+
+check("host seat model reaches the user settings", data["model"] == model)
+check("host seat effort reaches the user settings", data["effortLevel"] == effort)
+check("both changes are reported", len([c for c in changes if "host seat" in c]) == 2)
+check("every other key survives", all(data[key] == value for key, value in kept.items()))
+check("nothing else is invented", set(data) == set(kept) | {"model", "effortLevel", "$schema"})
+check("an aligned file reports no seat change", not [c for c in align.fix_user(dict(data)) if "host seat" in c])
+
 with tempfile.TemporaryDirectory() as tmp:
     copy = Path(tmp) / "managed-settings.json"
     copy.write_text('{"stale": true}\n', encoding="utf-8")
@@ -58,5 +74,5 @@ with tempfile.TemporaryDirectory() as tmp:
     check("refreshed reference copy is reported", changed)
     check("current reference copy reports nothing", not align.mirror_reference(copy, live, True))
 
-print(f"align-settings.py: {4 + 3 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {4 + 6 + 3 - len(failures)} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
