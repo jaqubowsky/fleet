@@ -116,6 +116,7 @@ RUN cp -r /usr/local/share/npm-global/lib/node_modules/@playwright/cli/skills/pl
  && test -r /home/agent/.pi/skills/playwright-cli/SKILL.md
 
 COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings.json
+COPY --chown=agent:agent extensions/             /home/agent/.pi/sbx/extensions/
 COPY --chmod=0755 container/base-worktree.sh       /usr/local/bin/base-worktree
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \

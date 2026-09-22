@@ -37,6 +37,12 @@ test("a status brief is the header lines plus the last log entry", () => {
 	assert.equal(brief(undefined), "status: no status.md");
 });
 
+test("a status brief carries summary and continuation without copying the log", () => {
+	const status = "status: implementing\nattention: none\n\n## Summary\nThe regression is reproduced. The fix awaits review; see [analysis](analysis.md).\n\n## Next step\nRun two-axis-review against abc1234.\n\n## Log\n- analysis: reproduced; analysis.md\n- fix: green; commit abc1234\n";
+
+	assert.equal(brief(status), "status: implementing | attention: none\n## Summary\nThe regression is reproduced. The fix awaits review; see [analysis](analysis.md).\n\n## Next step\nRun two-axis-review against abc1234.\nlast: fix: green; commit abc1234");
+});
+
 test("a wake carries the status brief, the commits on the branch and the review verdict", () => {
 	const status = "status: done\nattention: none\nnow: done\n\n## Log\n- review abc1234: OK; review.md\n";
 	const review = "# Review\n\nCommit: abc\nRange: a...b\nVerdict: OK with notes\n";

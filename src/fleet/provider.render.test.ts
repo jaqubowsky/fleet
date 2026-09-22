@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { fakeIo } from "./fake-io.ts";
 import { render } from "./provider.ts";
 
@@ -38,6 +39,26 @@ test("a seat file overrides the shared settings key by key", () => {
 
 	assert.deepEqual(JSON.parse(io.files["/root/agent/settings.json"]), { theme: "dark", trust: "ask", subagents: { a: 1 }, m: "m1" });
 	assert.deepEqual(JSON.parse(io.files["/root/sbx/agent-settings.json"]), { theme: "dark", trust: "always", subagents: { a: 1 }, m: "w1" });
+});
+
+test("render scopes handoff to sandbox settings and preserves unknown settings", () => {
+	const shared = JSON.parse(readFileSync("profiles/settings.json", "utf8"));
+	const sandbox = JSON.parse(readFileSync("profiles/sbx.json", "utf8"));
+	const io = fakeIo({
+		"read /root/profiles/settings.json": JSON.stringify({ ...shared, futureSetting: { nested: [1, "keep"] } }),
+		"read /root/profiles/models.json": readFileSync("profiles/models.json", "utf8"),
+		"read /root/profiles/host.json": readFileSync("profiles/host.json", "utf8"),
+		"read /root/profiles/sbx.json": JSON.stringify(sandbox),
+	});
+
+	render("/root", io);
+
+	const host = JSON.parse(io.files["/root/agent/settings.json"]);
+	const sbx = JSON.parse(io.files["/root/sbx/agent-settings.json"]);
+	assert.equal(host.sessionHandoff, undefined);
+	assert.deepEqual(sbx.sessionHandoff, { suggestAtTokens: 250000 });
+	assert.deepEqual(host.futureSetting, { nested: [1, "keep"] });
+	assert.deepEqual(sbx.futureSetting, { nested: [1, "keep"] });
 });
 
 test("render copies the disclosed refs next to AGENTS.md and keeps them out of it", () => {

@@ -7,7 +7,7 @@ One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo
 Each file has one role and one author. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
 
 ```text
-status.md      where it stands: status, attention, now, log       every skill, as its last write
+status.md      where it stands: status, attention, summary, next step, log    every skill, as its last write
 analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
 spec.md        what will be built and why                          to-tickets
 issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
@@ -26,7 +26,12 @@ One short file per name above `logs/`. Anything with many versions, big or binar
 ```md
 status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked | done
 attention: none | <one sentence naming what a person has to decide or provide>
-now: <one line: the ticket or step in hand and where it stands>
+
+## Summary
+<2-5 sentences for the host: what happened, current state, missing verification or blocker, links to canonical artifacts>
+
+## Next step
+<exact workflow continuation>
 
 ## Log
 - analysis: <verdict in a phrase>; analysis.md
@@ -34,7 +39,7 @@ now: <one line: the ticket or step in hand and where it stands>
 - review <sha7>: <verdict>, <n> findings; review.md
 ```
 
-The host reads this file and nothing else to know where a task stands. `attention` is the line a person reads: at `blocked` it names the decision or the missing piece, at `ready-for-host` what stayed unverified or uncommitted. `now` is the step in hand. `## Log` grows by one line per finished step, each ending in the file or commit that holds the detail; the steps to come are the tickets in `issues/`. A skill writes this file last, before its chat report.
+The host reads this file and nothing else to know where a task stands. `attention` is the line a person reads: at `blocked` it names the decision or the missing piece, at `ready-for-host` what stayed unverified or uncommitted. `## Summary` summarizes and links rather than copying analysis, spec, tickets, command output, decisions or file lists. `## Next step` names the exact workflow continuation, including the ticket, review range or check to run. `## Log` grows by one line per finished step, each ending in the file or commit that holds the detail; the steps to come are the tickets in `issues/`. A skill writes this file last, before its chat report.
 
 ## analysis.md
 

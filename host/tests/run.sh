@@ -14,4 +14,6 @@ process.exitCode = diagnostics.length === 0 ? 0 : 1;
 
 node "$dir/extension_syntax_test.mjs"; syntax=$?
 
-[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ]
+node "$dir/session_handoff_test.mjs" "$pi_root/dist/index.js"; handoff=$?
+
+[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ] && [ "$handoff" -eq 0 ]

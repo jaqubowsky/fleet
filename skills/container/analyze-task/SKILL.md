@@ -106,7 +106,7 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 The run this analysis calls for, in one line with the reason: the pipeline (`to-tickets`, `implement` per ticket, `two-axis-review`, `check-feature`), or the short run (`implement` with `tdd`, `two-axis-review`) when the change is one accepted behaviour at one seam in one commit. Under it, the proposed split into tickets and the test seams, one line each.
 
-This is the only question the pipeline asks. It goes out as `attention:` in `status.md` with `status: blocked`, and the later skills take the split and the seams from here. An opening prompt that already said end to end, or already chose the shape, has answered it: continue. Either way `status.md` gets the log line `analysis: <verdict>; analysis.md` and `now:` names the next step.
+This is the only question the pipeline asks. It goes out as `attention:` in `status.md` with `status: blocked`, and the later skills take the split and the seams from here. An opening prompt that already said end to end, or already chose the shape, has answered it: continue. Either way `status.md` gets the log line `analysis: <verdict>; analysis.md` and updates `## Summary` and `## Next step` per `rules/refs/artifacts.md`, rendered beside `AGENTS.md` as `refs/artifacts.md`.
 
 Define a term before using it, and keep one name per concept across the whole report. State the mechanism instead of naming it; no framing labels ("the key insight", "at its core"), no metaphor standing in for the mechanism.
 

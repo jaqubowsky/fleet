@@ -22,7 +22,8 @@ export function brief(statusMd: string | undefined): string {
 	const lines = statusMd.split("\n");
 	const header = lines.filter((l) => /^(status|attention|now): /.test(l)).join(" | ");
 	const last = lines.filter((l) => l.startsWith("- ")).at(-1)?.slice(2) ?? "nothing yet";
-	return `${header}\nlast: ${last}`;
+	const sections = statusMd.split(/(?=^## )/m).filter((section) => /^## (Summary|Next step)\n/.test(section)).map((section) => section.trim()).join("\n\n");
+	return `${header}\n${sections ? `${sections}\n` : ""}last: ${last}`;
 }
 
 export function formatRows(rows: Row[]): string {

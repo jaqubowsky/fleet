@@ -1,0 +1,102 @@
+import assert from "node:assert/strict";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fakeIo } from "../../src/fleet/fake-io.ts";
+import { render } from "../../src/fleet/provider.ts";
+
+const { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, SessionManager, SettingsManager } = await import(process.argv[2]);
+const root = join(import.meta.dirname, "../..");
+const io = fakeIo(Object.fromEntries(["settings", "models", "host", "sbx"].map((name) => [
+	`read /root/profiles/${name}.json`, readFileSync(join(root, `profiles/${name}.json`), "utf8"),
+])));
+render("/root", io);
+process.env.PI_OFFLINE = "1";
+
+for (const seat of ["host", "sbx"]) {
+	const dir = mkdtempSync(join(tmpdir(), `handoff-${seat}-`));
+	const agentDir = join(dir, "agent");
+	mkdirSync(agentDir);
+	mkdirSync(join(dir, "sbx/extensions"), { recursive: true });
+	copyFileSync(join(root, "sbx/extensions/session-handoff.ts"), join(dir, "sbx/extensions/session-handoff.ts"));
+	const settings = JSON.parse(io.files[seat === "host" ? "/root/agent/settings.json" : "/root/sbx/agent-settings.json"]);
+	writeFileSync(join(agentDir, "settings.json"), JSON.stringify(settings));
+	process.env.PI_CODING_AGENT_DIR = agentDir;
+	process.env.FLEET_ARTIFACTS = dir;
+	process.env.SANDBOX_NAME = "task";
+	mkdirSync(join(dir, "task"));
+	writeFileSync(join(dir, "task/status.md"), "status: implementing\nattention: none\n\n## Summary\nReady for review. Checks passed.\n\n## Next step\nRun two-axis-review.\n\n## Log\n");
+	let turns = 0;
+	let editor = "previous draft";
+	let replacement;
+	const errors = [];
+	const factory = async ({ cwd, sessionManager, sessionStartEvent }) => {
+		const services = await createAgentSessionServices({
+			cwd, agentDir,
+			settingsManager: SettingsManager.inMemory({ ...settings, packages: [], skills: [] }),
+			resourceLoaderOptions: { noSkills: true, noPromptTemplates: true, agentsFilesOverride: () => ({ agentsFiles: [] }) },
+		});
+		return { ...await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, noTools: "builtin" }), services, diagnostics: services.diagnostics };
+	};
+	const runtime = await createAgentSessionRuntime(factory, { cwd: dir, agentDir, sessionManager: SessionManager.inMemory(dir) });
+	const bind = async (session) => {
+		session.subscribe((event) => { if (event.type === "agent_start") turns++; });
+		await session.bindExtensions({
+			mode: "tui",
+			uiContext: {
+				notify() {},
+				setEditorText(text) { assert.equal(text, ""); editor = text; },
+			},
+			onError: (error) => errors.push(error),
+			commandContextActions: {
+				waitForIdle: () => session.waitForIdle(),
+				newSession: (options) => { replacement = runtime.newSession(options); return replacement; },
+			},
+		});
+	};
+	runtime.setRebindSession(bind);
+	try {
+		await bind(runtime.session);
+		const old = runtime.session;
+		const tool = old.agent.state.tools.find((tool) => tool.name === "session_handoff");
+		const extensions = runtime.services.resourceLoader.getExtensions().extensions;
+		if (seat === "host") {
+			assert.equal(settings.sessionHandoff, undefined);
+			assert.equal(tool, undefined);
+			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), false);
+			assert.equal(extensions.some((extension) => extension.handlers.has("before_agent_start")), false);
+			assert.deepEqual(old.messages, []);
+		} else {
+			assert.ok(tool);
+			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), true);
+			assert.equal(extensions.some((extension) => extension.handlers.has("before_agent_start")), true);
+			await tool.execute("request", {});
+			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff requested/);
+			assert.equal(runtime.session, old);
+			assert.equal(replacement, undefined);
+			await old.extensionRunner.emitInput("Approve session handoff", undefined, "rpc");
+			await tool.execute("approved", {});
+			await new Promise((resolve) => setImmediate(resolve));
+			assert.ok(replacement);
+			await replacement;
+			assert.notEqual(runtime.session, old);
+			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff complete; fresh session idle/);
+			assert.equal(runtime.session.isStreaming, false);
+			assert.equal(runtime.session.pendingMessageCount, 0);
+			assert.equal(editor, "");
+			assert.equal(runtime.session.messages.length, 1);
+			const message = runtime.session.messages[0];
+			assert.equal(message.role, "custom");
+			assert.equal(message.display, false);
+			assert.equal(message.customType, "session-handoff");
+			assert.match(message.content, /optional background/);
+			assert.match(message.content, /For unrelated work, ignore it/);
+		}
+		assert.equal(turns, 0);
+		assert.deepEqual(errors, []);
+		console.log(`session handoff: ${seat} rendered setup passed`);
+	} finally {
+		await runtime.dispose();
+		rmSync(dir, { recursive: true, force: true });
+	}
+}

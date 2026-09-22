@@ -49,6 +49,12 @@ A watched container working on without settling wakes you with `working <n>m wit
 - `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means pi died in it; read the tab.
 - Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 
+## Session handoff
+
+When `attention:` says `session handoff requested`, approval is routine local execution only for a task the user explicitly delegated end to end: the host may approve without asking again. For a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission.
+
+Once authorized, send `fleet steer <sandbox> "Approve session handoff"`. The container's `session_handoff` tool queues the switch; the host never loads that extension. Read `status.md` until `attention:` says `session handoff complete; fresh session idle`, using the next fleet wake rather than a poll loop. A cancellation stays in the previous session. For an end-to-end task, the host may then separately steer `Continue the previous task: read current durable artifacts and follow Next step in status.md.` For a manual task, the fresh session waits for the user's next message. The hidden prior-task pointer is optional background, not a continuation request.
+
 ## When it refuses
 
 - `fleet down` refuses a dirty tree, and commits that never reached the host repo. `fleet peek` shows what would go, and `--force` discards either.
