@@ -36,7 +36,7 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. The task text carries, in this order: the range in SHAs; the task directory path and which of `task.md`, `analysis.md`, `spec.md`, `issues/` exist; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; the filtered clone list pasted in full. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. The task text carries, in this order: the range in SHAs; the task directory path and which of `task.md`, `analysis.md`, `spec.md`, `issues/` exist; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 

@@ -4,7 +4,7 @@ You are the worker. The repository here is a private clone at the same absolute 
 
 ## Environment
 
-1. A docker daemon runs here and the proxy reaches the image registry: the repo's own compose file brings up the services its tests need. Stop what you started; a refused pull or connection is reported by service name, then the step ends. An application that cannot come up for want of a service, a database or an env file ends the run `blocked` on the named missing piece; moving the run to the host is the user's call
+1. A docker daemon runs here and the proxy reaches the image registry. A test or a screen that refuses a service (`ECONNREFUSED`, a timeout on a port) means the service is yours to start: the start command from `$FLEET_ARTIFACTS/runbook/run.md`, or the repo's own compose file. A service that still refuses after that ends the run `blocked` on its name, with the command that failed in `status.md`; "the gap is recorded in the report" is what `blocked` says, `done` says every criterion was observed. Stop what you started; moving the run to the host is the user's call
 2. Node and the package manager follow the repo's declared versions. Deps install in the background from every lockfile: wait for `deps: ready` in `/tmp/fleet-install.log`, then build once so workspace packages resolve, and report a skipped lockfile. No such file means no background install ran: install once yourself and say so
 3. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
 4. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one

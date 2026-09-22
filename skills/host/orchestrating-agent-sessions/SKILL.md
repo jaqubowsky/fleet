@@ -33,6 +33,8 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 | what is it doing this minute, before `status.md` moved | `fleet peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
 
+A rule or skill change reaches a container through `fleet build` and a new container. A running container keeps the rules it started with.
+
 After `fleet land --sign --push` the branch is on the remote and the container can open its pull request: it holds a token that writes pull requests and nothing else, so `fleet steer <sandbox> "resync and open the PR"` is the step, and the resync comes first because signing rewrote its commits.
 
 The repository inside a container is a private clone, so writes there stay there until `fleet land`. Three host directories are mounted alongside it at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo, holding one task directory per container and `runbook/`); `~/.pi/cache/<repo>` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `fleet down` leaves the task directory, its sessions and `logs/usage.json` behind.
