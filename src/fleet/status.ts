@@ -17,6 +17,14 @@ export function parseCheckout(text: string): { branch: string; dirty: number; he
 
 export const checkoutProbe = 'cd "$WORKSPACE_DIR" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)"';
 
+export function brief(statusMd: string | undefined): string {
+	if (statusMd === undefined) return "status: no status.md";
+	const lines = statusMd.split("\n");
+	const header = lines.filter((l) => /^(status|attention|commit|pr): /.test(l)).join(" | ");
+	const next = lines.find((l) => l.startsWith("- [ ] "))?.slice(6) ?? "nothing left";
+	return `${header}\nnext: ${next}`;
+}
+
 export function formatRows(rows: Row[]): string {
 	if (!rows.length) return "no fleet containers";
 	const width = Math.max(...rows.map((r) => r.sandbox.length));

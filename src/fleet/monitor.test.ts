@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+	taskDirOf,
 	pickAgents,
 	shouldWake,
 	transition,
@@ -38,4 +39,10 @@ test("wake on settling, never on going back to work", () => {
 	assert.equal(shouldWake("idle", "blocked"), true);
 	assert.equal(shouldWake("working", "unknown"), true);
 	assert.equal(shouldWake(undefined, "unknown"), false);
+});
+
+test("the task directory follows from the agent's sandbox and its repo", () => {
+	const sandboxes = [{ name: "pi-webapp-web-1", workspaces: ["/Users/me/Work/webapp"] }];
+	assert.equal(taskDirOf("/home/me", sandboxes, "webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
+	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
 });

@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { agentName } from "../../src/fleet/name.ts";
+import { brief } from "../../src/fleet/status.ts";
 
 type Agent = { name?: string; pane_id?: string; agent_status?: string };
+type SandboxRow = { name: string; workspaces: string[] };
 type Frame = {
 	event?: string;
 	data?: { pane_id?: string; agent_status?: string };
@@ -41,12 +45,39 @@ export function transition(
 	return `${prev ?? "?"} -> ${next}`;
 }
 
+export function taskDirOf(
+	home: string,
+	sandboxes: SandboxRow[],
+	agent: string,
+): string | undefined {
+	const hit = sandboxes.find((s) => agentName(s.name) === agent);
+	if (!hit?.workspaces[0]) return undefined;
+	return `${home}/.sandboxes/${basename(hit.workspaces[0])}/${hit.name}`;
+}
+
 export default function (pi: any) {
 	let sock: net.Socket | undefined;
 	let gen = 0;
 	const status = new Map<string, string>();
 	const names = new Map<string, string>();
 	const selfPane = process.env.HERDR_PANE_ID ?? "";
+
+	const statusOf = async (agent: string): Promise<string> => {
+		const out = await pi.exec("sbx", ["ls", "--json"]).catch(() => undefined);
+		const text = typeof out === "string" ? out : (out?.stdout ?? "");
+		let dir: string | undefined;
+		try {
+			dir = taskDirOf(os.homedir(), JSON.parse(text)?.sandboxes ?? [], agent);
+		} catch {
+			dir = undefined;
+		}
+		if (!dir) return brief(undefined);
+		try {
+			return brief(readFileSync(`${dir}/status.md`, "utf8"));
+		} catch {
+			return brief(undefined);
+		}
+	};
 
 	const publish = () => {
 		(globalThis as any).__fleetMonitor = [...status].map(([pane, s]) => ({
@@ -58,8 +89,13 @@ export default function (pi: any) {
 			status.size ? `watching ${status.size}` : undefined,
 		);
 	};
-	const wake = (name: string, change: string) => {
-		pi.sendUserMessage(`[fleet] ${name}: ${change}`, { deliverAs: "followUp" });
+	const wake = async (name: string, change: string) => {
+		const text = `[fleet] ${name}: ${change}\n${await statusOf(name)}`;
+		pi.sendMessage(
+			{ customType: "fleet", content: text, display: true },
+			{ deliverAs: "nextTurn" },
+		);
+		pi.ui?.notify?.(`[fleet] ${name}: ${change}`, "info");
 	};
 
 	const listAgents = async (wanted: string[]): Promise<Agent[] | undefined> => {
@@ -157,13 +193,16 @@ export default function (pi: any) {
 		if (!sock || sock.destroyed) connect(wanted, myGen);
 	};
 
-	const start = async (args: string): Promise<string> => {
-		stop();
-		const myGen = gen;
-		const wanted = args
+	const split = (args: string) =>
+		args
 			.trim()
 			.split(/[\s,]+/)
 			.filter(Boolean);
+
+	const start = async (args: string): Promise<string> => {
+		stop();
+		const myGen = gen;
+		const wanted = split(args);
 		const agents = await listAgents(wanted);
 		if (myGen !== gen) return "superseded";
 		if (!agents?.length) return "no agents to watch";
@@ -178,7 +217,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Report other herdr agents settling as a [fleet] line. Args: agent names; none = all",
+			"Watch other herdr agents; a settling one lands as a [fleet] line at your next prompt. Args: agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -193,8 +232,8 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch other herdr agents: an agent settling (done, idle, blocked, gone) arrives as a [fleet] <name>: <prev> -> <status> message, and going back to work does not. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
-		promptSnippet: "watch herdr agents, woken when one settles",
+			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) becomes a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header, delivered with your next prompt and triggering nothing. To act on a container you drive, use fleet steer --wait instead of waiting for this line. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
+		promptSnippet: "watch herdr agents; a settling one is a line at your next prompt",
 		parameters: {
 			type: "object",
 			properties: {
