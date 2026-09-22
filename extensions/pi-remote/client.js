@@ -1,3 +1,4 @@
+import { deliberate } from "/connection.js";
 import hljs from "/vendor/highlight.js";
 import { marked } from "/vendor/marked.js";
 import { tree } from "/markdown.js";
@@ -325,8 +326,9 @@ async function connect() {
 			connected = false;
 			previousStatus = undefined;
 			controls();
-			banner(error.message, "danger");
 			if (reader) await reader.cancel().catch(() => {});
+			if (deliberate(error, controller.signal.aborted)) continue;
+			banner(error.message, "danger");
 			if (error.message.startsWith("Link expired")) return;
 			await new Promise((resolve) => setTimeout(resolve, 1500));
 		}

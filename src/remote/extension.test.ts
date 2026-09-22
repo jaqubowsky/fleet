@@ -188,6 +188,7 @@ test("extension controls a process runtime across fresh factories", {
 	assert.match(await page.text(), /Pi remote/);
 	for (const path of [
 		"/markdown.js",
+		"/connection.js",
 		"/vendor/marked.js",
 		"/vendor/highlight.js",
 		"/vendor/highlight-dark.css",

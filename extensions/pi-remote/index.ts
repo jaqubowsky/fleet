@@ -152,6 +152,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 						"/client.js": asset("client.js", JS),
 						"/client.css": asset("client.css", CSS),
 						"/markdown.js": asset("markdown.js", JS),
+						"/connection.js": asset("connection.js", JS),
 						"/manifest.webmanifest": asset(
 							"manifest.webmanifest",
 							"application/manifest+json; charset=utf-8",
