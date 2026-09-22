@@ -5,3 +5,4 @@ audits/
 .claude/
 *.bak
 __pycache__/
+.playwright-cli/
