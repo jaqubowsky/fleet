@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+claude_version() { claude --version 2>/dev/null | tr -cd '0-9.' || true; }
+
 RENDERED="${1:?usage: build.sh <stage the fleet build command rendered>}"
 STAGE="$RENDERED/home"
 trap 'rm -rf "$RENDERED"' EXIT
@@ -48,7 +50,7 @@ jq --arg id "$LSP@$MARKET" \
 
 TAR="${TMPDIR:-/tmp}/my-claude.tar"
 docker buildx build --provenance=false --sbom=false \
-  --build-arg "CLAUDE_UPDATE_BUST=$(date +%Y%m%d)" \
+  --build-arg "CLAUDE_UPDATE_BUST=$(date +%Y%m%d)-$(claude_version)" \
   --build-context claude-home="$STAGE" \
   --output "type=docker,dest=$TAR" -t my-claude:v1 "$RENDERED/context"
 sbx template rm my-claude:v1 --force 2>/dev/null </dev/null || sbx template rm my-claude:v1 2>/dev/null </dev/null || true

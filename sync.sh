@@ -71,7 +71,11 @@ drift() {
 }
 
 seat_hash() {
-	(cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256; shasum -a 256 < "$2") | shasum -a 256 | cut -c1-64
+	(cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256; shasum -a 256 < "$2"; printf '%s\n' "${3-}") | shasum -a 256 | cut -c1-64
+}
+
+image_agent_version() {
+	[ "$1" = claude ] && claude --version 2>/dev/null | tr -cd '0-9.' || true
 }
 
 template_loaded() {
@@ -115,7 +119,7 @@ fi
 while read -r name cli home image owned <&3; do
 	echo "== $name: image $image"
 	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat container --out "$WORK/$name-image" >/dev/null
-	want="$(seat_hash "$WORK/$name-image" "$ROOT/$name/sbx/build.sh")"
+	want="$(seat_hash "$WORK/$name-image" "$ROOT/$name/sbx/build.sh" "$(image_agent_version "$name")")"
 	if [ "$want" != "$(cat "$STAMPS/$name" 2>/dev/null || true)" ] || ! template_loaded "$image"; then
 		act "$ROOT/bin/$cli" build
 		if [ "$apply" = 1 ]; then
