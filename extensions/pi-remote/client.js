@@ -1,4 +1,4 @@
-import { deliberate } from "/connection.js";
+import { deliberate, terminal } from "/connection.js";
 import hljs from "/vendor/highlight.js";
 import { marked } from "/vendor/marked.js";
 import { tree } from "/markdown.js";
@@ -13,6 +13,7 @@ let sending = false;
 let controller;
 let delivery = "followUp";
 let previousStatus;
+let resyncing = false;
 
 function controls() {
 	const control = snapshot?.control !== false;
@@ -286,7 +287,9 @@ async function request(path, options = {}) {
 		throw new Error(
 			response.status === 401
 				? "Link expired. Scan /remote link again."
-				: `Request rejected (${response.status}). Resync before retrying.`,
+				: response.status === 429
+					? "Too many phones are watching this link. Close one and open it again."
+					: `Request rejected (${response.status}). Resync before retrying.`,
 		);
 	return response;
 }
@@ -323,13 +326,16 @@ async function connect() {
 				}
 			}
 		} catch (error) {
-			connected = false;
-			previousStatus = undefined;
-			controls();
 			if (reader) await reader.cancel().catch(() => {});
-			if (deliberate(error, controller.signal.aborted)) continue;
+			previousStatus = undefined;
+			if (deliberate(error, resyncing)) {
+				resyncing = false;
+				continue;
+			}
+			connected = false;
+			controls();
 			banner(error.message, "danger");
-			if (error.message.startsWith("Link expired")) return;
+			if (terminal(error.message)) return;
 			await new Promise((resolve) => setTimeout(resolve, 1500));
 		}
 	}
@@ -384,7 +390,9 @@ $("abort").addEventListener("click", () => {
 	void send("abort");
 });
 document.addEventListener("visibilitychange", () => {
-	if (!document.hidden) controller?.abort();
+	if (document.hidden || !controller) return;
+	resyncing = true;
+	controller.abort();
 });
 $("text").addEventListener("input", () => {
 	const field = $("text");
