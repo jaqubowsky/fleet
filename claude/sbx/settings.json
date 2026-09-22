@@ -5,8 +5,28 @@
     "FLEET_HANDOFF_TOKENS": "250000"
   },
   "hooks": {
-    "Stop": [{ "hooks": [{ "type": "command", "command": "node /home/agent/fleet/claude/hooks/container.ts stop", "timeout": 10 }] }],
-    "StopFailure": [{ "hooks": [{ "type": "command", "command": "node /home/agent/fleet/claude/hooks/container.ts stop-failure", "timeout": 10 }] }]
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/agent/fleet/claude/hooks/container.ts stop",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/agent/fleet/claude/hooks/container.ts stop-failure",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   },
   "statusLine": {
     "type": "command",
