@@ -39,7 +39,7 @@ The repository inside a container is a private clone, so writes there stay there
 
 ## Watching
 
-`fleet_watch`, or `/fleet-watch [names]` typed by the user, watches the agents that exist when it runs, so call it again after every `fleet up`.
+`fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, watches the containers named, by the sandbox name `fleet up` and `fleet ls` print; no name watches every agent. It sees only the agents that exist when it runs, so call it again after every `fleet up`.
 
 - A settling agent wakes you with `[fleet] <name>: <prev> -> <status>` plus the `status.md` brief. The wake turn is one line, the agent and its change, then either the next steer when the task is yours to drive or the end of the turn. Going back to work is silent.
 - `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means pi died in it; read the tab.

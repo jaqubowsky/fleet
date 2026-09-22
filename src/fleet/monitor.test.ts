@@ -24,6 +24,17 @@ test("watch everyone but self, or only the named agents", () => {
 	assert.deepEqual(pickAgents(agents, ["me"], "w:p1"), []);
 });
 
+test("a sandbox name picks the agent herdr named after it", () => {
+	const agents = [
+		{ pane_id: "w:p1", name: "webapp-bug-ledger-repo-126faba" },
+		{ pane_id: "w:p2", name: "webapp-web-1705-no-dat-4405762" },
+	];
+
+	const picked = pickAgents(agents, ["pi-webapp-bug-ledger-repost-status-bar"], "w:p0");
+
+	assert.deepEqual(picked.map((a) => a.pane_id), ["w:p1"]);
+});
+
 test("a transition line only when the status changed", () => {
 	assert.equal(transition("working", "idle"), "working -> idle");
 	assert.equal(transition(undefined, "idle"), "? -> idle");

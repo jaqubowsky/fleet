@@ -32,8 +32,9 @@ export function pickAgents(
 ): Agent[] {
 	const others = agents.filter((a) => a.pane_id && a.pane_id !== selfPane);
 	if (!wanted.length) return others;
+	const names = new Set(wanted.flatMap((w) => [w, agentName(w)]));
 	return others.filter(
-		(a) => wanted.includes(a.name ?? "") || wanted.includes(a.pane_id ?? ""),
+		(a) => names.has(a.name ?? "") || names.has(a.pane_id ?? ""),
 	);
 }
 
@@ -217,7 +218,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Watch other herdr agents; a settling one wakes this session with a [fleet] line. Args: agent names; none = all",
+			"Watch other herdr agents; a settling one wakes this session with a [fleet] line. Args: sandbox or agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -232,7 +233,7 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) wakes this session with a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header; that turn is where you act on it. Watches only the agents that exist now, so call again after each fleet up. Empty string = every agent but this one.",
+			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) wakes this session with a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header; that turn is where you act on it. Watches only the agents that exist now, so call again after each fleet up. Pass the sandbox name from fleet up or fleet ls; empty string = every agent but this one.",
 		promptSnippet: "watch herdr agents; a settling one wakes this session with a [fleet] line",
 		parameters: {
 			type: "object",
@@ -240,7 +241,7 @@ export default function (pi: any) {
 				agents: {
 					type: "string",
 					description:
-						"Space- or comma-separated agent names or pane ids; empty string watches all",
+						"Space- or comma-separated sandbox names as fleet ls prints them (pi-<repo>-<label>), herdr agent names or pane ids. Empty string watches every agent, so name the one container when the user asked for one",
 				},
 			},
 			required: ["agents"],
