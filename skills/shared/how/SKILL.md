@@ -10,7 +10,7 @@ Explore the codebase to answer "how does X work?" questions. Produce clear archi
 Two modes:
 
 1. **Explain** (default). Explore the codebase and produce a clear explanation
-2. **Critique.** Explain first, then spawn multiple agents to independently identify architectural issues
+2. **Critique.** Explain first, then take several distinct critique passes to identify architectural issues
 
 ## Explain mode
 
@@ -28,9 +28,9 @@ Identify the scope. If ambiguous, state your best-guess interpretation before ex
 **Assess complexity to decide the approach:**
 
 - **Simple** (a single module, a small utility, a narrow question like "how does function X work"): skip explorer agents; the explainer explores and explains in a single pass. Go to Step 2b.
-- **Complex** (a subsystem spanning multiple files/services, a cross-cutting feature, a full architectural overview): spawn parallel explorer agents first, then hand off to the explainer. Go to Step 2a.
+- **Complex** (a subsystem spanning multiple files/services, a cross-cutting feature, a full architectural overview): take one explorer pass per slice first, then synthesize. Go to Step 2a.
 
-When in doubt, lean simple. You can always spawn explorers if the explainer hits a wall.
+When in doubt, lean simple. Add explorer passes when the direct explanation hits a wall.
 
 ### Step 2a. Explore (complex questions only)
 
@@ -42,36 +42,36 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 
 The right decomposition depends on the question. Default to three explorers: two when the subsystem sits in one package, four when it spans services or processes.
 
-Launch every explorer as a `scout` sub-agent, all in the same turn so they run concurrently. If `scout` is unavailable, say so in the answer before starting, then explore inline.
+Run every explorer yourself, one after another, each as its own pass over the code with its own notes; the passes stay separate until Step 3.
 
-Each explorer gets the same base prompt from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer should:
+Each pass follows `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each pass:
 - Start broad: find for relevant directories, grep for key types/interfaces/class names
 - Follow the thread: from an entry point, trace the call chain (callers, callees, data flow, type definitions)
 - Read the actual code, don't guess from file names
 - Stop when it can describe the full path from input to output (or trigger to effect) without hand-waving any step
 - Note things that are surprising, non-obvious, or that a newcomer would get wrong
 
-Each explorer returns structured findings: components found, flow traced, files read, anything non-obvious. Overlap between explorers is fine; the explainer reconciles.
+Each pass ends in structured findings: components found, flow traced, files read, anything non-obvious. Overlap between passes is fine; Step 3 reconciles.
 
 Then proceed to Step 3.
 
 ### Step 2b. Direct explain (simple questions)
 
-Spawn a single `scout` sub-agent that explores and explains in one pass.
+Explore and explain in one pass.
 
-The agent does its own exploration (find, grep, read) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
+Do the exploration (find, grep, read) and write the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
 
 Proceed to Step 4.
 
 ### Step 3. Synthesize (complex questions only)
 
-Once all explorers return, spawn a single `scout` sub-agent to synthesize their findings into one coherent explanation.
+With every pass done, synthesize their findings into one coherent explanation.
 
-The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
+Read `references/explainer-prompt.md` for the template and write the human-facing explanation from all the findings (output format below): reconcile overlaps, resolve contradictions, weave the slices into one picture.
 
 ### Step 4. Present
 
-Present the explainer's output to the user. You may lightly edit for clarity or add context from the conversation, but don't substantially rewrite. The explainer's communication is the product.
+Present the explanation to the user, with context from the conversation where it helps.
 
 The output structure (Overview, Key concepts, How it works, Where things live, Gotchas) lives in `references/explainer-prompt.md`, the one place both paths read it from.
 
@@ -87,9 +87,9 @@ Triggered when the user asks for architectural issues, problems, or improvements
 
 Run the full explain flow above (Steps 1-4). You must understand the architecture before critiquing it.
 
-### Step 2. Spawn critics
+### Step 2. Critique passes
 
-After the explanation is complete, launch 3-4 architectural critics as `scout` sub-agents in the same turn so they run concurrently. Give each critic a distinct lens (for example: coupling and boundaries, failure modes and operability, data model and invariants, evolution and deletability) so they don't converge on the same finding.
+After the explanation is complete, run 3-4 critique passes yourself, one per lens (for example: coupling and boundaries, failure modes and operability, data model and invariants, evolution and deletability), each written down before the next starts so they stay distinct.
 
 Read `references/critic-prompt.md` for the prompt template. Each critic gets:
 1. The explanation from Step 1 (so they don't re-explore)

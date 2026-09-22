@@ -2,7 +2,7 @@
 
 Both formats are JSONL, one object per line. Never `cat` a file: sizes reach 8 MB. Pipe through `jq` and slice with `.[0:N]`. `nl` on the extracted stream gives line numbers for the scorecard; the number is the transcript line when the filter keeps one output per input line, so print `input_line_number` where it matters.
 
-## pi (`~/.pi/agent/sessions`, `~/.pi/sandbox-transcripts/pi-*`)
+## pi (`~/.pi/agent/sessions`, `~/.sandboxes/*/pi-*/logs/sessions`)
 
 First line is `{"type":"session","cwd":...}`; `model_change` names provider and model. Messages sit under `.message` with `role` in `user`, `assistant`, `toolResult`.
 
@@ -38,4 +38,4 @@ Skill loads are `Skill` tool calls or `Read` calls on a `SKILL.md` path. Sub-age
 - Done-check after the last change (Acceptance): last mutating call versus the last test or check command.
 - Repeats (friction): `sort | uniq -c | sort -rn` over the extracted tool calls.
 - Push, sign, Linear writes (Autonomy): grep the tool calls for `git push`, `-S`, `gpgsign`, and MCP names containing `create` or `update`.
-- Sub-agents (Delegation): count of `scout`/`researcher`/`reviewer` tool calls in pi, `Agent` calls in Claude, against what the session's skill asked for.
+- Sub-agents (Delegation): count of `scout`/`researcher`/`two-axis-reviewer` tool calls in pi, `Agent` calls in Claude, against what the session's skill asked for.

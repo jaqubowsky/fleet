@@ -11,14 +11,6 @@
     "reviewer": {
       "model": "openai-codex/gpt-5.6-sol",
       "thinking": "xhigh"
-    },
-    "scout": {
-      "model": "openai-codex/gpt-5.6-luna",
-      "thinking": "max"
-    },
-    "researcher": {
-      "model": "openai-codex/gpt-5.6-luna",
-      "thinking": "max"
     }
   }
 }

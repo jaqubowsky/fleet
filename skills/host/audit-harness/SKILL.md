@@ -10,7 +10,7 @@ Transcripts are the experiment; the harness (rules, skills, guard, fleet, image,
 
 ## 1. New transcripts
 
-`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates under the root: `sandbox-transcripts/**/*.jsonl` and the host session store (`agent/sessions/` in pi, `projects/` in Claude Code); `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per container directory or host file) with side, size and date, so the user can narrow the run.
+`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every task directory's `logs/sessions/**/*.jsonl` under `~/.sandboxes/*/*/` for containers, and the host session store (`agent/sessions/` in pi, `projects/` in Claude Code); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per task directory or host file) with side, size and date, so the user can narrow the run.
 
 The newest `audits/*.md` carries the findings of the last run into step 4: every row with its id, severity and run count. Declining a fix does not close a row.
 
@@ -20,14 +20,14 @@ The newest `audits/*.md` carries the findings of the last run into step 4: every
 
 ## 3. Scorecard per session
 
-One read-only sub-agent per session, all in the same turn. The brief: the paths, the commit, [references/extract.md](references/extract.md), and this shape as its done-check:
+One scorecard per session, written by you from the transcript, the commit and [references/extract.md](references/extract.md), in this shape:
 
 - header: path, side, model, task in one line, outcome (finished, died, stopped by the user)
 - each rule: `held`, `broken` or `not exercised`; the first two with one quote and its transcript line
 - each skill the task matched: `SKILL.md` read at which line, before or after the user named it; steps skipped
 - friction with counts: a command repeated three or more times, tool errors, guard denials (correct or false positive), fleet refusals, user corrections verbatim
 
-Done when every rule has a verdict and every `broken` has a line number. A sub-agent without one is sent back for it.
+Done when every rule has a verdict and every `broken` has a line number.
 
 ## 4. Findings
 

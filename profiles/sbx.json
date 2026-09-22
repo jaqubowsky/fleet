@@ -16,29 +16,12 @@
   },
   "skills": ["~/.pi/skills"],
   "subagents": {
+    "disableBuiltins": true,
     "agentOverrides": {
-      "scout": {
-        "model": "{{providers.scout}}/{{models.scout}}",
-        "thinking": "{{thinking.scout}}"
-      },
-      "researcher": {
-        "model": "{{providers.researcher}}/{{models.researcher}}",
-        "thinking": "{{thinking.researcher}}"
-      },
       "two-axis-reviewer": {
         "model": "{{providers.reviewer}}/{{models.reviewer}}",
         "thinking": "{{thinking.reviewer}}"
-      },
-      "reviewer": { "disabled": true },
-      "worker": { "disabled": true },
-      "oracle": { "disabled": true },
-      "claude-code": { "disabled": true },
-      "codex-exec": { "disabled": true },
-      "cursor-agent": { "disabled": true },
-      "delegate": { "disabled": true },
-      "claude-code-writer": { "disabled": true },
-      "codex-exec-writer": { "disabled": true },
-      "cursor-agent-writer": { "disabled": true }
+      }
     }
   },
   "packages": [

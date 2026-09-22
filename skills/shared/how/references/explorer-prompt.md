@@ -1,6 +1,6 @@
 # Explorer Prompt Template
 
-Build each explorer subagent's prompt from this template. Fill in the placeholders.
+Each explorer pass follows this template. Fill in the placeholders and keep the pass to its slice.
 
 ---
 

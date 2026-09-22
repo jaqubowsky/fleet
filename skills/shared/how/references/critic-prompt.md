@@ -1,6 +1,6 @@
 # Critic Prompt Template
 
-Build each critic subagent's prompt from this template. Fill in the placeholders.
+Each critique pass follows this template. Fill in the placeholders and hold the lens for the whole pass.
 
 ---
 

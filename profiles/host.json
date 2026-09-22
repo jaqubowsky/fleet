@@ -11,12 +11,9 @@
   "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 },
   "skills": ["~/.pi/skills/shared", "~/.pi/skills/host"],
   "subagents": {
+    "disableBuiltins": true,
     "agentOverrides": {
-      "two-axis-reviewer": { "model": "{{providers.reviewer}}/{{models.reviewer}}", "thinking": "{{thinking.reviewer}}" },
-      "reviewer": { "disabled": true },
-      "scout": { "model": "{{providers.scout}}/{{models.scout}}", "thinking": "{{thinking.scout}}" },
-      "researcher": { "model": "{{providers.researcher}}/{{models.researcher}}", "thinking": "{{thinking.researcher}}" },
-      "worker": { "disabled": true }
+      "two-axis-reviewer": { "model": "{{providers.reviewer}}/{{models.reviewer}}", "thinking": "{{thinking.reviewer}}" }
     }
   },
   "packages": [
