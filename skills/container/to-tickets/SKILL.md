@@ -1,21 +1,21 @@
 ---
 name: to-tickets
-description: 'Break a plan, spec or the current conversation into tracer-bullet tickets under .issues/<feature-slug>/. Use when the user wants to convert a plan into tickets, create implementation tickets, or break down work.'
+description: 'Break a plan, spec or the current conversation into tracer-bullet tickets: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants to convert a plan into tickets, create implementation tickets, or break down work.'
 ---
 
 # To Tickets
 
 Work that fits a single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
 
-Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet vertical slices, each declaring the tickets that **block** it. Tickets are written as **local markdown files** under `.issues/<feature-slug>/`, not published to a hosted issue tracker.
+Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet vertical slices, each declaring the tickets that **block** it. Tickets are **local markdown files**: `issues/` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`), or `.issues/<feature-slug>/` outside fleet.
 
-Each ticket is picked up by a fresh session holding the repository, the parent spec and the ticket, and nothing else. The parent spec carries the sources and decisions shared by the whole feature. The ticket points at what is specific to its slice.
+Each ticket is read by a session holding the repository, the parent spec and the ticket, and possibly nothing else. The parent spec carries the sources and decisions shared by the whole feature. The ticket points at what is specific to its slice.
 
 ## Process
 
 ### 1. Gather context
 
-Work from whatever is already in the conversation context. If the user passes a reference as an argument (e.g. a path like `.issues/<feature-slug>/spec.md`), read its full body before drafting.
+Work from whatever is already in the conversation context. If the user passes a reference as an argument (a path like `spec.md` in the task directory), read its full body before drafting.
 
 ### 2. Explore the codebase (optional)
 
@@ -31,7 +31,7 @@ Break the work into **tracer bullet** tickets.
 
 - Each slice cuts a narrow but COMPLETE path through every layer (schema, API, UI, tests): vertical, NOT a horizontal slice of one layer
 - A completed slice is demoable or verifiable on its own
-- Each slice is sized to fit in a single fresh context window
+- Each slice is sized to one gate: one commit, one review
 - Any prefactoring should be done first
 
 </vertical-slice-rules>
@@ -58,9 +58,9 @@ Iterate until the user approves the breakdown.
 
 ### 5. Write the tickets to local files
 
-Pick a `<feature-slug>` for the overall plan (kebab-case, derived from the plan/spec title): reuse the existing directory if the spec already lives at `.issues/<feature-slug>/spec.md`.
+With a task directory, the tickets go to `issues/` in it, beside `spec.md`. Without one, pick a `<feature-slug>` for the overall plan (kebab-case, derived from the plan/spec title), reusing the directory if the spec already lives at `.issues/<feature-slug>/spec.md`.
 
-Write one file per approved ticket at `.issues/<feature-slug>/<NN>-<slug>.md`, numbered from `01` in **dependency order** (blockers first), so the numbering itself reflects implementation order and "Blocked by" can reference real filenames. One ticket per file, never a single combined file.
+Write one file per approved ticket, `<NN>-<slug>.md`, numbered from `01` in **dependency order** (blockers first), so the numbering itself reflects implementation order and "Blocked by" can reference real filenames. One ticket per file.
 
 Set `Status: ready-for-agent`, so the tickets are agent-grabbable by construction; a status the user named replaces it.
 
@@ -73,7 +73,7 @@ Blocked by: <NN>-<slug>.md, <NN>-<slug>.md, or "None, can start immediately"
 
 ## Parent
 
-A reference to the parent spec file (e.g. `.issues/<feature-slug>/spec.md`) if the source was an existing file: otherwise omit this section. Read it before starting, it carries the sources and decisions shared by the feature.
+A reference to the parent spec file (`../spec.md` in a task directory, `.issues/<feature-slug>/spec.md` otherwise) if the source was an existing file: otherwise omit this section. Read it before starting, it carries the sources and decisions shared by the feature.
 
 ## Sources
 
@@ -94,4 +94,4 @@ Avoid specific file paths or code snippets in ticket bodies, they go stale fast.
 
 The parent spec or plan stays as it is; the ticket files are the only files this skill writes.
 
-Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom. Work the frontier one ticket at a time with the `implement` skill, clearing context between tickets.
+Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom. Work the frontier one ticket at a time with the `implement` skill, in the same session; the ticket files carry the state between tickets.

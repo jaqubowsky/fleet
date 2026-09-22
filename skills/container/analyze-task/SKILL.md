@@ -78,7 +78,9 @@ REQUIRED SUB-SKILL: use `brain` after the code analysis. Compare recorded decisi
 
 REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
 
-The reply is the report: the six headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all. No file carries it. `.issues/` belongs to `to-spec` and `to-tickets`, and a file in `$FLEET_ARTIFACTS` is written only when the user asks for one, beside the report, never instead of it.
+The reply is the report: the six headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
+
+The same report, minus To do, is written to `analysis.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`), headed by `Commit: <sha7>` of the HEAD analyzed. The To do checklist becomes the `## Plan` of `status.md`, with `status: analyzing` while the analysis runs and the status the plan's first step calls for when it ends. A `task.md` still holding the `fleet up` stub gets its Goal, Requirements and Acceptance criteria from the ticket. Outside fleet, with no task directory, the chat report is the whole deliverable.
 
 ### Verdict
 
@@ -133,4 +135,4 @@ Each row quotes a run that went wrong: the first without this document in contex
 | Excuse | Reality |
 | --- | --- |
 | "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |
-| "The analysis is in `.issues/<slug>/analysis.md`", followed by one paragraph of prose | The reply is the report, in its slots. A paragraph plus a file is the shape this skill exists to replace, and the file is not a deliverable here. |
+| "The analysis is in `analysis.md`", followed by one paragraph of prose | The reply is the report, in its slots. `analysis.md` is the copy the next session reads; the person reads the chat. |

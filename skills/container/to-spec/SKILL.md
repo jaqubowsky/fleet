@@ -1,6 +1,6 @@
 ---
 name: to-spec
-description: 'Turn the current conversation into a feature spec at .issues/<feature-slug>/spec.md. Use when the user wants a spec for a single feature from the current context.'
+description: 'Turn the current conversation into a feature spec: spec.md in the task directory, or .issues/<feature-slug>/spec.md outside fleet. Use when the user wants a spec for a single feature from the current context.'
 ---
 
 A single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
@@ -9,7 +9,7 @@ This skill takes the current conversation context and codebase understanding and
 
 The spec is written as a **local markdown file**, not published to a hosted issue tracker.
 
-The implementer will be a fresh session that never saw this conversation. It needs to know which sources exist and can be consulted: tracker issues, ADRs, documents, prior art. Point at them, do not summarize them.
+The implementer may be a session that never saw this conversation. It needs to know which sources exist and can be consulted: tracker issues, ADRs, documents, prior art. Point at them, do not summarize them.
 
 ## Process
 
@@ -21,7 +21,7 @@ The implementer will be a fresh session that never saw this conversation. It nee
 
 Check with the user that these seams match their expectations.
 
-4. Write the spec using the template below. Pick a `<feature-slug>` (kebab-case, derived from the feature title) and write the spec to `.issues/<feature-slug>/spec.md`, creating the directory if needed. Set `Status: ready-for-agent` near the top: no further triage needed. Once written, run the `to-tickets` skill to break the spec into tracer-bullet ticket files alongside it.
+4. Write the spec using the template below. With a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) it is `spec.md` there, the task being the feature. Without one, pick a `<feature-slug>` (kebab-case, derived from the feature title) and write `.issues/<feature-slug>/spec.md`, creating the directory if needed. Set `Status: ready-for-agent` near the top: no further triage needed. Once written, run the `to-tickets` skill to break the spec into tracer-bullet ticket files beside it.
 
 <spec-template>
 
