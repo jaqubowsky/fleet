@@ -4,7 +4,7 @@ description: 'Independent review of one commit on two axes, correctness and engi
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`); with no task directory, `review.md` beside the repository's `.issues/`.
+Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md` beside `AGENTS.md`); with no task directory, `review.md` beside the repository's `.issues/`.
 
 ## Process
 
@@ -44,7 +44,7 @@ Read `review.md`. In `status.md`: the log line `review <sha7>: <verdict>, <n> fi
 
 ## Done
 
-`review.md` names the head that is now `HEAD`, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check in `logs/review-<head-sha7>/` appears under Checks read, and `status.md` moved.
+`review.md` names the head that is now `HEAD`, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check in `logs/review-<head-sha7>/` appears under Checks read, Shared seams lists every modified symbol other callers use or says none, and `status.md` moved.
 
 ## Why two axes in one reviewer
 

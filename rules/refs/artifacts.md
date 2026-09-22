@@ -11,11 +11,13 @@ status.md      where it stands: status, attention, now, log       every skill, a
 analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
 spec.md        what will be built and why                          to-tickets
 issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
-review.md      findings and the checks read, against one commit    two-axis-review
+review.md      verdict line, findings, checks read, shared seams   two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
 browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
 logs/          sessions/, usage.json, <skill>-<id>/ evidence        pi, fleet down, any skill
 ```
+
+`runbook/` at the root of `$FLEET_ARTIFACTS`, beside the task directories, holds how the app starts and how its screens drive (`run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md`, `gate-baseline.md`); every container on the repository shares it.
 
 One short file per name above `logs/`. Anything with many versions, big or binary goes to `logs/<skill>-<id>/`, and the file that cites it links there.
 
@@ -40,7 +42,7 @@ Findings only: the verdict, what it rests on, what is out of scope, what is open
 
 ## The pipeline
 
-A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-tickets`, `implement` per ticket with `tdd`, `two-axis-review`, `check-feature`. `check-regressions` follows when `review.md` names a shared seam, `record-walkthrough` on the user's word. The analysis ends with one question that covers the verdict, the split into tickets and the test seams; the later skills ask nothing on their own. An opening prompt that says end to end answers that question in advance.
+A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-tickets`, `implement` per ticket with `tdd`, `two-axis-review`, `check-feature`. `check-regressions` follows when `review.md` names a shared seam, `record-walkthrough` on the user's word. The analysis ends with one question, sent as `attention:` under `status: blocked`, that covers the run shape, the split into tickets and the test seams; the later skills ask nothing on their own. An opening prompt that says end to end answers that question in advance.
 
 The agent shortens the run when the analysis shows one accepted behaviour, one seam and one commit: `analyze-task`, then `implement` with `tdd`, then the review, and the analysis says so. The opening prompt overrides in either direction.
 

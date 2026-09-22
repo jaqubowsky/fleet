@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Audit harness
 
-Transcripts are the experiment; the harness (rules, skills, guard, fleet, image, settings) is the hypothesis. Grade the harness this skill lives in, the root two directories up (`~/.pi` or `~/.claude`), a git repository whose `README.md` layout table names every part. Ends at a report; every edit is the user's call.
+Transcripts are the experiment; the harness (rules, skills, guard, fleet, image, settings) is the hypothesis. Grade the harness this skill lives in, the root above `skills/` (`~/.pi` or `~/.claude`), a git repository whose `README.md` layout table names every part. Ends at a report; every edit is the user's call.
 
 ## 1. New transcripts
 

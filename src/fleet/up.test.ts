@@ -498,7 +498,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 
-	const again = fakeIo({ ...base, [`read ${task}/task.md`]: "# kept", [`read ${task}/status.md`]: "status: implementing" });
+	const again = fakeIo({ ...base, [`read ${task}/status.md`]: "status: implementing" });
 	await up({ repo, label: "web-1", root: "/root" }, again);
 	assert.ok(!again.calls.some((c) => c[0] === "write"));
 });

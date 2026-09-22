@@ -295,7 +295,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Watch herdr agents beyond the ones this session put up or steered; a settling one wakes this session with a [fleet] line. Args: sandbox or agent names; none = all",
+			"Watch herdr agents beyond the ones this session put up or steered; one settling or working on without settling wakes this session with a [fleet] line. Args: sandbox or agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -310,7 +310,7 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch herdr agents beyond the ones this session put up or steered, which are watched by themselves. An agent settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying its task's status.md header; that turn is where you act on it. Pass the sandbox name from fleet ls; empty string = every agent but this one.",
+			"Watch herdr agents beyond the ones this session put up or steered, which are watched by themselves. An agent settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying its status.md header, the commits on its branch and the review verdict; that turn is where you act on it. Pass the sandbox name from fleet ls; empty string = every agent but this one.",
 		promptSnippet: "watch herdr agents; a settling one wakes this session with a [fleet] line",
 		parameters: {
 			type: "object",

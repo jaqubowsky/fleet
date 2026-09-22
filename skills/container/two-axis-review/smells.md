@@ -1,6 +1,6 @@
 # Smell baseline
 
-The fixed set of Fowler code smells (_Refactoring_, ch.3) the Standards axis carries even when a repo documents nothing. Read by the Standards sub-agent, not by the orchestrator.
+The fixed set of Fowler code smells (_Refactoring_, ch.3) the engineering-quality axis carries even when a repo documents nothing. Read by the reviewer, not by the skill that runs it.
 
 Two rules bind it:
 

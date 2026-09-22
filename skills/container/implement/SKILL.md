@@ -5,7 +5,7 @@ description: 'Building a ticket, spec or analysis into working code, one ticket 
 
 # Implement
 
-Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) or in the ticket the user passed.
+Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md` beside `AGENTS.md`) or in the ticket the user passed.
 
 ## Process
 

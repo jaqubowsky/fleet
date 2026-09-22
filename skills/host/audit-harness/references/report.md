@@ -10,7 +10,7 @@ Three sentences: what held, what broke, the one change with the widest effect.
 
 | Id | Where | Finding | Runs | Violations | Severity | Fix |
 | --- | --- | --- | --- | --- | --- | --- |
-| `rule/acceptance-5` | `rules/core.md:24` | <one line> | 2 | 3/3 | high | <one line> |
+| `rule/acceptance-5` | `rules/core.md:42` | <one line> | 2 | 3/3 | high | <one line> |
 
 **`rule/acceptance-5`** <session>, line <l>: "<quote>". Cause: wording | mechanism | dead | conflict with <other>. Fix: <full replacement text, or the script, guard case or trigger line>. On a repeat, what the last audit proposed and what the evidence did since.
 

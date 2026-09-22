@@ -9,15 +9,15 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
-| put up a container for ticket X | `fleet up <label> --repo <path> [--branch <name>] [--base <name>] [--model <provider/id:thinking>]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); pi waiting, no prompt sent |
+| put up a container for ticket X | `fleet up <label> --repo <path> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); pi waiting, no prompt sent |
 | what is running | `fleet ls` | one line per container: status, herdr state, branch, dirty count, time since its first prompt, cost so far |
-| what is it doing this minute | `fleet peek <sandbox>` | git status, log, diff --stat, install log, pane tail |
+| what is it doing this minute | `fleet peek <sandbox> [--lines 40]` | git status, log, diff --stat, install log, pane tail |
 | send it this | `fleet steer <sandbox> "<text>"` | steered; pi takes it after its current tool call, and the container is under watch from now on |
 | run something inside | `fleet exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `fleet artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | get one file out | `fleet copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `fleet land <sandbox> [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks |
-| close it | `fleet down <sandbox>` | the usage line and where the task directory stays |
+| close it | `fleet down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `fleet build` | the docker build output, and what the image now carries |
 | switch models for new containers | `fleet render` after editing `profiles/models.json` | files rewritten; host sees it after `/reload`, containers after `fleet build` |
 

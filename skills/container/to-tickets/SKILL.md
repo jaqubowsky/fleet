@@ -7,7 +7,7 @@ description: 'Turn an analysis, a plan or the current conversation into spec.md 
 
 Work that fits a single bounded patch leaves this skill here: one accepted behaviour, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to `implement`. In a task directory that call was made in `analysis.md`; this skill runs when the analysis named the pipeline.
 
-Two files come out of it, read by a session that holds the repository and nothing of this conversation: `spec.md`, the decisions shared by the whole feature, and one ticket per slice under `issues/`. The spec carries the sources and the decisions; a ticket points at what is specific to its slice. In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) both live there; outside fleet, under `.issues/<feature-slug>/`, the slug kebab-case from the feature title.
+Two files come out of it, read by a session that holds the repository and nothing of this conversation: `spec.md`, the decisions shared by the whole feature, and one ticket per slice under `issues/`. The spec carries the sources and the decisions; a ticket points at what is specific to its slice. In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md` beside `AGENTS.md`) both live there; outside fleet, under `.issues/<feature-slug>/`, the slug kebab-case from the feature title.
 
 ## Process
 
