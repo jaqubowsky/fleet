@@ -14,6 +14,7 @@ mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.t
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"
 cp -L "$ROOT/sbx/AGENTS.md" "$STAGE/agent/AGENTS.md"
 cp -RL "$ROOT/rules/refs" "$STAGE/agent/refs"
+cp -RL "$ROOT/agent/agents" "$STAGE/agent/agents"
 cp -L "$HOME/.gitconfig" "$HOME/.gitconfig-work" "$HOME/.gitconfig-alice" "$STAGE/"
 cp -L "$HOME/.config/git/allowed_signers" "$STAGE/"
 find "$STAGE" -name .DS_Store -delete

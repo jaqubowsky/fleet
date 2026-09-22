@@ -25,10 +25,11 @@
         "model": "{{providers.researcher}}/{{models.researcher}}",
         "thinking": "{{thinking.researcher}}"
       },
-      "reviewer": {
+      "two-axis-reviewer": {
         "model": "{{providers.reviewer}}/{{models.reviewer}}",
         "thinking": "{{thinking.reviewer}}"
       },
+      "reviewer": { "disabled": true },
       "worker": { "disabled": true },
       "oracle": { "disabled": true },
       "claude-code": { "disabled": true },
