@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import qrcode from "qrcode-terminal";
 import { processRuntime } from "../../src/remote/runtime.ts";
 import { inspectServe } from "../../src/remote/tailscale.ts";
@@ -105,15 +106,38 @@ export default function remoteExtension(pi: RemoteAPI) {
 					ctx.ui.notify("Port must be 1..65535", "error");
 					return;
 				}
+				const JS = "text/javascript; charset=utf-8";
+				const CSS = "text/css; charset=utf-8";
 				const asset = (file: string, type: string) => ({
 					type,
 					body: readFileSync(new URL(file, import.meta.url), "utf8"),
 				});
+				const vendor = (specifier: string, type: string) => ({
+					type,
+					body: readFileSync(
+						createRequire(import.meta.url).resolve(specifier),
+						"utf8",
+					),
+				});
 				try {
 					await runtime.start(port, {
 						"/": asset("client.html", "text/html; charset=utf-8"),
-						"/client.js": asset("client.js", "text/javascript; charset=utf-8"),
-						"/client.css": asset("client.css", "text/css; charset=utf-8"),
+						"/client.js": asset("client.js", JS),
+						"/client.css": asset("client.css", CSS),
+						"/markdown.js": asset("markdown.js", JS),
+						"/vendor/marked.js": vendor("marked", JS),
+						"/vendor/highlight.js": vendor(
+							"@highlightjs/cdn-assets/es/highlight.min.js",
+							JS,
+						),
+						"/vendor/highlight-dark.css": vendor(
+							"@highlightjs/cdn-assets/styles/github-dark.min.css",
+							CSS,
+						),
+						"/vendor/highlight-light.css": vendor(
+							"@highlightjs/cdn-assets/styles/github.min.css",
+							CSS,
+						),
 					});
 				} catch {
 					ctx.ui.notify(

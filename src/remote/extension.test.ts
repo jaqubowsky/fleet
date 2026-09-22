@@ -143,6 +143,22 @@ test("extension controls a process runtime across fresh factories", {
 		/default-src 'none'/,
 	);
 	assert.match(await page.text(), /Pi remote/);
+	for (const path of [
+		"/markdown.js",
+		"/vendor/marked.js",
+		"/vendor/highlight.js",
+		"/vendor/highlight-dark.css",
+		"/vendor/highlight-light.css",
+	]) {
+		const library: Response = await fetch(identity.origin + path);
+		assert.equal(library.status, 200, `${path} is public`);
+		assert.ok((await library.text()).length > 0, `${path} has a body`);
+	}
+	assert.equal(
+		(await fetch(`${identity.origin}/vendor/anything-else.js`)).status,
+		401,
+		"only the listed assets are public",
+	);
 	const stream = await fetch(`${identity.origin}/events`, { headers });
 	const reader = stream.body!.getReader();
 	t.after(() => reader.cancel());

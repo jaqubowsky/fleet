@@ -1,3 +1,7 @@
+import hljs from "/vendor/highlight.js";
+import { marked } from "/vendor/marked.js";
+import { tree } from "/markdown.js";
+
 const token = location.hash.slice(1);
 history.replaceState(null, "", location.pathname);
 const headers = { Authorization: `Bearer ${token}` };
@@ -26,12 +30,11 @@ function render(next) {
 		next.tools.length > 0;
 	const row = (label, text) => {
 		const article = document.createElement("article");
-		article.dataset.role = label.split(" · ")[0];
+		const role = label.split(" · ")[0];
+		article.dataset.role = role;
 		const heading = document.createElement("strong");
 		heading.textContent = label;
-		const body = document.createElement("pre");
-		body.textContent = text;
-		article.append(heading, body);
+		article.append(heading, prose(role, text));
 		return article;
 	};
 	$("transcript").replaceChildren(
@@ -44,6 +47,57 @@ function render(next) {
 		...next.tools.map((tool) => row(`${tool.name} · ${tool.state}`, tool.text)),
 	);
 	controls();
+}
+function prose(role, text) {
+	if (role !== "user" && role !== "assistant") {
+		const output = document.createElement("pre");
+		output.className = "output";
+		output.textContent = text;
+		return output;
+	}
+	const body = document.createElement("div");
+	body.className = "markdown";
+	body.append(...tree(marked.lexer(text)).map(build));
+	return body;
+}
+function build(node) {
+	if ("text" in node) return document.createTextNode(node.text);
+	if (node.tag === "pre") return codeBlock(node);
+	const element = document.createElement(node.tag);
+	for (const [name, value] of Object.entries(node.attributes))
+		element.setAttribute(name, value);
+	element.append(...node.children.map(build));
+	return element;
+}
+function codeBlock(node) {
+	const [{ attributes, children }] = node.children;
+	const source = children[0]?.text ?? "";
+	const language = attributes["data-language"];
+	const figure = document.createElement("figure");
+	figure.className = "code";
+	const caption = document.createElement("figcaption");
+	const name = document.createElement("span");
+	name.textContent = language ?? "text";
+	const copy = document.createElement("button");
+	copy.type = "button";
+	copy.textContent = "Copy";
+	copy.addEventListener("click", async () => {
+		try {
+			await navigator.clipboard.writeText(source);
+			copy.textContent = "Copied";
+		} catch {
+			copy.textContent = "Copy failed";
+		}
+	});
+	caption.append(name, copy);
+	const pre = document.createElement("pre");
+	const code = document.createElement("code");
+	if (language && hljs.getLanguage(language))
+		code.innerHTML = hljs.highlight(source, { language }).value;
+	else code.textContent = source;
+	pre.append(code);
+	figure.append(caption, pre);
+	return figure;
 }
 async function request(path, options = {}) {
 	const response = await fetch(path, {

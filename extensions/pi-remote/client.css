@@ -432,3 +432,107 @@ textarea:focus-visible {
 		position: static;
 	}
 }
+.markdown > * + * {
+	margin-top: 10px;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+	margin: 0;
+	font-size: 1em;
+	color: var(--accent);
+}
+.markdown ul,
+.markdown ol {
+	margin: 0;
+	padding-left: 22px;
+}
+.markdown li + li {
+	margin-top: 4px;
+}
+.markdown blockquote {
+	margin: 0;
+	padding-left: 12px;
+	border-left: 2px solid var(--border);
+	color: var(--muted);
+}
+.markdown a {
+	color: var(--accent);
+}
+.markdown code {
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-size: 0.9em;
+}
+.markdown > code,
+.markdown p code,
+.markdown li code,
+.markdown td code {
+	padding: 1px 5px;
+	border-radius: 5px;
+	background: var(--background);
+}
+.markdown hr {
+	border: 0;
+	border-top: 1px solid var(--border);
+}
+.markdown table {
+	display: block;
+	overflow-x: auto;
+	border-collapse: collapse;
+}
+.markdown th,
+.markdown td {
+	padding: 5px 10px;
+	border: 1px solid var(--border);
+	text-align: left;
+	white-space: nowrap;
+}
+.markdown [data-align="right"] {
+	text-align: right;
+}
+.markdown [data-align="center"] {
+	text-align: center;
+}
+.code {
+	margin: 0;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--background);
+}
+.code figcaption {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-left: 12px;
+	border-bottom: 1px solid var(--border);
+	color: var(--muted);
+	font-size: 0.8em;
+}
+.code figcaption button {
+	min-height: 36px;
+	padding: 0 12px;
+	border: 0;
+	background: none;
+	color: var(--accent);
+	font-size: inherit;
+}
+.code pre {
+	margin: 0;
+	padding: 12px;
+	overflow-x: auto;
+}
+.code code.hljs,
+.code pre code {
+	padding: 0;
+	background: none;
+}
+.output {
+	margin: 0;
+	white-space: pre-wrap;
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-size: 0.9em;
+}
