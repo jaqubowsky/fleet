@@ -139,11 +139,7 @@ export class RemoteRuntime {
 	}
 
 	snapshot(control = true) {
-		const live = JSON.stringify({
-			assistant: this.assistant,
-			tools: this.tools,
-		}).length;
-		return {
+		const frame = (transcript: Message[]) => ({
 			version: 2,
 			control,
 			generation: this.generation,
@@ -153,10 +149,12 @@ export class RemoteRuntime {
 				: null,
 			status: this.status,
 			header: this.binding ? header(this.binding.header()) : null,
-			transcript: fit(this.messages, SNAPSHOT_LIMIT - live),
+			transcript,
 			assistant: this.assistant,
 			tools: this.tools,
-		};
+		});
+		const overhead = JSON.stringify(frame([])).length;
+		return frame(fit(this.messages, SNAPSHOT_LIMIT - overhead));
 	}
 
 	async start(port = 8787, assets: Assets = {}) {

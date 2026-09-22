@@ -611,3 +611,35 @@ test("the whole frame stays inside the documented budget", async (t) => {
 		`the whole frame stays inside 512 KiB, got ${frame.length}`,
 	);
 });
+
+test("a frame of many small turns is bounded by its transcript", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("chatty"));
+	await remote.start(0);
+	const client = await connect(remote);
+
+	for (let turn = 0; turn < 64; turn++)
+		remote.publish(owner, {
+			type: "message_end",
+			message: {
+				role: "assistant",
+				content: Array.from({ length: 8 }, () => ({
+					type: "text",
+					text: `"\t${"q".repeat(4000)}"`,
+				})),
+			},
+		});
+
+	const frame = await (await client.get("/bootstrap")).text();
+
+	assert.ok(
+		JSON.parse(frame).transcript.length > 1,
+		"many small turns are kept, not squeezed to one",
+	);
+	assert.ok(
+		frame.length <= 524_288,
+		`the whole frame stays inside 512 KiB, got ${frame.length}`,
+	);
+});
