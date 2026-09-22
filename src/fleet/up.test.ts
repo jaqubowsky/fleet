@@ -494,7 +494,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`));
 	assert.equal(io.files[`${task}/task.md`], undefined);
-	assert.equal(io.files[`${task}/status.md`], "status: new\nattention: none\n\n## Summary\nThe task directory is ready. Work has not started; no verification has run or artifacts been produced.\n\n## Next step\nRead the user's request and run analyze-task.\n\n## Log\n");
+	assert.equal(io.files[`${task}/status.md`], "status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n");
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 

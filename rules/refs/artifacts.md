@@ -7,7 +7,7 @@ One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo
 Each file has one role and one author. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
 
 ```text
-status.md      where it stands: status, attention, summary, next step, log    every skill, as its last write
+status.md      current user-facing state: status, attention, summary, next step, log    every skill, throughout its run
 analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
 spec.md        what will be built and why                          to-tickets
 issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
@@ -19,7 +19,7 @@ logs/          sessions/, usage.json, <skill>-<id>/ evidence        pi, fleet do
 
 `runbook/` at the root of `$FLEET_ARTIFACTS`, beside the task directories, holds how the app starts and how its screens drive (`run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md`, `gate-baseline.md`); every container on the repository shares it.
 
-One short file per name above `logs/`. Anything with many versions, big or binary goes to `logs/<skill>-<id>/`, and the file that cites it links there.
+One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role. `analysis.md` is a snapshot anchored to the analyzed commit and is replaced by a later analysis; accepted shared decisions and scope changes update `spec.md`, while slice-only changes update their ticket. A new reviewed head replaces `review.md`; `pr.md` appends one round at a time. Historical and run-specific evidence stays under versioned `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
 
 ## status.md
 
@@ -34,12 +34,23 @@ attention: none | <one sentence naming what a person has to decide or provide>
 <exact workflow continuation>
 
 ## Log
-- analysis: <verdict in a phrase>; analysis.md
-- 01-<slug>: red <what>, green, mutation red; commit <sha7>
-- review <sha7>: <verdict>, <n> findings; review.md
+- <delivered outcome>; <canonical artifact or commit>
 ```
 
-The host reads this file and nothing else to know where a task stands. `attention` is the line a person reads: at `blocked` it names the decision or the missing piece, at `ready-for-host` what stayed unverified or uncommitted. `## Summary` summarizes and links rather than copying analysis, spec, tickets, command output, decisions or file lists. `## Next step` names the exact workflow continuation, including the ticket, review range or check to run. `## Log` grows by one line per finished step, each ending in the file or commit that holds the detail; the steps to come are the tickets in `issues/`. A skill writes this file last, before its chat report.
+| status | holds when |
+| --- | --- |
+| `new` | `fleet up` laid out the task directory and no work has started |
+| `analyzing` | the analysis runs |
+| `blocked` | the work waits on a decision or an input only a person can give, the analysis question included; `attention` names it |
+| `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
+| `reviewing` | the review of a committed head runs |
+| `testing` | a browser check of the change or of its siblings runs |
+| `ready-for-host` | the run's last step passed with no open ticket, P0 or P1 finding, failed criterion or regression; `attention` names what stayed unverified or uncommitted |
+| `pr-open` | a pull request is open and its latest round is answered; `attention` names what only the host or the user can do next |
+
+The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
+
+Rewrite the file whenever a completed unit changes what is true or what comes next, before long-running work or delegation, and before idle, blocked or handoff. Write it last before a chat report. Do not rewrite it for tool-by-tool activity that changes none of its fields. `## Log` grows by one line per finished deliverable, naming the outcome and ending in the file or commit that holds the detail.
 
 ## analysis.md
 

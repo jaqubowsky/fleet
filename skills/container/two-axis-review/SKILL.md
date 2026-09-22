@@ -10,7 +10,7 @@ Review the diff between `HEAD` and a fixed point on two axes: does the code fulf
 
 ### 1. Pin the commit
 
-The fixed point is what the user or the calling skill named: a commit, a branch, `main`, `HEAD~3`. Missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs. Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other. Set `status: reviewing` in `status.md`.
+The fixed point is what the user or the calling skill named: a commit, a branch, `main`, `HEAD~3`. Missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs. Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other.
 
 ### 2. Gather the evidence
 
@@ -40,11 +40,11 @@ One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMo
 
 ### 5. Hand back
 
-Read `review.md`. In `status.md`: the log line `review <sha7>: <verdict>, <n> findings; review.md`; `status: implementing` on the first P0 or P1 finding when one stands, `status: testing` or `ready-for-host` otherwise. Update `## Summary` and `## Next step` per `refs/artifacts.md` beside `AGENTS.md`, continuing with the first P0 or P1 finding when one stands. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's: a fix means a new commit and a new review of that commit, and the previous `review.md` is superseded by the next.
+Read `review.md`. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's: a fix means a new commit and a new review of that commit, and the previous `review.md` is superseded by the next.
 
 ## Done
 
-`review.md` names the head that is now `HEAD`, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check in `logs/review-<head-sha7>/` appears under Checks read, Shared seams lists every modified symbol other callers use or says none, and `status.md` moved.
+`review.md` names the head that is now `HEAD`, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check in `logs/review-<head-sha7>/` appears under Checks read, and Shared seams lists every modified symbol other callers use or says none.
 
 ## Why two axes in one reviewer
 

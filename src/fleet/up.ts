@@ -22,7 +22,7 @@ export function taskDir(repo: string, sandbox: string, io: Io): string {
 	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
-const TASK_STATUS = "status: new\nattention: none\n\n## Summary\nThe task directory is ready. Work has not started; no verification has run or artifacts been produced.\n\n## Next step\nRead the user's request and run analyze-task.\n\n## Log\n";
+const TASK_STATUS = "status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n";
 
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);

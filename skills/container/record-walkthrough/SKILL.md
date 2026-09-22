@@ -16,4 +16,4 @@ One output: a video a person watches instead of clicking through the change. `ch
 
 3. **Replay.** Write the flow as one file and run it with `run-code --filename`: a video is a replay of the settled flow, not the walk that found it. [recording.md](recording.md) carries the three things that file needs, the screencast size, the pace, the chapters and overlays, and how to check the first recording before keeping it.
 
-4. **File and status.** The video goes to `$FLEET_ARTIFACTS/$SANDBOX_NAME/browser/<run-id>/walkthrough.webm`, captioned in that run's `report.md` under Artifacts with what happens in order. In `status.md`: the log line `walkthrough <run-id>: <duration>; browser/<run-id>/walkthrough.webm`. Cleanup as `browser.md` says. Then print the absolute path and end.
+4. **File.** The video goes to `$FLEET_ARTIFACTS/$SANDBOX_NAME/browser/<run-id>/walkthrough.webm`, captioned in that run's `report.md` under Artifacts with what happens in order. Cleanup as `browser.md` says. Then print the absolute path and end.
