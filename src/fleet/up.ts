@@ -16,12 +16,34 @@ export function artifactsDir(repo: string, io: Io): string {
 	return `${io.home}/.sandboxes/${basename(repo)}`;
 }
 
+export function taskDir(repo: string, sandbox: string, io: Io): string {
+	return `${artifactsDir(repo, io)}/${sandbox}`;
+}
+
+const TASK_STATUS = "status: new\nattention: none\ncommit: none\npr: none\n\n## Plan\n- [ ] \n";
+
+function taskBrief(label: string, branch: string | undefined): string {
+	return `# ${label}\n\nSource: none\nBranch: ${branch ?? "none"}\n\n## Goal\n\n## Requirements\n- \n\n## Constraints\n- none\n\n## Acceptance criteria\n- [ ] \n`;
+}
+
+function layoutTask(dir: string, input: UpInput, io: Io): void {
+	io.mkdir(`${dir}/logs/sessions`);
+	for (const [name, body] of [["task.md", taskBrief(input.label, input.branch)], ["status.md", TASK_STATUS]]) {
+		if (io.read(`${dir}/${name}`) === undefined) io.write(`${dir}/${name}`, body);
+	}
+}
+
+export function piArgs(model: string | undefined, resume: boolean): string {
+	return `${model ? ` --model ${model}` : ""}${resume ? " -c" : ""}`;
+}
+
 export type UpInput = {
 	repo: string;
 	label: string;
 	branch?: string;
 	memory?: string;
 	cpus?: string;
+	model?: string;
 	root: string;
 };
 type Workspace = { workspace_id: string; label: string };
@@ -62,6 +84,8 @@ export async function up(
 	const existing = fleetSandboxes(
 		parseSandboxList(io.sbx(["ls", "--json"], { quiet: true })),
 	).find((s: Sandbox) => s.name === sandbox);
+	const task = taskDir(input.repo, sandbox, io);
+	layoutTask(task, input, io);
 	if (!existing) {
 		create(input, sandbox, origin, memory, cpus, io);
 		try {
@@ -128,7 +152,7 @@ export async function up(
 			"pane",
 			"run",
 			pane,
-			`HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve`,
+			`HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve${piArgs(input.model, io.list(`${task}/logs/sessions`).length > 0)}`,
 		]);
 	await waitForAgent(io, pane);
 	io.herdr(["agent", "rename", pane, agent]);
@@ -190,6 +214,8 @@ function create(
 		`FLEET_ARTIFACTS=${artifacts}`,
 		"-e",
 		`FLEET_CACHE=${cache}`,
+		"-e",
+		`PI_CODING_AGENT_SESSION_DIR=${taskDir(input.repo, sandbox, io)}/logs/sessions`,
 		"--kit",
 		`${input.root}/host/kits/no-ssh-agent`,
 		"--kit-arg",

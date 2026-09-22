@@ -482,3 +482,36 @@ test("a cache path keeps one store whether or not it was written with a leading 
 	assert.equal(cacheStore("./.turbo/cache"), ".turbo-cache");
 	assert.equal(cacheStore("apps/web/.turbo/cache"), "apps-web-.turbo-cache");
 });
+
+test("up lays out the task directory once and points pi's sessions into it", async () => {
+	const io = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
+	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+
+	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`));
+	assert.match(io.files[`${task}/task.md`], /^# web-1\n[\s\S]*Branch: web-1\n[\s\S]*## Acceptance criteria/);
+	assert.match(io.files[`${task}/status.md`], /^status: new\nattention: none\ncommit: none\npr: none\n\n## Plan\n/);
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
+
+	const again = fakeIo({ ...base, [`read ${task}/task.md`]: "# kept", [`read ${task}/status.md`]: "status: implementing" });
+	await up({ repo, label: "web-1", root: "/root" }, again);
+	assert.ok(!again.calls.some((c) => c[0] === "write"));
+});
+
+test("up hands --model to pi and resumes the last session when one is on disk", async () => {
+	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+	const fresh = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root", model: "openai-codex/gpt-5.6-luna:high" }, fresh);
+	assert.equal(
+		fresh.calls.find((c) => c[1] === "pane")![4],
+		"HERDR_AGENT=pi sbx run --name pi-webapp-web-1 -- --approve --model openai-codex/gpt-5.6-luna:high",
+	);
+
+	const resumed = fakeIo({ ...base, [`list ${task}/logs/sessions`]: ["--Users-me-Work-webapp--"] });
+	await up({ repo, label: "web-1", root: "/root" }, resumed);
+	assert.equal(
+		resumed.calls.find((c) => c[1] === "pane")![4],
+		"HERDR_AGENT=pi sbx run --name pi-webapp-web-1 -- --approve -c",
+	);
+});
