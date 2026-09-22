@@ -1,11 +1,9 @@
-export const TRUSTED = new Set([
-	"bg_wait",
-	"ask_user_question",
-	"pi_lens_activate_tools",
-	"ast_grep_dump",
-	"fleet_watch",
-	"fleet_unwatch",
-]);
+const FLEET = ["fleet_watch", "fleet_unwatch"];
+
+export const TRUSTED: Partial<Record<string, Set<string>>> = {
+	pi: new Set(["bg_wait", "ask_user_question", "pi_lens_activate_tools", "ast_grep_dump", ...FLEET]),
+	omp: new Set(["ask", "todo", "hub", "checkpoint", "rewind", "retain", "recall", "reflect", "memory_edit", "learn", "manage_skill", ...FLEET]),
+};
 
 const READ_TOOLS = new Set([
 	"lens_diagnostics",
@@ -16,9 +14,11 @@ const READ_TOOLS = new Set([
 	"read_enclosing",
 	"ast_grep_search",
 	"ast_grep_outline",
+	"glob",
+	"ast_grep",
 ]);
 
-const LSP_MUTATIONS = new Set(["rename", "rename_file", "executeCommand"]);
+const LSP_MUTATIONS = new Set(["rename", "rename_file", "move", "format", "code_action", "executeCommand"]);
 
 function strings(value: unknown): string[] {
 	if (typeof value === "string") return [value];
@@ -54,8 +54,12 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 		case "powershell":
 			return { tool_name: "Bash", tool_input: { command: input.command } };
 		case "read":
-		case "ls":
-			return { tool_name: "Read", tool_input: { file_path: input.path } };
+		case "ls": {
+			const path = String(input.path ?? "");
+			return /^https?:\/\//.test(path)
+				? { tool_name: "WebFetch", tool_input: { url: path } }
+				: { tool_name: "Read", tool_input: { file_path: path } };
+		}
 		case "edit":
 			return { tool_name: "Edit", tool_input: { file_path: input.path } };
 		case "write":
@@ -66,6 +70,7 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 				tool_input: { path: input.path, pattern: input.pattern },
 			};
 		case "find":
+		case "glob":
 			return {
 				tool_name: "Glob",
 				tool_input: { path: input.path, pattern: input.pattern },
@@ -83,7 +88,9 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 				tool_input: { url: strings(input).join(" ") },
 			};
 		case "ast_grep_replace":
+		case "ast_edit":
 			return filePayload("Edit", input, ".");
+		case "lsp":
 		case "lsp_navigation":
 			return filePayload(
 				LSP_MUTATIONS.has(String(input.operation)) ? "Edit" : "Read",
@@ -97,9 +104,19 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 			);
 		case "project_report":
 			return filePayload("Read", input, ".");
+		case "eval":
+			return { tool_name: "Bash", tool_input: { command: strings(input).join(" ") } };
 		case "subagent":
 		case "subagent_supervisor":
+		case "task":
 			return { tool_name: "mcp__agent", tool_input: input };
+		case "browser":
+		case "computer":
+		case "github":
+		case "security_scan":
+		case "generate_image":
+		case "tts":
+			return { tool_name: `mcp__${toolName}`, tool_input: input };
 		default:
 			break;
 	}

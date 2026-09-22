@@ -13,8 +13,8 @@ const verdict = (tool: string, input: Record<string, unknown>) => {
 test("a tool with no translation has no policy, so the caller refuses it", () => {
 	assert.equal(translate("telepathy", { thought: "x" }), null);
 	assert.equal(translate("mcp_like_but_not", {}), null);
-	assert.ok(TRUSTED.has("fleet_watch"));
-	assert.ok(!TRUSTED.has("bash"));
+	assert.ok(TRUSTED.pi!.has("fleet_watch"));
+	assert.ok(!TRUSTED.pi!.has("bash"));
 });
 
 test("pi tools are judged on the subject their own policy reads", () => {

@@ -5,7 +5,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import { join } from "node:path";
-import fleetMonitor from "../../agent/extensions/fleet-monitor.ts";
+import fleetMonitor from "../../extensions/fleet-monitor.ts";
+import { HARNESSES } from "../harness.ts";
 import { logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import {
@@ -14,7 +15,7 @@ import {
 	shouldWake,
 	stalled,
 	transition,
-} from "../../agent/extensions/fleet-monitor.ts";
+} from "./monitor.ts";
 
 function monitorRuntime(t: TestContext) {
 	const home = mkdtempSync(join(os.tmpdir(), "fleet-monitor-"));
@@ -34,7 +35,7 @@ function monitorRuntime(t: TestContext) {
 		const tools: Record<string, { execute: (...args: any[]) => any }> = {};
 		const messages: { message: { content: string }; options: { deliverAs: string; triggerTurn: boolean } }[] = [];
 		const notices: string[] = [];
-		fleetMonitor({
+		fleetMonitor(HARNESSES.pi)({
 			on: (name: string, fn: any) => { events[name] = fn; },
 			registerTool: (tool: any) => { tools[tool.name] = tool; },
 			registerCommand() {},

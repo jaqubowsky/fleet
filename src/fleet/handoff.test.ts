@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deathNote } from "../../agent/extensions/handoff-on-error.ts";
+import { deathNote } from "../../extensions/handoff-on-error.ts";
 
 const running = "status: implementing\nattention: none\nnow: 01-fix, red written\n\n## Log\n- analysis: a defect; analysis.md\n";
 
@@ -9,7 +9,7 @@ test("a session dying mid-work leaves status blocked with the error as attention
 
 	assert.equal(
 		next,
-		"status: blocked\nattention: pi stopped on an error before done: 402 Payment Required: insufficient credits\nnow: 01-fix, red written\n\n## Log\n- analysis: a defect; analysis.md\n",
+		"status: blocked\nattention: the agent stopped on an error before done: 402 Payment Required: insufficient credits\nnow: 01-fix, red written\n\n## Log\n- analysis: a defect; analysis.md\n",
 	);
 });
 
@@ -22,5 +22,5 @@ test("a task already done or blocked keeps its status", () => {
 test("a status without an attention line gets one", () => {
 	const next = deathNote("status: implementing\nnow: fix\n", "boom");
 
-	assert.equal(next, "status: blocked\nattention: pi stopped on an error before done: boom\nnow: fix\n");
+	assert.equal(next, "status: blocked\nattention: the agent stopped on an error before done: boom\nnow: fix\n");
 });

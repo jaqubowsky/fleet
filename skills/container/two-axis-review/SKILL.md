@@ -4,7 +4,7 @@ description: 'Independent review of one commit on two axes, correctness and engi
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md` beside `AGENTS.md`); with no task directory, `review.md` beside the repository's `.issues/`.
+Review the diff between `HEAD` and a fixed point on two axes: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
 
 ## Process
 
@@ -36,7 +36,7 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. The task text carries, in this order: the range in SHAs; the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist, and when none does, the prompt that set the task, quoted; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+{{file:review-call}} The task text carries, in this order: the range in SHAs; the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist, and when none does, the prompt that set the task, quoted; the path of `logs/review-<head-sha7>/` and each file in it with the exit code of each check; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 

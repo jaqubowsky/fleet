@@ -16,12 +16,14 @@
       "node"
     ],
     "typeRoots": [
-      "node_modules/@types",
-      "agent/npm/node_modules/@types"
+      "node_modules/@types"
     ]
   },
   "include": [
     "src/**/*.ts",
-    "agent/extensions/**/*.ts"
+    "extensions/**/*.ts",
+    "pi/**/*.ts",
+    "omp/**/*.ts",
+    "claude/**/*.ts"
   ]
 }

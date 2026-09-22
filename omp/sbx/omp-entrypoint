@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source_file="$HOME/.omp/agent/import-auth.json"
+if [ -f "$source_file" ]; then
+	tmp="$(mktemp /tmp/omp-codex-auth.XXXXXX.json)"
+	trap 'rm -f "$tmp"' EXIT
+	node - "$source_file" "$tmp" <<'NODE'
+const fs = require("node:fs");
+const [source, target] = process.argv.slice(2);
+const credential = JSON.parse(fs.readFileSync(source, "utf8"))["openai-codex"];
+const imported = {
+  type: "codex",
+  access_token: credential.access,
+  refresh_token: credential.refresh,
+  expired: new Date(Number(credential.expires)).toISOString(),
+  account_id: credential.accountId,
+};
+fs.writeFileSync(target, JSON.stringify(imported), { mode: 0o600 });
+NODE
+	omp auth-broker import "$tmp" --provider openai-codex >/dev/null
+	rm -f "$tmp" "$source_file"
+	trap - EXIT
+fi
+
+exec omp "$@"

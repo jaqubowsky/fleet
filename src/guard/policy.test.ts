@@ -69,3 +69,11 @@ test("the policy speaks for the host seat alone", () => {
 	assert.equal(decide("Bash", { command: "git -c commit.gpgsign=false commit -m x" }).decision, "deny");
 	assert.equal(decide("Bash", { command: "gh pr create --title x" }).decision, "deny");
 });
+
+test("an explicit allow covers one plain read-only git or orchestration command and nothing chained to it", () => {
+	assert.equal(decide("Bash", { command: "git status" }).explicit, true);
+	assert.equal(decide("Bash", { command: "sbx ls --json" }).explicit, true);
+	assert.equal(decide("Bash", { command: "git status\npython3 deploy.py" }).explicit, undefined);
+	assert.equal(decide("Bash", { command: "git log && make release" }).explicit, undefined);
+	assert.equal(decide("Bash", { command: "ls -la" }).explicit, undefined);
+});

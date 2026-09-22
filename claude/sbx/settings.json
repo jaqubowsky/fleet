@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "FLEET_HANDOFF_TOKENS": "250000"
+  },
+  "hooks": {
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node /home/agent/fleet/claude/hooks/container.ts stop", "timeout": 10 }] }],
+    "StopFailure": [{ "hooks": [{ "type": "command", "command": "node /home/agent/fleet/claude/hooks/container.ts stop-failure", "timeout": 10 }] }]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node ~/.claude/statusline.mjs",
+    "padding": 0
+  },
+  "attribution": {
+    "sessionUrl": false,
+    "commit": "",
+    "pr": ""
+  },
+  "disableClaudeAiConnectors": true,
+  "managedMcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "sbx-cs-4siyjVHL2MFRhraD"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "language": "Polish",
+  "model": "opus[1m]",
+  "effortLevel": "medium",
+  "autoCompactEnabled": false,
+  "remoteControlAtStartup": false,
+  "autoMemoryEnabled": false,
+  "skipWorkflowUsageWarning": true
+}

@@ -1,8 +1,10 @@
+import type { Harness } from "../harness.ts";
+import { HARNESSES } from "../harness.ts";
 import type { Io } from "./io.ts";
 
 type Call = [string, ...string[]];
 
-export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] } {
+export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness = HARNESSES.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] } {
 	const calls: Call[] = [];
 	const sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] = [];
 	const lines: string[] = [];
@@ -24,6 +26,7 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 		lines,
 		files,
 		home: "/home/me",
+		harness,
 		tmp: "/tmp",
 		pane: "w1:host",
 		sbxOpts,
@@ -50,6 +53,11 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 		write: (path, body) => {
 			calls.push(["write", path]);
 			files[path] = body;
+		},
+		copy: (from, to) => {
+			calls.push(["copy", from, to]);
+			const body = files[from] ?? (answer(`read ${from}`) as string | undefined);
+			if (body !== undefined) files[to] = body;
 		},
 		list: (dir) => (answer(`list ${dir}`) as string[] | undefined) ?? [],
 		stat: (path) => answer(`stat ${path}`) as { size: number; mtime: Date; dir: boolean } | undefined,

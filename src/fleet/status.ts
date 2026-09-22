@@ -2,8 +2,8 @@ export type Sandbox = { name: string; status: string; workspaces: string[] };
 export type Agent = { pane_id: string; tab_id?: string; workspace_id?: string; agent_status?: string; name?: string; agent?: string | null; cwd?: string };
 export type Row = { sandbox: string; status: string; agent: string; branch: string; dirty: number; age?: string; cost?: string };
 
-export function fleetSandboxes(sbxLs: { sandboxes?: Sandbox[] }): Sandbox[] {
-	return (sbxLs.sandboxes ?? []).filter((s) => s.name.startsWith("pi-"));
+export function fleetSandboxes(sbxLs: { sandboxes?: Sandbox[] }, prefix: string): Sandbox[] {
+	return (sbxLs.sandboxes ?? []).filter((s) => s.name.startsWith(prefix));
 }
 
 export function agentFor(agents: Agent[], name: string): Agent | undefined {

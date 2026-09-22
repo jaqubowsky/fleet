@@ -1,0 +1,59 @@
+schemaVersion: "2"
+kind: sandbox
+name: omp
+displayName: OMP
+description: OMP coding agent on this fleet's hardened image
+args:
+  codex_account:
+    required: true
+    description: ChatGPT account id used by the sandbox credential proxy
+  codex_sentinel:
+    required: true
+    description: Proxy sentinel carrying the ChatGPT account id
+sandbox:
+  image: my-omp:v1
+  entrypoint:
+    - omp-entrypoint
+environment:
+  variables:
+    OMP_SKIP_SETUP: "1"
+    NODE_OPTIONS: "--disable-warning=UNDICI-EHPA"
+    OPENROUTER_API_KEY: "sbx-openrouter-proxy"
+permissions:
+  network:
+    allow:
+      - chatgpt.com
+      - auth.openai.com
+      - registry.npmjs.org
+      - mcp.context7.com
+      - api.openai.com
+      - openai.com
+      - openrouter.ai
+credentials:
+  - service: openai
+    oauth:
+      tokenEndpoint:
+        host: auth.openai.com
+        path: /oauth/token
+      resourceHosts:
+        - chatgpt.com
+      sentinels:
+        accessToken: "${{ kit.args.codex_sentinel }}"
+        refreshToken: oai-ort01-proxy-managed
+      credentialFile:
+        path: ~/.omp/agent/import-auth.json
+        structure:
+          openai-codex:
+            type: oauth
+            access: "{{.AccessToken}}"
+            refresh: "{{.RefreshToken}}"
+            expires: "{{.ExpiresAt}}"
+            accountId: "${{ kit.args.codex_account }}"
+setup:
+  install:
+    - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
+      user: "1000"
+      description: Point npm at the sandbox proxy
+    - command: 'mkdir -p ~/.omp/agent && printf ''{"mcpServers":{"gateway":{"url":"%s"},"context7":{"url":"https://mcp.context7.com/mcp","headers":{"CONTEXT7_API_KEY":"%s"}}}}\n'' "${MCP_GATEWAY_URL:-}" "${CONTEXT7_API_KEY:-}" > ~/.omp/agent/mcp.json'
+      user: "1000"
+      description: Configure the sandbox MCP gateway and Context7

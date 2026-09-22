@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE="${1:-$HOME/.pi/agent/auth.json}"
+TARGET="$HOME/.omp/agent/auth.json"
+OMP_BIN="${OMP_BIN:-$HOME/.local/bin/omp}"
+TMP="$(mktemp "${TMPDIR:-/tmp}/omp-codex-auth.XXXXXX.json")"
+trap 'rm -f "$TMP"' EXIT
+
+node - "$SOURCE" "$TMP" <<'NODE'
+const fs = require("node:fs");
+const [source, target] = process.argv.slice(2);
+const credential = JSON.parse(fs.readFileSync(source, "utf8"))["openai-codex"];
+if (!credential?.access || !credential?.refresh || !credential?.expires) {
+  throw new Error("source has no complete openai-codex OAuth credential");
+}
+const imported = {
+  type: "codex",
+  access_token: credential.access,
+  refresh_token: credential.refresh,
+  expired: new Date(Number(credential.expires)).toISOString(),
+  account_id: credential.accountId,
+};
+fs.writeFileSync(target, JSON.stringify(imported), { mode: 0o600 });
+NODE
+
+mkdir -p "$HOME/.omp/agent"
+install -m 0600 "$SOURCE" "$TARGET"
+OMP_SKIP_SETUP=1 "$OMP_BIN" auth-broker import "$TMP" --provider openai-codex >/dev/null
+printf 'OMP Codex auth imported; fleet proxy source updated at %s\n' "$TARGET"

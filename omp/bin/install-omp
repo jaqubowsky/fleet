@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+version=18.2.8
+case "$(uname -s)-$(uname -m)" in
+	Darwin-arm64) asset=omp-darwin-arm64; sum=cf8d34a7fe6f60de1acbe74f29c82026e4c07888e9d89f7ebceeb922159e5787 ;;
+	Darwin-x86_64) asset=omp-darwin-x64; sum=b385c2bbacddc09b266ec19ba95ebb2882301293d49390d7fd32cc3a12a1da41 ;;
+	Linux-aarch64) asset=omp-linux-arm64; sum=a9aa63e43c95ccaa0683e9fed03463c401829e220ad2bbc414b341d2d49e5806 ;;
+	Linux-x86_64) asset=omp-linux-x64; sum=b0c01da7339d87fd5d26d7faa7b61c131a50648399962783899fd93a6d8b1d65 ;;
+	*) printf 'unsupported platform: %s-%s\n' "$(uname -s)" "$(uname -m)" >&2; exit 1 ;;
+esac
+
+tmp="$(mktemp "${TMPDIR:-/tmp}/omp-binary.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+curl -fsSL "https://github.com/can1357/oh-my-pi/releases/download/v${version}/${asset}" -o "$tmp"
+printf '%s  %s\n' "$sum" "$tmp" | shasum -a 256 -c -
+mkdir -p "$HOME/.local/bin"
+install -m 0755 "$tmp" "$HOME/.local/bin/omp"
+"$HOME/.local/bin/omp" --version

@@ -1,5 +1,5 @@
 import type { Io } from "./io.ts";
-import { render } from "./provider.ts";
+import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
@@ -14,7 +14,7 @@ function agents(io: Io): Agent[] {
 }
 
 function sandboxes(io: Io): Sandbox[] {
-	return fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })));
+	return fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })), io.harness.prefix);
 }
 
 export function resolveSandbox(name: string, io: Io): string {
@@ -74,9 +74,14 @@ export function exec(sandbox: string, command: string[], io: Io): void {
 	io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && ${toolchain}; ${execScript(command)}`, "--", ...command], { stream: true });
 }
 
+export function renderHost(root: string, io: Io): void {
+	render({ root, harness: io.harness, seat: "host", out: `${io.home}/${io.harness.home}` }, io);
+}
+
 export function build(root: string, io: Io): void {
-	render(root, io);
-	io.run(`${root}/sbx/build.sh`, []);
+	const stage = `${io.tmp}/${io.harness.name}-sbx-stage-${io.now().getTime()}`;
+	render({ root, harness: io.harness, seat: "container", out: stage }, io);
+	io.run(`${root}/${io.harness.name}/sbx/build.sh`, [stage]);
 }
 
 export function copy(from: string, to: string, io: Io): void {
@@ -159,7 +164,7 @@ export function artifacts(repo: string, io: Io): string {
 
 function sessionUsage(task: string, branch: string, repo: string | undefined, io: Io): Summary | undefined {
 	const files = collect(`${task}/logs/sessions`, "", io, [])
-		.filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/"))
+		.filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/") && !f.path.includes("/subagents/"))
 		.sort((a, b) => a.path.localeCompare(b.path));
 	if (!files.length) return undefined;
 	const entries = files.flatMap((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""));
@@ -183,6 +188,17 @@ function landed(head: string, repo: string | undefined, io: Io): boolean {
 	}
 }
 
+function harvest(sandbox: string, task: string, from: string, force: boolean, io: Io): void {
+	const to = `${task}/logs/sessions/${from.split("/").pop()}`;
+	try {
+		io.sbx(["cp", `${sandbox}:${from}`, to], { quiet: true });
+		io.log(`${sandbox}: transcripts -> ${to}`);
+	} catch (error) {
+		if (!force) throw new Error(`${sandbox}: transcripts in ${from} did not copy out, so the container stays; pass --force to remove it without them\n${(error as Error).message}`);
+		io.log(`${sandbox}: transcripts in ${from} did not copy out; removing anyway (--force)`);
+	}
+}
+
 export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const entry = sandboxes(io).find((s) => s.name === sandbox);
 	if (!entry) throw new Error(`no fleet container named ${sandbox}`);
@@ -191,18 +207,19 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		throw new Error(`${sandbox} has ${checkout.dirty} uncommitted file(s) on ${checkout.branch}; commit them in the container or pass --force to discard`);
 	}
 	if (!landed(checkout.head, entry.workspaces[0], io) && !opts.force) {
-		throw new Error(`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run fleet land first or pass --force to discard`);
+		throw new Error(`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${io.harness.cli} land first or pass --force to discard`);
 	}
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
+	if (io.harness.containerSessions) harvest(sandbox, task, io.harness.containerSessions, opts.force === true, io);
 	const summary = sessionUsage(task, checkout.branch, repo, io);
 	if (summary) {
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
 	} else {
-		io.log(`${sandbox}: no session in ${task}/logs/sessions (pi never ran)`);
+		io.log(`${sandbox}: no session in ${task}/logs/sessions (${io.harness.agent} never ran)`);
 	}
-	if (repo && io.list(artifactsDir(repo, io)).length) io.log(`${sandbox}: artifacts stay in ${task}, read them with fleet artifacts --repo ${repo}`);
+	if (repo && io.list(artifactsDir(repo, io)).length) io.log(`${sandbox}: artifacts stay in ${task}, read them with ${io.harness.cli} artifacts --repo ${repo}`);
 	const agent = agentFor(agents(io), agentName(sandbox));
 	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);
 	try {

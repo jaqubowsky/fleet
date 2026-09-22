@@ -2,7 +2,7 @@
 
 Both formats are JSONL, one object per line. Never `cat` a file: sizes reach 8 MB. Pipe through `jq` and slice with `.[0:N]`. `nl` on the extracted stream gives line numbers for the scorecard; the number is the transcript line when the filter keeps one output per input line, so print `input_line_number` where it matters.
 
-## pi (`~/.pi/agent/sessions`, `~/.sandboxes/*/pi-*/logs/sessions`)
+## pi and omp (`~/.pi/agent/sessions`, `~/.omp/agent/sessions`, `~/.sandboxes/*/{pi,omp}-*/logs/sessions`)
 
 First line is `{"type":"session","cwd":...}`; `model_change` names provider and model. Messages sit under `.message` with `role` in `user`, `assistant`, `toolResult`.
 
@@ -17,7 +17,7 @@ jq -c 'select(.type=="message" and .message.role=="toolResult") | .message | sel
 
 Guard denials are `toolResult` entries whose content names the policy reason. Skill loads are `read` calls on a `SKILL.md` path. `git commit` subjects sit in `bash` arguments.
 
-## Claude Code (`~/.claude/projects`, `~/.claude/sandbox-transcripts`)
+## Claude Code (`~/.claude/projects`, `~/.sandboxes/*/claude-*/logs/sessions`)
 
 Top-level `.type` in `user`, `assistant`, `attachment`, `system`. `.message.content` is a string or an array of parts with `.type` in `text`, `tool_use`, `tool_result`, `thinking`.
 

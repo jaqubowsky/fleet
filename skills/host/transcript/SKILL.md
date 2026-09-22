@@ -61,7 +61,7 @@ The text the user appended after this skill holds a source and an optional desti
    name the path that failed instead of silently picking another one.
 
 Destination inside `~/my-knowledge-base/raw/inbox/`: finish by reminding the
-user to run `/skill:ingest` in that repo to fold the transcript into the wiki.
+user to run `{{skill.ingest}}` in that repo to fold the transcript into the wiki.
 
 ## Common mistakes
 

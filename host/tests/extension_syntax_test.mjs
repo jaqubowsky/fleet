@@ -1,19 +1,19 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const root = join(import.meta.dirname, "../..");
-const extensionRoot = join(root, "agent/extensions");
-const moduleRoot = join(root, "agent/npm/node_modules");
+const extensionRoot = join(root, "extensions");
+const moduleRoot = process.env.PI_NPM_MODULES ?? join(homedir(), ".pi/agent/npm/node_modules");
 const esbuild = join(moduleRoot, "esbuild/bin/esbuild");
 const output = mkdtempSync(join(tmpdir(), "pi-extension-syntax-"));
 const files = readdirSync(extensionRoot, { withFileTypes: true }).flatMap((entry) => {
 	if (entry.isFile() && entry.name.endsWith(".ts")) return [join(extensionRoot, entry.name)];
 	const index = join(extensionRoot, entry.name, "index.ts");
 	return entry.isDirectory() && existsSync(index) ? [index] : [];
-});
+}).concat(["pi", "omp"].map((h) => join(root, h, "extensions.ts")).filter(existsSync));
 const failures = [];
 
 for (const [index, file] of files.entries()) {

@@ -1,0 +1,78 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { test } from "node:test";
+import { fakeIo } from "../fleet/fake-io.ts";
+import { realIo } from "../fleet/io.ts";
+import { HARNESSES } from "../harness.ts";
+import { render, renderText } from "./render.ts";
+
+const root = resolve(import.meta.dirname, "../..");
+
+function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
+	return {
+		"list /root/rules": ["host.md", "core.md"],
+		"read /root/rules/core.md": "# Core\nask with {{tool.ask}}\n",
+		"read /root/rules/host.md": "# Host\nrun {{cli}} steer\n",
+		"read /root/sbx/container/sandbox.md": "# Container\nleaves at {{cli}} land\n",
+		"read /root/agents/explorer.md": "---\nname: explorer\n{{file:agent-explorer}}\n---\n",
+		"read /root/agents/researcher.md": "---\nname: researcher\n---\n",
+		"read /root/agents/reviewer.md": "---\nname: reviewer\n---\n",
+		"read /root/pi/fragments/agent-explorer.md": "tools: read, grep\n",
+		"read /root/claude/fragments/agent-explorer.md": "tools: Read, Grep\n",
+		"read /root/claude/CLAUDE.md": "Rules live in rules/.\n",
+		...extra,
+	};
+}
+
+test("a token the harness does not define stops the render and names the file", () => {
+	assert.throws(() => renderText("run {{nope}}", {}, () => undefined, "rules/core.md"), /rules\/core\.md: unresolved token \{\{nope\}\}/);
+	assert.throws(() => renderText("{{file:gone}}", {}, () => undefined, "agents/x.md"), /agents\/x\.md: unresolved token \{\{file:gone\}\}/);
+});
+
+test("a fragment is inlined without its trailing newline", () => {
+	assert.equal(renderText("a\n{{file:f}}\nb", {}, () => "one\ntwo\n", "x"), "a\none\ntwo\nb");
+});
+
+test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
+	const io = fakeIo(sources());
+
+	render({ root: "/root", harness: HARNESSES.pi, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: HARNESSES.pi, seat: "container", out: "/stage" }, io);
+
+	assert.equal(io.files["/home/agent/AGENTS.md"], "# Core\nask with ask_user_question\n\n# Host\nrun fleet steer\n");
+	assert.equal(io.files["/stage/home/agent/AGENTS.md"], "# Core\nask with ask_user_question\n\n# Container\nleaves at fleet land\n");
+	assert.equal(io.files["/home/agent/agents/explorer.md"], "---\nname: explorer\ntools: read, grep\n---\n");
+});
+
+test("claude keeps one file per rule, its own tool names and CLAUDE.md", () => {
+	const io = fakeIo(sources(), HARNESSES.claude);
+
+	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
+
+	assert.equal(io.files["/home/rules/core.md"], "# Core\nask with AskUserQuestion\n");
+	assert.equal(io.files["/home/rules/host.md"], "# Host\nrun cfleet steer\n");
+	assert.equal(io.files["/home/agents/explorer.md"], "---\nname: explorer\ntools: Read, Grep\n---\n");
+	assert.equal(io.files["/home/CLAUDE.md"], "Rules live in rules/.\n");
+	assert.equal(io.files["/stage/home/rules/sandbox.md"], "# Container\nleaves at cfleet land\n");
+	assert.equal(io.files["/stage/home/rules/host.md"], undefined);
+});
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} renders both seats from the real sources with every token resolved`, () => {
+		const out = mkdtempSync(join(tmpdir(), `render-${name}-`));
+		try {
+			const io = { ...realIo(out, HARNESSES[name]), log: () => {} };
+			render({ root, harness: HARNESSES[name], seat: "host", out: `${out}/host` }, io);
+			render({ root, harness: HARNESSES[name], seat: "container", out: `${out}/container` }, io);
+			const leftovers = (readdirSync(out, { recursive: true }) as string[])
+				.filter((file) => file.endsWith(".md"))
+				.filter((file) => /\{\{[a-z]/.test(readFileSync(join(out, file), "utf8")));
+			assert.deepEqual(leftovers, []);
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+	});
+}

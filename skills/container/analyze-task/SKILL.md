@@ -80,7 +80,7 @@ REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
 
 The reply is the report: the headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
 
-In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md` beside `AGENTS.md`) the same report is `analysis.md`, headed by `Commit: <sha7>` of the HEAD analyzed. Outside fleet the chat report is the whole deliverable.
+In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}) the same report is `analysis.md`, headed by `Commit: <sha7>` of the HEAD analyzed. Outside fleet the chat report is the whole deliverable.
 
 ### Verdict
 

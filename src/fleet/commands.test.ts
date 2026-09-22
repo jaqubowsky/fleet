@@ -185,19 +185,22 @@ test("artifacts says so when the container left nothing", () => {
 	assert.match(artifacts("/w/webapp", fakeIo()), /nothing left here yet/);
 });
 
-test("build renders the current rules before it bakes them into the image", () => {
+test("build renders the container seat into a stage and hands it to the harness build script", () => {
 	const io = fakeIo({
 		"list /root/rules": ["core.md"],
 		"read /root/rules/core.md": "# Core\n\n- be exact\n",
 		"read /root/sbx/container/sandbox.md": "# Container\n\n- a fresh rule\n",
-		"read /root/profiles/models.json": JSON.stringify({ seats: { host: { model: "p/m", thinking: "max" } } }),
-		"read /root/profiles/host.json": "{}",
-		"read /root/profiles/sbx.json": "{}",
+		"read /root/agents/explorer.md": "---\nname: explorer\n---\n",
+		"read /root/agents/researcher.md": "---\nname: researcher\n---\n",
+		"read /root/agents/reviewer.md": "---\nname: reviewer\n---\n",
+		"read /root/pi/profiles/models.json": JSON.stringify({ seats: { host: { model: "p/m", thinking: "max" } } }),
+		"read /root/pi/profiles/sbx.json": "{}",
 	});
 	build("/root", io);
 
-	assert.match(io.files["/root/sbx/AGENTS.md"] ?? "", /a fresh rule/);
-	assert.deepEqual(io.calls.at(-1), ["run", "/root/sbx/build.sh"]);
+	const [run, script, stage] = io.calls.at(-1) ?? [];
+	assert.deepEqual([run, script], ["run", "/root/pi/sbx/build.sh"]);
+	assert.match(io.files[`${stage}/home/agent/AGENTS.md`] ?? "", /a fresh rule/);
 });
 
 test("exec streams what the container prints instead of swallowing it", () => {

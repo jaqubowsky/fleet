@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import register from "../../agent/extensions/guard.ts";
+import guard from "../../extensions/guard.ts";
+import { HARNESSES } from "../harness.ts";
 
 type Verdict = { block: boolean; reason: string } | undefined;
 
 function handler() {
 	let captured: ((event: { toolName: string; input?: Record<string, unknown> }) => unknown) | undefined;
-	register({ on: (_event, fn) => { captured = fn; } });
+	guard(HARNESSES.pi)({ on: (_event, fn) => { captured = fn; } });
 	assert.ok(captured, "the extension registered no tool_call handler");
 
 	return captured as (event: { toolName: string; input?: Record<string, unknown> }) => Verdict;

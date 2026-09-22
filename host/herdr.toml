@@ -1,0 +1,24 @@
+onboarding = false
+
+[ui]
+status_indicators = "symbols"
+agent_panel_sort = "priority"
+
+[ui.sidebar.agents]
+rows = [["state_icon", "workspace", "tab"], ["agent", "$step"]]
+
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace", "$fleet"], ["branch", "git_status"]]
+
+[ui.sound]
+enabled = true
+
+[ui.toast]
+delivery = "system"
+
+[theme]
+name = "dracula"
+auto_switch = false
+
+[keys]
+focus_agent = "prefix+alt+1..9"

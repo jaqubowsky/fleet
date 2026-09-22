@@ -5,7 +5,7 @@ import remoteExtension, {
 	type Context,
 	type RemoteAPI,
 	type Widget,
-} from "../../agent/extensions/pi-remote/index.ts";
+} from "../../extensions/pi-remote/index.ts";
 import { processRuntime } from "./runtime.ts";
 
 async function port() {

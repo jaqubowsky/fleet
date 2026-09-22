@@ -1,6 +1,8 @@
-export type Decision = { decision: "allow" | "deny"; reason: string };
+export type Decision = { decision: "allow" | "deny"; reason: string; explicit?: true };
 
 const allow = (reason: string): Decision => ({ decision: "allow", reason });
+const PLAIN = /^\s*(git|sbx|herdr)\s[^\n;&|`$()<>]*$/;
+const plain = (subject: string, reason: string): Decision => (PLAIN.test(subject) ? { decision: "allow", reason, explicit: true } : allow(reason));
 const deny = (reason: string): Decision => ({ decision: "deny", reason });
 
 function strings(value: unknown): string[] {
@@ -12,6 +14,8 @@ function strings(value: unknown): string[] {
 }
 
 type Call = { subject: string; outbound: boolean };
+
+export const POLICY_TOOLS = ["Bash", "Read", "Edit", "Write", "NotebookEdit", "Grep", "Glob", "WebFetch", "WebSearch", "mcp__.*"];
 
 function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	const text = (key: string): string => (typeof input[key] === "string" ? (input[key] as string) : "");
@@ -41,8 +45,8 @@ const START = String.raw`(^|[;&|]|&&|-c\s*['"])\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+
 const command = (rule: string): RegExp => new RegExp(START + rule);
 
 const PUSH = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*\s+push\b`;
-const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|\.pi|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
-const ROOTS = String.raw`(/|/home/bob(/dev)?|/Users/[^/\s]+)(\s|$)`;
+const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
+const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
 const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`op\s+(read|item|document|vault|whoami|signin|account)\b`), "1Password is the human's. Secrets reach a sandbox as op:// references through sbx, never through the agent's shell."],
@@ -127,9 +131,9 @@ export function decide(tool: string, input: Record<string, unknown>): Decision {
 		if (hit(RM_ROOTS)) return deny("Recursive delete of a home or filesystem root.");
 	}
 
-	if (ORCHESTRATION.test(subject)) return allow("sbx/herdr orchestration.");
-	if (hit(SSH) && !hit(SSH_LOCAL)) return deny("Remote shell access is outside this local-only Pi fleet.");
-	if (READ_ONLY_GIT.test(subject)) return allow("Read-only git.");
+	if (ORCHESTRATION.test(subject)) return plain(subject, "sbx/herdr orchestration.");
+	if (hit(SSH) && !hit(SSH_LOCAL)) return deny("Remote shell access is outside this local-only fleet.");
+	if (READ_ONLY_GIT.test(subject)) return plain(subject, "Read-only git.");
 
 	return allow("Allowed by Bash policy.");
 }

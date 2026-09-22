@@ -1,12 +1,14 @@
 {
-  "name": "fleet",
+  "name": "harness",
   "private": true,
   "type": "module",
   "bin": {
-    "fleet": "bin/fleet"
+    "fleet": "bin/fleet",
+    "ofleet": "bin/ofleet",
+    "cfleet": "bin/cfleet"
   },
   "scripts": {
-    "test": "node --test 'src/*/*.test.ts' && host/tests/run.sh",
+    "test": "node --test 'src/*/*.test.ts' && host/tests/run.sh && python3 claude/tests/align_test.py",
     "check": "tsc --noEmit",
     "test:remote": "node --test src/remote/*.test.ts",
     "test:remote-integration": "node --test src/remote/extension.test.ts"

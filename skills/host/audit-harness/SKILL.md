@@ -6,17 +6,17 @@ disable-model-invocation: true
 
 # Audit harness
 
-Transcripts are the experiment; the harness (rules, skills, guard, fleet, image, settings) is the hypothesis. Grade the harness this skill lives in, the root above `skills/` (`~/.pi` or `~/.claude`), a git repository whose `README.md` layout table names every part. Ends at a report; every edit is the user's call.
+Transcripts are the experiment; the harness (rules, skills, guard, fleet, image, settings) is the hypothesis. Grade the harness monorepo at `{{root}}`, a git repository whose `README.md` layout table names every part: the shared sources and the `pi/`, `omp/` and `claude/` parts. Ends at a report; every edit is the user's call.
 
 ## 1. New transcripts
 
-`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every task directory's `logs/sessions/**/*.jsonl` under `~/.sandboxes/*/*/` for containers, and the host session store (`agent/sessions/` in pi, `projects/` in Claude Code); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per task directory or host file) with side, size and date, so the user can narrow the run.
+`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every task directory's `logs/sessions/**/*.jsonl` under `~/.sandboxes/*/*/` for containers, and the host session stores (`~/.pi/agent/sessions/`, `~/.omp/agent/sessions/`, `~/.claude/projects/`); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per task directory or host file) with side, size and date, so the user can narrow the run.
 
 The newest `audits/*.md` carries the findings of the last run into step 4: every row with its id, severity and run count. Declining a fix does not close a row.
 
 ## 2. Rules as they were
 
-`git log -1 --before=<session start> --format=%h -- rules sbx skills host` (the first commit when none precedes), then `git show <sha>:<path>` for `rules/*.md`, the container rule under `sbx/` and the skill descriptions. A Claude Code transcript lists the rule files it carried (`instructions` attachment); a pi container carries what the provider step folds into `sbx/AGENTS.md`. A rule the session never carried is `not exercised`.
+`git log -1 --before=<session start> --format=%h -- rules skills agents extensions sbx host pi omp claude` (the first commit when none precedes), then `git show <sha>:<path>` for `rules/*.md`, the container rule under `sbx/` and the skill descriptions. A Claude Code transcript lists the rule files it carried (`instructions` attachment); a pi or omp container carries what the render step folds into its `AGENTS.md`, a Claude container the rendered `~/.claude/rules`. A rule the session never carried is `not exercised`.
 
 ## 3. Scorecard per session
 

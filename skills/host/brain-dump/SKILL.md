@@ -16,7 +16,7 @@ Input: the text the user appended after this skill. Decide the capture mode by i
 
 1. Run `defuddle <url>` and save stdout: clean article extraction, no
    boilerplate (content, not your summary: the wiki synthesis happens
-   later, at /skill:ingest).
+   later, at {{skill.ingest}}).
 2. Record the URL and fetch date in the origin header.
 
 ## 2. YouTube link
@@ -38,7 +38,7 @@ errors ("charge pt" for ChatGPT, "Mid Journey" for Midjourney) that propagate in
 1. Extract the text: `pdftotext -layout "<file>" -` and capture stdout.
 2. Clean it mechanically: drop page headers/footers and hyphenation
    artifacts, join broken lines into paragraphs. Content, not your summary:
-   do not paraphrase; synthesis happens at /skill:ingest.
+   do not paraphrase; synthesis happens at {{skill.ingest}}.
 3. Record the source file path in the origin header.
 
 ## 4. No argument, or a topic phrase
@@ -51,9 +51,9 @@ useful commands or snippets: NOT a transcript. One note per distinct topic.
 
 - `raw/inbox/` is the only write surface from here: `wiki/`, its `index.md`
   and its `log.md` are written inside the knowledge-base repo by
-  `/skill:ingest`, which sweeps unprocessed `raw/` files automatically.
+  `{{skill.ingest}}`, which sweeps unprocessed `raw/` files automatically.
 - If the inbox is not writable (e.g. a read-only sandbox mount), print the
   full note in the reply instead and tell the user to save it from a host
   session.
-- Finish by reminding the user: run `/skill:ingest` in `~/my-knowledge-base` to
+- Finish by reminding the user: run `{{skill.ingest}}` in `~/my-knowledge-base` to
   fold the capture into the wiki.

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { eventAgents, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
+import { HARNESSES } from "../harness.ts";
 import { realIo } from "./io.ts";
 
 test("new up and steer events carry the invoking Pi session", () => {
@@ -24,9 +25,9 @@ test("two Pi sessions sharing a pane only adopt their own events", () => {
 	logEvent(b, "steer", "worker-b", "continue");
 	const log = [...a.calls, ...b.calls].map((call) => call[2]).join("\n");
 
-	assert.deepEqual(eventAgents(log, "session-a"), ["worker-a"]);
-	assert.deepEqual(eventAgents(log, "session-b"), ["worker-b"]);
-	assert.deepEqual(eventAgents(log, ""), []);
+	assert.deepEqual(eventAgents(log, { sessionId: "session-a" }), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, { sessionId: "session-b" }), ["worker-b"]);
+	assert.deepEqual(eventAgents(log, { sessionId: "" }), []);
 });
 
 test("legacy and ownerless events never cause automatic watching", () => {
@@ -37,18 +38,35 @@ test("legacy and ownerless events never cause automatic watching", () => {
 		"not a line",
 	].join("\n");
 
-	assert.deepEqual(eventAgents(log, "w1:host"), []);
-	assert.deepEqual(eventAgents(log, ""), []);
+	assert.deepEqual(eventAgents(log, { sessionId: "w1:host" }), []);
+	assert.deepEqual(eventAgents(log, { sessionId: "" }), []);
 });
 
 test("the shell Pi session id reaches event logging", (t) => {
 	const previous = process.env.PI_SESSION_ID;
 	process.env.PI_SESSION_ID = "shell-session";
 	t.after(() => { if (previous === undefined) delete process.env.PI_SESSION_ID; else process.env.PI_SESSION_ID = previous; });
-	const io = realIo("/home/me");
+	const io = realIo("/home/me", HARNESSES.pi);
 	const append = t.mock.method(io, "append", (_path: string, _line: string) => {});
 
 	logEvent(io, "up", "worker-a");
 
 	assert.match(append.mock.calls[0].arguments[1], / session=shell-session$/);
+});
+
+test("a harness without a shell session id owns events by pane", () => {
+	const log = [
+		"2026-09-16T10:00:00.000Z w1:host up worker-a session=",
+		"2026-09-16T10:01:00.000Z w2:other up worker-b session=",
+	].join("\n");
+
+	assert.deepEqual(eventAgents(log, { pane: "w1:host" }), ["worker-a"]);
+});
+
+test("a harness that watches through its CLI logs no events", () => {
+	const io = fakeIo({}, HARNESSES.claude);
+
+	logEvent(io, "up", "worker-a");
+
+	assert.deepEqual(io.calls, []);
 });

@@ -1,6 +1,6 @@
 # Container
 
-You are the worker. The repository here is a private clone at the same absolute path it has on the host, so nothing you write leaves until `fleet land`. `$FLEET_ARTIFACTS` and `$FLEET_CACHE` are host directories that outlive you; everything else, `/tmp` included, dies with the container.
+You are the worker. The repository here is a private clone at the same absolute path it has on the host, so nothing you write leaves until `{{cli}} land`. `$FLEET_ARTIFACTS` and `$FLEET_CACHE` are host directories that outlive you; everything else, `/tmp` included, dies with the container.
 
 ## Environment
 

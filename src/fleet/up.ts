@@ -3,6 +3,7 @@ import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { githubRef, linearServer } from "./github.ts";
+import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
 import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
@@ -29,8 +30,8 @@ function layoutTask(dir: string, io: Io): void {
 	if (io.read(`${dir}/status.md`) === undefined) io.write(`${dir}/status.md`, TASK_STATUS);
 }
 
-export function piArgs(model: string | undefined, resume: boolean): string {
-	return `${model ? ` --model ${model}` : ""}${resume ? " -c" : ""}`;
+export function agentArgs(h: Harness, model: string | undefined, resume: boolean): string {
+	return `${[...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])].join(" ")}`;
 }
 
 export const BRANCH_FROM_BASE =
@@ -78,11 +79,12 @@ export async function up(
 		...input,
 		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
 	};
-	const sandbox = sandboxName(input.repo, input.label);
+	const sandbox = sandboxName(input.repo, input.label, io.harness.prefix);
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
 	const existing = fleetSandboxes(
 		parseSandboxList(io.sbx(["ls", "--json"], { quiet: true })),
+		io.harness.prefix,
 	).find((s: Sandbox) => s.name === sandbox);
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
@@ -92,6 +94,7 @@ export async function up(
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
+			if (io.harness.projectConfig) seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
 			if (input.branch)
 				io.sbx(
 					[
@@ -153,13 +156,13 @@ export async function up(
 			"pane",
 			"run",
 			pane,
-			`HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve${piArgs(input.model, io.list(`${task}/logs/sessions`).length > 0)}`,
+			`HERDR_AGENT=${io.harness.agent} sbx run --name ${sandbox} -- ${agentArgs(io.harness, input.model, io.list(`${task}/logs/sessions`).length > 0 || (Boolean(existing) && Boolean(io.harness.containerSessions)))}`,
 		]);
 	await waitForAgent(io, pane);
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
-		`${sandbox}: pi waiting in tab ${agent} (pane ${pane}); no prompt sent`,
+		`${sandbox}: ${io.harness.agent} waiting in tab ${agent} (pane ${pane}); no prompt sent`,
 	);
 	return { sandbox, agent, pane };
 }
@@ -172,9 +175,9 @@ function create(
 	cpus: string,
 	io: Io,
 ): void {
-	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
+	const h = io.harness;
 	const artifacts = artifactsDir(input.repo, io);
-	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
+	const cache = cacheDir(input.repo, io);
 	const knowledgeBase = `${io.home}/my-knowledge-base`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
@@ -197,10 +200,11 @@ function create(
 		);
 	}
 	const linear = linearServer(origin);
+	const codex = h.codex ? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`)) : undefined;
 	io.sbx([
 		"run",
 		"-d",
-		"--skills=off",
+		...h.sbxFlags,
 		"--name",
 		sandbox,
 		"--clone",
@@ -216,23 +220,25 @@ function create(
 		`FLEET_ARTIFACTS=${artifacts}`,
 		"-e",
 		`FLEET_CACHE=${cache}`,
-		"-e",
-		`PI_CODING_AGENT_SESSION_DIR=${taskDir(input.repo, sandbox, io)}/logs/sessions`,
+		...(h.sessionEnv ? ["-e", `${h.sessionEnv}=${taskDir(input.repo, sandbox, io)}/logs/sessions`] : []),
 		"--kit",
 		`${input.root}/host/kits/no-ssh-agent`,
-		"--kit-arg",
-		`pi.codex_account=${codex.account}`,
-		"--kit-arg",
-		`pi.codex_sentinel=${codex.sentinel}`,
+		...(codex && h.codex
+			? ["--kit-arg", `${h.codex.kit}.codex_account=${codex.account}`, "--kit-arg", `${h.codex.kit}.codex_sentinel=${codex.sentinel}`]
+			: []),
 		...(linear ? ["--static-mcp", linear] : []),
-		`${input.root}/host/kits/pi`,
+		h.agentSpec(input.root),
 		input.repo,
 		artifacts,
 		cache,
 		`${knowledgeBase}:ro`,
 		"--",
-		"--approve",
+		...h.agentArgs,
 	]);
+}
+
+export function cacheDir(repo: string, io: Io): string {
+	return `${io.home}/${io.harness.home}/${io.harness.cache}/${basename(repo)}`;
 }
 
 function lockfiles(listing: string): number {
@@ -292,6 +298,24 @@ function seedEnv(io: Io, repo: string, sandbox: string): void {
 	);
 }
 
+export function ignoredPaths(listing: string): string[] {
+	return listing
+		.split("\n")
+		.map((line) => line.trim().replace(/\/$/, ""))
+		.filter(Boolean);
+}
+
+function seedProjectConfig(io: Io, repo: string, sandbox: string, dir: string): void {
+	const paths = ignoredPaths(io.git(["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "--", dir], repo));
+	if (!paths.length) return;
+	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	for (const path of paths) {
+		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$1"', "--", `${workspace}/${parentDir(path)}`], { quiet: true });
+		io.sbx(["cp", `${repo}/${path}`, `${sandbox}:${workspace}/${parentDir(path)}/`], { quiet: true });
+	}
+	io.log(`${sandbox}: copied ${paths.length} ignored path(s) under ${dir} from the host checkout`);
+}
+
 export function cacheStore(path: string): string {
 	return path.replace(/^\.\//, "").replace(/\//g, "-");
 }
@@ -308,7 +332,7 @@ function cachePaths(repo: string, io: Io): string[] {
 }
 
 function seedCache(io: Io, repo: string, sandbox: string): void {
-	const cache = `${io.home}/.pi/cache/${basename(repo)}`;
+	const cache = cacheDir(repo, io);
 	const listed = io.read(`${cache}/paths`);
 	const paths = listed
 		? listed
@@ -430,11 +454,11 @@ function openPane(
 		tab,
 	);
 	if (named?.pane_id) {
-		if (named.agent !== "pi")
+		if (named.agent !== io.harness.agent)
 			throw new Error(
-				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not pi; rename it or pick another label`,
+				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${io.harness.agent}; rename it or pick another label`,
 			);
-		io.log(`${tab}: adopting the pi already running in pane ${named.pane_id}`);
+		io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${named.pane_id}`);
 		return { pane: named.pane_id, running: true };
 	}
 	const list = io.herdr<{ result: { workspaces: Workspace[] } }>([
@@ -474,12 +498,12 @@ function openPane(
 			])
 			.result.panes.find((p) => p.tab_id === existing.tab_id);
 		if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
-		if (pane.agent && pane.agent !== "pi")
+		if (pane.agent && pane.agent !== io.harness.agent)
 			throw new Error(
 				`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
 			);
 		if (pane.agent)
-			io.log(`${tab}: adopting the pi already running in pane ${pane.pane_id}`);
+			io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`);
 		return { pane: pane.pane_id, running: Boolean(pane.agent) };
 	}
 	return {
@@ -511,6 +535,6 @@ async function waitForAgent(io: Io, pane: string): Promise<void> {
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`pi did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`,
+		`${io.harness.agent} did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`,
 	);
 }

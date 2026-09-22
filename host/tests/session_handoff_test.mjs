@@ -3,14 +3,14 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fakeIo } from "../../src/fleet/fake-io.ts";
-import { render } from "../../src/fleet/provider.ts";
+import { seatSettings } from "../../src/render/render.ts";
+import { HARNESSES } from "../../src/harness.ts";
 
 const { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, createEditTool, SessionManager, SettingsManager } = await import(process.argv[2]);
 const root = join(import.meta.dirname, "../..");
 const io = fakeIo(Object.fromEntries(["settings", "models", "host", "sbx"].map((name) => [
-	`read /root/profiles/${name}.json`, readFileSync(join(root, `profiles/${name}.json`), "utf8"),
+	`read /root/pi/profiles/${name}.json`, readFileSync(join(root, `pi/profiles/${name}.json`), "utf8"),
 ])));
-render("/root", io);
 process.env.PI_OFFLINE = "1";
 
 for (const seat of ["host", "sbx"]) {
@@ -18,8 +18,8 @@ for (const seat of ["host", "sbx"]) {
 	const agentDir = join(dir, "agent");
 	mkdirSync(agentDir);
 	mkdirSync(join(dir, "sbx/extensions"), { recursive: true });
-	copyFileSync(join(root, "sbx/extensions/session-handoff.ts"), join(dir, "sbx/extensions/session-handoff.ts"));
-	const settings = JSON.parse(io.files[seat === "host" ? "/root/agent/settings.json" : "/root/sbx/agent-settings.json"]);
+	copyFileSync(join(root, "extensions/session-handoff.ts"), join(dir, "sbx/extensions/session-handoff.ts"));
+	const settings = JSON.parse(seatSettings(io, "/root", HARNESSES.pi, seat === "host" ? "host.json" : "sbx.json"));
 	writeFileSync(join(agentDir, "settings.json"), JSON.stringify(settings));
 	process.env.PI_CODING_AGENT_DIR = agentDir;
 	process.env.FLEET_ARTIFACTS = dir;

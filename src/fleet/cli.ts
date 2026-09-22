@@ -1,29 +1,34 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { artifacts, build, copy, down, exec, ls, peek, resolveSandbox, steer } from "./commands.ts";
+import { harness } from "../harness.ts";
+import { render } from "../render/render.ts";
+import { artifacts, build, copy, down, exec, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
-import { render } from "./provider.ts";
 import { up } from "./up.ts";
+import { watch } from "./watch.ts";
 
 const home = homedir();
-const root = process.env.FLEET_ROOT ?? `${home}/.pi`;
-const io = realIo(home);
+const root = process.env.FLEET_ROOT ?? resolve(import.meta.dirname, "../..");
+const h = harness(process.env.FLEET_HARNESS);
+const io = realIo(home, h);
+const cli = h.cli;
 
 const usage = `usage:
-  fleet up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, lay out the task directory, start pi in a herdr tab, send nothing
-  fleet ls                                           containers with herdr status, branch and dirty count
-  fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
-  fleet steer <sandbox> <text...>                    steer the container's pi: delivered after its current tool call; the container is under watch from now on
-  fleet exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
-  fleet artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
-  fleet copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
-  fleet land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
-  fleet down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
-  fleet build                                        rebuild the worker image from sbx/Dockerfile and the current skills and rules
-  fleet render                                       rewrite both settings files and both AGENTS.md from profiles and rules
+  ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, lay out the task directory, start pi in a herdr tab, send nothing
+  ${cli} ls                                           containers with herdr status, branch and dirty count
+  ${cli} peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
+  ${cli} steer <sandbox> <text...>                    send the container's ${h.agent} this text
+  ${cli} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
+  ${cli} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
+  ${cli} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
+  ${cli} land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
+  ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
+  ${cli} build                                        render the container seat and rebuild ${h.image} from it
+  ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
+  ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor, persistent: true
 
-  <sandbox> is the container name or its herdr agent name, which is the container name without the pi- prefix
+  <sandbox> is the container name or its herdr agent name, which is the container name without the ${h.prefix} prefix
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
 
 const BARE = new Set(["force", "push", "sign"]);
@@ -110,8 +115,16 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		build(root, io);
 	},
 	render(args) {
-		flags(args, []);
-		render(root, io);
+		const { opts } = flags(args, ["seat", "out"]);
+		const seat = opts.seat === "container" ? "container" : "host";
+		if (opts.seat !== undefined && opts.seat !== seat) throw new Error(`--seat takes host or container, not ${opts.seat}`);
+		if (typeof opts.out === "string") render({ root, harness: h, seat, out: resolve(opts.out) }, io);
+		else if (seat === "host") renderHost(root, io);
+		else throw new Error("the container seat needs --out <dir>");
+	},
+	async watch(args) {
+		const { rest } = flags(args, []);
+		await watch(rest, io);
 	},
 };
 
@@ -129,7 +142,7 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
 	try {
 		await command(rest);
 	} catch (error) {
-		console.error(`fleet ${name}: ${(error as Error).message}`);
+		console.error(`${cli} ${name}: ${(error as Error).message}`);
 		process.exit(1);
 	}
 }

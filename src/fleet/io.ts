@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import type { Harness } from "../harness.ts";
 
 export type Io = {
 	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean }): string;
@@ -9,6 +10,7 @@ export type Io = {
 	git(args: string[], cwd: string): string;
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
+	copy(from: string, to: string): void;
 	list(dir: string): string[];
 	stat(path: string): { size: number; mtime: Date; dir: boolean } | undefined;
 	append(path: string, line: string): void;
@@ -18,6 +20,7 @@ export type Io = {
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
+	harness: Harness;
 	tmp: string;
 	pane: string;
 	sessionId?: string;
@@ -39,7 +42,7 @@ function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: bo
 	return (result.stdout ?? "").trim();
 }
 
-export function realIo(home: string): Io {
+export function realIo(home: string, harness: Harness): Io {
 	return {
 		sbx: (args, opts) => shell("sbx", args, opts),
 		herdr: <T>(args: string[]) => {
@@ -54,6 +57,10 @@ export function realIo(home: string): Io {
 		git: (args, cwd) => shell("git", args, { cwd, quiet: true }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),
+		copy: (from, to) => {
+			copyFileSync(from, to);
+			chmodSync(to, statSync(from).mode);
+		},
 		list: (dir) => {
 			try {
 				return readdirSync(dir);
@@ -83,8 +90,9 @@ export function realIo(home: string): Io {
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,
+		harness,
 		tmp: process.env.TMPDIR ?? "/tmp",
 		pane: process.env.HERDR_PANE_ID ?? "-",
-		sessionId: process.env.PI_SESSION_ID,
+		sessionId: harness.sessionIdEnv ? process.env[harness.sessionIdEnv] : undefined,
 	};
 }

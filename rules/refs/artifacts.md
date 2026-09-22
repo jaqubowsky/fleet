@@ -1,6 +1,6 @@
 # Task directory
 
-One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo>/<sandbox>/` on the host). `fleet up` creates it, `fleet down` keeps it. It is the handoff between skills, between sessions and to the host: what the next reader needs is in a file here or in git.
+One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo>/<sandbox>/` on the host). `{{cli}} up` creates it, `{{cli}} down` keeps it. It is the handoff between skills, between sessions and to the host: what the next reader needs is in a file here or in git.
 
 ## Files
 
@@ -14,7 +14,7 @@ issues/        NN-<slug>.md, one ticket per commit                  to-tickets; 
 review.md      verdict line, findings, checks read, shared seams   two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
 browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
-logs/          sessions/, usage.json, <skill>-<id>/ evidence        pi, fleet down, any skill
+logs/          sessions/, usage.json, <skill>-<id>/ evidence        {{harness}}, {{cli}} down, any skill
 ```
 
 `runbook/` at the root of `$FLEET_ARTIFACTS`, beside the task directories, holds how the app starts and how its screens drive (`run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md`, `gate-baseline.md`); every container on the repository shares it.
@@ -39,7 +39,7 @@ attention: none | <one sentence naming what a person has to decide or provide>
 
 | status | holds when |
 | --- | --- |
-| `new` | `fleet up` laid out the task directory and no work has started |
+| `new` | `{{cli}} up` laid out the task directory and no work has started |
 | `analyzing` | the analysis runs |
 | `blocked` | the work waits on a decision or an input only a person can give, the analysis question included; `attention` names it |
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |

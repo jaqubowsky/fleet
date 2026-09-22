@@ -1,0 +1,35 @@
+{
+  "modelRoles": {
+    "default": "{{providers.host}}/{{models.host}}:{{thinking.host}}",
+    "smol": "{{providers.explorer}}/{{models.explorer}}:{{thinking.explorer}}",
+    "slow": "{{providers.reviewer}}/{{models.reviewer}}:{{thinking.reviewer}}",
+    "task": "{{providers.sbx}}/{{models.sbx}}:{{thinking.sbx}}",
+    "advisor": "{{providers.reviewer}}/{{models.reviewer}}:{{thinking.reviewer}}"
+  },
+  "defaultThinkingLevel": "{{thinking.host}}",
+  "extensions": [
+    "{{root}}/omp/extensions.ts",
+    "{{root}}/extensions/handoff-on-error.ts",
+    "{{root}}/omp/extensions/statusline.ts",
+    "{{root}}/omp/extensions/herdr-agent-state.ts"
+  ],
+  "tools": {
+    "approvalMode": "yolo",
+    "approval": {
+      "browser": "prompt",
+      "computer": "deny",
+      "github": "prompt",
+      "security_scan": "deny"
+    }
+  },
+  "skills": {
+    "enabled": true,
+    "enableSkillCommands": true,
+    "enablePiUser": false,
+    "enablePiProject": false,
+    "customDirectories": [
+      "~/.omp/skills/shared",
+      "~/.omp/skills/host"
+    ]
+  }
+}

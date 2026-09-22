@@ -4,7 +4,7 @@ import { agentFor, brief, elapsed, fleetSandboxes, formatRows, parseCheckout, wa
 
 test("only pi- sandboxes belong to the fleet", () => {
 	const all = { sandboxes: [{ name: "claude-x", status: "running", workspaces: [] }, { name: "pi-webapp-a", status: "stopped", workspaces: ["/r"] }] };
-	assert.deepEqual(fleetSandboxes(all).map((s) => s.name), ["pi-webapp-a"]);
+	assert.deepEqual(fleetSandboxes(all, "pi-").map((s) => s.name), ["pi-webapp-a"]);
 });
 
 test("checkout probe output parses branch, dirty count and head", () => {

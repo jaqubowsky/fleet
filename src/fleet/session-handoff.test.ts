@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import handoff from "../../sbx/extensions/session-handoff.ts";
+import handoff from "../../extensions/session-handoff.ts";
 import { fakeIo } from "./fake-io.ts";
-import { render } from "./provider.ts";
+import { seatSettings } from "../render/render.ts";
+import { HARNESSES } from "../harness.ts";
 import { brief } from "./status.ts";
 
 async function runtime(t: TestContext, settings = "{}") {
@@ -95,11 +96,10 @@ test("context threshold adds only a neutral system advisory", async (t) => {
 
 test("sandbox uses an overridden rendered threshold", async (t) => {
 	const io = fakeIo({
-		"read /root/profiles/settings.json": '{"unknown":{"keep":true}}',
-		"read /root/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
+		"read /root/pi/profiles/settings.json": '{"unknown":{"keep":true}}',
+		"read /root/pi/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
 	});
-	render("/root", io);
-	const r = await runtime(t, io.files["/root/sbx/agent-settings.json"]);
+	const r = await runtime(t, seatSettings(io, "/root", HARNESSES.pi, "sbx.json"));
 
 	r.usage(83);
 	assert.equal(await r.prompt(), undefined);
@@ -189,11 +189,10 @@ test("cancelled replacement consumes approval and reports that it stayed put", a
 });
 
 test("handoff is loaded only through the sandbox profile and image", () => {
-	assert.equal(existsSync("agent/extensions/session-handoff.ts"), false);
-	const sandbox = JSON.parse(readFileSync("profiles/sbx.json", "utf8"));
-	const host = JSON.parse(readFileSync("profiles/host.json", "utf8"));
+	const sandbox = JSON.parse(readFileSync("pi/profiles/sbx.json", "utf8"));
+	const host = JSON.parse(readFileSync("pi/profiles/host.json", "utf8"));
 	assert.deepEqual(sandbox.extensions, ["../sbx/extensions/session-handoff.ts"]);
-	assert.equal(host.extensions, undefined);
+	assert.ok(!(host.extensions ?? []).some((path: string) => path.includes("session-handoff")));
 	assert.equal(sandbox.sessionHandoff.suggestAtTokens, 250000);
-	assert.match(readFileSync("sbx/Dockerfile", "utf8"), /COPY.*extensions\/\s+\/home\/agent\/\.pi\/sbx\/extensions\//);
+	assert.match(readFileSync("pi/sbx/Dockerfile", "utf8"), /COPY.*extensions\/\s+\/home\/agent\/\.pi\/sbx\/extensions\//);
 });

@@ -40,16 +40,54 @@ export type Summary = {
 const SKILL_FILE = /\/skills\/([^/]+)\/SKILL\.md$/;
 const DIRECT = "direct";
 
+type ClaudeUsage = { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+type ClaudePart = { type: string; name?: string; input?: { file_path?: string; skill?: string } };
+type ClaudeLine = { type: string; subtype?: string; timestamp?: string; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
+
+function claudeCalls(content: ClaudePart[] | string | undefined): ToolCall[] {
+	if (!Array.isArray(content)) return [];
+	return content.flatMap((part): ToolCall[] => {
+		if (part.type !== "tool_use") return [];
+		if (part.name === "Skill" && part.input?.skill) return [{ type: "toolCall", name: "read", arguments: { path: `/skills/${part.input.skill}/SKILL.md` } }];
+		if (part.name === "Read") return [{ type: "toolCall", name: "read", arguments: { path: part.input?.file_path } }];
+		return [];
+	});
+}
+
+function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
+	if (line.type === "system" && line.subtype === "compact_boundary") return [{ type: "compaction" }];
+	const usage = line.message?.usage;
+	if (line.type !== "assistant" || !usage) return [];
+	const id = line.message?.id;
+	if (id && seen.has(id)) return [];
+	if (id) seen.add(id);
+	return [
+		{
+			type: "message",
+			timestamp: line.timestamp,
+			message: {
+				role: "assistant",
+				model: line.message?.model,
+				usage: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens, cacheWrite: usage.cache_creation_input_tokens },
+				content: claudeCalls(line.message?.content),
+			},
+		},
+	];
+}
+
 export function parseEntries(jsonl: string): Entry[] {
+	const seen = new Set<string>();
 	return jsonl
 		.split("\n")
 		.filter((line) => line.trim())
 		.flatMap((line) => {
+			let parsed: Entry & ClaudeLine;
 			try {
-				return [JSON.parse(line) as Entry];
+				parsed = JSON.parse(line);
 			} catch {
 				return [];
 			}
+			return parsed.type === "assistant" || parsed.type === "system" ? fromClaude(parsed, seen) : [parsed as Entry];
 		});
 }
 
