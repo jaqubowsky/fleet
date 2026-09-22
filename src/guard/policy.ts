@@ -34,7 +34,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	return deny(`Unknown tool policy: ${tool}`);
 }
 
-const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/auth\.json|\.pi/agent/models-store\.json)`;
+const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json)|\.omp/agent/(auth\.json|agent\.db|models\.db)|\.claude/\.credentials\.json|\.claude\.json)`;
 const HOST_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])/Users/[^/\s]+/${SECRET_PATHS}`);
 const HOME_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])(~|\$HOME)/${SECRET_PATHS}`);
 const SECRET_MATERIAL = /(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,}|-----BEGIN\s[A-Z ]*PRIVATE KEY|op:\/\/)/;
@@ -42,7 +42,7 @@ const DELEGATED = /(^|[;&|]|&&)\s*sbx\s+(exec|run|cp)(\s|$)/;
 const CREDENTIAL_STORE = "Credential store is off limits: ~/.ssh, ~/.config/op and ~/Library/Keychains are read by the human only.";
 
 const START = String.raw`(^|[;&|]|&&|-c\s*['"])\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?`;
-const command = (rule: string): RegExp => new RegExp(START + rule);
+const command = (rule: string): RegExp => new RegExp(START + rule, "m");
 
 const PUSH = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*\s+push\b`;
 const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
@@ -119,8 +119,8 @@ export function decide(tool: string, input: Record<string, unknown>): Decision {
 
 	if (tool !== "Bash") return allow(`Allowed by ${tool} policy.`);
 
-	const flat = flatten(subject);
-	const hit = (rule: RegExp): boolean => rule.test(subject) || rule.test(flat);
+	const flat = flatten(scanned);
+	const hit = (rule: RegExp): boolean => rule.test(scanned) || rule.test(flat);
 
 	for (const [rule, reason] of BASH_RULES) {
 		if (hit(rule)) return deny(reason);
