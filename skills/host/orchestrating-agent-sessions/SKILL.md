@@ -9,7 +9,7 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
-| put up a container for ticket X | `fleet up <label> --repo <path> [--branch <name>] [--model <provider/id:thinking>]` | sandbox name, tab name, task directory; pi waiting, no prompt sent |
+| put up a container for ticket X | `fleet up <label> --repo <path> [--branch <name>] [--base <name>] [--model <provider/id:thinking>]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); pi waiting, no prompt sent |
 | what is running | `fleet ls` | one line per container: status, herdr state, branch, dirty count |
 | what is it doing this minute | `fleet peek <sandbox>` | git status, log, diff --stat, install log, pane tail |
 | send it this | `fleet steer <sandbox> "<text>"` | steered; pi takes it after its current tool call |

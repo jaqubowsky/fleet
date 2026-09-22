@@ -3,6 +3,7 @@ import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
 import { githubRef, linearServer } from "./github.ts";
 import type { Io } from "./io.ts";
+import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
 import {
 	agentFor,
@@ -37,10 +38,14 @@ export function piArgs(model: string | undefined, resume: boolean): string {
 	return `${model ? ` --model ${model}` : ""}${resume ? " -c" : ""}`;
 }
 
+export const BRANCH_FROM_BASE =
+	'cd "$WORKSPACE_DIR" && (git fetch --quiet origin "$2" || echo "fleet: fetch of $2 failed, branching from the local base") && (git switch "$1" 2>/dev/null || git switch -c "$1" "$(git rev-parse --verify --quiet "origin/$2" || echo "$2")")';
+
 export type UpInput = {
 	repo: string;
 	label: string;
 	branch?: string;
+	base?: string;
 	memory?: string;
 	cpus?: string;
 	model?: string;
@@ -99,9 +104,10 @@ export async function up(
 						sandbox,
 						"sh",
 						"-c",
-						`cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")`,
+						BRANCH_FROM_BASE,
 						"--",
 						input.branch,
+						input.base ?? baseBranch(input.repo, io).replace(/^origin\//, ""),
 					],
 					{ quiet: true },
 				);

@@ -34,7 +34,7 @@ The cost is that a repository behaves here as it does in its pipeline rather tha
 ## Commands
 
 ```text
-fleet up <label> [--repo <path>] [--branch <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]
+fleet up <label> [--repo <path>] [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]
 fleet ls
 fleet peek <sandbox> [--lines 40]
 fleet steer <sandbox> <text...> [--wait]

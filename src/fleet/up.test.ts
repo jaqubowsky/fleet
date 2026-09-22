@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { cacheStore, envFiles, up } from "./up.ts";
+import { BRANCH_FROM_BASE, cacheStore, envFiles, up } from "./up.ts";
 
 const repo = "/Users/me/Work/webapp";
 const base = {
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
+	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 	"sbx ls --json": { sandboxes: [] },
 	"herdr agent list": { result: { agents: [] } },
 	"herdr workspace list": {
@@ -46,9 +47,10 @@ test("up creates the container, switches the branch, starts the install in the b
 		"pi-webapp-web-1",
 		"sh",
 		"-c",
-		'cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")',
+		BRANCH_FROM_BASE,
 		"--",
 		"web-1",
+		"main",
 	]);
 	assert.match(
 		execs[1][5],
@@ -514,4 +516,17 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 		resumed.calls.find((c) => c[1] === "pane")![4],
 		"HERDR_AGENT=pi sbx run --name pi-webapp-web-1 -- --approve -c",
 	);
+});
+
+test("up branches off the freshest remote base, detected or given with --base", async () => {
+	const detected = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, detected);
+	const script = detected.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!;
+	assert.deepEqual(script.slice(6), ["--", "web-1", "main"]);
+	assert.match(BRANCH_FROM_BASE, /git fetch --quiet origin "\$2"/);
+	assert.match(BRANCH_FROM_BASE, /git switch -c "\$1" "\$\(git rev-parse --verify --quiet "origin\/\$2" \|\| echo "\$2"\)"/);
+
+	const given = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1", base: "develop" }, given);
+	assert.deepEqual(given.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!.slice(6), ["--", "web-1", "develop"]);
 });

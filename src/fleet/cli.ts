@@ -11,7 +11,7 @@ const root = process.env.FLEET_ROOT ?? `${home}/.pi`;
 const io = realIo(home);
 
 const usage = `usage:
-  fleet up <label> [--branch <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, lay out its task directory, start pi in a herdr tab, send nothing
+  fleet up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, lay out the task directory, start pi in a herdr tab, send nothing
   fleet ls                                           containers with herdr status, branch and dirty count
   fleet peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
   fleet steer <sandbox> <text...> [--wait]           steer the container's pi: delivered after its current tool call; --wait returns when it settles, with its status.md brief
@@ -69,8 +69,8 @@ function repoOf(opts: Record<string, string | true>): string {
 
 const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async up(args) {
-		const { opts, rest } = flags(args, ["repo", "branch", "model", "memory", "cpus"]);
-		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, model: opts.model as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
+		const { opts, rest } = flags(args, ["repo", "branch", "base", "model", "memory", "cpus"]);
+		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, base: opts.base as string | undefined, model: opts.model as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
 	},
 	ls(args) {
 		flags(args, []);

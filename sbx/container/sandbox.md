@@ -20,7 +20,7 @@ You are the worker. The repository here is a private clone at the same absolute 
 
 ## Finish
 
-1. Commit unsigned on the task branch; signing, push and merge belong to the host. Signing rewrites those commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
+1. Commit unsigned on the task branch; signing, push and merge belong to the host. Before `ready-for-host`, and as long as the branch has never been pushed, `git fetch origin && git rebase origin/<base>` so the host lands a branch that applies to today's base; a pushed branch follows the stale-base rules of skill `babysit-pr` instead, because a rebase there is a force push. Signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
 2. Your GitHub token writes pull requests and reads everything else, so `gh pr create` is the one remote write you have and a push fails here whatever you try. Open the pull request once the host has pushed the branch and the user says so; before that the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
 3. Linear is read-write where the container has it and absent everywhere else. Write only when told, say what you posted
 4. The task ends in `handoff.md`, in the shape `refs/artifacts.md` gives it, with `status.md` at `ready-for-host` or `blocked`: the gate results, each one the command you ran and the name of every failure it reported, and a pointer to every log and screenshot it cites under `logs/`. Nothing there is committed, so keep code and secrets out
