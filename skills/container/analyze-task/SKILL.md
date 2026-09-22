@@ -41,9 +41,9 @@ Choose from the described behavior, not from the issue label or title. State the
 
 | Described behavior | Path |
 | --- | --- |
-| New behavior or capability | REQUIRED SUB-SKILL: use `how` in Explain mode to establish existing behavior and gaps |
+| New behavior or capability | one `explorer` run traces the existing behaviour from its entry point: callers, data flow, the user-visible outcome, and where the gap is |
 | Broken, slow, visually incorrect or regressed | REQUIRED SUB-SKILL: use `diagnosing-bugs`; follow its feedback-loop, reproduction, hypothesis and instrumentation phases |
-| Both in one request | Diagnose the defect first, then use `how` for the new behavior; keep causes, fixes and additions distinguishable |
+| Both in one request | Diagnose the defect first, then the `explorer` trace for the new behavior; keep causes, fixes and additions distinguishable |
 
 Stop before the fix phase of `diagnosing-bugs`. Present the reproduced symptom, the reproduction command and its result, the supported cause, and the proposed fix with its verification. Blocked reproduction is an incomplete diagnosis, never a fix. Static code reading alone is not a confirmed diagnosis.
 
@@ -104,7 +104,7 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### The run and the one question
 
-The run this analysis calls for, in one line with the reason: the pipeline (`to-spec`, `to-tickets`, `implement` per ticket, review, browser audit), or the short run (`implement` with `tdd`, review) when the change is one accepted behaviour at one seam in one commit. Under it, the proposed split into tickets and the test seams, one line each.
+The run this analysis calls for, in one line with the reason: the pipeline (`to-tickets`, `implement` per ticket, review, browser audit), or the short run (`implement` with `tdd`, review) when the change is one accepted behaviour at one seam in one commit. Under it, the proposed split into tickets and the test seams, one line each.
 
 This is the only question the pipeline asks. It goes out as `attention:` in `status.md` with `status: blocked`, and the later skills take the split and the seams from here. An opening prompt that already said end to end, or already chose the shape, has answered it: continue. Either way `status.md` gets the log line `analysis: <verdict>; analysis.md` and `now:` names the next step.
 

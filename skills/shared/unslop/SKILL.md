@@ -7,7 +7,7 @@ description: 'Cut AI tells from any writing. Must always apply.'
 
 Edit text to remove AI patterns and add human voice.
 
-Polish message with a human reader on the other side (Slack, PR comment, Linear comment, standup): run `tone` first, then these patterns on what survives.
+A Polish message with a human reader on the other side (Slack, PR comment, Linear comment, standup) gets the same patterns, in the reader's language.
 
 ## Process
 

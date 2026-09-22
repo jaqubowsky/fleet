@@ -27,4 +27,4 @@ Finding _facts_ is your job, never the user's. When a frontier question needs a 
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
 
-If we are in a repo, run this session using the `domain-modeling` skill, so terminology lands in `CONTEXT.md` and hard-to-reverse decisions become ADRs as they are settled.
+In a repo, a hard-to-reverse decision settled here is written down as an ADR under `docs/adr/` before the session ends, in the format the existing ADRs there use.

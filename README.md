@@ -13,7 +13,7 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `agent/extensions/fleet-monitor.ts` | watches every container `fleet up` and `fleet steer` touched (`agent/fleet-events.log`), plus `fleet_watch` for the rest: a container settling or working on without settling wakes the host with a `[fleet]` line carrying `status.md`, the commits on the branch and the review verdict |
 | `agent/extensions/handoff-on-error.ts` | in the container: a pi run ending on an error sets `status.md` to `blocked` with the error as `attention` |
 | `agent/extensions/statusline.ts` | status line |
-| `profiles/` | `models.json` (one row per seat: `host`, `sbx`, `reviewer`, `explorer`, each a `<provider>/<model>` and a thinking level), `host.json` and `sbx.json` templates |
+| `profiles/` | `models.json` (one row per seat: `host`, `sbx`, `reviewer`, `explorer`, `researcher`, each a `<provider>/<model>` and a thinking level), `settings.json` shared by both seats, `host.json` and `sbx.json` overriding it key by key |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
 | `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet render` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |

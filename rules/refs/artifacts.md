@@ -9,7 +9,7 @@ Each file has one role and one author. The commit, the branch and the dirty stat
 ```text
 status.md      where it stands: status, attention, plan            every skill, as its last write
 analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
-spec.md        what will be built and why                          to-spec
+spec.md        what will be built and why                          to-tickets
 issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
 review.md      findings and the checks read, against one commit    two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
@@ -40,7 +40,7 @@ Findings only: the verdict, what it rests on, what is out of scope, what is open
 
 ## The pipeline
 
-A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-spec`, `to-tickets`, `implement` per ticket with `tdd`, `two-axis-review`, `to-testing`. The analysis ends with one question that covers the verdict, the split into tickets and the test seams; the later skills ask nothing on their own. An opening prompt that says end to end answers that question in advance.
+A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-tickets`, `implement` per ticket with `tdd`, `two-axis-review`, `to-testing`. The analysis ends with one question that covers the verdict, the split into tickets and the test seams; the later skills ask nothing on their own. An opening prompt that says end to end answers that question in advance.
 
 The agent shortens the run when the analysis shows one accepted behaviour, one seam and one commit: `analyze-task`, then `implement` with `tdd`, then the review, and the analysis says so. The opening prompt overrides in either direction.
 

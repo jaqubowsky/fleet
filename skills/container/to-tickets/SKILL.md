@@ -1,97 +1,85 @@
 ---
 name: to-tickets
-description: 'Break a plan, spec or the current conversation into tracer-bullet tickets: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants to convert a plan into tickets, create implementation tickets, or break down work.'
+description: 'Turn an analysis, a plan or the current conversation into spec.md and tracer-bullet tickets: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants a spec, implementation tickets, or work broken down.'
 ---
 
-# To Tickets
+# To tickets
 
-Work that fits a single bounded patch leaves this skill here: one accepted behavior, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to TDD.
+Work that fits a single bounded patch leaves this skill here: one accepted behaviour, no open product decision, no migration or external-contract change, provable by one focused test. Say so and go straight to `implement`. In a task directory that call was made in `analysis.md`; this skill runs when the analysis named the pipeline.
 
-Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet vertical slices, each declaring the tickets that **block** it. Tickets are **local markdown files**: `issues/` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`), or `.issues/<feature-slug>/` outside fleet.
-
-Each ticket is read by a session holding the repository, the parent spec and the ticket, and possibly nothing else. The parent spec carries the sources and decisions shared by the whole feature. The ticket points at what is specific to its slice.
+Two files come out of it, read by a session that holds the repository and nothing of this conversation: `spec.md`, the decisions shared by the whole feature, and one ticket per slice under `issues/`. The spec carries the sources and the decisions; a ticket points at what is specific to its slice. In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) both live there; outside fleet, under `.issues/<feature-slug>/`, the slug kebab-case from the feature title.
 
 ## Process
 
-### 1. Gather context
+1. **Read what exists.** `analysis.md` when there is one, the reference the user passed, `docs/PRD.md` if it exists (the feature serves a capability the PRD names and keeps its constraints), `CONTEXT.md` for vocabulary, the ADRs in the area. Note every source while it is in hand: tracker issue, ADR, document, pull request, prior art in the code. They go into the spec as pointers, one line each, never summarised.
 
-Work from whatever is already in the conversation context. If the user passes a reference as an argument (a path like `spec.md` in the task directory), read its full body before drafting.
+2. **Write `spec.md`** from the template below. `Status: ready-for-agent` at the top.
 
-### 2. Explore the codebase (optional)
+3. **Cut the slices.** Each ticket is a tracer bullet: a narrow, complete path through every layer the feature touches (schema, API, UI, tests), demoable on its own, sized to one commit and one review. Prefactoring that makes a slice easy is its own first ticket. Give each ticket its blocking edges: the tickets that must be done before it starts.
 
-If you have not already explored the codebase, do so to understand the current state of the code. Ticket titles and descriptions should use the project's domain glossary vocabulary (e.g. `CONTEXT.md`), and respect ADRs in the area you're touching.
+   A wide refactor (rename a column, retype a shared symbol) breaks thousands of call sites at once, so no slice lands green: sequence it as expand, migrate in batches sized by blast radius, contract. Each batch is a ticket blocked by the expand; the contract is blocked by every batch.
 
-Look for opportunities to prefactor the code to make the implementation easier. "Make the change easy, then make the easy change."
+4. **Confirm the split.** Outside a task directory, show the numbered list (title, blocked by, what it delivers) and ask about granularity and edges until the user approves. In a task directory the split was proposed and answered in `analysis.md` as the pipeline's one question: take it from there, and a change to it is a change to `analysis.md` first.
 
-### 3. Draft vertical slices
+5. **Write the tickets**, `<NN>-<slug>.md` numbered from `01` in dependency order, so the numbering is the implementation order and "Blocked by" names real files. `Status: ready-for-agent` unless the user named another. The spec stays as written; the tickets are the only other files this skill writes.
 
-Break the work into **tracer bullet** tickets.
+Then `implement` works the frontier, one ticket at a time, in this session: any ticket whose blockers are all done.
 
-<vertical-slice-rules>
+<spec-template>
 
-- Each slice cuts a narrow but COMPLETE path through every layer (schema, API, UI, tests): vertical, NOT a horizontal slice of one layer
-- A completed slice is demoable or verifiable on its own
-- Each slice is sized to one gate: one commit, one review
-- Any prefactoring should be done first
+# <Feature title>
 
-</vertical-slice-rules>
+Status: ready-for-agent
 
-Give each ticket its **blocking edges**: the other tickets that must complete before it can start. A ticket with no blockers can start immediately.
+## Sources
 
-**Wide refactors are the exception to vertical slicing.** A **wide refactor** is one mechanical change (rename a column, retype a shared symbol) whose **blast radius** fans across the whole codebase, so a single edit breaks thousands of call sites at once and no vertical slice can land green. Don't force it into a tracer bullet; sequence it as **expand-contract**. First expand: add the new form beside the old so nothing breaks. Then migrate the call sites over in batches sized by blast radius (per package, per directory), each batch its own ticket blocked by the expand, keeping CI green batch to batch because the old form still exists. Finally contract: delete the old form once no caller remains, in a ticket blocked by every migrate batch. When even the batches can't stay green alone, keep the sequence but let them share an integration branch that all block a final integrate-and-verify ticket, green is promised only there.
+One line each: the reference and what it holds. Tracker issues with the amendments comments made; ADRs binding this area with the constraint in one line; documents; prior art in the code with the date checked, re-located by symbol name if the path moved; external links and whether they were reachable. File paths belong here only.
 
-### 4. Quiz the user
+## Problem
 
-Present the proposed breakdown as a numbered list. For each ticket, show:
+What the user cannot do today, from the user's side.
 
-- **Title**: short descriptive name
-- **Blocked by**: which other tickets (if any) must complete first
-- **What it delivers**: the end-to-end behaviour this ticket makes work
+## Solution
 
-Ask the user:
+What the feature does, from the user's side, and the one alternative turned down, with the reason.
 
-- Does the granularity feel right? (too coarse / too fine)
-- Are the blocking edges correct: does each ticket only depend on tickets that genuinely gate it?
-- Should any tickets be merged or split further?
+## Decisions
 
-Iterate until the user approves the breakdown. In a task directory the breakdown was proposed and answered in `analysis.md` as the pipeline's one question: take the split from there and write the tickets; a change to it is a change to `analysis.md` first.
+Modules built or changed and their interfaces, schema and API contracts, the specific interactions. One line per alternative rejected, with the reason, so the next session does not rediscover a dead end. A prototype snippet that encodes a decision more precisely than prose (a state machine, a reducer, a schema) is inlined, trimmed to the decision.
 
-### 5. Write the tickets to local files
+## Testing
 
-With a task directory, the tickets go to `issues/` in it, beside `spec.md`. Without one, pick a `<feature-slug>` for the overall plan (kebab-case, derived from the plan/spec title), reusing the directory if the spec already lives at `.issues/<feature-slug>/spec.md`.
+The seams the tests sit at, the prior art for them in the codebase, and what a test here verifies: external behaviour, never implementation detail.
 
-Write one file per approved ticket, `<NN>-<slug>.md`, numbered from `01` in **dependency order** (blockers first), so the numbering itself reflects implementation order and "Blocked by" can reference real filenames. One ticket per file.
+## Out of scope
 
-Set `Status: ready-for-agent`, so the tickets are agent-grabbable by construction; a status the user named replaces it.
+One line each.
+
+</spec-template>
 
 <ticket-template>
 
 # <NN>: <Ticket title>
 
 Status: ready-for-agent
-Blocked by: <NN>-<slug>.md, <NN>-<slug>.md, or "None, can start immediately"
+Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 ## Parent
 
-A reference to the parent spec file (`../spec.md` in a task directory, `.issues/<feature-slug>/spec.md` otherwise) if the source was an existing file: otherwise omit this section. Read it before starting, it carries the sources and decisions shared by the feature.
+`../spec.md` in a task directory, `.issues/<feature-slug>/spec.md` otherwise. Read it first: it carries the sources and decisions shared by the feature.
 
 ## Sources
 
-Only what this slice needs beyond the parent spec: the issue, ADR or review comment that constrains it, and the code it copies from. One line each, saying what it holds. Omit the section when the parent spec already covers everything.
+Only what this slice needs beyond the spec: the issue, ADR or review comment that constrains it, the code it copies from. Omit when the spec covers everything.
 
 ## What to build
 
-The end-to-end behaviour this ticket makes work, from the user's perspective: not a layer-by-layer implementation list.
+The end-to-end behaviour this ticket makes work, from the user's side, never a layer-by-layer list.
 
 ## Acceptance criteria
 
-- [ ] Criterion 1
-- [ ] Criterion 2
+- [ ] <criterion a command or a person can check>
 
 </ticket-template>
 
-Avoid specific file paths or code snippets in ticket bodies, they go stale fast. A path under Sources is the exception: it is an anchor, so date it and say to re-locate by symbol name if it moved. Second exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.
-
-The parent spec or plan stays as it is; the ticket files are the only files this skill writes.
-
-Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom. Work the frontier one ticket at a time with the `implement` skill, in the same session; the ticket files carry the state between tickets.
+File paths and code snippets in ticket bodies go stale; a path under Sources is an anchor, dated, with the symbol name to re-locate it. A prototype snippet that encodes a decision is the exception, trimmed to the decision.
