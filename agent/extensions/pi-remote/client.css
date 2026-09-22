@@ -1,0 +1,62 @@
+:root {
+	color-scheme: dark light;
+	font:
+		16px system-ui,
+		sans-serif;
+}
+body {
+	max-width: 52rem;
+	margin: auto;
+	padding: 1rem;
+	overflow-wrap: anywhere;
+}
+h1 {
+	font-size: 1.4rem;
+}
+header {
+	border-bottom: 1px solid #888;
+}
+article {
+	padding: 0.8rem 0;
+	border-bottom: 1px solid #8886;
+}
+pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font: inherit;
+	margin: 0.4rem 0;
+}
+form {
+	position: sticky;
+	bottom: 0;
+	background: Canvas;
+	padding: 0.8rem 0;
+	border-top: 1px solid #888;
+}
+textarea,
+select,
+button {
+	font: inherit;
+	box-sizing: border-box;
+	padding: 0.65rem;
+	min-height: 44px;
+}
+textarea {
+	width: 100%;
+	resize: vertical;
+}
+label {
+	display: block;
+	margin: 0.4rem 0;
+}
+.buttons {
+	display: flex;
+	gap: 0.8rem;
+	margin-top: 0.8rem;
+}
+button {
+	flex: 1;
+}
+#feedback {
+	min-height: 1.3rem;
+}
