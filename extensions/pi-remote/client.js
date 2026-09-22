@@ -28,76 +28,50 @@ function render(next) {
 		next.transcript.length > 0 ||
 		Boolean(next.assistant) ||
 		next.tools.length > 0;
-	const row = (label, text) => {
-		const article = document.createElement("article");
-		const role = label.split(" · ")[0];
-		article.dataset.role = role;
-		const heading = document.createElement("strong");
-		heading.textContent = label;
-		article.append(heading, prose(role, text));
-		return article;
-	};
-	$("transcript").replaceChildren(
-		...next.transcript.map((item) => row(item.role, item.text)),
-	);
+	$("transcript").replaceChildren(...next.transcript.map((item) => turn(item)));
 	$("activity").replaceChildren(
-		...(next.assistant
-			? [row("assistant · streaming", next.assistant.text)]
-			: []),
-		...next.tools.map((tool) => row(`${tool.name} · ${tool.state}`, tool.text)),
+		...(next.assistant ? [turn(next.assistant, "streaming")] : []),
+		...next.tools.map(tool),
 	);
 	controls();
 }
-function prose(role, text) {
-	if (role !== "user" && role !== "assistant") {
-		const output = document.createElement("pre");
-		output.className = "output";
-		output.textContent = text;
-		return output;
-	}
+function turn(message, note) {
+	const article = document.createElement("article");
+	article.dataset.role = message.role;
+	const heading = document.createElement("strong");
+	heading.textContent = note ? `${message.role} · ${note}` : message.role;
+	article.append(
+		heading,
+		...message.blocks.map((block) =>
+			block.kind === "text" ? markdown(block.text) : tool(block),
+		),
+	);
+	return article;
+}
+function tool(block) {
+	const card = document.createElement("div");
+	card.className = "tool";
+	card.dataset.state = block.state;
+	const name = document.createElement("strong");
+	name.textContent = block.name;
+	const summary = document.createElement("span");
+	summary.textContent = block.summary;
+	card.append(name, summary);
+	if (block.result) card.append(output(block.result));
+	if (block.diff) card.append(output(block.diff));
+	return card;
+}
+function output(text) {
+	const pre = document.createElement("pre");
+	pre.className = "output";
+	pre.textContent = text;
+	return pre;
+}
+function markdown(text) {
 	const body = document.createElement("div");
 	body.className = "markdown";
 	body.append(...tree(marked.lexer(text)).map(build));
 	return body;
-}
-function build(node) {
-	if ("text" in node) return document.createTextNode(node.text);
-	if (node.tag === "pre") return codeBlock(node);
-	const element = document.createElement(node.tag);
-	for (const [name, value] of Object.entries(node.attributes))
-		element.setAttribute(name, value);
-	element.append(...node.children.map(build));
-	return element;
-}
-function codeBlock(node) {
-	const [{ attributes, children }] = node.children;
-	const source = children[0]?.text ?? "";
-	const language = attributes["data-language"];
-	const figure = document.createElement("figure");
-	figure.className = "code";
-	const caption = document.createElement("figcaption");
-	const name = document.createElement("span");
-	name.textContent = language ?? "text";
-	const copy = document.createElement("button");
-	copy.type = "button";
-	copy.textContent = "Copy";
-	copy.addEventListener("click", async () => {
-		try {
-			await navigator.clipboard.writeText(source);
-			copy.textContent = "Copied";
-		} catch {
-			copy.textContent = "Copy failed";
-		}
-	});
-	caption.append(name, copy);
-	const pre = document.createElement("pre");
-	const code = document.createElement("code");
-	if (language && hljs.getLanguage(language))
-		code.innerHTML = hljs.highlight(source, { language }).value;
-	else code.textContent = source;
-	pre.append(code);
-	figure.append(caption, pre);
-	return figure;
 }
 async function request(path, options = {}) {
 	const response = await fetch(path, {

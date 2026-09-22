@@ -1,13 +1,25 @@
-export type Message = {
-	role: "user" | "assistant" | "toolResult";
-	text: string;
-};
-export type Tool = {
+import { SECRET_MATERIAL } from "../guard/policy.ts";
+
+export type TextBlock = { kind: "text"; text: string };
+export type ToolBlock = {
+	kind: "tool";
 	id: string;
 	name: string;
+	summary: string;
 	state: "running" | "done" | "error";
-	text: string;
+	result: string;
+	diff?: string;
 };
+export type Block = TextBlock | ToolBlock;
+export type Message = { role: "user" | "assistant"; blocks: Block[] };
+
+const ENTRY_LIMIT = 1024;
+const MESSAGE_LIMIT = 64;
+const BLOCK_LIMIT = 32;
+const TEXT_LIMIT = 4096;
+const SUMMARY_LIMIT = 200;
+const SNAPSHOT_LIMIT = 524_288;
+const SECRETS = new RegExp(SECRET_MATERIAL.source, "g");
 
 export function record(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -15,40 +27,175 @@ export function record(value: unknown): Record<string, unknown> {
 		: {};
 }
 
-export function text(value: unknown, limit = 4096): string {
-	return typeof value === "string" ? value.slice(0, limit) : "";
+export function text(value: unknown, limit = TEXT_LIMIT): string {
+	return typeof value === "string"
+		? value.replace(SECRETS, "[redacted]").slice(0, limit)
+		: "";
+}
+
+const omitted = (count: number) => `\n… ${count} characters omitted …\n`;
+
+export function clamp(value: string, limit = TEXT_LIMIT): string {
+	if (value.length <= limit) return value;
+	const keep = Math.max(0, limit - omitted(value.length).length);
+	const head = Math.ceil(keep * 0.6);
+	const tail = keep - head;
+	return (
+		value.slice(0, head) +
+		omitted(value.length - keep) +
+		(tail ? value.slice(value.length - tail) : "")
+	);
 }
 
 export function content(value: unknown): string {
 	if (typeof value === "string") return text(value);
 	if (!Array.isArray(value)) return "";
-	return value
-		.slice(0, 64)
-		.map((block) => {
-			const item = record(block);
-			return item.type === "text" ? text(item.text) : "";
+	return clamp(
+		value
+			.slice(0, 64)
+			.map((block) => {
+				const item = record(block);
+				return item.type === "text" ? text(item.text) : "";
+			})
+			.filter(Boolean)
+			.join("\n"),
+	);
+}
+
+const string = (value: unknown): string =>
+	typeof value === "string" ? value : "";
+const located = (args: Record<string, unknown>): string =>
+	[string(args.pattern), string(args.path)].filter(Boolean).join(" in ");
+
+const SUMMARIES: Record<string, (args: Record<string, unknown>) => string> = {
+	bash: (args) => string(args.command),
+	read: (args) => string(args.path),
+	write: (args) => string(args.path),
+	edit: (args) => string(args.path),
+	ls: (args) => string(args.path) || ".",
+	grep: located,
+	find: located,
+	web_search: (args) => string(args.query),
+	source_check: (args) => string(args.query) || string(args.url),
+	get_search_content: (args) => string(args.query) || string(args.url),
+	fetch_content: (args) =>
+		string(args.url) ||
+		(Array.isArray(args.urls) ? args.urls.map(string).join(", ") : ""),
+	subagent: (args) =>
+		[string(args.agent), string(args.task)].filter(Boolean).join(": "),
+};
+const PREFERRED = ["command", "path", "pattern", "query", "url", "task"];
+
+export function summarize(name: string, args: Record<string, unknown>): string {
+	const own = SUMMARIES[name]?.(args);
+	if (own) return text(own, SUMMARY_LIMIT);
+	const key = PREFERRED.find((field) => string(args[field]));
+	if (key) return text(string(args[key]), SUMMARY_LIMIT);
+	const keys = Object.keys(args).slice(0, 6);
+	return keys.length ? `${name}(${keys.join(", ")})` : name;
+}
+
+function edited(args: Record<string, unknown>): string {
+	const edits = Array.isArray(args.edits) ? args.edits : [];
+	return edits
+		.flatMap((value) => {
+			const edit = record(value);
+			return [
+				...string(edit.oldText)
+					.split("\n")
+					.map((line) => `-${line}`),
+				...string(edit.newText)
+					.split("\n")
+					.map((line) => `+${line}`),
+			];
 		})
-		.filter(Boolean)
-		.join("\n")
-		.slice(0, 4096);
+		.join("\n");
+}
+
+export function call(value: unknown): ToolBlock {
+	const item = record(value);
+	const name = text(item.name, 128);
+	const args = record(item.arguments);
+	const diff = name === "edit" ? clamp(text(edited(args))) : "";
+	return {
+		kind: "tool",
+		id: text(item.id, 128),
+		name,
+		summary: summarize(name, args),
+		state: "running",
+		result: "",
+		...(diff ? { diff } : {}),
+	};
+}
+
+export function settle(
+	block: ToolBlock,
+	isError: unknown,
+	result: unknown,
+	details: unknown,
+): ToolBlock {
+	const patch = text(record(details).patch);
+	return {
+		...block,
+		state: isError ? "error" : "done",
+		result: content(result),
+		...(patch ? { diff: clamp(patch) } : {}),
+	};
 }
 
 export function message(value: unknown): Message | undefined {
 	const item = record(value);
-	if (
-		item.role !== "user" &&
-		item.role !== "assistant" &&
-		item.role !== "toolResult"
-	)
-		return;
-	return { role: item.role, text: content(item.content) };
+	if (item.role !== "user" && item.role !== "assistant") return;
+	const blocks: Block[] =
+		typeof item.content === "string"
+			? [{ kind: "text", text: text(item.content) }]
+			: (Array.isArray(item.content) ? item.content : [])
+					.map((entry) => {
+						const part = record(entry);
+						if (part.type === "text")
+							return { kind: "text", text: text(part.text) } as Block;
+						if (part.type === "toolCall") return call(part);
+						return undefined;
+					})
+					.filter((block): block is Block => block !== undefined)
+					.slice(0, BLOCK_LIMIT);
+	return { role: item.role, blocks: blocks.filter(filled) };
 }
 
+const filled = (block: Block) => block.kind === "tool" || block.text !== "";
+
 export function transcript(entries: unknown[]): Message[] {
-	return entries.slice(-64).flatMap((entry) => {
+	const messages: Message[] = [];
+	const pending = new Map<string, ToolBlock>();
+	for (const entry of entries.slice(-ENTRY_LIMIT)) {
 		const item = record(entry);
-		const projected =
-			item.type === "message" ? message(item.message) : undefined;
-		return projected ? [projected] : [];
-	});
+		if (item.type !== "message") continue;
+		const value = record(item.message);
+		if (value.role === "toolResult") {
+			const block = pending.get(text(value.toolCallId, 128));
+			if (block)
+				Object.assign(
+					block,
+					settle(block, value.isError, value.content, value.details),
+				);
+			continue;
+		}
+		const projected = message(value);
+		if (!projected) continue;
+		for (const block of projected.blocks)
+			if (block.kind === "tool") pending.set(block.id, block);
+		messages.push(projected);
+	}
+	return fit(messages.slice(-MESSAGE_LIMIT));
+}
+
+function fit(messages: Message[]): Message[] {
+	const kept: Message[] = [];
+	let total = 0;
+	for (let index = messages.length - 1; index >= 0; index--) {
+		total += JSON.stringify(messages[index]).length + 1;
+		if (total > SNAPSHOT_LIMIT && kept.length) break;
+		kept.unshift(messages[index]);
+	}
+	return kept;
 }

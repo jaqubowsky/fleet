@@ -160,7 +160,9 @@ test("protocol bounds input and projects only public text", async (t) => {
 	await remote.start(0);
 	const client = await connect(remote);
 	const snapshot = await (await client.get("/bootstrap")).json();
-	assert.deepEqual(snapshot.transcript, [{ role: "user", text: "hello one" }]);
+	assert.deepEqual(snapshot.transcript, [
+		{ role: "user", blocks: [{ kind: "text", text: "hello one" }] },
+	]);
 	assert.equal(JSON.stringify(snapshot).includes("private"), false);
 	for (const action of ["prompt", "steer", "followUp", "abort"]) {
 		assert.equal(
@@ -214,18 +216,37 @@ test("protocol bounds input and projects only public text", async (t) => {
 		type: "tool_execution_update",
 		toolName: "read",
 		toolCallId: "t1",
-		args: { secret: true },
+		args: { path: "/tmp/notes.md", token: "ghp_abcdefghijklmnopqrst" },
 		partialResult: {
 			content: [{ type: "text", text: "result" }],
-			details: "secret",
+			details: { hidden: "secret" },
 		},
 	});
 	const live = await (await client.get("/bootstrap")).json();
-	assert.deepEqual(live.assistant, { role: "assistant", text: "answer" });
+	assert.deepEqual(live.assistant, {
+		role: "assistant",
+		blocks: [{ kind: "text", text: "answer" }],
+	});
 	assert.deepEqual(live.tools, [
-		{ id: "t1", name: "read", state: "running", text: "result" },
+		{
+			kind: "tool",
+			id: "t1",
+			name: "read",
+			summary: "/tmp/notes.md",
+			state: "running",
+			result: "result",
+		},
 	]);
-	assert.equal(JSON.stringify(live).includes("secret"), false);
+	assert.equal(
+		JSON.stringify(live).includes("secret"),
+		false,
+		"thinking, usage and tool details stay out",
+	);
+	assert.equal(
+		JSON.stringify(live).includes("ghp_"),
+		false,
+		"a secret in an argument is masked",
+	);
 });
 
 test("only the bearer holder can read a session", async (t) => {
@@ -289,7 +310,7 @@ test("snapshots and connected phones have finite bounds", async (t) => {
 	);
 	const snapshot = await (await client.get("/bootstrap")).json();
 	assert.equal(snapshot.transcript.length, 64);
-	assert.equal(snapshot.transcript[0].text.length, 4096);
+	assert.equal(snapshot.transcript[0].blocks[0].text.length, 4096);
 	const phones: Awaited<ReturnType<typeof stream>>[] = [];
 	for (let i = 0; i < 8; i++) phones.push(await stream(remote));
 	t.after(() => Promise.all(phones.map((phone) => phone.close())));
@@ -345,7 +366,7 @@ test(
 		});
 		const live = await phone.next();
 		assert.equal(live.status, "running");
-		assert.equal(live.assistant.text, "draft");
+		assert.equal(live.assistant.blocks[0].text, "draft");
 		await phone.close();
 		remote.publish(owner, {
 			type: "message_end",
@@ -358,7 +379,7 @@ test(
 		const reconnected = await stream(remote);
 		const recovered = await reconnected.next();
 		assert.equal(recovered.status, "idle");
-		assert.equal(recovered.transcript.at(-1).text, "finished");
+		assert.equal(recovered.transcript.at(-1).blocks[0].text, "finished");
 		assert.equal(recovered.assistant, undefined);
 		await reconnected.close();
 	},

@@ -536,3 +536,26 @@ textarea:focus-visible {
 	font-family: ui-monospace, "SF Mono", Menlo, monospace;
 	font-size: 0.9em;
 }
+.tool {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--background);
+}
+.tool > span {
+	color: var(--muted);
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-size: 0.85em;
+}
+.tool > .output {
+	flex-basis: 100%;
+	max-height: 240px;
+	overflow: auto;
+}
+.tool[data-state="error"] {
+	border-color: #c98484;
+}

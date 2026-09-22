@@ -105,6 +105,7 @@ test("renaming preserves live activity and pending phone commands", async (t) =>
 	await current.emit("tool_execution_start", {
 		toolCallId: "tool-1",
 		toolName: "read",
+		args: { path: "src/a.ts" },
 	});
 	await current.emit("ui_prompt_start");
 	const before = await snapshot();
@@ -115,9 +116,19 @@ test("renaming preserves live activity and pending phone commands", async (t) =>
 
 	assert.equal(after.session.name, "Renamed");
 	assert.equal(after.status, "waiting for terminal");
-	assert.deepEqual(after.assistant, { role: "assistant", text: "draft" });
+	assert.deepEqual(after.assistant, {
+		role: "assistant",
+		blocks: [{ kind: "text", text: "draft" }],
+	});
 	assert.deepEqual(after.tools, [
-		{ id: "tool-1", name: "read", state: "running", text: "" },
+		{
+			kind: "tool",
+			id: "tool-1",
+			name: "read",
+			summary: "src/a.ts",
+			state: "running",
+			result: "",
+		},
 	]);
 	assert.equal(after.generation, before.generation);
 });

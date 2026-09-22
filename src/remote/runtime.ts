@@ -6,13 +6,15 @@ import {
 	type ServerResponse,
 } from "node:http";
 import {
+	call,
 	content,
 	message,
 	record,
+	settle,
 	text,
 	transcript,
 	type Message,
-	type Tool,
+	type ToolBlock,
 } from "./projection.ts";
 
 export type Binding = {
@@ -38,7 +40,7 @@ export class RemoteRuntime {
 	private status = "reconnecting";
 	private messages: Message[] = [];
 	private assistant?: Message;
-	private tools: Tool[] = [];
+	private tools: ToolBlock[] = [];
 	private clients = new Set<ServerResponse>();
 	private heartbeat?: ReturnType<typeof setInterval>;
 	private update?: ReturnType<typeof setTimeout>;
@@ -98,20 +100,21 @@ export class RemoteRuntime {
 			case "tool_execution_start":
 			case "tool_execution_update":
 			case "tool_execution_end": {
-				const id = text(event.toolCallId, 128);
-				const tool: Tool = {
-					id,
-					name: text(event.toolName, 128),
-					state:
-						event.type === "tool_execution_end"
-							? event.isError
-								? "error"
-								: "done"
-							: "running",
-					text: content(record(event.partialResult ?? event.result).content),
-				};
+				const started = call({
+					id: event.toolCallId,
+					name: event.toolName,
+					arguments: event.args,
+				});
+				const result = record(event.result);
+				const tool =
+					event.type === "tool_execution_end"
+						? settle(started, event.isError, result.content, result.details)
+						: {
+								...started,
+								result: content(record(event.partialResult).content),
+							};
 				this.tools = [
-					...this.tools.filter((item) => item.id !== id),
+					...this.tools.filter((item) => item.id !== tool.id),
 					tool,
 				].slice(-16);
 				break;
@@ -124,7 +127,7 @@ export class RemoteRuntime {
 
 	snapshot() {
 		return {
-			version: 1,
+			version: 2,
 			generation: this.generation,
 			revision: this.revision,
 			session: this.binding
