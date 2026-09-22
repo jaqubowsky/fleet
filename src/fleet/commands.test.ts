@@ -176,7 +176,6 @@ test("artifacts shows each task's files flat and folds its folders into one line
 		"  task.md              800B  1h ago",
 		"  browser/           2 files  8.6M",
 		"  logs/              2 files  3.8M",
-
 		"runbook/           2 files  400B",
 		"plan.md                2K  5m ago",
 	]);
@@ -245,3 +244,5 @@ test("ls shows how long a container has worked and what it cost", () => {
 		[`read ${task}/logs/sessions/s1.jsonl`]: [req("2026-09-16T09:30:00Z"), req("2026-09-16T09:40:00Z")].join("\n"),
 	});
 
+	assert.equal(ls(io), "pi-a  running  gone     web-1  30m  $0.42");
+});
