@@ -18,6 +18,10 @@ For Tailscale 1.102.4 on macOS, the one-time command for the default port is:
 
 The extension only runs `serve status --json`. It never applies the command. It recognizes a root HTTPS proxy to this exact listener on a `.ts.net` host, with Funnel disabled. Inspect existing Serve configuration before applying the command, since it may replace an existing root handler. Your phone must be on the same tailnet. The QR and URL grant access to the transcript and the agent's tools; treat them as a password.
 
+The phone always sends messages as `followUp`. While Pi is working, they wait until the current run finishes; when Pi is idle, they start a new run. There is no delivery-mode selector. The HTTP protocol still supports prompt and steer for other clients.
+
+Abort delegates to Pi's current context. In the inspected Pi 0.85.1 terminal implementation, this interrupts the run and restores pending messages to the terminal editor, not the phone. It does not undo completed tool actions or stop the remote server. SDK hosts can bind a different abort handler.
+
 ## Lifetime
 
 The server, bearer token, socket address and phone streams belong to the terminal process. `/new`, `/resume`, `/fork`, and `/reload` detach only the old session callbacks and bind the fresh API/context on `session_start`. Late events and shutdown from an old instance cannot affect the new binding. During the gap, commands return 503; commands addressed to an older generation return 409. Process quit and explicit stop close the listener. Reloading preserves the running implementation too. Changes to runtime or projection code require restarting the Pi process; stopping and starting remote control does not replace the process-global instance.

@@ -1,35 +1,85 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="referrer" content="no-referrer" />
-		<title>Pi remote</title>
-		<link rel="stylesheet" href="/client.css" />
-		<script src="/client.js" defer></script>
-	</head>
-	<body>
-		<header>
-			<h1>Pi remote</h1>
-			<p id="session">Connecting</p>
-			<p id="status" role="status">Connecting</p>
-		</header>
-		<main id="transcript" aria-label="Conversation"></main>
-		<section id="activity" aria-label="Live activity"></section>
-		<form id="command">
-			<label for="text">Message</label>
-			<textarea id="text" maxlength="8192" rows="3" required></textarea>
-			<label for="action">Delivery</label>
-			<select id="action">
-				<option value="prompt">Prompt when idle</option>
-				<option value="steer">Steer current run</option>
-				<option value="followUp">Follow up after run</option>
-			</select>
-			<div class="buttons">
-				<button id="send" type="submit" disabled>Send</button
-				><button id="abort" type="button" disabled>Abort</button>
-			</div>
-			<p id="feedback" role="status"></p>
-		</form>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#101714" />
+    <title>Pi remote</title>
+    <link rel="stylesheet" href="/client.css" />
+    <script src="/client.js" defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">pi</span>
+          <div>
+            <h1>Pi remote</h1>
+            <p class="eyebrow">Your terminal, untethered</p>
+          </div>
+        </div>
+        <span class="connection"
+          ><span class="connection-dot" aria-hidden="true"></span
+          ><span id="connection">Connecting</span></span
+        >
+      </header>
+      <section class="session-card" aria-label="Current session">
+        <div id="session">
+          <p class="eyebrow">Current session</p>
+          <h2 id="session-name">Connecting to Pi</h2>
+          <p id="session-id" class="session-id">Waiting for your terminal</p>
+        </div>
+        <p id="status" class="status-badge" role="status">Connecting</p>
+      </section>
+      <main class="conversation">
+        <div class="section-heading">
+          <h2>Conversation</h2>
+          <span class="caption">Synced with your terminal</span>
+        </div>
+        <div id="empty" class="empty-state" hidden>
+          <span class="empty-mark" aria-hidden="true">&gt;_</span>
+          <h3>A little room to think.</h3>
+          <p>
+            Send a message below. Replies and tool activity will appear here as
+            Pi works.
+          </p>
+        </div>
+        <div id="transcript" aria-label="Conversation messages"></div>
+        <section id="activity" aria-label="Live activity"></section>
+      </main>
+      <footer class="composer-wrap">
+        <form id="command" class="composer">
+          <div class="composer-heading">
+            <label for="text">Message Pi</label
+            ><span class="caption">Messages join the queue</span>
+          </div>
+          <textarea
+            id="text"
+            maxlength="8192"
+            rows="3"
+            required
+            placeholder="What would you like to work on?"
+          ></textarea>
+          <div class="composer-toolbar">
+            <div class="buttons">
+              <button id="abort" class="abort-button" type="button" disabled>
+                <span class="stop-icon" aria-hidden="true"></span>Abort</button
+              ><button id="send" class="send-button" type="submit" disabled>
+                Send<span aria-hidden="true">&uarr;</span>
+              </button>
+            </div>
+          </div>
+          <p id="feedback" role="status"></p>
+        </form>
+        <p class="footer-note">
+          PI REMOTE <span aria-hidden="true">/</span> A window into your
+          terminal
+        </p>
+      </footer>
+    </div>
+  </body>
 </html>

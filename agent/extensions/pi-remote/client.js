@@ -8,17 +8,25 @@ let sending = false;
 let controller;
 
 function controls() {
+	document.body.dataset.connected = String(connected);
+	$("connection").textContent = connected ? "Live" : "Offline";
 	$("send").disabled = !connected || sending || !snapshot?.session;
 	$("abort").disabled = !connected || sending || !snapshot?.session;
 }
 function render(next) {
 	snapshot = next;
-	$("session").textContent = next.session
-		? `${next.session.name} · ${next.session.id}`
-		: "Session changing";
+	$("session-name").textContent = next.session?.name ?? "Session changing";
+	$("session-id").textContent =
+		next.session?.id ?? "Reconnecting to your terminal";
 	$("status").textContent = next.status;
+	$("status").dataset.state = next.status;
+	$("empty").hidden =
+		next.transcript.length > 0 ||
+		Boolean(next.assistant) ||
+		next.tools.length > 0;
 	const row = (label, text) => {
 		const article = document.createElement("article");
+		article.dataset.role = label.split(" · ")[0];
 		const heading = document.createElement("strong");
 		heading.textContent = label;
 		const body = document.createElement("pre");
@@ -121,7 +129,7 @@ async function send(action) {
 }
 $("command").addEventListener("submit", (event) => {
 	event.preventDefault();
-	void send($("action").value);
+	void send("followUp");
 });
 $("abort").addEventListener("click", () => {
 	void send("abort");
