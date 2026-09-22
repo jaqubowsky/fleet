@@ -181,6 +181,10 @@ test("extension controls a process runtime across fresh factories", {
 		page.headers.get("content-security-policy")!,
 		/default-src 'none'/,
 	);
+	assert.match(
+		page.headers.get("content-security-policy")!,
+		/manifest-src 'self'/,
+	);
 	assert.match(await page.text(), /Pi remote/);
 	for (const path of [
 		"/markdown.js",
@@ -188,6 +192,8 @@ test("extension controls a process runtime across fresh factories", {
 		"/vendor/highlight.js",
 		"/vendor/highlight-dark.css",
 		"/vendor/highlight-light.css",
+		"/manifest.webmanifest",
+		"/icon.svg",
 	]) {
 		const library: Response = await fetch(identity.origin + path);
 		assert.equal(library.status, 200, `${path} is public`);

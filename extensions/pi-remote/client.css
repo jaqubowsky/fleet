@@ -724,3 +724,12 @@ textarea:focus-visible {
 		color: #c05a5a;
 	}
 }
+.notify {
+	min-height: 34px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: none;
+	color: var(--muted);
+	font-size: 12px;
+}

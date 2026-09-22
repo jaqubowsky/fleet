@@ -28,6 +28,8 @@
       href="/vendor/highlight-dark.css"
       media="(prefers-color-scheme: dark)"
     />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="stylesheet" href="/client.css" />
     <script type="module" src="/client.js"></script>
   </head>
@@ -41,6 +43,9 @@
             <p class="eyebrow">Your terminal, untethered</p>
           </div>
         </div>
+        <button id="notify" class="notify" type="button" hidden>
+          Notify me
+        </button>
         <span class="connection"
           ><span class="connection-dot" aria-hidden="true"></span
           ><span id="connection">Connecting</span></span

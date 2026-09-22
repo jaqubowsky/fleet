@@ -152,6 +152,11 @@ export default function remoteExtension(pi: RemoteAPI) {
 						"/client.js": asset("client.js", JS),
 						"/client.css": asset("client.css", CSS),
 						"/markdown.js": asset("markdown.js", JS),
+						"/manifest.webmanifest": asset(
+							"manifest.webmanifest",
+							"application/manifest+json; charset=utf-8",
+						),
+						"/icon.svg": asset("icon.svg", "image/svg+xml; charset=utf-8"),
 						"/vendor/marked.js": vendor("marked", JS),
 						"/vendor/highlight.js": vendor(
 							"@highlightjs/cdn-assets/es/highlight.min.js",

@@ -11,6 +11,7 @@ let connected = false;
 let sending = false;
 let controller;
 let delivery = "followUp";
+let previousStatus;
 
 function controls() {
 	const control = snapshot?.control !== false;
@@ -47,8 +48,29 @@ function facts(header) {
 			return item;
 		});
 }
+const SETTLED = ["idle", "waiting for terminal"];
+
+function announce(status) {
+	navigator.vibrate?.([120, 60, 120]);
+	if (window.Notification?.permission !== "granted") return;
+	new Notification("Pi remote", {
+		body: status === "idle" ? "The turn is done." : "Pi is waiting on the terminal.",
+		tag: "pi-remote-status",
+	});
+}
+function notifications() {
+	const ask = $("notify");
+	ask.hidden = window.Notification?.permission !== "default";
+	ask.addEventListener("click", async () => {
+		await Notification.requestPermission();
+		ask.hidden = Notification.permission !== "default";
+	});
+}
 function render(next) {
 	const follow = atBottom();
+	if (previousStatus === "running" && SETTLED.includes(next.status))
+		announce(next.status);
+	previousStatus = next.status;
 	snapshot = next;
 	$("session-name").textContent = next.session?.name ?? "Session changing";
 	$("session-id").textContent =
@@ -203,6 +225,7 @@ async function connect() {
 			}
 		} catch (error) {
 			connected = false;
+			previousStatus = undefined;
 			controls();
 			$("status").textContent = error.message;
 			if (reader) await reader.cancel().catch(() => {});
@@ -257,4 +280,5 @@ $("abort").addEventListener("click", () => {
 document.addEventListener("visibilitychange", () => {
 	if (!document.hidden) controller?.abort();
 });
+notifications();
 void connect();

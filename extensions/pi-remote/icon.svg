@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img">
+  <title>Pi remote</title>
+  <rect width="192" height="192" rx="42" fill="#101714" />
+  <text
+    x="96"
+    y="126"
+    text-anchor="middle"
+    font-family="ui-monospace, Menlo, monospace"
+    font-size="96"
+    fill="#b7e2b2"
+  >pi</text>
+</svg>
