@@ -3,7 +3,7 @@ import { render } from "./provider.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, taskDir } from "./up.ts";
-import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
+import { agentFor, brief, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 type Agents = { result: { agents: Agent[] } };
@@ -44,11 +44,20 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function steer(sandbox: string, text: string, io: Io): void {
+type Settled = { result?: { agent?: { agent_status?: string }; agent_status?: string } };
+
+export function steer(sandbox: string, text: string, opts: { wait?: boolean }, io: Io): void {
 	const agent = agentName(sandbox);
 	io.append(`${io.home}/.pi/agent/fleet-steer.log`, `${io.now().toISOString()} ${agent} ${JSON.stringify(text)}`);
-	io.herdr(["agent", "prompt", agent, text]);
-	io.log(`${agent}: steered`);
+	if (!opts.wait) {
+		io.herdr(["agent", "prompt", agent, text]);
+		io.log(`${agent}: steered`);
+		return;
+	}
+	const settled = io.herdr<Settled>(["agent", "prompt", agent, text, "--wait"]);
+	const status = settled.result?.agent?.agent_status ?? settled.result?.agent_status ?? "settled";
+	const repo = sandboxes(io).find((s) => s.name === sandbox)?.workspaces[0];
+	io.log(`${agent}: ${status}\n${brief(repo ? io.read(`${taskDir(repo, sandbox, io)}/status.md`) : undefined)}`);
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;

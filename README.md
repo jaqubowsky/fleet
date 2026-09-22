@@ -37,7 +37,7 @@ The cost is that a repository behaves here as it does in its pipeline rather tha
 fleet up <label> [--repo <path>] [--branch <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]
 fleet ls
 fleet peek <sandbox> [--lines 40]
-fleet steer <sandbox> <text...>
+fleet steer <sandbox> <text...> [--wait]
 fleet exec <sandbox> -- <command...>
 fleet artifacts [--repo <path>]
 fleet copy <src> <dst>
