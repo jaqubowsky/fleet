@@ -149,7 +149,7 @@ test("build renders the current rules before it bakes them into the image", () =
 		"list /root/rules": ["core.md"],
 		"read /root/rules/core.md": "# Core\n\n- be exact\n",
 		"read /root/sbx/container/sandbox.md": "# Container\n\n- a fresh rule\n",
-		"read /root/profiles/models.json": JSON.stringify({ activeProvider: "p", providers: { p: { coordinator: "m" } } }),
+		"read /root/profiles/models.json": JSON.stringify({ seats: { host: { model: "p/m", thinking: "max" } } }),
 		"read /root/profiles/host.json": "{}",
 		"read /root/profiles/sbx.json": "{}",
 	});

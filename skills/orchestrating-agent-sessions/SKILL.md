@@ -19,7 +19,9 @@ One container per task: a private clone in an sbx sandbox, pi waiting in a herdr
 | bring the branch home | `fleet land <sandbox> [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks |
 | close it | `fleet down <sandbox>` | where the transcripts and the artifacts stayed |
 | rebuild the image | `fleet build` | the docker build output, and what the image now carries |
-| switch models | `fleet provider [<name>]` | files rewritten; host sees it after `/reload` |
+| switch models | `fleet render` (after editing `profiles/models.json`) | files rewritten; host sees it after `/reload` |
+
+After `fleet land --sign --push` the branch is on the remote and the container can open its pull request: it holds a token that writes pull requests and nothing else, so `fleet say <sandbox> "resync and open the PR"` is the step, and the resync comes first because signing rewrote its commits.
 
 The repository inside a container is a private clone, so writes there stay there until `fleet land`. Three host directories are mounted alongside it at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo) for what workers keep between sessions and leave for a person; `~/.pi/cache/<repo>` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so screenshots and reports in the artifacts directory survive `fleet down`.
 

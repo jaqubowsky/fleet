@@ -8,11 +8,9 @@ trap 'rm -rf "$STAGE"' EXIT
 
 mkdir -p "$STAGE/agent" "$STAGE/skills"
 for skill in analyze-task implement tdd two-axis-review to-testing diagnosing-bugs resolving-merge-conflicts babysit-pr unslop tone writing-for-agents how brain; do
-  cp -RL "$ROOT/skills/$skill" "$STAGE/skills/"
+	cp -RL "$ROOT/skills/$skill" "$STAGE/skills/"
 done
 mkdir -p "$STAGE/agent/extensions" && cp -L "$ROOT/agent/extensions/statusline.ts" "$STAGE/agent/extensions/"
-"$ROOT/agent/npm/node_modules/esbuild/bin/esbuild" "$ROOT/agent/extensions/guard.ts" --bundle --platform=node --format=esm --log-level=warning --outfile="$STAGE/agent/extensions/guard.ts"
-grep -q "Containers do not push" "$STAGE/agent/extensions/guard.ts" || { echo "build.sh: the bundled guard carries no policy" >&2; exit 1; }
 cp -L "$ROOT/agent/models.json" "$STAGE/agent/"
 cp -L "$ROOT/sbx/AGENTS.md" "$STAGE/agent/AGENTS.md"
 cp -RL "$ROOT/rules/refs" "$STAGE/agent/refs"
@@ -25,7 +23,7 @@ git config --file "$STAGE/.gitconfig-work" --unset user.signingkey || true
 git config --file "$STAGE/.gitconfig-alice" --unset user.signingkey || true
 
 sed -i '' '/^\[url /,$d' "$STAGE/.gitconfig-work" "$STAGE/.gitconfig-alice"
-cat >> "$STAGE/.gitconfig-work" <<'EOF'
+cat >>"$STAGE/.gitconfig-work" <<'EOF'
 [url "https://github.com/bob/"]
 	insteadOf = git@github.com:bob/
 	insteadOf = git@github.com-work:bob/
@@ -33,7 +31,7 @@ cat >> "$STAGE/.gitconfig-work" <<'EOF'
 	insteadOf = git@github.com:globex/
 	insteadOf = git@github.com-work:globex/
 EOF
-cat >> "$STAGE/.gitconfig-alice" <<'EOF'
+cat >>"$STAGE/.gitconfig-alice" <<'EOF'
 [url "https://github.com/alice/"]
 	insteadOf = git@github.com:alice/
 	insteadOf = git@github.com-personal:alice/
@@ -44,8 +42,8 @@ EOF
 
 TAR="${TMPDIR:-/tmp}/my-pi.tar"
 docker buildx build --provenance=false --sbom=false \
-  --build-context pi-home="$STAGE" \
-  --output "type=docker,dest=$TAR" -t my-pi:v1 .
+	--build-context pi-home="$STAGE" \
+	--output "type=docker,dest=$TAR" -t my-pi:v1 .
 sbx template rm my-pi:v1 2>/dev/null || true
 sbx template load "$TAR"
 rm -f "$TAR"

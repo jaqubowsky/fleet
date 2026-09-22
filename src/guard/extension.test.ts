@@ -27,19 +27,28 @@ test("the extension blocks what the policy denies and stays out of the way other
 	assert.match(unknown?.reason ?? "", /Unknown tool policy: telepathy/);
 });
 
-test("the extension reads its role from the sandbox, so a worker cannot push", () => {
+test("goal tracking reaches nothing outside its own state, so the extension lets it through", () => {
 	const guard = handler();
-	const before = process.env.PI_FLEET_ROLE;
 
-	try {
-		process.env.PI_FLEET_ROLE = "worker";
-		const denied = guard({ toolName: "bash", input: { command: "git push origin main" } });
-		assert.match(denied?.reason ?? "", /Containers do not push/);
+	const tools = [
+		"create_goal",
+		"get_goal",
+		"update_goal",
+		"set_goal_tasks",
+		"update_goal_task",
+		"goal_question",
+		"goal_questionnaire",
+		"propose_goal_draft",
+	];
 
-		delete process.env.PI_FLEET_ROLE;
-		assert.equal(guard({ toolName: "bash", input: { command: "git push origin main" } }), undefined);
-	} finally {
-		if (before === undefined) delete process.env.PI_FLEET_ROLE;
-		else process.env.PI_FLEET_ROLE = before;
-	}
+	for (const tool of tools) assert.equal(guard({ toolName: tool, input: {} }), undefined, tool);
+});
+
+test("a denied command comes back blocked with the reason the policy gave", () => {
+	const guard = handler();
+
+	const denied = guard({ toolName: "bash", input: { command: "gh pr create --title x" } });
+
+	assert.equal(denied?.block, true);
+	assert.match(denied?.reason ?? "", /push by another name/);
 });

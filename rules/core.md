@@ -12,13 +12,14 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 6. Chat in the user's language. Everything committed in English
 7. Work that changes files and runs longer than one step -> restate in three lines: goal, boundaries, done-check. Then start. No approval wait. Read-only work starts without ceremony
 8. Text going to a person (Slack, PR comment, Linear comment, standup) -> skill `tone`, then skill `unslop`
+9. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user
 
 ## Coding
 
 1. Search wide, keep the diff narrow. AI overcodes by default
 2. Smallest code standing after the change: remove the cause and everything grep shows has no consumer left. New module, helper or flag only after the inline fix fails a requirement you can name. Findings outside the task: name them, leave them
 3. Defensive code (guard, retry, fallback) only for a failure this run showed or the user named. Validate data once, where it crosses a boundary
-4. The repo carries only what the task needs. Reports, screenshots and transcripts go to `$FLEET_ARTIFACTS` in a container, `~/.sandboxes/<repo>/` on the host, never the working tree
+4. The repo carries only what the task needs. Reports, screenshots and transcripts go to the artifacts directory, never the working tree
 5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A lint gate demanding one loses: report what the gate printed, leave it red. Comments in untouched code stay
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
@@ -58,8 +59,8 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 
 1. Blocked -> name blocker, cheapest question that unblocks, what you do if no answer. Never guess, never idle quiet
 2. While a background job or sub-agent runs, do the next piece that does not depend on it. Nothing independent left -> name what you wait on and end the turn; a poll loop is not work
-3. Irreversible or outward-facing (push, deploy, migration, delete, message to person, closing a workspace or container) -> stop, ask. Every time
-4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: push, deploy, migration on real env, delete branch/container/remote, message person, post Linear, change external contract, pick business rule sans evidence
+3. Irreversible or outward-facing (push, deploy, migration, delete, message to person) -> stop, ask. Every time
+4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: push, deploy, migration on real env, delete a branch or a remote, message person, post Linear, change external contract, pick business rule sans evidence
 
 ## Security
 

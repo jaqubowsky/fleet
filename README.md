@@ -6,15 +6,15 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 
 | Path | What |
 | --- | --- |
-| `rules/` | global rules; `fleet provider` folds them into `agent/AGENTS.md` and `sbx/AGENTS.md` |
+| `rules/` | global rules; `fleet render` folds them into `agent/AGENTS.md` and `sbx/AGENTS.md` |
 | `agent/` | pi home: settings (generated), extensions, runtime state (ignored) |
 | `src/guard/` | the tool-call policy and the pi-to-policy translation, driven by the case corpus in `host/tests/` |
-| `agent/extensions/guard.ts` | the pi hook: trusted tools out, everything else through `src/guard` |
+| `agent/extensions/guard.ts` | the pi hook on this Mac: trusted tools out, everything else through `src/guard`. Containers run without it |
 | `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: another agent settling as a `[fleet]` line |
 | `agent/extensions/statusline.ts` | status line |
-| `profiles/` | `models.json` (providers x roles, each role a model and its thinking level), `host.json` and `sbx.json` templates |
+| `profiles/` | `models.json` (one row per seat — `host`, `sbx`, and each subagent — naming a `<provider>/<model>` and a thinking level), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
-| `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet provider` |
+| `sbx/` | worker image: `Dockerfile`, `build.sh`, and `container/sandbox.md`, which reaches the image through `fleet render` |
 | `host/kits/` | sbx kits: pi (proxy credentials, LSP limits), no-ssh-agent |
 | `host/inventory.md` | facts outside this repo: tokens, MCP servers, provider auth |
 | `skills/` | skills for host and container; `sbx/build.sh` picks the container subset |
@@ -44,7 +44,7 @@ fleet copy <src> <dst>
 fleet land <sandbox> [--repo <path>] [--branch <name>] [--sign] [--push]
 fleet down <sandbox> [--force]
 fleet build
-fleet provider [<name>]
+fleet render
 ```
 
 ## Checks
@@ -58,4 +58,4 @@ npm run check     # tsc --noEmit
 
 Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only. They commit unsigned on the task branch. `fleet land` fetches the branch through the `sandbox-<name>` git remote that sbx registers in the host repo, and refuses one that no longer descends from the branch already here. `--sign` rewrites only the commits origin does not have yet, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` then pushes it and refuses anything that is not a fast-forward, on the user's word alone. Merge, deploy and publication stay with the person.
 
-pi-lens keeps at most 2 LSP clients and evicts an idle tsserver after 30 s, which is what keeps a container from dying under a monorepo typecheck; installing a language server it needs is the container's own call. The container sets no `--max-old-space-size`, because a repository that needs a heap budget declares it in the script that needs it, and a container-wide `NODE_OPTIONS` silently overrides every such script that defaults its own.
+pi-lens keeps at most 2 LSP clients and evicts an idle tsserver after 30 s, which is what keeps a container from dying under a monorepo typecheck; installing a language server it needs is the container's own call, while managed tool installs (formatters, linters, scanners) stay off, because that fan-out is what pushed containers into OOM. The container sets no `--max-old-space-size`, because a repository that needs a heap budget declares it in the script that needs it, and a container-wide `NODE_OPTIONS` silently overrides every such script that defaults its own.

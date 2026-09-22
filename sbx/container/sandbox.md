@@ -14,13 +14,14 @@ You are the worker. The repository here is a private clone at the same absolute 
 
 ## Evidence
 
-1. Before your first measurement: `ls "$FLEET_ARTIFACTS"` and read what is there. Every container on this repository shares it, the person reads it too, and `runbook/` at its root holds how this app starts and how its screens drive
+1. Your artifacts directory is `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. Before your first measurement: `ls "$FLEET_ARTIFACTS"` and read what is there. Every container on this repository shares it, the person reads it too, and `runbook/` at its root holds how this app starts and how its screens drive
 2. A red gate is yours only when the same command is green on the base commit: `base-worktree <base-commit>` builds `/tmp/base` with deps, env files and generated code linked in, and prints its path; run the command there. Those links make one file serve both trees, so a build output under suspicion is shared: rebuild it in `/tmp/base` before the comparison decides anything. That worktree is also how you read the code as it was
 3. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 
 ## Finish
 
 1. Commit unsigned on the task branch; signing, push and merge belong to the host. Signing rewrites those commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
-2. Linear is read-write where the container has it and absent everywhere else. Write only when told, say what you posted
-3. Your report stands on `$FLEET_ARTIFACTS/$SANDBOX_NAME/`: the gate results, each one the command you ran and the name of every failure it reported, plus every screenshot and write-up it cites. Nothing there is committed, so keep code and secrets out
-4. Finish with a clean checkout: committed, or a named list of what is uncommitted and why
+2. Your GitHub token writes pull requests and reads everything else, so `gh pr create` is the one remote write you have and a push fails here whatever you try. Open the pull request once the host has pushed the branch and the user says so; before that the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
+3. Linear is read-write where the container has it and absent everywhere else. Write only when told, say what you posted
+4. Your report stands on `$FLEET_ARTIFACTS/$SANDBOX_NAME/`: the gate results, each one the command you ran and the name of every failure it reported, plus every screenshot and write-up it cites. Nothing there is committed, so keep code and secrets out
+5. Finish with a clean checkout: committed, or a named list of what is uncommitted and why

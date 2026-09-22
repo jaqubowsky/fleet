@@ -44,11 +44,6 @@ const PUSH = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*\s+push\b`;
 const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|\.pi|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/home/bob(/dev)?|/Users/[^/\s]+)(\s|$)`;
 
-const DELEGATED_RULES: [RegExp, string][] = [
-	[command(PUSH), "Containers do not push or hold a write credential. Bring the branch home with fleet land and let the human push from this Mac."],
-	[command(String.raw`(git\s+commit[^|;&]*(-S\b|--gpg-sign)|git\s+config[^|;&]*gpgsign\s+true)`), "The signing key never enters a container. Signing happens here, on the host."],
-];
-
 const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`op\s+(read|item|document|vault|whoami|signin|account)\b`), "1Password is the human's. Secrets reach a sandbox as op:// references through sbx, never through the agent's shell."],
 	[command(String.raw`security\s+(find-(generic|internet)-password|export|dump-keychain)`), "The keychain is read by the human only. Ask for the value instead of pulling it out of the store."],
@@ -105,7 +100,7 @@ function flatten(subject: string): string {
 	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/['"]/g, " ");
 }
 
-export function decide(tool: string, input: Record<string, unknown>, worker = false): Decision {
+export function decide(tool: string, input: Record<string, unknown>): Decision {
 	const call = read(tool, input);
 	if ("decision" in call) return call;
 	if (!call.subject) return deny("Guard policy error: tool input has no policy subject.");
@@ -122,12 +117,6 @@ export function decide(tool: string, input: Record<string, unknown>, worker = fa
 
 	const flat = flatten(subject);
 	const hit = (rule: RegExp): boolean => rule.test(subject) || rule.test(flat);
-
-	if (worker || DELEGATED.test(subject)) {
-		for (const [rule, reason] of DELEGATED_RULES) {
-			if (hit(rule)) return deny(reason);
-		}
-	}
 
 	for (const [rule, reason] of BASH_RULES) {
 		if (hit(rule)) return deny(reason);

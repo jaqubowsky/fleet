@@ -4,18 +4,35 @@ import { INSTALL_LOG, installScript } from "./deps.ts";
 import { githubRef, linearServer } from "./github.ts";
 import type { Io } from "./io.ts";
 import { agentName, sandboxName } from "./name.ts";
-import { agentFor, fleetSandboxes, type Agent, type Sandbox } from "./status.ts";
+import {
+	agentFor,
+	fleetSandboxes,
+	type Agent,
+	type Sandbox,
+} from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
 export function artifactsDir(repo: string, io: Io): string {
 	return `${io.home}/.sandboxes/${basename(repo)}`;
 }
 
-export type UpInput = { repo: string; label: string; branch?: string; memory?: string; cpus?: string; root: string };
+export type UpInput = {
+	repo: string;
+	label: string;
+	branch?: string;
+	memory?: string;
+	cpus?: string;
+	root: string;
+};
 type Workspace = { workspace_id: string; label: string };
 type Tab = { tab_id: string; label: string };
 type Pane = { pane_id: string; tab_id: string; agent?: string | null };
-type Created = { result: { workspace?: { workspace_id: string }; root_pane: { pane_id: string } } };
+type Created = {
+	result: {
+		workspace?: { workspace_id: string };
+		root_pane: { pane_id: string };
+	};
+};
 
 const DETECT_TIMEOUT_MS = 90_000;
 const DEFAULT_CPUS = "4";
@@ -29,43 +46,106 @@ function parseSandboxList(text: string): { sandboxes?: Sandbox[] } {
 	}
 }
 
-export async function up(input: UpInput, io: Io): Promise<{ sandbox: string; agent: string; pane: string }> {
+export async function up(
+	input: UpInput,
+	io: Io,
+): Promise<{ sandbox: string; agent: string; pane: string }> {
 	const memory = input.memory ?? "8g";
 	const cpus = input.cpus ?? DEFAULT_CPUS;
-	input = { ...input, repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo };
+	input = {
+		...input,
+		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
+	};
 	const sandbox = sandboxName(input.repo, input.label);
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
-	const existing = fleetSandboxes(parseSandboxList(io.sbx(["ls", "--json"], { quiet: true }))).find((s: Sandbox) => s.name === sandbox);
+	const existing = fleetSandboxes(
+		parseSandboxList(io.sbx(["ls", "--json"], { quiet: true })),
+	).find((s: Sandbox) => s.name === sandbox);
 	if (!existing) {
 		create(input, sandbox, origin, memory, cpus, io);
 		try {
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
-			if (input.branch) io.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")`, "--", input.branch], { quiet: true });
+			if (input.branch)
+				io.sbx(
+					[
+						"exec",
+						sandbox,
+						"sh",
+						"-c",
+						`cd "$WORKSPACE_DIR" && (git switch "$1" 2>/dev/null || git switch -c "$1")`,
+						"--",
+						input.branch,
+					],
+					{ quiet: true },
+				);
 		} catch (error) {
 			io.sbx(["rm", "-f", sandbox], { quiet: true });
-			throw new Error(`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`);
+			throw new Error(
+				`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`,
+			);
 		}
-		const locks = lockfiles(io.git(["ls-files", "--", ":(glob)**/yarn.lock", ":(glob)**/pnpm-lock.yaml", ":(glob)**/package-lock.json"], input.repo));
+		const locks = lockfiles(
+			io.git(
+				[
+					"ls-files",
+					"--",
+					":(glob)**/yarn.lock",
+					":(glob)**/pnpm-lock.yaml",
+					":(glob)**/package-lock.json",
+				],
+				input.repo,
+			),
+		);
 		if (locks) {
-			io.sbx(["exec", sandbox, "sh", "-c", `setsid nohup bash -c "$1" >${INSTALL_LOG} 2>&1 </dev/null &`, "--", installScript], { quiet: true });
-			io.log(`${sandbox}: created; ${locks} lockfile(s) install in the background, log ${INSTALL_LOG} in the container`);
+			io.sbx(
+				[
+					"exec",
+					sandbox,
+					"sh",
+					"-c",
+					`setsid nohup bash -c "$1" >${INSTALL_LOG} 2>&1 </dev/null &`,
+					"--",
+					installScript,
+				],
+				{ quiet: true },
+			);
+			io.log(
+				`${sandbox}: created; ${locks} lockfile(s) install in the background, log ${INSTALL_LOG} in the container`,
+			);
 		} else {
-			io.log(`${sandbox}: created; no lockfile in the repository, so nothing installs`);
+			io.log(
+				`${sandbox}: created; no lockfile in the repository, so nothing installs`,
+			);
 		}
 	}
 
 	const { pane, running } = openPane(io, basename(input.repo), agent);
-	if (!running) io.herdr(["pane", "run", pane, `HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve`]);
+	if (!running)
+		io.herdr([
+			"pane",
+			"run",
+			pane,
+			`HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve`,
+		]);
 	await waitForAgent(io, pane);
 	io.herdr(["agent", "rename", pane, agent]);
-	io.log(`${sandbox}: pi waiting in tab ${agent} (pane ${pane}); no prompt sent`);
+	io.log(
+		`${sandbox}: pi waiting in tab ${agent} (pane ${pane}); no prompt sent`,
+	);
 	return { sandbox, agent, pane };
 }
 
-function create(input: UpInput, sandbox: string, origin: string, memory: string, cpus: string, io: Io): void {
+function create(
+	input: UpInput,
+	sandbox: string,
+	origin: string,
+	memory: string,
+	cpus: string,
+	io: Io,
+): void {
 	const codex = codexArgs(io.read(`${io.home}/.pi/agent/auth.json`));
 	const artifacts = artifactsDir(input.repo, io);
 	const cache = `${io.home}/.pi/cache/${basename(input.repo)}`;
@@ -73,22 +153,57 @@ function create(input: UpInput, sandbox: string, origin: string, memory: string,
 	io.mkdir(artifacts);
 	io.mkdir(cache);
 	try {
-		io.sbx(["secret", "set", "github", "--sandbox", sandbox, "--ref", githubRef(origin)], { quiet: true });
+		io.sbx(
+			[
+				"secret",
+				"set",
+				"github",
+				"--sandbox",
+				sandbox,
+				"--ref",
+				githubRef(origin),
+			],
+			{ quiet: true },
+		);
 	} catch (error) {
-		io.log(`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`sbx secret set github --sandbox ${sandbox} --ref '${githubRef(origin)}'\``);
+		io.log(
+			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`sbx secret set github --sandbox ${sandbox} --ref '${githubRef(origin)}'\``,
+		);
 	}
 	const linear = linearServer(origin);
 	io.sbx([
-		"run", "-d", "--skills=off", "--name", sandbox, "--clone", "--memory", memory, "--cpus", cpus,
-		"-e", "SSH_AUTH_SOCK_GATEWAY=",
-		"-e", "CI=true",
-		"-e", `FLEET_ARTIFACTS=${artifacts}`,
-		"-e", `FLEET_CACHE=${cache}`,
-		"--kit", `${input.root}/host/kits/no-ssh-agent`,
-		"--kit-arg", `pi.codex_account=${codex.account}`,
-		"--kit-arg", `pi.codex_sentinel=${codex.sentinel}`,
+		"run",
+		"-d",
+		"--skills=off",
+		"--name",
+		sandbox,
+		"--clone",
+		"--memory",
+		memory,
+		"--cpus",
+		cpus,
+		"-e",
+		"SSH_AUTH_SOCK_GATEWAY=",
+		"-e",
+		"CI=true",
+		"-e",
+		`FLEET_ARTIFACTS=${artifacts}`,
+		"-e",
+		`FLEET_CACHE=${cache}`,
+		"--kit",
+		`${input.root}/host/kits/no-ssh-agent`,
+		"--kit-arg",
+		`pi.codex_account=${codex.account}`,
+		"--kit-arg",
+		`pi.codex_sentinel=${codex.sentinel}`,
 		...(linear ? ["--static-mcp", linear] : []),
-		`${input.root}/host/kits/pi`, input.repo, artifacts, cache, `${knowledgeBase}:ro`, "--", "--approve",
+		`${input.root}/host/kits/pi`,
+		input.repo,
+		artifacts,
+		cache,
+		`${knowledgeBase}:ro`,
+		"--",
+		"--approve",
 	]);
 }
 
@@ -100,20 +215,53 @@ export function envFiles(listing: string): string[] {
 	return listing
 		.split("\n")
 		.map((line) => line.trim())
-		.filter((line) => line && !line.endsWith("/") && basename(line).startsWith(".env"));
+		.filter(
+			(line) => line && !line.endsWith("/") && basename(line).startsWith(".env"),
+		);
 }
 
 function seedEnv(io: Io, repo: string, sandbox: string): void {
-	const files = envFiles(io.git(["ls-files", "--others", "--ignored", "--exclude-standard", "--", ":(glob)**/.env*", ":(exclude,glob)**/node_modules/**"], repo));
+	const files = envFiles(
+		io.git(
+			[
+				"ls-files",
+				"--others",
+				"--ignored",
+				"--exclude-standard",
+				"--",
+				":(glob)**/.env*",
+				":(exclude,glob)**/node_modules/**",
+			],
+			repo,
+		),
+	);
 	if (!files.length) return;
 
-	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	const workspace = io.sbx(
+		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
+		{ quiet: true },
+	);
 	for (const file of files) {
-		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$(dirname "$1")"', "--", `${workspace}/${file}`], { quiet: true });
-		io.sbx(["cp", `${repo}/${file}`, `${sandbox}:${workspace}/${file}`], { quiet: true });
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'mkdir -p "$(dirname "$1")"',
+				"--",
+				`${workspace}/${file}`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(["cp", `${repo}/${file}`, `${sandbox}:${workspace}/${file}`], {
+			quiet: true,
+		});
 	}
 
-	io.log(`${sandbox}: copied ${files.length} ignored env file(s) from the host checkout`);
+	io.log(
+		`${sandbox}: copied ${files.length} ignored env file(s) from the host checkout`,
+	);
 }
 
 export function cacheStore(path: string): string {
@@ -126,21 +274,43 @@ function cachePaths(repo: string, io: Io): string[] {
 		[`${repo}/nx.json`, ".nx/cache"],
 	];
 
-	return declared.filter(([config]) => io.read(config) !== undefined).map(([, path]) => path);
+	return declared
+		.filter(([config]) => io.read(config) !== undefined)
+		.map(([, path]) => path);
 }
 
 function seedCache(io: Io, repo: string, sandbox: string): void {
 	const cache = `${io.home}/.pi/cache/${basename(repo)}`;
 	const listed = io.read(`${cache}/paths`);
-	const paths = listed ? listed.split("\n").map((line) => line.trim()).filter(Boolean) : cachePaths(repo, io);
+	const paths = listed
+		? listed
+				.split("\n")
+				.map((line) => line.trim())
+				.filter(Boolean)
+		: cachePaths(repo, io);
 	if (!paths.length) return;
 	if (!listed) io.write(`${cache}/paths`, `${paths.join("\n")}\n`);
 
-	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	const workspace = io.sbx(
+		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
+		{ quiet: true },
+	);
 	for (const path of paths) {
 		const store = `${cache}/${cacheStore(path)}`;
 		io.mkdir(store);
-		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$(dirname "$2")" && rm -rf "$2" && ln -sfn "$1" "$2"', "--", store, `${workspace}/${path}`], { quiet: true });
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'mkdir -p "$(dirname "$2")" && rm -rf "$2" && ln -sfn "$1" "$2"',
+				"--",
+				store,
+				`${workspace}/${path}`,
+			],
+			{ quiet: true },
+		);
 	}
 
 	io.log(`${sandbox}: ${paths.join(", ")} now live in ${cache}`);
@@ -149,53 +319,170 @@ function seedCache(io: Io, repo: string, sandbox: string): void {
 function seedSubmodules(io: Io, repo: string, sandbox: string): void {
 	const modules = submodulePaths(io.git(["submodule", "status"], repo));
 	if (!modules.length) return;
-	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	const workspace = io.sbx(
+		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
+		{ quiet: true },
+	);
 	for (const module of modules) {
 		io.log(`${sandbox}: copying submodule ${module}`);
-		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$1" "$2"', "--", `${workspace}/${parentDir(module)}`, `${workspace}/.git/modules/${parentDir(module)}`], { quiet: true });
-		io.sbx(["cp", `${repo}/${module}`, `${sandbox}:${workspace}/${parentDir(module)}/`], { quiet: true });
-		io.sbx(["cp", `${repo}/.git/modules/${module}`, `${sandbox}:${workspace}/.git/modules/${parentDir(module)}/`], { quiet: true });
-		io.sbx(["exec", sandbox, "sh", "-c", 'sudo chown -R agent:agent "$1" "$2" && rm -rf "$1/node_modules"', "--", `${workspace}/${module}`, `${workspace}/.git/modules/${module}`], { quiet: true });
-		io.sbx(["exec", sandbox, "sh", "-c", 'printf "gitdir: %s\\n" "$1" > "$2"', "--", gitdirOf(module), `${workspace}/${module}/.git`], { quiet: true });
-		io.sbx(["exec", sandbox, "sh", "-c", 'cd "$1" && git submodule init "$2"', "--", workspace, module], { quiet: true });
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'mkdir -p "$1" "$2"',
+				"--",
+				`${workspace}/${parentDir(module)}`,
+				`${workspace}/.git/modules/${parentDir(module)}`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(
+			["cp", `${repo}/${module}`, `${sandbox}:${workspace}/${parentDir(module)}/`],
+			{ quiet: true },
+		);
+		io.sbx(
+			[
+				"cp",
+				`${repo}/.git/modules/${module}`,
+				`${sandbox}:${workspace}/.git/modules/${parentDir(module)}/`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'sudo chown -R agent:agent "$1" "$2" && rm -rf "$1/node_modules"',
+				"--",
+				`${workspace}/${module}`,
+				`${workspace}/.git/modules/${module}`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'printf "gitdir: %s\\n" "$1" > "$2"',
+				"--",
+				gitdirOf(module),
+				`${workspace}/${module}/.git`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'cd "$1" && git submodule init "$2"',
+				"--",
+				workspace,
+				module,
+			],
+			{ quiet: true },
+		);
 	}
 }
 
-function openPane(io: Io, label: string, tab: string): { pane: string; running: boolean } {
-	const named = agentFor(io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents, tab);
+function openPane(
+	io: Io,
+	label: string,
+	tab: string,
+): { pane: string; running: boolean } {
+	const named = agentFor(
+		io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents,
+		tab,
+	);
 	if (named?.pane_id) {
-		if (named.agent !== "pi") throw new Error(`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not pi; rename it or pick another label`);
+		if (named.agent !== "pi")
+			throw new Error(
+				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not pi; rename it or pick another label`,
+			);
 		io.log(`${tab}: adopting the pi already running in pane ${named.pane_id}`);
 		return { pane: named.pane_id, running: true };
 	}
-	const list = io.herdr<{ result: { workspaces: Workspace[] } }>(["workspace", "list"]);
-	const workspace = list.result.workspaces.find((w) => w.label.toLowerCase() === label.toLowerCase())?.workspace_id;
+	const list = io.herdr<{ result: { workspaces: Workspace[] } }>([
+		"workspace",
+		"list",
+	]);
+	const workspace = list.result.workspaces.find(
+		(w) => w.label.toLowerCase() === label.toLowerCase(),
+	)?.workspace_id;
 	if (!workspace) {
-		const created = io.herdr<Created>(["workspace", "create", "--label", label, "--no-focus"]);
-		if (created.result.workspace) io.herdr(["tab", "rename", created.result.root_pane.pane_id.replace(/:p/, ":t"), tab]);
+		const created = io.herdr<Created>([
+			"workspace",
+			"create",
+			"--label",
+			label,
+			"--no-focus",
+		]);
+		if (created.result.workspace)
+			io.herdr([
+				"tab",
+				"rename",
+				created.result.root_pane.pane_id.replace(/:p/, ":t"),
+				tab,
+			]);
 		return { pane: created.result.root_pane.pane_id, running: false };
 	}
-	const existing = io.herdr<{ result: { tabs: Tab[] } }>(["tab", "list", "--workspace", workspace]).result.tabs.find((t) => t.label === tab);
+	const existing = io
+		.herdr<{ result: { tabs: Tab[] } }>(["tab", "list", "--workspace", workspace])
+		.result.tabs.find((t) => t.label === tab);
 	if (existing) {
-		const pane = io.herdr<{ result: { panes: Pane[] } }>(["pane", "list", "--workspace", workspace]).result.panes.find((p) => p.tab_id === existing.tab_id);
+		const pane = io
+			.herdr<{ result: { panes: Pane[] } }>([
+				"pane",
+				"list",
+				"--workspace",
+				workspace,
+			])
+			.result.panes.find((p) => p.tab_id === existing.tab_id);
 		if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
-		if (pane.agent && pane.agent !== "pi") throw new Error(`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`);
-		if (pane.agent) io.log(`${tab}: adopting the pi already running in pane ${pane.pane_id}`);
+		if (pane.agent && pane.agent !== "pi")
+			throw new Error(
+				`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
+			);
+		if (pane.agent)
+			io.log(`${tab}: adopting the pi already running in pane ${pane.pane_id}`);
 		return { pane: pane.pane_id, running: Boolean(pane.agent) };
 	}
-	return { pane: io.herdr<Created>(["tab", "create", "--workspace", workspace, "--label", tab, "--no-focus"]).result.root_pane.pane_id, running: false };
+	return {
+		pane: io.herdr<Created>([
+			"tab",
+			"create",
+			"--workspace",
+			workspace,
+			"--label",
+			tab,
+			"--no-focus",
+		]).result.root_pane.pane_id,
+		running: false,
+	};
 }
 
 async function waitForAgent(io: Io, pane: string): Promise<void> {
 	const started = io.now().getTime();
 	while (io.now().getTime() - started < DETECT_TIMEOUT_MS) {
 		try {
-			const status = io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent.agent_status ?? "";
+			const status =
+				io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent
+					.agent_status ?? "";
 			if (KNOWN_STATUS.has(status)) return;
 		} catch (error) {
-			if (!(error instanceof Error) || !error.message.includes("agent_not_found")) throw error;
+			if (!(error instanceof Error) || !error.message.includes("agent_not_found"))
+				throw error;
 		}
 		await io.sleep(2000);
 	}
-	throw new Error(`pi did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`);
+	throw new Error(
+		`pi did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`,
+	);
 }

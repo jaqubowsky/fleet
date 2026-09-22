@@ -1,45 +1,42 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { renderSettings, withActiveProvider, type Models } from "./provider.ts";
+import { renderSettings, type Models } from "./provider.ts";
 
 const models: Models = {
-	activeProvider: "openrouter",
-	providers: {
-		openrouter: {
-			coordinator: { model: "glm", thinking: "high" },
-			worker: { model: "glm-w", thinking: "high" },
-			scout: { model: "glm-s", thinking: "low" },
-		},
-		"openai-codex": {
-			coordinator: { model: "gpt-c", thinking: "max" },
-			worker: { model: "gpt-w", thinking: "max" },
-			scout: { model: "gpt-s", thinking: "low" },
-		},
+	seats: {
+		host: { model: "openai-codex/gpt-c", thinking: "max" },
+		sbx: { model: "openrouter/z-ai/glm-5.3-flash", thinking: "max" },
+		scout: { model: "openai-codex/gpt-s", thinking: "low" },
 	},
 };
 
-test("renders provider and role tokens", () => {
-	const out = renderSettings('{"p":"{{provider}}","m":"{{provider}}/{{models.worker}}"}', models);
-	assert.equal(out, '{"p":"openrouter","m":"openrouter/glm-w"}');
+test("a seat renders its provider and its model apart", () => {
+	assert.equal(renderSettings('{"p":"{{providers.host}}","m":"{{models.host}}"}', models), '{"p":"openai-codex","m":"gpt-c"}');
 });
 
-test("renders the thinking level of a role", () => {
+test("seats on different providers render side by side", () => {
+	assert.equal(
+		renderSettings('{"w":"{{providers.sbx}}/{{models.sbx}}","s":"{{providers.scout}}/{{models.scout}}"}', models),
+		'{"w":"openrouter/z-ai/glm-5.3-flash","s":"openai-codex/gpt-s"}',
+	);
+});
+
+test("renders the thinking level of a seat", () => {
 	assert.equal(renderSettings('{"t":"{{thinking.scout}}"}', models), '{"t":"low"}');
 });
 
-test("missing role fails", () => {
-	assert.throws(() => renderSettings('{"m":"{{models.reviewer}}"}', models), /no openrouter entry for role reviewer/);
+test("missing seat fails", () => {
+	assert.throws(() => renderSettings('{"m":"{{models.reviewer}}"}', models), /no entry for seat reviewer/);
+});
+
+test("a model that names no provider fails", () => {
+	assert.throws(() => renderSettings('{"m":"{{models.host}}"}', { seats: { host: { model: "gpt-c", thinking: "max" } } }), /needs a provider\/model/);
 });
 
 test("unknown token fails", () => {
 	assert.throws(() => renderSettings('{"m":"{{nope}}"}', models), /unresolved token/);
 });
 
-test("switching keeps providers and validates the name", () => {
-	assert.equal(withActiveProvider(models, "openai-codex").activeProvider, "openai-codex");
-	assert.throws(() => withActiveProvider(models, "anthropic"), /unknown provider/);
-});
-
 test("a template that renders to invalid JSON is refused", () => {
-	assert.throws(() => renderSettings('{"m": {{models.worker}}}', models), /JSON/);
+	assert.throws(() => renderSettings('{"m": {{models.sbx}}}', models), /JSON/);
 });

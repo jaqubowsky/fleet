@@ -1,38 +1,28 @@
 import { buildAgents } from "./agents.ts";
 import type { Io } from "./io.ts";
 
-export type Role = { model: string; thinking: string };
+export type Seat = { model: string; thinking: string };
 
-export type Models = {
-	activeProvider: string;
-	providers: Record<string, Record<string, Role>>;
-};
+export type Models = { seats: Record<string, Seat> };
 
-function roles(models: Models): Record<string, Role> {
-	const row = models.providers[models.activeProvider];
-	if (!row) throw new Error(`unknown provider: ${models.activeProvider}`);
-	return row;
+function qualified(seat: string, entry: Seat): { provider: string; model: string } {
+	const cut = entry.model.indexOf("/");
+	if (cut < 1 || cut === entry.model.length - 1) throw new Error(`seat ${seat} needs a provider/model: ${entry.model}`);
+	return { provider: entry.model.slice(0, cut), model: entry.model.slice(cut + 1) };
 }
 
 export function renderSettings(template: string, models: Models): string {
-	const provider = models.activeProvider;
-	const map = roles(models);
-	const rendered = template
-		.replaceAll("{{provider}}", provider)
-		.replace(/\{\{(models|thinking)\.([a-z-]+)\}\}/g, (_, field: string, role: string) => {
-			const entry = map[role];
-			if (!entry) throw new Error(`no ${provider} entry for role ${role}`);
-			return field === "models" ? entry.model : entry.thinking;
-		});
+	const rendered = template.replace(/\{\{(models|thinking|providers)\.([a-z-]+)\}\}/g, (_, field: string, seat: string) => {
+		const entry = models.seats?.[seat];
+		if (!entry) throw new Error(`no entry for seat ${seat}`);
+		if (field === "thinking") return entry.thinking;
+		const parts = qualified(seat, entry);
+		return field === "models" ? parts.model : parts.provider;
+	});
 	const left = rendered.match(/\{\{[^}]+\}\}/);
 	if (left) throw new Error(`unresolved token: ${left[0]}`);
 	JSON.parse(rendered);
 	return rendered;
-}
-
-export function withActiveProvider(models: Models, provider: string): Models {
-	if (!models.providers[provider]) throw new Error(`unknown provider: ${provider}`);
-	return { ...models, activeProvider: provider };
 }
 
 const SETTINGS: [string, string][] = [
@@ -41,16 +31,11 @@ const SETTINGS: [string, string][] = [
 ];
 const CONTAINER_EXCLUDES = ["host.md"];
 
-export function render(root: string, io: Io, provider?: string): void {
-	const path = `${root}/profiles/models.json`;
-	let models = JSON.parse(io.read(path) ?? "{}") as Models;
-	if (provider) {
-		models = withActiveProvider(models, provider);
-		io.write(path, `${JSON.stringify(models, null, 2)}\n`);
-	}
+export function render(root: string, io: Io): void {
+	const models = JSON.parse(io.read(`${root}/profiles/models.json`) ?? "{}") as Models;
 	for (const [template, target] of SETTINGS) {
 		io.write(`${root}/${target}`, renderSettings(io.read(`${root}/${template}`) ?? "", models));
-		io.log(`${target} <- ${models.activeProvider}`);
+		io.log(target);
 	}
 	const rules = io.list(`${root}/rules`).filter((f) => f.endsWith(".md")).sort().map((name) => ({ name, body: io.read(`${root}/rules/${name}`) ?? "" }));
 	const refs = io.list(`${root}/rules/refs`).filter((f) => f.endsWith(".md")).sort();

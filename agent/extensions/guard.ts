@@ -14,7 +14,7 @@ export default function (pi: GuardApi) {
 		if (!payload)
 			return { block: true, reason: `Unknown tool policy: ${event.toolName}` };
 
-		const verdict = decide(payload.tool_name, payload.tool_input, process.env.PI_FLEET_ROLE === "worker");
+		const verdict = decide(payload.tool_name, payload.tool_input);
 		if (verdict.decision === "allow") return;
 
 		return { block: true, reason: verdict.reason };

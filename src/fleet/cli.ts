@@ -21,7 +21,7 @@ const usage = `usage:
   fleet land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
   fleet down <sandbox> [--force]                     harvest transcripts, close the tab, remove the container; artifacts stay
   fleet build                                        rebuild the worker image from sbx/Dockerfile and the current skills and rules
-  fleet provider [<name>]                            switch the model provider; regenerates settings and AGENTS.md
+  fleet render                                       rewrite both settings files and both AGENTS.md from profiles and rules
 
   <sandbox> is the container name or its herdr agent name, which is the container name without the pi- prefix
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
@@ -108,9 +108,9 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		flags(args, []);
 		build(root, io);
 	},
-	provider(args) {
-		const { rest } = flags(args, []);
-		render(root, io, rest[0]);
+	render(args) {
+		flags(args, []);
+		render(root, io);
 	},
 };
 

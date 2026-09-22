@@ -78,7 +78,7 @@ REQUIRED SUB-SKILL: use `brain` after the code analysis. Compare recorded decisi
 
 REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
 
-The report fits on one screen. Fill these slots, in this order, and write nothing outside them.
+The reply is the report: the six headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all. No file carries it. `.issues/` belongs to `to-spec` and `to-tickets`, and a file in `$FLEET_ARTIFACTS` is written only when the user asks for one, beside the report, never instead of it.
 
 ### Verdict
 
@@ -124,12 +124,13 @@ Rules for the report:
 - No sentence about your own process. Not "I read", not "this changes my earlier conclusion". State the conclusion that holds now.
 - A finding that needs a paragraph is two findings, or it belongs in Out of scope.
 - At most one small ASCII diagram, and only when the flow has three or more hops and the labels carry the meaning.
-- Detail beyond these slots goes to the ticket, or, when asked for, to a file in `$FLEET_ARTIFACTS`. `.issues/` belongs to `to-spec` and `to-tickets`.
+- Detail beyond these slots goes to the ticket.
 
 ## Rationalizations
 
-Each row quotes an analysis written without this document, on a ticket whose linked issue was a defect in the same flow.
+Each row quotes a run that went wrong: the first without this document in context, the second with it.
 
 | Excuse | Reality |
 | --- | --- |
 | "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |
+| "The analysis is in `.issues/<slug>/analysis.md`", followed by one paragraph of prose | The reply is the report, in its slots. A paragraph plus a file is the shape this skill exists to replace, and the file is not a deliverable here. |

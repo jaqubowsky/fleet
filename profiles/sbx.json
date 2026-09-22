@@ -1,7 +1,7 @@
 {
-  "defaultProvider": "{{provider}}",
-  "defaultModel": "{{models.worker}}",
-  "defaultThinkingLevel": "{{thinking.worker}}",
+  "defaultProvider": "{{providers.sbx}}",
+  "defaultModel": "{{models.sbx}}",
+  "defaultThinkingLevel": "{{thinking.sbx}}",
   "defaultProjectTrust": "always",
   "tuiMode": "fullscreen",
   "fullscreenExitOutput": "resume-hint",
@@ -17,15 +17,15 @@
   "subagents": {
     "agentOverrides": {
       "scout": {
-        "model": "{{provider}}/{{models.scout}}",
+        "model": "{{providers.scout}}/{{models.scout}}",
         "thinking": "{{thinking.scout}}"
       },
       "researcher": {
-        "model": "{{provider}}/{{models.researcher}}",
+        "model": "{{providers.researcher}}/{{models.researcher}}",
         "thinking": "{{thinking.researcher}}"
       },
       "reviewer": {
-        "model": "{{provider}}/{{models.reviewer}}",
+        "model": "{{providers.reviewer}}/{{models.reviewer}}",
         "thinking": "{{thinking.reviewer}}"
       },
       "worker": { "disabled": true },
