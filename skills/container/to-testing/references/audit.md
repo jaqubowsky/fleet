@@ -47,7 +47,7 @@ Written after cleanup, so the stop commands are proven too, in English whatever 
 - `gotchas.md`: an entry only for an action that failed this run and its workaround. A failure an entry already describes is folded into that entry, under its heading. An existing entry whose failure did not reproduce this run is deleted.
 - Each markdown file stays under 150 lines; over the limit, cut the oldest entries that this run did not exercise.
 
-The report's "Runbook changes" section names every file touched and why.
+The report's `Runbook:` line names every file touched and why.
 
 ## Prove the checkout
 
