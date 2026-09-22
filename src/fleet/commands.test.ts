@@ -19,8 +19,8 @@ const sessions = {
 test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
 	steer("pi-webapp-web-1", 'zrób analizę "x"', io);
-	assert.equal(io.calls[0][0], "append");
-	assert.match(io.calls[0][2], /webapp-web-1 "zrób analizę \\"x\\""/);
+	assert.equal(io.calls[0][1], "/home/me/.pi/agent/fleet-events.log");
+	assert.match(io.calls[0][2], /w1:host steer webapp-web-1 "zrób analizę \\"x\\""/);
 	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "webapp-web-1", 'zrób analizę "x"']);
 	assert.deepEqual(io.lines, ["webapp-web-1: steered"]);
 });

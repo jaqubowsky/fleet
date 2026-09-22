@@ -19,6 +19,7 @@ export type Io = {
 	now(): Date;
 	home: string;
 	tmp: string;
+	pane: string;
 };
 
 function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
@@ -78,5 +79,6 @@ export function realIo(home: string): Io {
 		now: () => new Date(),
 		home,
 		tmp: process.env.TMPDIR ?? "/tmp",
+		pane: process.env.HERDR_PANE_ID ?? "-",
 	};
 }

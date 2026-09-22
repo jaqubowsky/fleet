@@ -1,6 +1,7 @@
 import type { Io } from "./io.ts";
 import { render } from "./provider.ts";
 import { INSTALL_LOG } from "./deps.ts";
+import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, taskDir } from "./up.ts";
 import { agentFor, checkoutProbe, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
@@ -46,7 +47,7 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 
 export function steer(sandbox: string, text: string, io: Io): void {
 	const agent = agentName(sandbox);
-	io.append(`${io.home}/.pi/agent/fleet-steer.log`, `${io.now().toISOString()} ${agent} ${JSON.stringify(text)}`);
+	logEvent(io, "steer", agent, text);
 	io.herdr(["agent", "prompt", agent, text]);
 	io.log(`${agent}: steered`);
 }

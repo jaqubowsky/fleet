@@ -4,6 +4,7 @@ import {
 	taskDirOf,
 	pickAgents,
 	shouldWake,
+	stalled,
 	transition,
 } from "../../agent/extensions/fleet-monitor.ts";
 
@@ -22,6 +23,19 @@ test("watch everyone but self, or only the named agents", () => {
 		["w:p2", "w:p3"],
 	);
 	assert.deepEqual(pickAgents(agents, ["me"], "w:p1"), []);
+});
+
+test("a container working past the stall window rings once, then again after the ring window", () => {
+	const minute = 60_000;
+	const entries = [
+		{ pane: "w:p1", status: "working", since: 0, rang: 0 },
+		{ pane: "w:p2", status: "working", since: 15 * minute, rang: 15 * minute },
+		{ pane: "w:p3", status: "idle", since: 0, rang: 0 },
+		{ pane: "w:p4", status: "working", since: 0, rang: 25 * minute },
+	];
+
+	assert.deepEqual(stalled(entries, 30 * minute, 20 * minute, 15 * minute), ["w:p1"]);
+	assert.deepEqual(stalled(entries, 40 * minute, 20 * minute, 15 * minute), ["w:p1", "w:p2", "w:p4"]);
 });
 
 test("a sandbox name picks the agent herdr named after it", () => {

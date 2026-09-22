@@ -10,7 +10,8 @@ Pi on this Mac plus containers for code work. One container per task: a private 
 | `agent/` | pi home: settings (generated), extensions, runtime state (ignored) |
 | `src/guard/` | the tool-call policy and the pi-to-policy translation, driven by the case corpus in `host/tests/` |
 | `agent/extensions/guard.ts` | the pi hook on this Mac: trusted tools out, everything else through `src/guard`. Containers run without it |
-| `agent/extensions/fleet-monitor.ts` | `fleet_watch` tool and `/fleet-watch`: another agent settling as a `[fleet]` line |
+| `agent/extensions/fleet-monitor.ts` | watches every container `fleet up` and `fleet steer` touched (`agent/fleet-events.log`), plus `fleet_watch` for the rest: a container settling or working on without settling wakes the host with a `[fleet]` line |
+| `agent/extensions/handoff-on-error.ts` | in the container: a pi run ending on an error sets `status.md` to `blocked` with the error as `attention` |
 | `agent/extensions/statusline.ts` | status line |
 | `profiles/` | `models.json` (one row per seat: `host`, `sbx`, `reviewer`, `explorer`, each a `<provider>/<model>` and a thinking level), `host.json` and `sbx.json` templates |
 | `src/fleet/` | the `fleet` CLI, TypeScript, `node --test` |
@@ -37,7 +38,7 @@ The cost is that a repository behaves here as it does in its pipeline rather tha
 fleet up <label> [--repo <path>] [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]
 fleet ls
 fleet peek <sandbox> [--lines 40]
-fleet steer <sandbox> <text...> [--wait]
+fleet steer <sandbox> <text...>
 fleet exec <sandbox> -- <command...>
 fleet artifacts [--repo <path>]
 fleet copy <src> <dst>

@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
+import { logEvent } from "./events.ts";
 import { githubRef, linearServer } from "./github.ts";
 import type { Io } from "./io.ts";
 import { baseBranch } from "./land.ts";
@@ -161,6 +162,7 @@ export async function up(
 			`HERDR_AGENT=pi sbx run --name ${sandbox} -- --approve${piArgs(input.model, io.list(`${task}/logs/sessions`).length > 0)}`,
 		]);
 	await waitForAgent(io, pane);
+	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
 		`${sandbox}: pi waiting in tab ${agent} (pane ${pane}); no prompt sent`,

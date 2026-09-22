@@ -25,6 +25,7 @@ export function fakeIo(answers: Record<string, unknown> = {}): Io & { calls: Cal
 		files,
 		home: "/home/me",
 		tmp: "/tmp",
+		pane: "w1:host",
 		sbxOpts,
 		sbx: (args, opts) => {
 			calls.push(["sbx", ...args]);

@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, unwatchFile, watchFile } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import { basename, join } from "node:path";
+import { EVENTS_LOG, eventAgents } from "../../src/fleet/events.ts";
 import { agentName } from "../../src/fleet/name.ts";
 import { brief } from "../../src/fleet/status.ts";
 
@@ -15,6 +16,10 @@ type Frame = {
 const SOCK =
 	process.env.HERDR_SOCK ?? join(os.homedir(), ".config/herdr/herdr.sock");
 const RECONNECT_MS = 3000;
+const LOG_POLL_MS = 2000;
+const STALL_TICK_MS = 60_000;
+const STALL_MS = 20 * 60_000;
+const RING_MS = 15 * 60_000;
 const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
 
@@ -36,6 +41,17 @@ export function pickAgents(
 	return others.filter(
 		(a) => names.has(a.name ?? "") || names.has(a.pane_id ?? ""),
 	);
+}
+
+export function stalled(
+	entries: { pane: string; status: string; since: number; rang: number }[],
+	now: number,
+	stallMs: number,
+	ringMs: number,
+): string[] {
+	return entries
+		.filter((e) => e.status === "working" && now - e.since >= stallMs && now - e.rang >= ringMs)
+		.map((e) => e.pane);
 }
 
 export function transition(
@@ -61,7 +77,22 @@ export default function (pi: any) {
 	let gen = 0;
 	const status = new Map<string, string>();
 	const names = new Map<string, string>();
+	const since = new Map<string, number>();
+	const rang = new Map<string, number>();
 	const selfPane = process.env.HERDR_PANE_ID ?? "";
+	const log = join(os.homedir(), EVENTS_LOG);
+
+	const track = (pane: string, next: string) => {
+		status.set(pane, next);
+		since.set(pane, Date.now());
+		rang.set(pane, Date.now());
+	};
+	const forget = (pane: string) => {
+		status.delete(pane);
+		names.delete(pane);
+		since.delete(pane);
+		rang.delete(pane);
+	};
 
 	const statusOf = async (agent: string): Promise<string> => {
 		const out = await pi.exec("sbx", ["ls", "--json"]).catch(() => undefined);
@@ -115,8 +146,50 @@ export default function (pi: any) {
 		sock = undefined;
 		status.clear();
 		names.clear();
+		since.clear();
+		rang.clear();
 		pi.ui?.setStatus("fleet", undefined);
 		publish();
+	};
+
+	const reconnect = () => {
+		gen++;
+		sock?.destroy();
+		sock = undefined;
+		connect([], gen);
+	};
+
+	const adopt = async (wanted: string[]) => {
+		const agents = await listAgents(wanted);
+		const fresh = (agents ?? []).filter((a) => !status.has(a.pane_id!));
+		if (!fresh.length) return;
+		for (const a of fresh) {
+			track(a.pane_id!, a.agent_status ?? "unknown");
+			names.set(a.pane_id!, a.name ?? a.pane_id!);
+		}
+		publish();
+		reconnect();
+	};
+
+	const sweep = () => {
+		let text: string;
+		try {
+			text = readFileSync(log, "utf8");
+		} catch {
+			return;
+		}
+		const agents = eventAgents(text, selfPane);
+		if (agents.length) void adopt(agents);
+	};
+
+	const ring = () => {
+		const now = Date.now();
+		const entries = [...status].map(([pane, st]) => ({ pane, status: st, since: since.get(pane) ?? now, rang: rang.get(pane) ?? now }));
+		for (const pane of stalled(entries, now, STALL_MS, RING_MS)) {
+			rang.set(pane, now);
+			const minutes = Math.round((now - (since.get(pane) ?? now)) / 60_000);
+			void wake(names.get(pane) ?? pane, `working ${minutes}m without settling`);
+		}
 	};
 
 	const connect = (wanted: string[], myGen: number) => {
@@ -155,8 +228,7 @@ export default function (pi: any) {
 				const who = names.get(pane) ?? pane;
 				if (/pane[._]exited/.test(frame.event ?? "")) {
 					void wake(who, `${status.get(pane)} -> gone`);
-					status.delete(pane);
-					names.delete(pane);
+					forget(pane);
 					publish();
 					continue;
 				}
@@ -164,7 +236,7 @@ export default function (pi: any) {
 				const change = transition(status.get(pane), next);
 				if (!change) continue;
 				const wakeable = shouldWake(status.get(pane), next);
-				status.set(pane, next);
+				track(pane, next);
 				publish();
 				if (wakeable) void wake(who, change);
 			}
@@ -186,8 +258,7 @@ export default function (pi: any) {
 		for (const pane of [...status.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
 			void wake(names.get(pane) ?? pane, `${status.get(pane)} -> gone`);
-			status.delete(pane);
-			names.delete(pane);
+			forget(pane);
 		}
 		publish();
 		if (!status.size) return stop();
@@ -208,7 +279,7 @@ export default function (pi: any) {
 		if (myGen !== gen) return "superseded";
 		if (!agents?.length) return "no agents to watch";
 		for (const a of agents) {
-			status.set(a.pane_id!, a.agent_status ?? "unknown");
+			track(a.pane_id!, a.agent_status ?? "unknown");
 			names.set(a.pane_id!, a.name ?? a.pane_id!);
 		}
 		publish();
@@ -218,7 +289,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("fleet-watch", {
 		description:
-			"Watch other herdr agents; a settling one wakes this session with a [fleet] line. Args: sandbox or agent names; none = all",
+			"Watch herdr agents beyond the ones this session put up or steered; a settling one wakes this session with a [fleet] line. Args: sandbox or agent names; none = all",
 		handler: async (args: string, ctx: any) =>
 			ctx.ui?.notify(`fleet: ${await start(args)}`, "info"),
 	});
@@ -233,7 +304,7 @@ export default function (pi: any) {
 		name: "fleet_watch",
 		label: "Fleet watch",
 		description:
-			"Watch other herdr agents. An agent settling (done, idle, blocked, gone) wakes this session with a [fleet] <name>: <prev> -> <status> line carrying its task's status.md header; that turn is where you act on it. Watches only the agents that exist now, so call again after each fleet up. Pass the sandbox name from fleet up or fleet ls; empty string = every agent but this one.",
+			"Watch herdr agents beyond the ones this session put up or steered, which are watched by themselves. An agent settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying its task's status.md header; that turn is where you act on it. Pass the sandbox name from fleet ls; empty string = every agent but this one.",
 		promptSnippet: "watch herdr agents; a settling one wakes this session with a [fleet] line",
 		parameters: {
 			type: "object",
@@ -241,7 +312,7 @@ export default function (pi: any) {
 				agents: {
 					type: "string",
 					description:
-						"Space- or comma-separated sandbox names as fleet ls prints them (pi-<repo>-<label>), herdr agent names or pane ids. Empty string watches every agent, so name the one container when the user asked for one",
+						"Space- or comma-separated sandbox names as fleet ls prints them (pi-<repo>-<label>), herdr agent names or pane ids. Empty string watches every agent",
 				},
 			},
 			required: ["agents"],
@@ -264,5 +335,12 @@ export default function (pi: any) {
 			return { content: [{ type: "text", text: "fleet: stopped" }] };
 		},
 	});
-	pi.on("session_shutdown", () => stop());
+	const ticker = setInterval(ring, STALL_TICK_MS);
+	sweep();
+	watchFile(log, { interval: LOG_POLL_MS }, sweep);
+	pi.on("session_shutdown", () => {
+		stop();
+		clearInterval(ticker);
+		unwatchFile(log, sweep);
+	});
 }
