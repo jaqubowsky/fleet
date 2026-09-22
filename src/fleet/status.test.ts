@@ -30,22 +30,22 @@ test("a garbled dirty count reads as zero rather than NaN", () => {
 	assert.equal(parseCheckout("main\tabc\tdef").dirty, 0);
 });
 
-test("a status brief is the header line plus the next open plan item", () => {
-	const status = "status: implementing\nattention: none\npr: none\n\n## Plan\n- [x] restore endpoint\n- [ ] frontend error mapping\n- [ ] review\n";
-	assert.equal(brief(status), "status: implementing | attention: none | pr: none\nnext: frontend error mapping");
-	assert.equal(brief("status: done\n\n## Plan\n- [x] all\n"), "status: done\nnext: nothing left");
+test("a status brief is the header lines plus the last log entry", () => {
+	const status = "status: implementing\nattention: none\nnow: 02-restore-endpoint, red written, fix next\n\n## Log\n- analysis: expected behaviour; analysis.md\n- 01-count-query: red 2 vs 1, green; commit abc1234\n";
+	assert.equal(brief(status), "status: implementing | attention: none | now: 02-restore-endpoint, red written, fix next\nlast: 01-count-query: red 2 vs 1, green; commit abc1234");
+	assert.equal(brief("status: new\nattention: none\nnow: nothing yet\n\n## Log\n"), "status: new | attention: none | now: nothing yet\nlast: nothing yet");
 	assert.equal(brief(undefined), "status: no status.md");
 });
 
 test("a wake carries the status brief, the commits on the branch and the review verdict", () => {
-	const status = "status: done\nattention: none\n\n## Plan\n- [x] fix\n";
+	const status = "status: done\nattention: none\nnow: done\n\n## Log\n- review abc1234: OK; review.md\n";
 	const review = "# Review\n\nCommit: abc\nRange: a...b\nVerdict: OK with notes\n";
 
 	assert.equal(
 		wake(status, review, "abc1234 fix(documents): exclude rebookings\n"),
-		"status: done | attention: none\nnext: nothing left\ncommits: abc1234 fix(documents): exclude rebookings\nreview: OK with notes",
+		"status: done | attention: none | now: done\nlast: review abc1234: OK; review.md\ncommits: abc1234 fix(documents): exclude rebookings\nreview: OK with notes",
 	);
-	assert.equal(wake(status, undefined, ""), "status: done | attention: none\nnext: nothing left\ncommits: none");
+	assert.equal(wake(status, undefined, ""), "status: done | attention: none | now: done\nlast: review abc1234: OK; review.md\ncommits: none");
 });
 
 test("rows carry the elapsed time and cost when the sessions give them", () => {

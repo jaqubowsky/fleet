@@ -9,7 +9,7 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 ## Process
 
-1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of `issues/` in the task directory (outside fleet: `.issues/<feature-slug>/`): the lowest-numbered ticket whose `Status:` is `ready-for-agent` and whose "Blocked by" tickets are all `done`. No tickets: the plan in `status.md` is the work, one unchecked step at a time.
+1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of `issues/` in the task directory (outside fleet: `.issues/<feature-slug>/`): the lowest-numbered ticket whose `Status:` is `ready-for-agent` and whose "Blocked by" tickets are all `done`. No tickets: the short run `analysis.md` named is the work, one seam and one commit.
 
 2. **Claim it.** Set `Status: claimed` in the ticket file and save before any work.
 
@@ -27,4 +27,4 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 9. **Close the gate.** Run the `two-axis-review` skill against the commit you just made, then re-run the step 4 check against `HEAD`. Anything the review changes means a new commit and another run of the check: a review that ran before the final commit proves the previous commit, not this one. Gate output goes to `logs/gate-<timestamp>/` in the task directory. Report the command, its exit code, and name anything you did not run and why.
 
-10. **Update `status.md`.** Tick the plan step and set `status:` to `reviewing`, `testing` or `ready-for-host` according to what comes next; at `ready-for-host` fill `## Risks` and `## Uncommitted`. The next ticket starts at step 1 in this same session; the ticket files and `status.md` carry the state between them.
+10. **Update `status.md`.** One log line for the ticket (red, green, mutation, the commit sha), `now:` on the next ticket or the review, and `status:` on `reviewing`, `testing` or `ready-for-host` according to what comes next; at `ready-for-host` `attention:` names what stayed unverified or uncommitted. The next ticket starts at step 1 in this same session; the ticket files and `status.md` carry the state between them.

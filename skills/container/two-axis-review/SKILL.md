@@ -40,7 +40,7 @@ One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMo
 
 ### 5. Hand back
 
-Read `review.md`. In `status.md`: `status: implementing` when the verdict is BLOCK or a P1 stands, with each such finding as a new plan step; `status: testing` or `ready-for-host` otherwise. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's: a fix means a new commit and a new review of that commit, and the previous `review.md` is superseded by the next.
+Read `review.md`. In `status.md`: the log line `review <sha7>: <verdict>, <n> findings; review.md`; `status: implementing` with `now:` on the first P0 or P1 finding when one stands, `status: testing` or `ready-for-host` otherwise. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's: a fix means a new commit and a new review of that commit, and the previous `review.md` is superseded by the next.
 
 ## Done
 

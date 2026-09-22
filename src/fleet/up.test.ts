@@ -494,7 +494,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 
 	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`));
 	assert.equal(io.files[`${task}/task.md`], undefined);
-	assert.match(io.files[`${task}/status.md`], /^status: new\nattention: none\n\n## Plan\n/);
+	assert.match(io.files[`${task}/status.md`], /^status: new\nattention: none\nnow: nothing yet\n\n## Log\n/);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 

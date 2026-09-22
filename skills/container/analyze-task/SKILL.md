@@ -80,7 +80,7 @@ REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
 
 The reply is the report: the headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
 
-In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) the same report is `analysis.md`, headed by `Commit: <sha7>` of the HEAD analyzed, and the plan below it goes to `## Plan` in `status.md`. `status: analyzing` while the analysis runs. Outside fleet the chat report is the whole deliverable.
+In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in `refs/artifacts.md`) the same report is `analysis.md`, headed by `Commit: <sha7>` of the HEAD analyzed. `status: analyzing` while the analysis runs. Outside fleet the chat report is the whole deliverable.
 
 ### Verdict
 
@@ -102,11 +102,11 @@ One line per item, with the reason.
 
 Open questions with the decision each one blocks. Sources you could not open. Checks proposed but not run. One line each.
 
-### The plan and the one question
+### The run and the one question
 
-The run this analysis calls for, as the `## Plan` of `status.md`, one line per step, ordered by dependency: either the pipeline (`to-spec`, `to-tickets`, `implement` per ticket, review, browser audit) or the short run (`implement` with `tdd`, review) when the change is one accepted behaviour at one seam in one commit. The first step names which and why in one line. Under it, the proposed split into tickets and the test seams.
+The run this analysis calls for, in one line with the reason: the pipeline (`to-spec`, `to-tickets`, `implement` per ticket, review, browser audit), or the short run (`implement` with `tdd`, review) when the change is one accepted behaviour at one seam in one commit. Under it, the proposed split into tickets and the test seams, one line each.
 
-This is the only question the pipeline asks. It goes out as `attention:` in `status.md` with `status: blocked`, and the later skills take the split and the seams from here. An opening prompt that already said end to end, or already chose the shape, has answered it: write the plan and continue.
+This is the only question the pipeline asks. It goes out as `attention:` in `status.md` with `status: blocked`, and the later skills take the split and the seams from here. An opening prompt that already said end to end, or already chose the shape, has answered it: continue. Either way `status.md` gets the log line `analysis: <verdict>; analysis.md` and `now:` names the next step.
 
 Define a term before using it, and keep one name per concept across the whole report. State the mechanism instead of naming it; no framing labels ("the key insight", "at its core"), no metaphor standing in for the mechanism.
 

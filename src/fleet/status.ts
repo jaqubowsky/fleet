@@ -20,9 +20,9 @@ export const checkoutProbe = 'cd "$WORKSPACE_DIR" && printf "%s\\t%s\\t%s" "$(gi
 export function brief(statusMd: string | undefined): string {
 	if (statusMd === undefined) return "status: no status.md";
 	const lines = statusMd.split("\n");
-	const header = lines.filter((l) => /^(status|attention|commit|pr): /.test(l)).join(" | ");
-	const next = lines.find((l) => l.startsWith("- [ ] "))?.slice(6) ?? "nothing left";
-	return `${header}\nnext: ${next}`;
+	const header = lines.filter((l) => /^(status|attention|now): /.test(l)).join(" | ");
+	const last = lines.filter((l) => l.startsWith("- ")).at(-1)?.slice(2) ?? "nothing yet";
+	return `${header}\nlast: ${last}`;
 }
 
 export function formatRows(rows: Row[]): string {

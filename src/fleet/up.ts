@@ -22,7 +22,7 @@ export function taskDir(repo: string, sandbox: string, io: Io): string {
 	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
-const TASK_STATUS = "status: new\nattention: none\n\n## Plan\n- [ ] \n";
+const TASK_STATUS = "status: new\nattention: none\nnow: nothing yet\n\n## Log\n";
 
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);

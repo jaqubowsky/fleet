@@ -24,22 +24,24 @@ One short file per name above `logs/`. Anything with many versions, big or binar
 ```md
 status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked | done
 attention: none | <one sentence naming what a person has to decide or provide>
+now: <one line: the ticket or step in hand and where it stands>
 
-## Plan
-- [x] <step>
-- [ ] <step>
+## Log
+- analysis: <verdict in a phrase>; analysis.md
+- 01-<slug>: red <what>, green, mutation red; commit <sha7>
+- review <sha7>: <verdict>, <n> findings; review.md
 ```
 
-The first unchecked step is the current work. `attention` is the line a person reads: at `blocked` it names the decision or the missing piece, at `ready-for-host` what stayed unverified or uncommitted. A skill writes this file last, before its chat report.
+The host reads this file and nothing else to know where a task stands. `attention` is the line a person reads: at `blocked` it names the decision or the missing piece, at `ready-for-host` what stayed unverified or uncommitted. `now` is the step in hand. `## Log` grows by one line per finished step, each ending in the file or commit that holds the detail; the steps to come are the tickets in `issues/`. A skill writes this file last, before its chat report.
 
 ## analysis.md
 
-Findings only: the verdict, what it rests on, what is out of scope, what is open. The decision on what to build is `spec.md`; the steps are the plan. The shape is in skill `analyze-task`.
+Findings only: the verdict, what it rests on, what is out of scope, what is open, and the run it calls for. The decision on what to build is `spec.md`; the steps are the tickets. The shape is in skill `analyze-task`.
 
 ## The pipeline
 
 A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-spec`, `to-tickets`, `implement` per ticket with `tdd`, `two-axis-review`, `to-testing`. The analysis ends with one question that covers the verdict, the split into tickets and the test seams; the later skills ask nothing on their own. An opening prompt that says end to end answers that question in advance.
 
-The agent shortens the run when the analysis shows one accepted behaviour, one seam and one commit: `analyze-task`, then `implement` with `tdd`, then the review, and the first plan step says so. The opening prompt overrides in either direction.
+The agent shortens the run when the analysis shows one accepted behaviour, one seam and one commit: `analyze-task`, then `implement` with `tdd`, then the review, and the analysis says so. The opening prompt overrides in either direction.
 
 A prompt with no ticket behind it ("run the build", "read this log") runs no pipeline and leaves no file but `status.md`.
