@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
+import { HARNESSES } from "../harness.ts";
 import { BRANCH_FROM_BASE, cacheStore, envFiles, up } from "./up.ts";
 
 const repo = "/Users/me/Work/webapp";
@@ -531,4 +532,22 @@ test("up branches off the freshest remote base, detected or given with --base", 
 	const given = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1", base: "develop" }, given);
 	assert.deepEqual(given.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!.slice(6), ["--", "web-1", "develop"]);
+});
+
+test("a claude container is given colour, a pi container is left as it is", async () => {
+	const claudeIo = fakeIo(base, HARNESSES.claude);
+	const piIo = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, claudeIo);
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, piIo);
+
+	const args = (io: typeof piIo) =>
+		io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	const claude = args(claudeIo);
+	assert.equal(
+		claude[claude.indexOf("FORCE_COLOR=3") - 1],
+		"-e",
+		"FORCE_COLOR is passed as its own -e",
+	);
+	assert.ok(!args(piIo).includes("FORCE_COLOR=3"));
 });

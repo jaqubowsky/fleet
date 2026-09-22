@@ -10,6 +10,7 @@ export type Harness = {
 	owner: "session" | "pane" | "none";
 	sessionIdEnv?: string;
 	sbxFlags: string[];
+	env: string[];
 	agentSpec(root: string): string;
 	agentArgs: string[];
 	resume: string;
@@ -36,6 +37,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		owner: "session",
 		sessionIdEnv: "PI_SESSION_ID",
 		sbxFlags: ["--skills=off"],
+		env: [],
 		agentSpec: (root) => `${root}/pi/kits/pi`,
 		agentArgs: ["--approve"],
 		resume: "-c",
@@ -69,6 +71,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		image: "my-omp:v1",
 		owner: "pane",
 		sbxFlags: ["--skills=off"],
+		env: [],
 		agentSpec: (root) => `${root}/omp/kits/omp`,
 		agentArgs: ["--yolo"],
 		resume: "-c",
@@ -102,6 +105,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		image: "my-claude:v1",
 		owner: "none",
 		sbxFlags: ["-t", "my-claude:v1", "--skills=off"],
+		env: ["FORCE_COLOR=3"],
 		agentSpec: () => "claude",
 		agentArgs: ["--dangerously-skip-permissions"],
 		resume: "--continue",

@@ -220,6 +220,8 @@ function create(
 		`FLEET_ARTIFACTS=${artifacts}`,
 		"-e",
 		`FLEET_CACHE=${cache}`,
+		...h.env.flatMap((entry) => ["-e", entry]),
+
 		...(h.sessionEnv ? ["-e", `${h.sessionEnv}=${taskDir(input.repo, sandbox, io)}/logs/sessions`] : []),
 		"--kit",
 		`${input.root}/host/kits/no-ssh-agent`,
