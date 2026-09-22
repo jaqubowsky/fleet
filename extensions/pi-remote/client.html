@@ -9,12 +9,12 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       name="theme-color"
-      content="#f7faf7"
+      content="#fbfbfa"
       media="(prefers-color-scheme: light)"
     />
     <meta
       name="theme-color"
-      content="#101714"
+      content="#12120f"
       media="(prefers-color-scheme: dark)"
     />
     <title>Pi remote</title>
@@ -34,90 +34,64 @@
     <script type="module" src="/client.js"></script>
   </head>
   <body>
-    <div class="app">
-      <header class="app-header">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true">pi</span>
-          <div>
-            <h1>Pi remote</h1>
-            <p class="eyebrow">Your terminal, untethered</p>
+    <header class="topbar">
+      <div class="topbar-row">
+        <h1 id="session-name">Pi remote</h1>
+        <span id="status" class="pill">Connecting</span>
+        <span id="connection" class="dot" aria-hidden="true"></span>
+        <button id="notify" class="ghost" type="button" hidden>Notify</button>
+      </div>
+      <ul id="facts" class="facts" aria-label="Session"></ul>
+    </header>
+
+    <p id="banner" class="banner" hidden></p>
+
+    <main id="thread" class="thread">
+      <div id="empty" class="empty" hidden>
+        <h2>Nothing yet</h2>
+        <p>Send a message and Pi's reply lands here.</p>
+      </div>
+      <div id="transcript"></div>
+      <div id="activity" class="activity" aria-label="Running now"></div>
+    </main>
+
+    <p id="live" class="visually-hidden" role="status" aria-live="polite"></p>
+
+    <button id="jump" class="jump" type="button" hidden>Latest</button>
+
+    <footer class="dock">
+      <form id="command" class="composer">
+        <textarea
+          id="text"
+          maxlength="8192"
+          rows="1"
+          required
+          placeholder="Message Pi"
+          aria-label="Message Pi"
+        ></textarea>
+        <div class="row">
+          <div
+            class="delivery"
+            role="group"
+            aria-label="How the message is delivered"
+          >
+            <button type="button" data-mode="steer" aria-pressed="false">
+              Steer</button
+            ><button type="button" data-mode="followUp" aria-pressed="true">
+              Queue
+            </button>
           </div>
+          <span class="spacer"></span>
+          <button id="abort" class="ghost" type="button" disabled>Stop</button
+          ><button id="send" class="primary" type="submit" disabled>
+            Send
+          </button>
         </div>
-        <button id="notify" class="notify" type="button" hidden>
-          Notify me
-        </button>
-        <span class="connection"
-          ><span class="connection-dot" aria-hidden="true"></span
-          ><span id="connection">Connecting</span></span
-        >
-      </header>
-      <section class="session-card" aria-label="Current session">
-        <div id="session">
-          <p class="eyebrow">Current session</p>
-          <h2 id="session-name">Connecting to Pi</h2>
-          <p id="session-id" class="session-id">Waiting for your terminal</p>
-        </div>
-        <p id="status" class="status-badge" role="status">Connecting</p>
-        <ul id="facts" class="facts" aria-label="Session facts"></ul>
-      </section>
-      <main class="conversation">
-        <div class="section-heading">
-          <h2>Conversation</h2>
-          <span class="caption">Synced with your terminal</span>
-        </div>
-        <div id="empty" class="empty-state" hidden>
-          <span class="empty-mark" aria-hidden="true">&gt;_</span>
-          <h3>A little room to think.</h3>
-          <p>
-            Send a message below. Replies and tool activity will appear here as
-            Pi works.
-          </p>
-        </div>
-        <div id="transcript" aria-label="Conversation messages"></div>
-        <section id="activity" aria-label="Live activity"></section>
-      </main>
-      <button id="jump" class="jump" type="button" hidden>
-        Latest<span aria-hidden="true">&darr;</span>
-      </button>
-      <footer class="composer-wrap">
-        <form id="command" class="composer">
-          <div class="composer-heading">
-            <label for="text">Message Pi</label
-            ><span class="caption">Messages join the queue</span>
-          </div>
-          <textarea
-            id="text"
-            maxlength="8192"
-            rows="3"
-            required
-            placeholder="What would you like to work on?"
-          ></textarea>
-          <div class="composer-toolbar">
-            <div class="delivery" role="group" aria-label="How the message is delivered">
-              <button type="button" data-mode="steer" aria-pressed="false">
-                Steer
-              </button><button type="button" data-mode="followUp" aria-pressed="true">
-                Queue
-              </button>
-            </div>
-            <div class="buttons">
-              <button id="abort" class="abort-button" type="button" disabled>
-                <span class="stop-icon" aria-hidden="true"></span>Abort</button
-              ><button id="send" class="send-button" type="submit" disabled>
-                Send<span aria-hidden="true">&uarr;</span>
-              </button>
-            </div>
-          </div>
-          <p id="feedback" role="status"></p>
-        </form>
-        <p id="view-note" class="footer-note" hidden>
-          This link watches only. Ask for the control link to send.
-        </p>
-        <p class="footer-note">
-          PI REMOTE <span aria-hidden="true">/</span> A window into your
-          terminal
-        </p>
-      </footer>
-    </div>
+        <p id="feedback" class="feedback" role="status"></p>
+      </form>
+      <p id="view-note" class="note" hidden>
+        This link watches only. Ask for the control link to send.
+      </p>
+    </footer>
   </body>
 </html>

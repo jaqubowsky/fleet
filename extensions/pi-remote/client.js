@@ -16,12 +16,26 @@ let previousStatus;
 function controls() {
 	const control = snapshot?.control !== false;
 	document.body.dataset.connected = String(connected);
-	document.body.dataset.control = String(control);
-	$("connection").textContent = connected ? "Live" : "Offline";
+	$("connection").title = connected ? "Live" : "Offline";
 	$("send").disabled = !connected || sending || !snapshot?.session;
 	$("abort").disabled = !connected || sending || !snapshot?.session;
 	$("command").hidden = !control;
 	$("view-note").hidden = control;
+	dock();
+}
+function dock() {
+	const footer = document.querySelector(".dock");
+	document.documentElement.style.setProperty(
+		"--dock",
+		`${footer.offsetHeight}px`,
+	);
+}
+function banner(message, tone) {
+	const node = $("banner");
+	node.hidden = !message;
+	node.textContent = message ?? "";
+	if (tone) node.dataset.tone = tone;
+	else delete node.dataset.tone;
 }
 const BOTTOM = 48;
 const atBottom = () =>
@@ -68,15 +82,20 @@ function notifications() {
 }
 function render(next) {
 	const follow = atBottom();
-	if (previousStatus === "running" && SETTLED.includes(next.status))
+	const previous = previousStatus;
+	if (previous === "running" && SETTLED.includes(next.status))
 		announce(next.status);
 	previousStatus = next.status;
 	snapshot = next;
 	$("session-name").textContent = next.session?.name ?? "Session changing";
-	$("session-id").textContent =
-		next.session?.id ?? "Reconnecting to your terminal";
 	$("status").textContent = next.status;
 	$("status").dataset.state = next.status;
+	if (next.status !== previous) $("live").textContent = `Pi is ${next.status}.`;
+	banner(
+		next.session
+			? undefined
+			: "Your terminal is reconnecting. The transcript below is the last thing Pi sent.",
+	);
 	$("facts").replaceChildren(...facts(next.header));
 	$("empty").hidden =
 		next.transcript.length > 0 ||
@@ -89,7 +108,7 @@ function render(next) {
 		),
 	);
 	$("activity").replaceChildren(
-		...(next.assistant ? [turn(next.assistant, "streaming")] : []),
+		...(next.assistant ? [turn(next.assistant, true)] : []),
 		...next.tools.filter((block) => !settled.has(block.id)).map(tool),
 	);
 	controls();
@@ -100,11 +119,14 @@ function scrollToLatest() {
 	window.scrollTo({ top: document.body.scrollHeight });
 	$("jump").hidden = true;
 }
-function turn(message, note) {
+function turn(message, streaming) {
 	const article = document.createElement("article");
+	article.className = "turn";
 	article.dataset.role = message.role;
-	const heading = document.createElement("strong");
-	heading.textContent = note ? `${message.role} · ${note}` : message.role;
+	if (streaming) article.dataset.streaming = "true";
+	const heading = document.createElement("p");
+	heading.className = "turn-label";
+	heading.textContent = message.role === "user" ? "You" : "Pi";
 	article.append(
 		heading,
 		...message.blocks.map((block) =>
@@ -113,39 +135,59 @@ function turn(message, note) {
 	);
 	return article;
 }
-const ICONS = {
-	bash: "$",
-	read: "▤",
-	write: "✎",
-	edit: "✎",
-	ls: "▤",
-	grep: "⌕",
-	find: "⌕",
-	web_search: "⌕",
-	fetch_content: "↓",
-	source_check: "↓",
-	get_search_content: "↓",
-	subagent: "⊕",
+const PATHS = {
+	terminal: "M4 6l5 5-5 5M12 16h8",
+	file: "M6 3h7l5 5v13H6zM13 3v5h5",
+	pencil: "M4 20h4L20 8l-4-4L4 16z",
+	search: "M11 4a7 7 0 107 7 7 7 0 00-7-7zM20 20l-4-4",
+	list: "M4 6h16M4 12h16M4 18h10",
+	download: "M12 4v11M7 11l5 5 5-5M5 20h14",
+	agent: "M12 3a9 9 0 109 9 9 9 0 00-9-9zM12 8v8M8 12h8",
+	dot: "M12 8a4 4 0 104 4 4 4 0 00-4-4z",
+	check: "M5 13l4 4L19 7",
+	alert: "M12 5v8M12 17v.5",
+	spinner: "M12 4a8 8 0 018 8",
 };
-const STATES = { running: "", done: "✓", error: "!" };
+const ICONS = {
+	bash: "terminal",
+	read: "file",
+	write: "pencil",
+	edit: "pencil",
+	ls: "list",
+	grep: "search",
+	find: "search",
+	web_search: "search",
+	fetch_content: "download",
+	source_check: "download",
+	get_search_content: "download",
+	subagent: "agent",
+};
+const STATES = { running: "spinner", done: "check", error: "alert" };
 
+function icon(name) {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("aria-hidden", "true");
+	const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	path.setAttribute("d", PATHS[name] ?? PATHS.dot);
+	svg.append(path);
+	return svg;
+}
 function tool(block) {
 	const card = document.createElement("details");
 	card.className = "tool";
 	card.dataset.state = block.state;
 	const head = document.createElement("summary");
-	const icon = document.createElement("span");
-	icon.className = "tool-icon";
-	icon.textContent = ICONS[block.name] ?? "•";
-	const name = document.createElement("strong");
+	const name = document.createElement("span");
+	name.className = "tool-name";
 	name.textContent = block.name;
 	const summary = document.createElement("span");
 	summary.className = "tool-summary";
 	summary.textContent = block.summary;
 	const state = document.createElement("span");
 	state.className = "tool-state";
-	state.textContent = STATES[block.state] ?? "";
-	head.append(icon, name, summary, state);
+	state.append(icon(STATES[block.state]));
+	head.append(icon(ICONS[block.name]), name, summary, state);
 	card.append(head);
 	if (block.diff) card.append(diff(block.diff));
 	if (block.result) card.append(output(block.result));
@@ -176,6 +218,45 @@ function markdown(text) {
 	body.append(...tree(marked.lexer(text)).map(build));
 	return body;
 }
+function build(node) {
+	if ("text" in node) return document.createTextNode(node.text);
+	if (node.tag === "pre") return codeBlock(node);
+	const element = document.createElement(node.tag);
+	for (const [name, value] of Object.entries(node.attributes))
+		element.setAttribute(name, value);
+	element.append(...node.children.map(build));
+	return element;
+}
+function codeBlock(node) {
+	const [{ attributes, children }] = node.children;
+	const source = children[0]?.text ?? "";
+	const language = attributes["data-language"];
+	const figure = document.createElement("figure");
+	figure.className = "code";
+	const caption = document.createElement("figcaption");
+	const name = document.createElement("span");
+	name.textContent = language ?? "text";
+	const copy = document.createElement("button");
+	copy.type = "button";
+	copy.textContent = "Copy";
+	copy.addEventListener("click", async () => {
+		try {
+			await navigator.clipboard.writeText(source);
+			copy.textContent = "Copied";
+		} catch {
+			copy.textContent = "Copy failed";
+		}
+	});
+	caption.append(name, copy);
+	const pre = document.createElement("pre");
+	const code = document.createElement("code");
+	if (language && hljs.getLanguage(language))
+		code.innerHTML = hljs.highlight(source, { language }).value;
+	else code.textContent = source;
+	pre.append(code);
+	figure.append(caption, pre);
+	return figure;
+}
 async function request(path, options = {}) {
 	const response = await fetch(path, {
 		...options,
@@ -193,7 +274,7 @@ async function request(path, options = {}) {
 }
 async function connect() {
 	if (!/^[a-f0-9]{64}$/.test(token)) {
-		$("status").textContent = "Open the private URL from /remote link.";
+		banner("Open the private URL that /remote link shows.", "danger");
 		return;
 	}
 	for (;;) {
@@ -227,7 +308,7 @@ async function connect() {
 			connected = false;
 			previousStatus = undefined;
 			controls();
-			$("status").textContent = error.message;
+			banner(error.message, "danger");
 			if (reader) await reader.cancel().catch(() => {});
 			if (error.message.startsWith("Link expired")) return;
 			await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -280,5 +361,13 @@ $("abort").addEventListener("click", () => {
 document.addEventListener("visibilitychange", () => {
 	if (!document.hidden) controller?.abort();
 });
+$("text").addEventListener("input", () => {
+	const field = $("text");
+	field.style.height = "auto";
+	field.style.height = `${field.scrollHeight}px`;
+	dock();
+});
+window.addEventListener("resize", dock);
 notifications();
+dock();
 void connect();
