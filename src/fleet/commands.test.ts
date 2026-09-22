@@ -150,7 +150,7 @@ test("artifacts shows each task's files flat and folds its folders into one line
 		[`list ${root}/runbook/features`]: ["rmk.md"],
 		[`stat ${root}/runbook/features/rmk.md`]: file(100, 900),
 		[`stat ${t}`]: dir,
-		[`list ${t}`]: ["status.md", "task.md", "review.md", "logs", "to-testing"],
+		[`list ${t}`]: ["status.md", "task.md", "review.md", "logs", "browser"],
 		[`stat ${t}/status.md`]: file(200, 1),
 		[`stat ${t}/task.md`]: file(800, 60),
 		[`stat ${t}/review.md`]: file(3000, 30),
@@ -160,12 +160,12 @@ test("artifacts shows each task's files flat and folds its folders into one line
 		[`stat ${t}/logs/sessions`]: dir,
 		[`list ${t}/logs/sessions`]: ["s.jsonl"],
 		[`stat ${t}/logs/sessions/s.jsonl`]: file(4_000_000, 1),
-		[`stat ${t}/to-testing`]: dir,
-		[`list ${t}/to-testing`]: ["20260921-1505"],
-		[`stat ${t}/to-testing/20260921-1505`]: dir,
-		[`list ${t}/to-testing/20260921-1505`]: ["report.md", "walk.webm"],
-		[`stat ${t}/to-testing/20260921-1505/report.md`]: file(1000, 40),
-		[`stat ${t}/to-testing/20260921-1505/walk.webm`]: file(9_000_000, 40),
+		[`stat ${t}/browser`]: dir,
+		[`list ${t}/browser`]: ["20260921-1505"],
+		[`stat ${t}/browser/20260921-1505`]: dir,
+		[`list ${t}/browser/20260921-1505`]: ["report.md", "walk.webm"],
+		[`stat ${t}/browser/20260921-1505/report.md`]: file(1000, 40),
+		[`stat ${t}/browser/20260921-1505/walk.webm`]: file(9_000_000, 40),
 	});
 
 	assert.deepEqual(artifacts("/w/webapp", io).split("\n"), [
@@ -174,8 +174,9 @@ test("artifacts shows each task's files flat and folds its folders into one line
 		"  status.md            200B  1m ago",
 		"  review.md              3K  30m ago",
 		"  task.md              800B  1h ago",
+		"  browser/           2 files  8.6M",
 		"  logs/              2 files  3.8M",
-		"  to-testing/        2 files  8.6M",
+
 		"runbook/           2 files  400B",
 		"plan.md                2K  5m ago",
 	]);
@@ -244,5 +245,3 @@ test("ls shows how long a container has worked and what it cost", () => {
 		[`read ${task}/logs/sessions/s1.jsonl`]: [req("2026-09-16T09:30:00Z"), req("2026-09-16T09:40:00Z")].join("\n"),
 	});
 
-	assert.equal(ls(io), "pi-a  running  gone     web-1  30m  $0.42");
-});

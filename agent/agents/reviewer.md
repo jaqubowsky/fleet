@@ -48,8 +48,11 @@ Verdict: OK | OK with notes | BLOCK
 ## Checks read
 - `<command>`: exit <n>, <log path>
 
+## Shared seams
+- `<path:symbol>`: <who else uses it>, or none
+
 ## Not covered
 - <what this review could not judge and what it would take>
 ```
 
-`Verdict` is BLOCK on any P0, OK with notes on any P1 or P2, OK otherwise. `No findings.` under an axis is a result. The verdict covers the commit in `Commit:` and no other.
+`Shared seams` lists every function, component, hook, query or endpoint the diff modified that other screens or callers use, found by grep; `check-regressions` runs on it. `Verdict` is BLOCK on any P0, OK with notes on any P1 or P2, OK otherwise. `No findings.` under an axis is a result. The verdict covers the commit in `Commit:` and no other.
