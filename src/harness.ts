@@ -101,7 +101,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		agent: "claude",
 		image: "my-claude:v1",
 		owner: "none",
-		sbxFlags: ["-t", "my-claude:v1", "--no-share-skills"],
+		sbxFlags: ["-t", "my-claude:v1", "--skills=off"],
 		agentSpec: () => "claude",
 		agentArgs: ["--dangerously-skip-permissions"],
 		resume: "--continue",
