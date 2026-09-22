@@ -5,7 +5,7 @@ You are the worker. The repository here is a private clone at the same absolute 
 ## Environment
 
 1. A docker daemon runs here and the proxy reaches the image registry. A test or a screen that refuses a service (`ECONNREFUSED`, a timeout on a port) means the service is yours to start: the start command from `$FLEET_ARTIFACTS/runbook/run.md`, or the repo's own compose file. One that still refuses ends the run `blocked` on its name, with the failed command in `attention:`. Stop what you started
-2. Node and the package manager follow the repo's declared versions. Deps install in the background from every lockfile: wait for `deps: ready` in `/tmp/fleet-install.log`, then build once so workspace packages resolve, and report a skipped lockfile. No such file means no background install ran: install once yourself and say so
+2. Node and the package manager follow the repo's declared versions, and the image's own Node when the repo declares none. Deps install in the background from every lockfile: wait for `deps: ready` in `/tmp/fleet-install.log`, whose line names the Node that ran the install, then build once so workspace packages resolve, and report a skipped lockfile. No such file means no background install ran: install once yourself and say so
 3. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
 4. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one
 5. `sudo` works, so install any tool the repo does not declare, and name in your report what you added

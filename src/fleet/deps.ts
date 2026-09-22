@@ -3,8 +3,10 @@ export const INSTALL_LOG = "/tmp/fleet-install.log";
 export const installScript = [
 	"set -eu",
 	'cd "$WORKSPACE_DIR"',
-	'eval "$(fnm env --shell bash)"',
-	"fnm use --install-if-missing >/dev/null",
+	"if [ -f .nvmrc ] || [ -f .node-version ] || node -e \"process.exit(require('./package.json').engines?.node ? 0 : 1)\" 2>/dev/null; then",
+	'  eval "$(fnm env --shell bash)"',
+	"  fnm use --install-if-missing >/dev/null",
+	"fi",
 	"find . -maxdepth 6 -type f \\( -name yarn.lock -o -name pnpm-lock.yaml -o -name package-lock.json \\) \\",
 	"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | sort | while read -r lock; do",
 	'  root="$(dirname "$lock")"',
@@ -23,5 +25,5 @@ export const installScript = [
 	'  npm run "$script" >/tmp/deps-generate.log 2>&1 || tail -20 /tmp/deps-generate.log',
 	"  break",
 	"done",
-	"echo deps: ready",
+	'echo "deps: ready on node $(node --version) at $(command -v node)"',
 ].join("\n");
