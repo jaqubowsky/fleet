@@ -10,13 +10,19 @@ const ENTITIES = {
 };
 
 const text = (value) => ({ text: value });
+const codePoint = (body) => {
+	const value = Number(
+		body[1] === "x" || body[1] === "X" ? `0${body.slice(1)}` : body.slice(1),
+	);
+	return Number.isInteger(value) && value <= 0x10ffff
+		? String.fromCodePoint(value)
+		: undefined;
+};
 const prose = (value) => ({
-	text: value.replace(/&(#\d{1,7}|#[xX][\da-fA-F]{1,6}|\w{2,8});/g, (whole, body) =>
-		body.startsWith("#")
-			? String.fromCodePoint(
-					Number(body[1] === "x" || body[1] === "X" ? `0${body.slice(1)}` : body.slice(1)),
-				)
-			: (ENTITIES[body] ?? whole),
+	text: value.replace(
+		/&(#\d{1,7}|#[xX][\da-fA-F]{1,6}|\w{2,8});/g,
+		(whole, body) =>
+			(body.startsWith("#") ? codePoint(body) : ENTITIES[body]) ?? whole,
 	),
 });
 const element = (tag, children, attributes = {}) => ({

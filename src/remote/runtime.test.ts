@@ -464,3 +464,73 @@ test("the view link shows everything and controls nothing", async (t) => {
 	await remote.stop();
 	await assert.rejects(fetch(`${origin}/bootstrap`, { headers: as(view) }));
 });
+
+test("a long-running session keeps its snapshot inside the budget", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("growing"));
+	await remote.start(0);
+	const client = await connect(remote);
+	const filler = "y".repeat(200_000);
+
+	for (let turn = 0; turn < 64; turn++)
+		remote.publish(owner, {
+			type: "message_end",
+			message: {
+				role: "assistant",
+				content: [
+					{ type: "text", text: filler },
+					...Array.from({ length: 40 }, (_, slot) => ({
+						type: "toolCall",
+						id: `t${turn}-${slot}`,
+						name: "edit",
+						arguments: {
+							path: filler,
+							edits: [{ oldText: filler, newText: filler }],
+						},
+					})),
+				],
+			},
+		});
+
+	const snapshot = await (await client.get("/bootstrap")).json();
+	const size = JSON.stringify(snapshot.transcript).length;
+
+	assert.ok(snapshot.transcript.length > 0, "the newest turn survives");
+	assert.ok(size <= 524_288, `live transcript stays inside 512 KiB, got ${size}`);
+});
+
+test("a finished tool reports how it ended", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("settling"));
+	await remote.start(0);
+	const client = await connect(remote);
+
+	remote.publish(owner, {
+		type: "tool_execution_end",
+		toolCallId: "e1",
+		toolName: "bash",
+		args: { command: "false" },
+		isError: true,
+		result: {
+			content: [{ type: "text", text: "exit 1" }],
+			details: { hidden: "secret" },
+		},
+	});
+
+	const snapshot = await (await client.get("/bootstrap")).json();
+
+	assert.deepEqual(snapshot.tools, [
+		{
+			kind: "tool",
+			id: "e1",
+			name: "bash",
+			summary: "false",
+			state: "error",
+			result: "exit 1",
+		},
+	]);
+});

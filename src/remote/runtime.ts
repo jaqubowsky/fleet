@@ -8,6 +8,7 @@ import {
 import {
 	call,
 	content,
+	fit,
 	header,
 	message,
 	record,
@@ -97,7 +98,8 @@ export class RemoteRuntime {
 				break;
 			case "message_end": {
 				const projected = message(event.message);
-				if (projected) this.messages = [...this.messages, projected].slice(-64);
+				if (projected)
+					this.messages = fit([...this.messages, projected].slice(-64));
 				if (projected?.role === "assistant") this.assistant = undefined;
 				break;
 			}

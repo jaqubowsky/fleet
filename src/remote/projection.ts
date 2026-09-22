@@ -101,7 +101,7 @@ export function summarize(name: string, args: Record<string, unknown>): string {
 	const key = PREFERRED.find((field) => string(args[field]));
 	if (key) return text(string(args[key]), SUMMARY_LIMIT);
 	const keys = Object.keys(args).slice(0, 6);
-	return keys.length ? `${name}(${keys.join(", ")})` : name;
+	return text(keys.length ? `${name}(${keys.join(", ")})` : name, SUMMARY_LIMIT);
 }
 
 function edited(args: Record<string, unknown>): string {
@@ -198,7 +198,7 @@ export function transcript(entries: unknown[]): Message[] {
 	return fit(messages.slice(-MESSAGE_LIMIT));
 }
 
-function fit(messages: Message[]): Message[] {
+export function fit(messages: Message[]): Message[] {
 	const kept: Message[] = [];
 	let total = 0;
 	for (let index = messages.length - 1; index >= 0; index--) {

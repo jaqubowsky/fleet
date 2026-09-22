@@ -223,3 +223,17 @@ test("an image reaches the phone as its alt text", () => {
 		children: [{ text: "a diagram" }],
 	});
 });
+
+test("an entity that names no character stays on the page as text", () => {
+	const source = "budget &#9999999; and &#xFFFFFFF; and &nope; survive";
+
+	const [paragraph] = parse(source);
+
+	assert.deepEqual(paragraph, {
+		tag: "p",
+		attributes: {},
+		children: [
+			{ text: "budget &#9999999; and &#xFFFFFFF; and &nope; survive" },
+		],
+	});
+});
