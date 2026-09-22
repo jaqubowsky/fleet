@@ -63,6 +63,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 	for (const name of [
 		"agent_start",
 		"agent_settled",
+		"session_info_changed",
 		"ui_prompt_start",
 		"ui_prompt_end",
 		"message_start",
@@ -74,11 +75,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 	]) {
 		pi.on(name, (event) => runtime.publish(owner, event));
 	}
-	for (const name of [
-		"session_tree",
-		"session_compact",
-		"session_info_changed",
-	])
+	for (const name of ["session_tree", "session_compact"])
 		pi.on(name, (_event, ctx) => bind(ctx));
 	pi.registerCommand("remote", {
 		description: "Remote control: start [port], stop, status, link, help",

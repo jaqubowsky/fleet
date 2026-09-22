@@ -23,6 +23,7 @@ function session(id: string) {
 	const notices: string[] = [];
 	let widget: string[] | undefined;
 	let stale = false;
+	let name = id;
 	const active = () => {
 		assert.equal(stale, false, "old session is never accessed");
 	};
@@ -33,7 +34,7 @@ function session(id: string) {
 				active();
 				return id;
 			},
-			getSessionName: () => id,
+			getSessionName: () => name,
 			getBranch: () => [],
 		},
 		isIdle: () => {
@@ -69,6 +70,9 @@ function session(id: string) {
 		sent,
 		notices,
 		widget: () => widget,
+		setName: (value: string) => {
+			name = value;
+		},
 		command: (args: string) => command.handler(args, context),
 		emit: (type: string, fields = {}) =>
 			handlers.get(type)?.({ type, ...fields }, context),
@@ -78,91 +82,124 @@ function session(id: string) {
 	};
 }
 
-test(
-	"extension controls a process runtime across fresh factories",
-	{ timeout: 15000 },
-	async (t) => {
-		const runtime = processRuntime();
-		t.after(() => runtime.stop());
-		let current = session("original");
-		await current.emit("session_start", { reason: "startup" });
-		await current.command(`start ${await port()}`);
-		const identity = runtime.identity();
-		assert.ok(identity);
-		const headers = { Authorization: `Bearer ${identity.token}` };
-		const initial = await fetch(`${identity.origin}/bootstrap`, { headers });
-		assert.equal(initial.status, 200);
-		assert.equal((await initial.json()).session.id, "original");
-		const page = await fetch(identity.origin);
-		assert.equal(page.status, 200);
-		assert.match(
-			page.headers.get("content-security-policy")!,
-			/default-src 'none'/,
+test("renaming preserves live activity and pending phone commands", async (t) => {
+	const runtime = processRuntime();
+	const current = session("running");
+	t.after(() => current.emit("session_shutdown", { reason: "quit" }));
+	await current.emit("session_start");
+	await runtime.start(0);
+	const identity = runtime.identity()!;
+	const headers = { Authorization: `Bearer ${identity.token}` };
+	const snapshot = () =>
+		fetch(`${identity.origin}/bootstrap`, { headers }).then((response) =>
+			response.json(),
 		);
-		assert.match(await page.text(), /Pi remote/);
-		const stream = await fetch(`${identity.origin}/events`, { headers });
-		const reader = stream.body!.getReader();
-		t.after(() => reader.cancel());
-		assert.match(
-			new TextDecoder().decode((await reader.read()).value),
-			/original/,
-		);
-		await current.command("link");
-		assert.ok(
-			current.widget()?.some((line) => line.includes(`#${identity.token}`)),
-		);
-		assert.equal(current.notices.join("\n").includes(identity.token), false);
-		await current.command("status");
-		assert.ok(
-			current.widget() === undefined,
-			"status hides the credential widget",
-		);
+	await current.emit("message_update", {
+		message: { role: "assistant", content: [{ type: "text", text: "draft" }] },
+	});
+	await current.emit("tool_execution_start", {
+		toolCallId: "tool-1",
+		toolName: "read",
+	});
+	await current.emit("ui_prompt_start");
+	const before = await snapshot();
 
-		for (const reason of ["new", "resume", "fork", "reload"]) {
-			const old = current;
-			await old.emit("session_shutdown", { reason });
-			old.retire();
-			current = session(reason);
-			await current.emit("session_start", { reason });
-			const reimported = await import(`./runtime.ts?${reason}`);
-			assert.equal(reimported.processRuntime(), runtime);
-			assert.ok(
-				runtime.identity()?.token === identity.token &&
-					runtime.identity()?.origin === identity.origin,
-				"factory replacement preserves identity",
-			);
-			await old.emit("session_shutdown", { reason: "quit" });
-			assert.ok(
-				runtime.identity()?.token === identity.token &&
-					runtime.identity()?.origin === identity.origin,
-				"stale quit preserves identity",
-			);
-			const bootstrap = await (
-				await fetch(`${identity.origin}/bootstrap`, { headers })
-			).json();
-			assert.equal(bootstrap.session.id, reason);
-			const result: Response = await fetch(`${identity.origin}/command`, {
-				method: "POST",
-				headers: { ...headers, "Content-Type": "application/json" },
-				body: JSON.stringify({
-					generation: bootstrap.generation,
-					action: "prompt",
-					text: "fresh context",
-				}),
-			});
-			assert.equal(result.status, 202);
-			assert.deepEqual(current.sent, ["prompt:fresh context"]);
-		}
-		await reader.cancel();
-		await current.command("stop");
-		assert.ok(runtime.identity() === undefined, "stop revokes identity");
-		await assert.rejects(fetch(`${identity.origin}/bootstrap`, { headers }));
-		await current.command(`start ${await port()}`);
+	current.setName("Renamed");
+	await current.emit("session_info_changed", { name: "Renamed" });
+	const after = await snapshot();
+
+	assert.equal(after.session.name, "Renamed");
+	assert.equal(after.status, "waiting for terminal");
+	assert.deepEqual(after.assistant, { role: "assistant", text: "draft" });
+	assert.deepEqual(after.tools, [
+		{ id: "tool-1", name: "read", state: "running", text: "" },
+	]);
+	assert.equal(after.generation, before.generation);
+});
+
+test("extension controls a process runtime across fresh factories", {
+	timeout: 15000,
+}, async (t) => {
+	const runtime = processRuntime();
+	t.after(() => runtime.stop());
+	let current = session("original");
+	await current.emit("session_start", { reason: "startup" });
+	await current.command(`start ${await port()}`);
+	const identity = runtime.identity();
+	assert.ok(identity);
+	const headers = { Authorization: `Bearer ${identity.token}` };
+	const initial = await fetch(`${identity.origin}/bootstrap`, { headers });
+	assert.equal(initial.status, 200);
+	assert.equal((await initial.json()).session.id, "original");
+	const page = await fetch(`${identity.origin}/`);
+	assert.equal(page.status, 200);
+	assert.match(
+		page.headers.get("content-security-policy")!,
+		/default-src 'none'/,
+	);
+	assert.match(await page.text(), /Pi remote/);
+	const stream = await fetch(`${identity.origin}/events`, { headers });
+	const reader = stream.body!.getReader();
+	t.after(() => reader.cancel());
+	assert.match(
+		new TextDecoder().decode((await reader.read()).value),
+		/original/,
+	);
+	await current.command("link");
+	assert.ok(
+		current.widget()?.some((line) => line.includes(`#${identity.token}`)),
+	);
+	assert.equal(current.notices.join("\n").includes(identity.token), false);
+	await current.command("status");
+	assert.ok(
+		current.widget() === undefined,
+		"status hides the credential widget",
+	);
+
+	for (const reason of ["new", "resume", "fork", "reload"]) {
+		const old = current;
+		await old.emit("session_shutdown", { reason });
+		old.retire();
+		current = session(reason);
+		await current.emit("session_start", { reason });
+		const reimported = await import(`./runtime.ts?${reason}`);
+		assert.equal(reimported.processRuntime(), runtime);
 		assert.ok(
-			runtime.identity()!.token !== identity.token,
-			"restart rotates token",
+			runtime.identity()?.token === identity.token &&
+				runtime.identity()?.origin === identity.origin,
+			"factory replacement preserves identity",
 		);
-		await current.emit("session_shutdown", { reason: "quit" });
-		assert.ok(runtime.identity() === undefined, "quit revokes identity");
-	},
-);
+		await old.emit("session_shutdown", { reason: "quit" });
+		assert.ok(
+			runtime.identity()?.token === identity.token &&
+				runtime.identity()?.origin === identity.origin,
+			"stale quit preserves identity",
+		);
+		const bootstrap = await (
+			await fetch(`${identity.origin}/bootstrap`, { headers })
+		).json();
+		assert.equal(bootstrap.session.id, reason);
+		const result: Response = await fetch(`${identity.origin}/command`, {
+			method: "POST",
+			headers: { ...headers, "Content-Type": "application/json" },
+			body: JSON.stringify({
+				generation: bootstrap.generation,
+				action: "prompt",
+				text: "fresh context",
+			}),
+		});
+		assert.equal(result.status, 202);
+		assert.deepEqual(current.sent, ["prompt:fresh context"]);
+	}
+	await reader.cancel();
+	await current.command("stop");
+	assert.ok(runtime.identity() === undefined, "stop revokes identity");
+	await assert.rejects(fetch(`${identity.origin}/bootstrap`, { headers }));
+	await current.command(`start ${await port()}`);
+	assert.ok(
+		runtime.identity()!.token !== identity.token,
+		"restart rotates token",
+	);
+	await current.emit("session_shutdown", { reason: "quit" });
+	assert.ok(runtime.identity() === undefined, "quit revokes identity");
+});

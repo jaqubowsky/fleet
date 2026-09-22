@@ -20,7 +20,7 @@ The extension only runs `serve status --json`. It never applies the command. It 
 
 ## Lifetime
 
-The server, bearer token, socket address and phone streams belong to the terminal process. `/new`, `/resume`, `/fork`, and `/reload` detach only the old session callbacks and bind the fresh API/context on `session_start`. Late events and shutdown from an old instance cannot affect the new binding. During the gap, commands return 503; commands addressed to an older generation return 409. Process quit and explicit stop close the listener. Reloading preserves the running implementation too; restart remote control after changing server code.
+The server, bearer token, socket address and phone streams belong to the terminal process. `/new`, `/resume`, `/fork`, and `/reload` detach only the old session callbacks and bind the fresh API/context on `session_start`. Late events and shutdown from an old instance cannot affect the new binding. During the gap, commands return 503; commands addressed to an older generation return 409. Process quit and explicit stop close the listener. Reloading preserves the running implementation too. Changes to runtime or projection code require restarting the Pi process; stopping and starting remote control does not replace the process-global instance.
 
 The phone keeps its token only in memory, removes the fragment from browser history immediately, and uses an Authorization header. Reloading the phone page requires scanning the link again. Network reconnects and tab wakeups keep the in-memory credential and request a fresh snapshot. Commands are never automatically retried, because an interrupted response might already have been accepted.
 

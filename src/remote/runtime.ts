@@ -69,6 +69,9 @@ export class RemoteRuntime {
 		if (owner !== this.owner) return;
 		const event = record(value);
 		switch (event.type) {
+			case "session_info_changed":
+				if (this.binding) this.binding.name = text(event.name, 256) || "Untitled";
+				break;
 			case "agent_start":
 				this.status = "running";
 				break;
