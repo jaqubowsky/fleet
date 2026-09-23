@@ -46,12 +46,18 @@ test("CLI watch reconciles status and reconnects after a closed stream", (t: Tes
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "claude-webapp-a", workspaces: ["/w/webapp"] }] },
 	}, HARNESSES.claude);
-	io.herdr = (<T>() => ({ result: { agents } }) as T);
+	let snapshots = 0;
+	io.herdr = (<T>() => {
+		snapshots++;
+		if (snapshots === 2) throw new Error("herdr unavailable");
+		return { result: { agents } } as T;
+	});
 	void watch([], io, "/tmp/herdr.sock");
 
 	agents[0].agent_status = "idle";
 	sockets[0].destroyed = true;
 	sockets[0].emit("close");
+	t.mock.timers.tick(3000);
 	t.mock.timers.tick(3000);
 	t.mock.timers.tick(1000);
 

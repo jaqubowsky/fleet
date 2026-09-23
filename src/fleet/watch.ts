@@ -111,7 +111,15 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 	};
 
 	const refresh = () => {
-		const agents = fleetAgents(io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents, sandboxes(), wanted);
+		let agents: Agent[];
+		try {
+			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
+			agents = fleetAgents(listed, sandboxes(), wanted);
+		} catch (error) {
+			io.log(`[fleet] watch: refresh: ${error instanceof Error ? error.message : String(error)}`);
+			setTimeout(refresh, RECONNECT_MS);
+			return;
+		}
 		const fresh = agents.filter((a) => a.pane_id && !tracked.has(a.pane_id));
 		for (const agent of agents) {
 			const pane = agent.pane_id;
