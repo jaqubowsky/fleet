@@ -3,6 +3,28 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 type MutationQueue = <T>(path: string, mutation: () => Promise<T>) => Promise<T>;
+type Session = {
+	ui: { setEditorText(text: string): void };
+	sendMessage(message: object, options: object): Promise<void> | void;
+	sendUserMessage(text: string): Promise<void> | void;
+};
+
+export const COMMAND = "/session-handoff";
+export const COMPLETE = "session handoff complete; fresh session idle";
+const CANCELLED = "session handoff cancelled; still in the previous session";
+
+export function suggested(command: string): string {
+	return `session handoff suggested; approve with ${command}`;
+}
+
+export function withAttention(status: string, text: string): string {
+	if (!/^attention: .*$/m.test(status)) throw new Error("status.md needs an attention line before handoff");
+	return status.replace(/^attention: .*$/m, () => `attention: ${text}`);
+}
+
+export function pointer(taskDirectory: string): string {
+	return `Previous task directory: ${JSON.stringify(taskDirectory)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`;
+}
 
 const queues = new Map<string, Promise<unknown>>();
 
@@ -47,73 +69,43 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 	}
 	const threshold = settings.sessionHandoff?.suggestAtTokens ?? 250000;
 	if (!Number.isSafeInteger(threshold) || threshold <= 0) throw new Error("sessionHandoff.suggestAtTokens must be a positive integer");
-	const approval = "Approve session handoff";
-	let requested = false;
-	let approved = false;
-	let queued = false;
-	let previousAttention = "none";
 
-	const attention = (text: string) => {
-		const status = readFileSync(statusFile, "utf8");
-		const previous = status.match(/^attention: (.*)$/m)?.[1];
-		if (previous === undefined) throw new Error("status.md needs an attention line before handoff");
-		writeFileSync(statusFile, status.replace(/^attention: .*$/m, () => `attention: ${text}`));
-		return previous;
+	const attention = (text: string) => mutate(statusFile, async () => writeFileSync(statusFile, withAttention(readFileSync(statusFile, "utf8"), text)));
+
+	const start = async (session: Session, prompt: string) => {
+		session.ui.setEditorText("");
+		await session.sendMessage({ customType: "session-handoff", content: pointer(taskDirectory), display: false }, { triggerTurn: false });
+		await attention(COMPLETE);
+		if (prompt) await session.sendUserMessage(prompt);
 	};
-
-	pi.on("input", async (event: { text: string; source: string }) => {
-		if (event.source === "extension") return;
-		await mutate(statusFile, async () => {
-			if (!requested || queued) return;
-			approved = event.text.trim() === approval;
-			if (!approved) {
-				attention(previousAttention);
-				requested = false;
-			}
-		});
-	});
 
 	pi.registerTool({
 		name: "session_handoff",
 		label: "Session handoff",
-		description: `At an appropriate handoff point, keep durable artifacts current, then call session_handoff to publish a suggestion in status.md and wait. The user or authorized host must reply exactly "${approval}". Call session_handoff again after that explicit approval to queue a fresh session. The new session stays idle with an empty editor and only hidden optional task-directory context.`,
+		description: `At an appropriate handoff point, keep durable artifacts current, then call session_handoff and end your turn. It records the suggestion in status.md, where the host sees it. The user or the host approves by running ${COMMAND}, which opens a fresh idle session with only hidden optional task-directory context; tell the user that command. You cannot approve it yourself.`,
 		parameters: { type: "object", properties: {}, additionalProperties: false },
 		concurrency: "exclusive",
 		async execute() {
-			return mutate(statusFile, async () => {
-				if (!requested) {
-					previousAttention = attention(`session handoff requested; reply "${approval}" to approve`);
-					requested = true;
-				}
-				if (!approved || queued) return { content: [{ type: "text", text: `Handoff suggestion recorded in status.md. Waiting for "${approval}" from the user or authorized host; no session switch started.` }], terminate: true };
-				approved = false;
-				queued = true;
-				pi.sendUserMessage("/session-handoff", { deliverAs: "followUp", expandPromptTemplates: true });
-				return { content: [{ type: "text", text: "Approved handoff queued." }], terminate: true };
-			});
+			await attention(suggested(COMMAND));
+			return { content: [{ type: "text", text: `Handoff suggested in status.md. The user or the host approves with ${COMMAND}; no session switch started.` }], terminate: true };
 		},
 	});
 
 	pi.registerCommand("session-handoff", {
-		description: "Complete a handoff approved through session_handoff",
-		handler: async (_args: string, ctx: any) => {
+		description: "Open a fresh session for this task; text after the command becomes its first prompt",
+		handler: async (args: string, ctx: any) => {
+			const prompt = args.trim();
 			await ctx.waitForIdle();
-			if (!queued) return;
-			queued = false;
-			requested = false;
+			let replaced = false;
 			const result = await ctx.newSession({
 				parentSession: ctx.sessionManager.getSessionFile(),
-				withSession: async (replacementCtx: any) => {
-					replacementCtx.ui.setEditorText("");
-					await replacementCtx.sendMessage({
-						customType: "session-handoff",
-						content: `Previous task directory: ${JSON.stringify(taskDirectory)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`,
-						display: false,
-					}, { triggerTurn: false });
-					await mutate(statusFile, async () => attention("session handoff complete; fresh session idle"));
+				withSession: async (replacement: Session) => {
+					replaced = true;
+					await start(replacement, prompt);
 				},
 			});
-			if (result.cancelled) await mutate(statusFile, async () => attention("session handoff cancelled; still in the previous session"));
+			if (result.cancelled) return attention(CANCELLED);
+			if (!replaced) await start({ ui: ctx.ui, sendMessage: (m, o) => pi.sendMessage(m, o), sendUserMessage: (text) => pi.sendUserMessage(text) }, prompt);
 		},
 	});
 
@@ -121,7 +113,7 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 		const tokens = ctx.getContextUsage()?.tokens;
 		if (tokens == null || tokens < threshold) return;
 		return {
-			systemPrompt: `${event.systemPrompt}\n\nActive context has reached the configured session handoff threshold. Decide whether the work is at an appropriate handoff point. If it is, keep durable artifacts current and use session_handoff to suggest a fresh session and wait for explicit approval; otherwise continue the work.`,
+			systemPrompt: `${event.systemPrompt}\n\nActive context has reached the configured session handoff threshold. Decide whether the work is at an appropriate handoff point. If it is, keep durable artifacts current, call session_handoff to suggest a fresh session, and end the turn; otherwise continue the work.`,
 		};
 	});
 }

@@ -88,13 +88,11 @@ for (const seat of ["host", "sbx"]) {
 			await new Promise((resolve) => setImmediate(resolve));
 			finishRead.resolve();
 			await Promise.all([editing, requesting]);
-			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff requested/);
+			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff suggested; approve with \/session-handoff/);
 			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /Ready for independent review\./);
 			assert.equal(runtime.session, old);
 			assert.equal(replacement, undefined);
-			await old.extensionRunner.emitInput("Approve session handoff", undefined, "rpc");
-			await tool.execute("approved", {});
-			await new Promise((resolve) => setImmediate(resolve));
+			await old.prompt("/session-handoff");
 			assert.ok(replacement);
 			await replacement;
 			assert.notEqual(runtime.session, old);

@@ -3,13 +3,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import handoff from "../../extensions/session-handoff.ts";
+import handoff, { COMPLETE, suggested } from "../../extensions/session-handoff.ts";
+import { clearedNote, handoffNote } from "../../claude/hooks/container.ts";
 import { fakeIo } from "./fake-io.ts";
 import { seatSettings } from "../render/render.ts";
 import { HARNESSES } from "../harness.ts";
 import { brief } from "./status.ts";
 
-async function runtime(t: TestContext, settings = "{}") {
+async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}) {
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
 	t.after(() => rmSync(dir, { recursive: true, force: true }));
 	const taskDirectory = dir;
@@ -24,15 +25,18 @@ async function runtime(t: TestContext, settings = "{}") {
 	const events: Record<string, (...args: any[]) => any> = {};
 	const commands: Record<string, { handler: (...args: any[]) => any }> = {};
 	const tools: Record<string, { execute: (...args: any[]) => any }> = {};
-	const queued: any[] = [];
-	const messages: any[] = [];
+	const sent: any[] = [];
+	const prompts: string[] = [];
 	let tokens: number | null | undefined;
 	let attempts = 0;
 	let sessions = 0;
 	let cancelled = false;
 	let idle = Promise.resolve();
 	let editor = "draft typed during the previous turn";
+	const ui = { setEditorText: (text: string) => { editor = text; } };
+	const into = { ui, sendMessage: async (message: any, options: any) => sent.push({ message, options }), sendUserMessage: async (text: string) => prompts.push(text) };
 	const ctx = {
+		ui,
 		waitForIdle: () => idle,
 		getContextUsage: () => tokens === undefined ? undefined : { tokens },
 		sessionManager: { getSessionFile: () => "/sessions/previous.jsonl" },
@@ -41,11 +45,7 @@ async function runtime(t: TestContext, settings = "{}") {
 			if (cancelled) return { cancelled: true };
 			sessions++;
 			assert.equal(options.parentSession, "/sessions/previous.jsonl");
-			assert.equal(options.setup, undefined);
-			await options.withSession({
-				ui: { setEditorText: (text: string) => { assert.equal(text, ""); editor = text; } },
-				sendMessage: async (message: any, options: any) => messages.push({ message, options }),
-			});
+			if (replaces) await options.withSession(into);
 			return { cancelled: false };
 		},
 	};
@@ -53,13 +53,14 @@ async function runtime(t: TestContext, settings = "{}") {
 		on: (name: string, fn: any) => { events[name] = fn; },
 		registerCommand: (name: string, command: any) => { commands[name] = command; },
 		registerTool: (tool: any) => { tools[tool.name] = tool; },
-		sendUserMessage: (text: string, options: any) => queued.push({ text, options }),
+		sendMessage: replaces ? () => assert.fail("the old session's API is stale after a replacement") : into.sendMessage,
+		sendUserMessage: replaces ? () => assert.fail("the old session's API is stale after a replacement") : into.sendUserMessage,
 	}, async (_path, mutation) => mutation());
 	return {
-		ctx, commands, tools, queued, messages, taskDirectory, status,
+		ctx, taskDirectory, status, sent, prompts,
 		usage: (value: typeof tokens) => { tokens = value; },
-		input: (text: string, source = "interactive") => events.input?.({ text, source }, ctx),
-		call: () => tools.session_handoff.execute("call", {}, undefined, undefined, ctx),
+		suggest: () => tools.session_handoff.execute("call", {}, undefined, undefined, ctx),
+		approve: (args = "") => commands["session-handoff"].handler(args, ctx),
 		cancel: () => { cancelled = true; },
 		busy: () => {
 			let finish!: () => void;
@@ -73,6 +74,12 @@ async function runtime(t: TestContext, settings = "{}") {
 	};
 }
 
+const pointer = (dir: string) => ({
+	customType: "session-handoff",
+	content: `Previous task directory: ${JSON.stringify(dir)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`,
+	display: false,
+});
+
 test("context threshold adds only a neutral system advisory", async (t) => {
 	const r = await runtime(t);
 
@@ -85,12 +92,11 @@ test("context threshold adds only a neutral system advisory", async (t) => {
 		const result = await r.prompt();
 		assert.ok(result?.systemPrompt.startsWith("Existing system prompt\n\n"));
 		assert.match(result.systemPrompt, /appropriate handoff point/);
-		assert.match(result.systemPrompt, /explicit approval/);
+		assert.match(result.systemPrompt, /session_handoff/);
 		assert.equal(result.message, undefined);
 	}
 	assert.equal(r.readStatus(), r.status);
-	assert.deepEqual(r.queued, []);
-	assert.deepEqual(r.messages, []);
+	assert.deepEqual(r.sent, []);
 	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
 });
 
@@ -99,7 +105,7 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 		"read /root/pi/profiles/settings.json": '{"unknown":{"keep":true}}',
 		"read /root/pi/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
 	});
-	const r = await runtime(t, seatSettings(io, "/root", HARNESSES.pi, "sbx.json"));
+	const r = await runtime(t, { settings: seatSettings(io, "/root", HARNESSES.pi, "sbx.json") });
 
 	r.usage(83);
 	assert.equal(await r.prompt(), undefined);
@@ -107,66 +113,66 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 	assert.ok((await r.prompt())?.systemPrompt);
 });
 
-test("a suggestion reaches the host attention line without duplicating task content", async (t) => {
+test("a suggestion reaches the host attention line with the command that approves it", async (t) => {
 	const r = await runtime(t);
 
-	const result = await r.call();
+	const result = await r.suggest();
 
 	assert.equal(result.terminate, true);
-	assert.match(brief(r.readStatus()), /attention: session handoff requested; reply "Approve session handoff" to approve/);
+	assert.match(result.content[0].text, /\/session-handoff/);
+	assert.match(brief(r.readStatus()), /attention: session handoff suggested; approve with \/session-handoff/);
 	assert.equal(r.readStatus().replace(/^attention: .*$/m, "attention: none"), r.status);
-	assert.deepEqual(r.queued, []);
-	assert.equal(r.state().sessions, 0);
+	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
 });
 
-test("only explicit external approval permits the tool to queue the command", async (t) => {
+test("the model cannot approve its own suggestion", async (t) => {
 	const r = await runtime(t);
-	await r.commands["session-handoff"].handler("", r.ctx);
-	await r.call();
-	await r.input("Approve session handoff", "extension");
-	await r.call();
-	assert.deepEqual(r.queued, []);
-	await r.input("No, keep working");
-	await r.call();
-	assert.deepEqual(r.queued, []);
-	await r.input("Approve session handoff");
-	const result = await r.call();
-	await r.call();
 
-	assert.equal(result.terminate, true);
-	assert.deepEqual(r.queued, [{ text: "/session-handoff", options: { deliverAs: "followUp", expandPromptTemplates: true } }]);
-	assert.equal(r.state().sessions, 0);
+	await r.suggest();
+	await r.suggest();
+
+	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
+	assert.deepEqual(r.prompts, []);
 });
 
-test("approved handoff leaves only hidden optional context in the idle replacement", async (t) => {
+test("the command opens an idle fresh session holding only hidden optional context", async (t) => {
 	const r = await runtime(t);
-	await r.call();
-	await r.input("Approve session handoff", "rpc");
-	await r.call();
-	await r.commands["session-handoff"].handler("", r.ctx);
+	await r.suggest();
 
-	assert.deepEqual(r.messages, [{
-		message: {
-			customType: "session-handoff",
-			content: `Previous task directory: ${JSON.stringify(r.taskDirectory)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`,
-			display: false,
-		},
-		options: { triggerTurn: false },
-	}]);
-	assert.match(r.readStatus(), /^attention: session handoff complete; fresh session idle$/m);
-	await r.commands["session-handoff"].handler("", r.ctx);
-	assert.deepEqual(r.state(), { attempts: 1, sessions: 1 });
-	assert.equal(r.queued.length, 1);
+	await r.approve();
+
+	assert.deepEqual(r.sent, [{ message: pointer(r.taskDirectory), options: { triggerTurn: false } }]);
+	assert.deepEqual(r.prompts, []);
 	assert.equal(r.editor(), "");
+	assert.match(r.readStatus(), /^attention: session handoff complete; fresh session idle$/m);
+	assert.deepEqual(r.state(), { attempts: 1, sessions: 1 });
 });
 
-test("the follow-up command waits for the old tool turn to finish", async (t) => {
+test("text after the command becomes the fresh session's first prompt", async (t) => {
 	const r = await runtime(t);
-	await r.call();
-	await r.input("Approve session handoff");
-	await r.call();
+
+	await r.approve("  Continue the previous task: read current durable artifacts.  ");
+
+	assert.deepEqual(r.sent, [{ message: pointer(r.taskDirectory), options: { triggerTurn: false } }]);
+	assert.deepEqual(r.prompts, ["Continue the previous task: read current durable artifacts."]);
+});
+
+test("a runtime that keeps its session object reaches the fresh session through the extension API", async (t) => {
+	const r = await runtime(t, { replaces: false });
+
+	await r.approve("Continue.");
+
+	assert.deepEqual(r.sent, [{ message: pointer(r.taskDirectory), options: { triggerTurn: false } }]);
+	assert.deepEqual(r.prompts, ["Continue."]);
+	assert.equal(r.editor(), "");
+	assert.match(r.readStatus(), /^attention: session handoff complete; fresh session idle$/m);
+});
+
+test("the command waits for the old turn to finish", async (t) => {
+	const r = await runtime(t);
 	const finish = r.busy();
-	const command = r.commands["session-handoff"].handler("", r.ctx);
+
+	const command = r.approve();
 
 	assert.equal(r.state().sessions, 0);
 	finish();
@@ -174,18 +180,27 @@ test("the follow-up command waits for the old tool turn to finish", async (t) =>
 	assert.equal(r.state().sessions, 1);
 });
 
-test("cancelled replacement consumes approval and reports that it stayed put", async (t) => {
+test("a cancelled replacement reports that it stayed put", async (t) => {
 	const r = await runtime(t);
-	await r.call();
-	await r.input("Approve session handoff");
-	await r.call();
+	await r.suggest();
 	r.cancel();
-	await r.commands["session-handoff"].handler("", r.ctx);
-	await r.commands["session-handoff"].handler("", r.ctx);
 
-	assert.deepEqual(r.messages, []);
+	await r.approve("Continue.");
+
+	assert.deepEqual(r.sent, []);
+	assert.deepEqual(r.prompts, []);
 	assert.deepEqual(r.state(), { attempts: 1, sessions: 0 });
 	assert.match(r.readStatus(), /^attention: session handoff cancelled; still in the previous session$/m);
+});
+
+test("every harness suggests a handoff with the command its host is told to steer", async (t) => {
+	const r = await runtime(t);
+	await r.suggest();
+	const claude = handoffNote(r.status, 250_000, 250_000) ?? "";
+
+	for (const name of ["pi", "omp"] as const) assert.match(r.readStatus(), new RegExp(`^attention: ${suggested(HARNESSES[name].tokens["handoff.command"])}$`, "m"));
+	assert.match(claude, new RegExp(`^attention: ${suggested(HARNESSES.claude.tokens["handoff.command"])}$`, "m"));
+	assert.match(clearedNote(claude) ?? "", new RegExp(`^attention: ${COMPLETE}$`, "m"));
 });
 
 test("handoff is loaded only through the sandbox profile and image", () => {

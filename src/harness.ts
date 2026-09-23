@@ -26,6 +26,8 @@ export type Harness = {
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const PI_WATCH = "Steer returns at once and puts the container under watch; the `[fleet]` wake is where the outcome lands.";
 const watchOwner = (agent: string, cli: string, env: string) => `Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch.`;
+const CONTINUE = "Continue the previous task: read current durable artifacts and follow Next step in status.md.";
+const continueInOneSteer = (cli: string) => `For an end-to-end task, approve and continue in one steer: \`${cli} steer <sandbox> "/session-handoff ${CONTINUE}"\`.`;
 
 export const HARNESSES: Record<HarnessName, Harness> = {
 	pi: {
@@ -57,6 +59,8 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"delegation.parallel": "\"Parallel\" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
 			"models.row": "| switch models for new containers | `fleet render` after editing `pi/profiles/models.json` in the harness repo | files rewritten; host sees it after `/reload`, containers after `fleet build` |",
+			"handoff.command": "/session-handoff",
+			"handoff.continue": continueInOneSteer("fleet"),
 		},
 	},
 	omp: {
@@ -88,6 +92,8 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"delegation.parallel": "\"Parallel\" = one `task` batch holding several independent `explorer` or `researcher` items, started together, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
 			"models.row": "| switch models for new containers | `ofleet render` after editing `omp/profiles/models.json` in the harness repo | files rewritten; host sees it after `/reload`, containers after `ofleet build` |",
+			"handoff.command": "/session-handoff",
+			"handoff.continue": continueInOneSteer("ofleet"),
 		},
 	},
 	claude: {
@@ -116,6 +122,8 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"delegation.parallel": "\"Parallel\" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis",
 			"model.flag": "<opus|sonnet|model id>",
 			"models.row": "| switch models for new containers | `cfleet render` then `cfleet build` after editing `claude/profiles/models.json` in the harness repo, or `--model` on one `cfleet up` | the image carries it; the host takes it from `align-settings.py --apply` |",
+			"handoff.command": "/clear",
+			"handoff.continue": `For an end-to-end task, follow the approval with a second steer: \`cfleet steer <sandbox> "${CONTINUE}"\`; \`/clear\` takes no text.`,
 		},
 	},
 };

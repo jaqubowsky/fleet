@@ -226,6 +226,7 @@ function claude(r: Renderer): void {
 		["src/statusline/statusline.ts", "home/fleet/src/statusline/statusline.ts"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
+		["extensions/session-handoff.ts", "home/fleet/extensions/session-handoff.ts"],
 	]);
 }
 
