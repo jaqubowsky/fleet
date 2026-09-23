@@ -22,6 +22,7 @@ let resyncing = false;
 let inFlightAfter;
 const submitted = [];
 const acknowledged = new Set();
+const TRANSCRIPT_LIMIT = 64;
 
 function controls() {
 	const control = snapshot?.control !== false;
@@ -116,7 +117,8 @@ function render(next, follow = !snapshot || atBottom()) {
 	const oldestPending = submitted.reduce((oldest, item) =>
 		Math.min(oldest, item.after), inFlightAfter ?? Infinity);
 	for (const seq of acknowledged)
-		if (seq <= oldestPending) acknowledged.delete(seq);
+		if (seq <= oldestPending || seq <= next.userSequence - TRANSCRIPT_LIMIT)
+			acknowledged.delete(seq);
 	const previous = previousStatus;
 	if (previous === "running" && SETTLED.includes(next.status))
 		announce(next.status);
