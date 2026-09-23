@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import { HARNESSES } from "../harness.ts";
-
-const PREFIXES = new RegExp(`^(${Object.values(HARNESSES).map((h) => h.prefix).join("|")})`);
 
 export function slug(value: string): string {
 	return value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
@@ -16,7 +13,6 @@ export function sandboxName(repo: string, label: string, prefix: string): string
 }
 
 export function agentName(sandbox: string): string {
-	const name = sandbox.replace(PREFIXES, "");
-	if (name.length <= 32) return name;
-	return `${name.slice(0, 24).replace(/-+$/, "")}-${createHash("sha256").update(name).digest("hex").slice(0, 7)}`;
+	if (sandbox.length <= 32) return sandbox;
+	return `${sandbox.slice(0, 24).replace(/-+$/, "")}-${createHash("sha256").update(sandbox).digest("hex").slice(0, 7)}`;
 }

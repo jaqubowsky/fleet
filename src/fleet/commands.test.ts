@@ -20,9 +20,9 @@ test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
 	steer("pi-webapp-web-1", 'zrób analizę "x"', io);
 	assert.equal(io.calls[0][1], "/home/me/.pi/agent/fleet-events.log");
-	assert.match(io.calls[0][2], /w1:host steer webapp-web-1 session= "zrób analizę \\"x\\""/);
-	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "webapp-web-1", 'zrób analizę "x"']);
-	assert.deepEqual(io.lines, ["webapp-web-1: steered"]);
+	assert.match(io.calls[0][2], /w1:host steer pi-webapp-web-1 session= "zrób analizę \\"x\\""/);
+	assert.deepEqual(io.calls[1], ["herdr", "agent", "prompt", "pi-webapp-web-1", 'zrób analizę "x"']);
+	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
 test("down refuses a dirty container without --force", () => {
@@ -38,7 +38,7 @@ test("down refuses a container whose commits never reached the repo", () => {
 });
 
 test("down sums the task's sessions into usage.json, closes the tab, then removes", () => {
-	const io = fakeIo({ ...running, ...sessions, "sbx exec pi-a sh -c": "web-1\t0\tabc", "herdr agent list": { result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "a" }] } } });
+	const io = fakeIo({ ...running, ...sessions, "sbx exec pi-a sh -c": "web-1\t0\tabc", "herdr agent list": { result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "pi-a" }] } } });
 	down("pi-a", {}, io);
 	const order = io.calls.map((c) => c.slice(0, 3).join(" "));
 	const at = (prefix: string) => {
@@ -90,18 +90,18 @@ test("ls joins sbx, herdr and git state", () => {
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "pi-webapp-web-1", status: "running", workspaces: ["/r"] }, { name: "pi-cv-x", status: "stopped", workspaces: [] }] },
 		"sbx exec pi-webapp-web-1 sh -c": "web-1\t1\tabc",
-		"herdr agent list": { result: { agents: [{ pane_id: "w1:p2", name: "webapp-web-1", agent_status: "working" }] } },
+		"herdr agent list": { result: { agents: [{ pane_id: "w1:p2", name: "pi-webapp-web-1", agent_status: "working" }] } },
 	});
 	assert.equal(ls(io), "pi-webapp-web-1  running  working  web-1  1 uncommitted\npi-cv-x           stopped  gone     ?");
 });
 
 test("peek shows git state and the pane tail, or says the agent is gone", () => {
-	const io = fakeIo({ "sbx exec pi-a sh -c": " M a.ts\n---\nabc feat: x\n---\n 1 file changed", "herdr agent read a": "❯ waiting" });
+	const io = fakeIo({ "sbx exec pi-a sh -c": " M a.ts\n---\nabc feat: x\n---\n 1 file changed", "herdr agent read pi-a": "❯ waiting" });
 	const out = peek("pi-a", io, 5);
 	assert.match(out, /M a\.ts/);
 	assert.match(out, /=== last 5 lines\n❯ waiting/);
-	const gone = fakeIo({ "sbx exec pi-a sh -c": "clean", "herdr agent read a": new Error("agent_not_found") });
-	assert.match(peek("pi-a", gone, 5), /no herdr agent named a; the tab may still be coming up/);
+	const gone = fakeIo({ "sbx exec pi-a sh -c": "clean", "herdr agent read pi-a": new Error("agent_not_found") });
+	assert.match(peek("pi-a", gone, 5), /no herdr agent named pi-a; the tab may still be coming up/);
 });
 
 test("down probes a stopped container too, so its refusals still apply", () => {
@@ -116,10 +116,10 @@ test("down passes a container whose head is already in the repo", () => {
 });
 
 test("resolveSandbox accepts the container name or its agent name", () => {
-	const io = fakeIo({ "sbx ls --json": { sandboxes: [{ name: "pi-webapp-web-1636", status: "running", workspaces: [] }] } });
+	const io = fakeIo({ "sbx ls --json": { sandboxes: [{ name: "pi-webapp-frontend-ticket-123-fix-login-page", status: "running", workspaces: [] }] } });
 
-	assert.equal(resolveSandbox("pi-webapp-web-1636", io), "pi-webapp-web-1636");
-	assert.equal(resolveSandbox("webapp-web-1636", io), "pi-webapp-web-1636");
+	assert.equal(resolveSandbox("pi-webapp-frontend-ticket-123-fix-login-page", io), "pi-webapp-frontend-ticket-123-fix-login-page");
+	assert.equal(resolveSandbox("pi-webapp-frontend-tick-33301c6", io), "pi-webapp-frontend-ticket-123-fix-login-page");
 });
 
 test("exec runs a one-argument command line through the shell, argv untouched", () => {

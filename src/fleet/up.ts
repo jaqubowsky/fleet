@@ -74,6 +74,7 @@ export async function up(
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
+	const found = findPane(io, basename(input.repo), agent);
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {
@@ -138,7 +139,7 @@ export async function up(
 		}
 	}
 
-	const { pane, running } = openPane(io, basename(input.repo), agent);
+	const { pane, running } = openPane(io, basename(input.repo), agent, found);
 	if (!running)
 		io.herdr([
 			"pane",
@@ -434,11 +435,9 @@ function seedSubmodules(io: Io, repo: string, sandbox: string): void {
 	}
 }
 
-function openPane(
-	io: Io,
-	label: string,
-	tab: string,
-): { pane: string; running: boolean } {
+type Found = { pane: string; running: boolean } | { workspace?: string };
+
+function findPane(io: Io, label: string, tab: string): Found {
 	const named = agentFor(
 		io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents,
 		tab,
@@ -458,7 +457,37 @@ function openPane(
 	const workspace = list.result.workspaces.find(
 		(w) => w.label.toLowerCase() === label.toLowerCase(),
 	)?.workspace_id;
-	if (!workspace) {
+	if (!workspace) return {};
+	const existing = io
+		.herdr<{ result: { tabs: Tab[] } }>(["tab", "list", "--workspace", workspace])
+		.result.tabs.find((t) => t.label === tab);
+	if (!existing) return { workspace };
+	const pane = io
+		.herdr<{ result: { panes: Pane[] } }>([
+			"pane",
+			"list",
+			"--workspace",
+			workspace,
+		])
+		.result.panes.find((p) => p.tab_id === existing.tab_id);
+	if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
+	if (pane.agent && pane.agent !== io.harness.agent)
+		throw new Error(
+			`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
+		);
+	if (pane.agent)
+		io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`);
+	return { pane: pane.pane_id, running: Boolean(pane.agent) };
+}
+
+function openPane(
+	io: Io,
+	label: string,
+	tab: string,
+	found: Found,
+): { pane: string; running: boolean } {
+	if ("pane" in found) return found;
+	if (!found.workspace) {
 		const created = io.herdr<Created>([
 			"workspace",
 			"create",
@@ -475,33 +504,12 @@ function openPane(
 			]);
 		return { pane: created.result.root_pane.pane_id, running: false };
 	}
-	const existing = io
-		.herdr<{ result: { tabs: Tab[] } }>(["tab", "list", "--workspace", workspace])
-		.result.tabs.find((t) => t.label === tab);
-	if (existing) {
-		const pane = io
-			.herdr<{ result: { panes: Pane[] } }>([
-				"pane",
-				"list",
-				"--workspace",
-				workspace,
-			])
-			.result.panes.find((p) => p.tab_id === existing.tab_id);
-		if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
-		if (pane.agent && pane.agent !== io.harness.agent)
-			throw new Error(
-				`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
-			);
-		if (pane.agent)
-			io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`);
-		return { pane: pane.pane_id, running: Boolean(pane.agent) };
-	}
 	return {
 		pane: io.herdr<Created>([
 			"tab",
 			"create",
 			"--workspace",
-			workspace,
+			found.workspace,
 			"--label",
 			tab,
 			"--no-focus",

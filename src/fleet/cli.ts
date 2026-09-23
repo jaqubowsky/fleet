@@ -28,7 +28,7 @@ const usage = `usage:
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
   ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor, persistent: true
 
-  <sandbox> is the container name or its herdr agent name, which is the container name without the ${h.prefix} prefix
+  <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
 
 const BARE = new Set(["force", "push", "sign"]);

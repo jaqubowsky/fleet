@@ -8,7 +8,7 @@ import { eventsLog, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import { taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
 
-function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
+function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h.prefix}worker`, pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	t.after(() => {
@@ -23,7 +23,7 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "wor
 		return socket as unknown as net.Socket;
 	});
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: `${h.prefix}${a.name}`, workspaces: ["/w/repo"] })) },
+		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, workspaces: ["/w/repo"] })) },
 		"herdr agent list": herdr,
 	}, h);
 	const events = (...lines: string[]) => {
@@ -55,7 +55,7 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "wor
 test("only the invoking Pi session receives automatic fleet notifications", (t) => {
 	const runtime = monitorRuntime(t);
 	const writer = Object.assign(fakeIo(), { sessionId: "session-a" });
-	logEvent(writer, "up", "worker");
+	logEvent(writer, "up", "pi-worker");
 	runtime.events(writer.calls[0][2]);
 	const a = runtime.start("session-a");
 	const b = runtime.start("session-b");
@@ -63,20 +63,20 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 	runtime.settle();
 
 	assert.equal(a.messages.length, 1);
-	assert.match(a.messages[0].message.content, /^\[fleet\] worker:/);
-	assert.equal(a.notices.filter((n) => n.startsWith("[fleet] worker:")).length, 1);
+	assert.match(a.messages[0].message.content, /^\[fleet\] pi-worker:/);
+	assert.equal(a.notices.filter((n) => n.startsWith("[fleet] pi-worker:")).length, 1);
 	assert.deepEqual(b.messages, []);
-	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] worker:")), []);
+	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")), []);
 });
 
 test("OMP exports its session owner and ignores another session's events", (t) => {
 	const runtime = monitorRuntime(t, HARNESSES.omp, [
-		{ name: "worker-a", pane_id: "worker-a:pane", agent_status: "working" },
-		{ name: "worker-b", pane_id: "worker-b:pane", agent_status: "working" },
+		{ name: "omp-worker-a", pane_id: "worker-a:pane", agent_status: "working" },
+		{ name: "omp-worker-b", pane_id: "worker-b:pane", agent_status: "working" },
 	]);
 	runtime.events(
-		"2026-09-16T10:00:00.000Z - up worker-a session=session-a",
-		"2026-09-16T10:01:00.000Z - up worker-b session=session-b",
+		"2026-09-16T10:00:00.000Z - up omp-worker-a session=session-a",
+		"2026-09-16T10:01:00.000Z - up omp-worker-b session=session-b",
 	);
 	const watcher = runtime.start("session-a");
 
@@ -85,7 +85,7 @@ test("OMP exports its session owner and ignores another session's events", (t) =
 
 	assert.equal(process.env.OMP_SESSION_ID, "session-a");
 	assert.equal(watcher.messages.length, 1);
-	assert.match(watcher.messages[0].message.content, /^\[fleet\] worker-a: working -> idle\n/);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] omp-worker-a: working -> idle\n/);
 });
 
 for (const h of [HARNESSES.pi, HARNESSES.omp]) {
@@ -119,7 +119,7 @@ test("explicit fleet watch delivers a follow-up turn without waiting for user in
 	const runtime = monitorRuntime(t);
 	const watcher = runtime.start("session-b");
 
-	await watcher.tools.fleet_watch.execute("call", { agents: "worker" });
+	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
 	runtime.settle();
 
 	assert.equal(watcher.messages.length, 1);
@@ -158,6 +158,6 @@ test("wake on settling, never on going back to work", () => {
 
 test("the task directory follows from the agent's sandbox and its repo", () => {
 	const sandboxes = [{ name: "pi-webapp-web-1", workspaces: ["/Users/me/Work/webapp"] }];
-	assert.equal(taskDirOf("/home/me", sandboxes, "webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
+	assert.equal(taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
 	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
 });

@@ -31,7 +31,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	);
 	assert.deepEqual(out, {
 		sandbox: "pi-webapp-web-1",
-		agent: "webapp-web-1",
+		agent: "pi-webapp-web-1",
 		pane: "w1:p9",
 	});
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
@@ -42,7 +42,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	);
 	assert.equal(run[run.indexOf("--memory") + 1], "8g");
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
-	assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.pi/agent/fleet-events.log" && / up webapp-web-1 session=$/.test(c[2])));
+	assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.pi/agent/fleet-events.log" && / up pi-webapp-web-1 session=$/.test(c[2])));
 	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec");
 	assert.deepEqual(execs[0], [
 		"sbx",
@@ -79,7 +79,7 @@ test("up creates the container, switches the branch, starts the install in the b
 		"agent",
 		"rename",
 		"w1:p9",
-		"webapp-web-1",
+		"pi-webapp-web-1",
 	]);
 });
 
@@ -168,7 +168,7 @@ test("up refuses to adopt a same-named agent that is not pi", async () => {
 				agents: [
 					{
 						pane_id: "w1:p3",
-						name: "webapp-web-1",
+						name: "pi-webapp-web-1",
 						agent: "claude",
 						agent_status: "idle",
 					},
@@ -180,6 +180,22 @@ test("up refuses to adopt a same-named agent that is not pi", async () => {
 		up({ repo, label: "web-1", root: "/root" }, io),
 		/is claude in pane w1:p3, not pi/,
 	);
+});
+
+test("up refuses a name another agent holds before it creates anything", async () => {
+	const held = fakeIo({ ...base, "herdr agent list": { result: { agents: [{ pane_id: "w1:p3", name: "pi-webapp-web-1", agent: "claude", agent_status: "idle" }] } } });
+	const tab = fakeIo({
+		...base,
+		"herdr tab list": { result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] } },
+		"herdr pane list": { result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "omp" }] } },
+	});
+	const created = (io: typeof held) => io.calls.filter((c) => c[0] === "mkdir" || c[0] === "write" || (c[0] === "sbx" && c[1] !== "ls") || (c[0] === "herdr" && ["create", "rename", "run"].includes(c[2])));
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, held), /is claude in pane w1:p3, not pi/);
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, tab), /already runs omp/);
+
+	assert.deepEqual(created(held), []);
+	assert.deepEqual(created(tab), []);
 });
 
 test("up reuses an existing container and only opens the tab", async () => {
@@ -202,7 +218,7 @@ test("up adopts an agent that already carries the name, whatever its tab is call
 				agents: [
 					{
 						pane_id: "w1:p3",
-						name: "webapp-web-1",
+						name: "pi-webapp-web-1",
 						agent: "pi",
 						agent_status: "working",
 					},
@@ -222,7 +238,7 @@ test("up adopts an agent that already carries the name, whatever its tab is call
 
 test("up reuses an empty tab with the same label, adopts an unnamed pi there, refuses another agent", async () => {
 	const tabs = {
-		result: { tabs: [{ tab_id: "w1:t7", label: "webapp-web-1" }] },
+		result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] },
 	};
 	const free = fakeIo({
 		...base,
@@ -252,7 +268,7 @@ test("up reuses an empty tab with the same label, adopts an unnamed pi there, re
 		"agent",
 		"rename",
 		"w1:p7",
-		"webapp-web-1",
+		"pi-webapp-web-1",
 	]);
 	const busy = fakeIo({
 		...base,
@@ -285,7 +301,7 @@ test("up creates the workspace when the repo has none and names its root tab", a
 	assert.ok(
 		io.calls.some(
 			(c) =>
-				c[1] === "tab" && c[2] === "rename" && c[3] === "w2:t1" && c[4] === "cv-x",
+				c[1] === "tab" && c[2] === "rename" && c[3] === "w2:t1" && c[4] === "pi-cv-x",
 		),
 	);
 });
