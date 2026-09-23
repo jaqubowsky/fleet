@@ -43,7 +43,7 @@ attention: none | <one sentence of at most 300 characters naming what a person h
 | `analyzing` | the analysis runs |
 | `blocked` | the work waits on a decision or an input only a person can give, the analysis question included; `attention` names it |
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
-| `reviewing` | the review of a ticket's uncommitted diff, or of a range the user named, runs |
+| `reviewing` | the review of uncommitted work, or of a range the user named, runs |
 | `testing` | a browser check of the change or of its siblings runs |
 | `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, and no open P0 or P1 finding other than a `host:` one; `attention` names what stayed unverified, uncommitted or left to the host |
 | `pr-open` | a pull request is open and its latest round is answered; `attention` names what only the host or the user can do next |

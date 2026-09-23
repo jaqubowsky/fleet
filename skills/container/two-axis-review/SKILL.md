@@ -1,10 +1,10 @@
 ---
 name: two-axis-review
-description: 'Independent review of one diff on two axes, correctness and engineering quality, by a reviewer that never saw the implementation. Use on a ticket''s uncommitted work before its commit, or when the user asks to review a branch, a PR or work in progress.'
+description: 'Independent review of one diff on two axes, correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user asks to review a branch, a PR or work in progress.'
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review one diff on two axes, a ticket's uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
+Review one diff on two axes, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
 
 ## Process
 
@@ -57,4 +57,4 @@ Read `review.md`. Report the verdict and the finding count per axis in chat, wit
 
 ## Why two axes in one reviewer
 
-Code that follows every standard can implement the wrong thing, and code that does exactly what the ticket asked can break the project's conventions. The two sections stay separate in `review.md` so one verdict never hides the other; one reviewer holds both because both need the same diff, the same evidence and the same fresh eyes, and a second context would only pay for the diff twice.
+Code that follows every standard can implement the wrong thing, and code that does exactly what the task asked can break the project's conventions. The two sections stay separate in `review.md` so one verdict never hides the other; one reviewer holds both because both need the same diff, the same evidence and the same fresh eyes, and a second context would only pay for the diff twice.
