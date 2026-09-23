@@ -5,7 +5,7 @@ ENV GIT_TERMINAL_PROMPT=0
 
 {{toolchain}}
 
-ARG CLAUDE_UPDATE_BUST=0
+ARG UPDATE_BUST=0
 RUN claude update \
  && find /home/agent/.local/share/claude/versions -type f \
       ! -samefile "$(readlink -f "$(command -v claude)")" -delete

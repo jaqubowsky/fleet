@@ -6,9 +6,8 @@ ENV NODE_OPTIONS=--disable-warning=UNDICI-EHPA
 
 {{toolchain}}
 
-ARG PI_VERSION=0.87.1
-
-RUN sudo npm install -g --prefix /usr/local/share/npm-global "@earendil-works/pi-coding-agent@$PI_VERSION" \
+ARG UPDATE_BUST=0
+RUN sudo npm install -g --prefix /usr/local/share/npm-global @earendil-works/pi-coding-agent@latest \
  && sudo ln -sf /usr/local/share/npm-global/bin/pi /usr/local/bin/pi \
  && pi --version
 

@@ -76,7 +76,7 @@ seat_hash() {
 }
 
 image_agent_version() {
-	[ "$1" = claude ] && claude --version 2>/dev/null | tr -cd '0-9.' || true
+	"$1" --version 2>/dev/null | tr -cd '0-9.' || true
 }
 
 template_loaded() {

@@ -6,7 +6,7 @@ NAME="${1:?$usage}"
 IMAGE="${2:?$usage}"
 RENDERED="${3:?$usage}"
 STAGE="$RENDERED/home"
-BUILD_ARGS=()
+BUILD_ARGS=(--build-arg "UPDATE_BUST=$(date +%Y%m%d)-$("$NAME" --version 2>/dev/null | tr -cd '0-9.' || true)")
 trap 'rm -rf "$RENDERED"' EXIT
 
 cp -L "$HOME/.gitconfig" "$HOME/.gitconfig-work" "$HOME/.gitconfig-alice" "$STAGE/"

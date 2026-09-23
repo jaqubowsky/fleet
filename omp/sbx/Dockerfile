@@ -6,17 +6,15 @@ ENV NODE_OPTIONS=--disable-warning=UNDICI-EHPA
 
 {{toolchain}}
 
-ARG OMP_VERSION=18.2.8
-ARG OMP_SHA256_ARM64=a9aa63e43c95ccaa0683e9fed03463c401829e220ad2bbc414b341d2d49e5806
-ARG OMP_SHA256_AMD64=b0c01da7339d87fd5d26d7faa7b61c131a50648399962783899fd93a6d8b1d65
-
+ARG UPDATE_BUST=0
 RUN case "$(dpkg --print-architecture)" in \
-      arm64) asset=omp-linux-arm64; sum="$OMP_SHA256_ARM64" ;; \
-      amd64) asset=omp-linux-x64; sum="$OMP_SHA256_AMD64" ;; \
+      arm64) asset=omp-linux-arm64 ;; \
+      amd64) asset=omp-linux-x64 ;; \
       *) echo "omp: unsupported architecture $(dpkg --print-architecture)" >&2; exit 1 ;; \
     esac \
- && curl -fsSL "https://github.com/can1357/oh-my-pi/releases/download/v${OMP_VERSION}/${asset}" -o /tmp/omp \
- && echo "$sum  /tmp/omp" | sha256sum -c - \
+ && curl -fsSL "https://github.com/can1357/oh-my-pi/releases/latest/download/${asset}" -o /tmp/omp \
+ && sum="$(curl -fsSL "https://github.com/can1357/oh-my-pi/releases/latest/download/SHA256SUMS.txt" | awk -v a="$asset" '$2 == a { print $1 }')" \
+ && test -n "$sum" && echo "$sum  /tmp/omp" | sha256sum -c - \
  && sudo install -m 0755 /tmp/omp /usr/local/bin/omp \
  && rm /tmp/omp \
  && omp --version
