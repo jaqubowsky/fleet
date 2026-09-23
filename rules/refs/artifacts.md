@@ -57,7 +57,7 @@ Write the file at each event below, before the next tool call. Only a row with a
 | a prompt or a steer arrives, before its first command | `status`, Summary, Next step | none |
 | a skill starts | `status`, Summary, Next step | none |
 | a sub-agent starts or returns | `status`, Summary, Next step | none |
-| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step | the outcome; that file |
+| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
 | a commit lands | `status`, Summary, Next step | the outcome; the commit |
 | the work waits on a person | `status`, `attention`, Summary, Next step | none |
 | a session handoff is about to be suggested | Summary, Next step | none |

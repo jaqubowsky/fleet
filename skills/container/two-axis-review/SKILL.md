@@ -40,19 +40,20 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 5. Hand back
 
-Read `review.md`. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Fix each finding that carries a smallest fix and close it with its evidence: a test that fails without the fix, or a log path and line. Leave each `host:` finding unbuilt: its fix leaves the task. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets an addendum:
+Read `review.md`. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Fix each finding that carries a smallest fix and close it with its evidence: a test that fails without the fix, or a log path and line. Leave each `host:` finding unbuilt: its fix leaves the task. A product decision, whether the reviewer wrote it as `host:` or as a smallest fix, is a question for the user under `attention:`, not a fix. An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets an addendum:
 
 ```md
 ## Closed after review
 
 - P<0-2> <finding>: fixed, <test name, or log path:line>
 - P<0-2> <finding>: host, <why its fix leaves the task>
+- P<0-2> <finding>: user, <the question under attention:>
 - `<gate command>`: exit <n>, <log path>
 ```
 
 ## Done
 
-`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence or its `host:` reason.
+`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence, its `host:` reason or its question.
 
 ## Why two axes in one reviewer
 
