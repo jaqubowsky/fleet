@@ -16,18 +16,19 @@ const sandboxes = [
 	{ name: "claude-webapp-b", workspaces: ["/w/webapp"] },
 ];
 
-function herdr(t: TestContext, agents: { name: string; pane_id: string; agent_status: string }[]) {
+function herdr(t: TestContext, agents: { name: string; pane_id: string; agent_status: string }[], harness = HARNESSES.claude) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const intervals = new Map<number, () => void>();
 	t.mock.method(globalThis, "setInterval", ((callback: () => void, delay: number) => {
 		intervals.set(delay, callback);
 		return 1;
 	}) as typeof setInterval);
-	const sockets: (EventEmitter & { destroyed: boolean })[] = [];
+	const sockets: (EventEmitter & { destroyed: boolean; written: string[] })[] = [];
 	t.mock.method(net, "createConnection", () => {
 		const socket = Object.assign(new EventEmitter(), {
 			destroyed: false,
-			write() {},
+			written: [] as string[],
+			write(line: string) { this.written.push(line); },
 			destroy() { this.destroyed = true; },
 		});
 		sockets.push(socket);
@@ -36,7 +37,7 @@ function herdr(t: TestContext, agents: { name: string; pane_id: string; agent_st
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, workspaces: ["/w/webapp"] })) },
 		"herdr agent list": { result: { agents } },
-	}, HARNESSES.claude);
+	}, harness);
 	const status = (pane: string, next: string) => {
 		for (const socket of sockets) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: next } })}\n`));
 	};
@@ -146,3 +147,94 @@ test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
 	assert.equal(sockets.length, 1);
 	assert.equal(io.calls.length, asked);
 });
+
+const OMP_WORKING = ["npm test", "", "  \u{F12B7} Reverting unrelated formatter output", "", "> ", "opus · 41%"].join("\n");
+const OMP_IDLE = ["npm test", "230 pass", "", "> ", "opus · 41%"].join("\n");
+
+test("the omp watch reads work from the omp screen while herdr says idle", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
+	let screen = OMP_WORKING;
+	io.herdrText = (args) => (args.join(" ") === "agent read w1:p1 --source detection" ? screen : "");
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	intervals.get(30_000)?.();
+	t.mock.timers.tick(3000);
+	screen = OMP_IDLE;
+	intervals.get(2000)?.();
+	t.mock.timers.tick(3000);
+
+	assert.ok(io.lines.includes("[fleet] watching omp-webapp-a working"), io.lines.join("\n"));
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> idle\n/);
+});
+
+test("one idle omp screen between two working ones wakes nothing", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
+	let screen = OMP_WORKING;
+	io.herdrText = () => screen;
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	screen = OMP_IDLE;
+	intervals.get(2000)?.();
+	t.mock.timers.tick(2000);
+	screen = OMP_WORKING;
+	intervals.get(2000)?.();
+	t.mock.timers.tick(2000);
+
+	assert.deepEqual(wakes, []);
+});
+
+test("a working omp pane rings after 20 minutes without settling", (t: TestContext) => {
+	let now = 0;
+	t.mock.method(Date, "now", () => now);
+	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
+	io.herdrText = () => OMP_WORKING;
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	now = 20 * 60_000;
+	intervals.get(2000)?.();
+	intervals.get(60_000)?.();
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working 20m without settling\n/);
+});
+
+test("an omp screen herdr cannot read leaves the pane as it was", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
+	let screen: string | Error = OMP_WORKING;
+	io.herdrText = () => {
+		if (screen instanceof Error) throw screen;
+		return screen;
+	};
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	screen = new Error("herdr agent read w1:p1 --source detection failed (1)");
+	intervals.get(2000)?.();
+	t.mock.timers.tick(3000);
+	screen = OMP_IDLE;
+	intervals.get(2000)?.();
+	t.mock.timers.tick(3000);
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> idle\n/);
+});
+
+for (const [h, types] of [
+	[HARNESSES.pi, ["pane.agent_status_changed", "pane.exited"]],
+	[HARNESSES.claude, ["pane.agent_status_changed", "pane.exited"]],
+	[HARNESSES.omp, ["pane.exited"]],
+] as const) {
+	test(`the ${h.name} watch subscribes to ${types.join(" and ")}`, (t: TestContext) => {
+		const { io, sockets } = herdr(t, [{ name: `${h.prefix}webapp-a`, pane_id: "w1:p1", agent_status: "working" }], h);
+		watch(() => undefined, io);
+
+		sockets[0].emit("connect");
+
+		const { params } = JSON.parse(sockets[0].written[0]) as { params: { subscriptions: { type: string }[] } };
+		assert.deepEqual(params.subscriptions.map((s) => s.type), types);
+	});
+}

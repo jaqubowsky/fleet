@@ -6,6 +6,7 @@ export type Harness = {
 	home: string;
 	prefix: string;
 	agent: string;
+	spinner?: RegExp;
 	image: string;
 	owner: "session" | "pane" | "none";
 	sessionIdEnv?: string;
@@ -69,6 +70,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		home: ".omp",
 		prefix: "omp-",
 		agent: "omp",
+		spinner: /^\s*[\u{F12B7}\u{238B}]\s+\S/mu,
 		image: "my-omp:v1",
 		owner: "session",
 		sessionIdEnv: "OMP_SESSION_ID",

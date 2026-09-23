@@ -20,7 +20,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `src/statusline/` | the status line pi and Claude draw: folder, branch, model, a context bar toward the 250k handoff, usage limits, in the terminal's own ANSI colours |
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, pi's statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
-| `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config and the screen rules herdr reads a sandboxed pi or OMP by |
+| `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config and the screen rules herdr reads a sandboxed pi by |
 | `pi/` | pi profiles, the model overrides pi and OMP both read (`models.json`), its Ayu Mirage theme, its host extension entry, kit, image |
 | `omp/` | OMP profiles, its Ayu Mirage theme, its host extension entry, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
