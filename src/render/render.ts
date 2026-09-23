@@ -186,7 +186,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		for (const name of r.refs()) r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agent/agents");
 		r.skills(false, "skills");
-		r.extra([[`${harness.name}/models.json`, `agent/${modelsTarget}`]]);
+		r.extra([["pi/models.json", `agent/${modelsTarget}`]]);
 		return;
 	}
 	r.context();
@@ -196,7 +196,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.agents("home/agent/agents");
 	r.skills(true, "home/skills");
 	r.extra([
-		[`${harness.name}/models.json`, `home/agent/${modelsTarget}`],
+		["pi/models.json", `home/agent/${modelsTarget}`],
 		[statusline, "home/agent/extensions/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],

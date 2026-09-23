@@ -121,8 +121,8 @@ test("omp renders YAML model overrides and removes its legacy host JSON", () => 
 	const io = fakeIo(
 		sources({
 			"read /root/omp/fragments/agent-explorer.md": "tools: read, grep\n",
-			"read /root/omp/models.json": models,
-			"stat /root/omp/models.json": { size: models.length, mtime: new Date(0), dir: false },
+			"read /root/pi/models.json": models,
+			"stat /root/pi/models.json": { size: models.length, mtime: new Date(0), dir: false },
 		}),
 		HARNESSES.omp,
 	);

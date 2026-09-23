@@ -20,7 +20,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, pi's statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |
-| `pi/` | pi profiles and models, its host extension entry, kit, image |
+| `pi/` | pi profiles, the model overrides pi and OMP both read (`models.json`), its host extension entry, kit, image |
 | `omp/` | OMP profiles, its host extension entry, statusline, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: the one CLI with its harness set |
