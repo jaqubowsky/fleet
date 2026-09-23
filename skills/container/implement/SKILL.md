@@ -29,9 +29,9 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 6. Run typechecking regularly and single test files regularly. The full suite belongs to step 7, not here.
 
-7. **Run the gate.** Run the step 4 check once on the finished tree. Gate output goes to `logs/gate-<timestamp>/` in the task directory.
+7. **Run the gate.** Run the step 4 check once on the finished tree. Gate output goes to `logs/gate-<local time, date +%Y%m%dT%H%M%S>/` in the task directory.
 
-8. **Review before the commit.** Run the `two-axis-review` skill on the uncommitted diff, with the step 7 logs as its checks, and close its findings as its step 5 says.
+8. **Review before the commit.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then run the `two-axis-review` skill on the uncommitted diff, with the step 7 logs as its checks, and close its findings as its step 5 says.
 
 9. **Commit** the reviewed work together with its fixes to the current branch.
 

@@ -18,7 +18,7 @@ One question: does this change do what was asked, on the real screens of the run
 
 4. **Report.** `$FLEET_ARTIFACTS/$SANDBOX_NAME/browser/<run-id>/report.md` from [report.md](references/report.md), the screenshots beside it. Runbook files touched are named in it. A `passed` criterion is ticked where the task lists it, beside its screenshot path. Done when the report lists every criterion and every file it cites exists.
 
-5. **Cleanup.** `playwright-cli close`, `run.sh stop`, a request per port to confirm silence, `git status --porcelain` as clean as the checkout proof. Then print the report in full with absolute paths and end with the run's verdict.
+5. **Cleanup** as [browser.md](references/browser.md) says. Then end with the run's verdict and the report's absolute path.
 
 ## After it
 

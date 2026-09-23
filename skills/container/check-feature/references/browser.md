@@ -47,7 +47,7 @@ An action waits for itself and for nothing after it: `find`, `eval` and `screens
 
 One screenshot per criterion, at the state that decides its verdict, `<NN>-<criterion-slug>.png` in the run directory, the path absolute (a bare filename lands in the working directory, which is the repository). Scroll the state into view, `highlight <ref>` the element that matters, capture the viewport; full page only when one criterion covers the whole page. A failed criterion adds the console or the response that shows the cause, as text. Tracing and video stay off here: a trace is hundreds of megabytes nobody opens, and the video belongs to `record-walkthrough`.
 
-Every capture is read before it is filed: the state the criterion names is in the frame, and everything else in the frame is accounted for, an element on top of another, a panel that did not close, a region that came up empty. A snapshot reports the tree the page declares, so a layout that renders wrong passes it; the image is where that surfaces. Full HD unless the criterion turns on a smaller screen, which sets its own size with `resize` and says so in the report.
+Every capture is read by the agent that took it, before it is filed: the state the criterion names is in the frame, and everything else in the frame is accounted for, an element on top of another, a panel that did not close, a region that came up empty. A snapshot reports the tree the page declares, so a layout that renders wrong passes it; the image is where that surfaces. Full HD unless the criterion turns on a smaller screen, which sets its own size with `resize` and says so in the report.
 
 ## Runbook
 
@@ -57,4 +57,4 @@ After cleanup, from the scratch log of this run and not from memory, in English:
 
 ## Cleanup
 
-`playwright-cli close`, then `run.sh stop`, then a request per port confirms nothing answers; the stop script's own report is not that confirmation. `git status --porcelain` comes back as clean as the checkout proof recorded it. Publication, pushes and merges stay with the person.
+`playwright-cli close`, then `run.sh stop`, then a request per port confirms nothing answers; the stop script's own report is not that confirmation. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it. Publication, pushes and merges stay with the person.
