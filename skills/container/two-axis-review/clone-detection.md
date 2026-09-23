@@ -9,19 +9,19 @@ REPORT="$FLEET_ARTIFACTS/$SANDBOX_NAME/logs/review-<head-sha7>"
 jscpd --silent --no-tips --reporters json --output "$REPORT" \
   --min-tokens 50 --cross-formats js-ts \
   --ignore "**/__snapshots__/**,**/fixtures/**,**/*.generated.*" . > /dev/null
-jq -r '
-  .duplicates[]
-  | "\(.firstFile.name):\(.firstFile.start)-\(.firstFile.end) ~ \(.secondFile.name):\(.secondFile.start)-\(.secondFile.end) (\(.lines) lines)"
-' "$REPORT/jscpd-report.json" | grep -F -f "$REPORT/changed.txt" > "$REPORT/clones.txt"
+git diff -U0 <range> | awk '/^diff --git /{f=""} /^\+\+\+ b\//{f=substr($0,7)} /^\+\+\+ \/dev\/null/{f=""} /^@@/{split($3,a,/[+,]/); n=(a[3]=="")?1:a[3]; if(f!="" && n>0) print f"\t"a[2]"\t"a[2]+n-1}' > "$REPORT/hunks.txt"
+jq -r '.duplicates[] | [.firstFile.name, .firstFile.start, .firstFile.end, .secondFile.name, .secondFile.start, .secondFile.end, .lines] | @tsv' "$REPORT/jscpd-report.json" > "$REPORT/pairs.tsv"
+awk -F'\t' 'NR==FNR { h[$1] = h[$1] " " $2 ":" $3; next } function hit(f, s, e,   n, r, i, p) { n = split(h[f], r, " "); for (i = 1; i <= n; i++) { split(r[i], p, ":"); if (s <= p[2] && e >= p[1]) return 1 } return 0 } hit($1, $2, $3) || hit($4, $5, $6) { printf "%s:%s-%s ~ %s:%s-%s (%s lines)\n", $1, $2, $3, $4, $5, $6, $7 }' "$REPORT/hunks.txt" "$REPORT/pairs.tsv" > "$REPORT/clones.txt"
+rm "$REPORT/jscpd-report.json"
 ```
 
-The `grep -F -f` is the whole filter: keep a clone pair only when at least one side is a file the diff touched. Paths in the report are relative to the scan root, so they match what `git diff --name-only` prints. `clones.txt` is what the brief pastes; the JSON stays beside it.
+`<range>` is the one `changed.txt` used: `<base>...<head>`, or `HEAD` for uncommitted work. The second `awk` is the whole filter: keep a clone pair only when one side overlaps a changed hunk. Paths in the report are relative to the scan root, so they match what `git diff` prints. `clones.txt` is what the brief pastes; `pairs.tsv` keeps every pair, so what the filter dropped can be checked.
 
 ## Five rules bind this step
 
 - **Evidence, not verdict.** jscpd matches tokens; DRY is about knowledge. Two token-identical blocks living in two bounded contexts are two pieces of knowledge and stay copied. When that is the call, the finding says so, so the next review doesn't raise it again.
 - **Rule each pair with the recorded test**, in `/Users/alice/my-knowledge-base/wiki/dry-principle.md`: share technical code, copy domain code even when identical today, and ask whether the two sides can change independently. A pair that can is two pieces of knowledge. The page also names the unit that is safe to share: a policy or a calculator before a whole handler.
-- **At least one side in the diff.** A clone pair entirely outside the change is pre-existing and out of scope.
+- **At least one side in a changed hunk.** A clone pair outside the changed lines is pre-existing and out of scope, even inside a file the diff touched.
 - **Skip what a machine wrote.** Generated clients, fixtures, snapshots, migrations, lockfiles.
 - **No detector, no failure.** If jscpd isn't installed, `clones.txt` says so in one line and the reviewer judges duplication by reading.
 

@@ -18,7 +18,7 @@ Into `logs/review-<head-sha7>/` in the task directory:
 
 - `diff.patch`: `git diff <base>...<head>`, and `changed.txt`: `git diff --name-only --diff-filter=ACMR <base>...<head>`; for uncommitted work, `git diff HEAD` in both.
 - `commits.txt`: `git log <base>..<head> --oneline`; none for uncommitted work.
-- `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md), its full JSON beside it. No detector is a line in `clones.txt` saying so.
+- `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md). No detector is a line in `clones.txt` saying so.
 - The checks: the logs `implement` step 7 wrote on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
 
 ### 3. Name the standards
