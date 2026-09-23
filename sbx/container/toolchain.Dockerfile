@@ -38,7 +38,7 @@ RUN case "$(dpkg --print-architecture)" in \
  && sudo unzip -qo /tmp/fnm.zip fnm -d /usr/local/bin \
  && sudo chmod a+rx /usr/local/bin/fnm \
  && rm /tmp/fnm.zip \
- && printf '\neval "$(fnm env --use-on-cd --shell bash)"\n' >> /home/agent/.bashrc \
+ && printf '\n. /etc/fnm-bash-env.sh\n' >> /home/agent/.bashrc \
  && fnm --version
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
