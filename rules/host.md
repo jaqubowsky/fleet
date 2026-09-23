@@ -18,5 +18,5 @@ Containers are the user's workbench. Commands: skill `orchestrating-agent-sessio
 ## Git on this Mac
 
 - Fetch, push and any other remote command only on the user's word
-- Every signature costs the user one Touch ID tap: say what you are about to sign. More than a couple: announce the count, sign the first, wait for the user's word. "Leave Unlocked" plus a second tap buys a silent minute; name every commit signed inside it
+- Every signature costs the user one Touch ID tap: say what you are about to sign
 - SSH auth failure or `banner exchange` = missed Touch ID prompt, not a broken remote. Say so, retry. Never switch to https or change auth config

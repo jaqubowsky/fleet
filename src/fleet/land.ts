@@ -45,7 +45,7 @@ export function land(input: LandInput, io: Io): void {
 	const pushed = input.sign || input.push ? remoteBranch(input.repo, branch, io) : undefined;
 
 	if (input.sign) sign(input.repo, branch, pushed ?? base, io);
-	else io.log(`unsigned commits stay unsigned; rerun with --sign to sign them (one Touch ID tap per commit, "Leave Unlocked" covers the rest)`);
+	else io.log(`unsigned commits stay unsigned; rerun with --sign to sign them (one Touch ID tap per commit)`);
 
 	if (input.push) push(input.repo, branch, io);
 }
