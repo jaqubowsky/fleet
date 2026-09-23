@@ -22,6 +22,10 @@ function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
 		"read /root/pi/fragments/agent-explorer.md": "tools: read, grep\n",
 		"read /root/claude/fragments/agent-explorer.md": "tools: Read, Grep\n",
 		"read /root/claude/CLAUDE.md": "Rules live in rules/.\n",
+		"read /root/sbx/container/toolchain.Dockerfile": "RUN install node\n",
+		"read /root/pi/sbx/Dockerfile": "FROM pi-base\n\n{{toolchain}}\n\nCMD [\"pi\"]\n",
+		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n\n{{toolchain}}\n",
+		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n\n{{toolchain}}\n",
 		...extra,
 	};
 }
@@ -33,6 +37,14 @@ test("a token the harness does not define stops the render and names the file", 
 
 test("a fragment is inlined without its trailing newline", () => {
 	assert.equal(renderText("a\n{{file:f}}\nb", {}, () => "one\ntwo\n", "x"), "a\none\ntwo\nb");
+});
+
+test("an image takes the shared toolchain between its own lines", () => {
+	const io = fakeIo(sources());
+
+	render({ root: "/root", harness: HARNESSES.pi, seat: "container", out: "/stage" }, io);
+
+	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
 
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {

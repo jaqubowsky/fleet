@@ -86,10 +86,15 @@ class Renderer {
 		return `${this.input.root}/${this.input.harness.name}`;
 	}
 
+	source(path: string): string {
+		const body = this.io.read(`${this.input.root}/${path}`);
+		if (body === undefined) throw new Error(`missing ${this.input.root}/${path}`);
+		return body;
+	}
+
 	text(path: string): string {
 		const { root, harness } = this.input;
-		const body = this.io.read(`${root}/${path}`);
-		if (body === undefined) throw new Error(`missing ${root}/${path}`);
+		const body = this.source(path);
 		const tokens = { ...harness.tokens, ...this.seats, root };
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
@@ -151,6 +156,16 @@ class Renderer {
 		return seatSettings(this.io, this.input.root, this.input.harness, template);
 	}
 
+	context(): void {
+		const dockerfile = `${this.input.harness.name}/sbx/Dockerfile`;
+		const toolchain = this.source("sbx/container/toolchain.Dockerfile").trimEnd();
+		this.put("context/Dockerfile", renderText(this.source(dockerfile), { toolchain }, () => undefined, dockerfile));
+		this.extra([
+			["sbx/container/.dockerignore", "context/.dockerignore"],
+			["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
+		]);
+	}
+
 	extra(files: [string, string][]): void {
 		for (const [from, to] of files) {
 			const source = `${this.input.root}/${from}`;
@@ -174,6 +189,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		r.extra([[`${harness.name}/models.json`, `agent/${modelsTarget}`]]);
 		return;
 	}
+	r.context();
 	r.put(`context/${containerSettingsFile}`, r.settings("sbx.json"));
 	r.put("home/agent/AGENTS.md", buildAgents([...rules, r.sandboxRule()], HOST_ONLY_RULES));
 	for (const name of r.refs()) r.put(`home/agent/refs/${name}`, r.text(`rules/refs/${name}`));
@@ -184,9 +200,6 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		[statusline, "home/agent/extensions/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
-		["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
-		[`${harness.name}/sbx/Dockerfile`, "context/Dockerfile"],
-		[`${harness.name}/sbx/.dockerignore`, "context/.dockerignore"],
 		...containerFiles,
 	]);
 }
@@ -207,14 +220,12 @@ function claude(r: Renderer): void {
 	r.agents("home/agents");
 	r.skills(true, "home/skills");
 	r.put("home/CLAUDE.md", r.text("claude/CLAUDE.md"));
+	r.context();
 	r.put("context/settings.json", r.settings("sbx.json"));
 	r.extra([
 		["claude/statusline.mjs", "home/statusline.mjs"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
-		["claude/sbx/Dockerfile", "context/Dockerfile"],
-		["claude/sbx/.dockerignore", "context/.dockerignore"],
-		["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
 	]);
 }
 

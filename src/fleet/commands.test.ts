@@ -195,6 +195,8 @@ test("build renders the container seat into a stage and hands it to the harness 
 		"read /root/agents/reviewer.md": "---\nname: reviewer\n---\n",
 		"read /root/pi/profiles/models.json": JSON.stringify({ seats: { host: { model: "p/m", thinking: "max" } } }),
 		"read /root/pi/profiles/sbx.json": "{}",
+		"read /root/sbx/container/toolchain.Dockerfile": "RUN install node\n",
+		"read /root/pi/sbx/Dockerfile": "FROM base\n{{toolchain}}\n",
 	});
 	build("/root", io);
 

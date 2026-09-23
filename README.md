@@ -18,7 +18,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `src/fleet/` | the fleet CLI behind `fleet`, `ofleet` and `cfleet`; `node --test` |
 | `src/guard/` | the tool-call policy all three hosts enforce, driven by the case corpus in `host/tests/` |
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, pi's statusline, phone remote |
-| `sbx/container/` | the container rule and `base-worktree`, the same in every image |
+| `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |
 | `pi/` | pi profiles and models, its host extension entry, kit, image |
 | `omp/` | OMP profiles, its host extension entry, statusline, kit, image, installer, auth import |
