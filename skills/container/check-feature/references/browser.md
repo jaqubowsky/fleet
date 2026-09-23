@@ -39,7 +39,7 @@ Targets come from `snapshot` refs, or `find <text>` where a page is too large to
 
 A covered control reports itself on the click's own output: after the retries it names the element that took the event, `… intercepts pointer events`. That output is the finding (a chat widget over a save button is a defect a user would hit), and it exists only while the stream is read. A forced click or an event dispatched from `eval` proves nothing.
 
-An action waits for itself and for nothing after it: `find`, `eval` and `screenshot` show the page at the instant they run, which after a navigation is a page still settling. A real wait lives in `run-code` (`waitForURL`, `waitForSelector`, a locator's `waitFor`), so a read that follows a change goes through one and names the condition. A `sleep` that has to grow as the run goes on is the same flake measured three times.
+An action waits for itself and for nothing after it: `find`, `eval` and `screenshot` show the page at the instant they run, which after a navigation is a page still settling. A real wait lives in `run-code` (`waitForURL`, `waitForSelector`, a locator's `waitFor`), so a read that follows a change goes through one and names the condition. A `sleep` that has to grow as the run goes on is the same flake measured three times. Every page gives an action 5 s and a navigation 30 s, `run-code` included; a wait that needs longer passes its own `timeout`, and a check that something is absent uses `count()`, which does not wait.
 
 `Target crashed` empties the page: reopen and walk the criterion again. Inside `run-code` it arrives as a script waiting out its timeout, so a replay that goes quiet is a crashed page. A crash that repeats in the same flow puts the run `blocked` on the environment.
 

@@ -65,6 +65,11 @@ RUN printf '{"outputDir":"/tmp/playwright-cli","browser":{"browserName":"chromiu
 
 ENV PLAYWRIGHT_MCP_CONFIG=/etc/playwright-cli.json
 
+RUN printf '%s\n' 'exports.default = async ({ page }) => { page.setDefaultTimeout(5000); page.setDefaultNavigationTimeout(30000); };' \
+    | sudo tee /etc/playwright-init-page.cjs >/dev/null
+
+ENV PLAYWRIGHT_MCP_INIT_PAGE=/etc/playwright-init-page.cjs
+
 RUN printf '%s\n' \
       'case ":$PATH:" in' \
       '  *":${FNM_MULTISHELL_PATH:-/nonexistent}/bin:"*) ;;' \
