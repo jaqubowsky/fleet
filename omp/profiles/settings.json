@@ -1,7 +1,7 @@
 {
   "setupVersion": 2,
   "theme": {
-    "dark": "mahogany",
+    "dark": "ayu-mirage",
     "light": "light"
   },
   "symbolPreset": "nerd",

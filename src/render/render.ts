@@ -233,18 +233,35 @@ function claude(r: Renderer): void {
 
 export const OWNED: Record<HarnessName, string[]> = {
 	pi: ["skills", "agent/refs", "agent/agents", "agent/themes"],
-	omp: ["skills", "agent/refs", "agent/agents", "agent/models.json"],
+	omp: ["skills", "agent/refs", "agent/agents", "agent/models.json", "agent/themes"],
 	claude: ["rules", "skills", "agents"],
 };
 
 export function render(input: RenderInput, io: Io): void {
 	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
-	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", [["pi/models.json", "models.json"], ["pi/themes/mahogany.json", "themes/mahogany.json"]], []);
+	if (input.harness.name === "pi")
+		piFamily(
+			r,
+			"settings.json",
+			"agent-settings.json",
+			[
+				["pi/models.json", "models.json"],
+				["pi/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
+			],
+			[],
+		);
 	else if (input.harness.name === "omp")
-		piFamily(r, "config.yml", "agent-config.yml", [["pi/models.json", "models.yml"]], [
-			["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"],
-		]);
+		piFamily(
+			r,
+			"config.yml",
+			"agent-config.yml",
+			[
+				["pi/models.json", "models.yml"],
+				["omp/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
+			],
+			[["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"]],
+		);
 	else claude(r);
 	io.log(`${input.harness.name} ${input.seat} -> ${input.out}`);
 }

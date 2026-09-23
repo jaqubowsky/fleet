@@ -21,8 +21,8 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, the pi and OMP statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |
-| `pi/` | pi profiles, the model overrides pi and OMP both read (`models.json`), its host extension entry, kit, image |
-| `omp/` | OMP profiles, its host extension entry, kit, image, installer, auth import |
+| `pi/` | pi profiles, the model overrides pi and OMP both read (`models.json`), its Ayu Mirage theme, its host extension entry, kit, image |
+| `omp/` | OMP profiles, its Ayu Mirage theme, its host extension entry, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: the one CLI with its harness set |
 | `sync.sh` | brings every harness home, link, image and setting in line with this repository and removes what nothing uses; prints the plan, `--apply` makes it |

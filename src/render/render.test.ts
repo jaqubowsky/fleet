@@ -48,21 +48,21 @@ test("an image takes the shared toolchain between its own lines", () => {
 	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
 
-test("pi carries its own theme into both seats, omp keeps its built-in one", () => {
-	const theme = '{"name":"mahogany"}\n';
-	const withTheme = { "read /root/pi/themes/mahogany.json": theme, "stat /root/pi/themes/mahogany.json": { size: theme.length, mtime: new Date(0), dir: false } };
-	const pi = fakeIo(sources(withTheme));
-	const omp = fakeIo(sources({ ...withTheme, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+test("pi and omp each carry their own theme", () => {
+	const file = (path: string, body: string) => ({ [`read /root/${path}`]: body, [`stat /root/${path}`]: { size: body.length, mtime: new Date(0), dir: false } });
+	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("omp/themes/ayu-mirage.json", "omp theme\n") };
+	const pi = fakeIo(sources(themes));
+	const omp = fakeIo(sources({ ...themes, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
 	for (const io of [pi, omp]) {
 		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
 		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
 	}
 
-	assert.equal(pi.files["/home/agent/themes/mahogany.json"], theme);
-	assert.equal(pi.files["/stage/home/agent/themes/mahogany.json"], theme);
-	assert.equal(omp.files["/home/agent/themes/mahogany.json"], undefined);
-	assert.equal(omp.files["/stage/home/agent/themes/mahogany.json"], undefined);
+	assert.equal(pi.files["/home/agent/themes/ayu-mirage.json"], "pi theme\n");
+	assert.equal(pi.files["/stage/home/agent/themes/ayu-mirage.json"], "pi theme\n");
+	assert.equal(omp.files["/home/agent/themes/ayu-mirage.json"], "omp theme\n");
+	assert.equal(omp.files["/stage/home/agent/themes/ayu-mirage.json"], "omp theme\n");
 });
 
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
