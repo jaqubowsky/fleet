@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
-import { decide } from "../../src/guard/policy.ts";
+import { decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
 
 type HookInput = { tool_name?: string; tool_input?: Record<string, unknown> };
 
+const POLICY = new RegExp(`^(${POLICY_TOOLS.join("|")})$`);
+
 export function answer(input: HookInput): string {
-	const verdict = decide(input.tool_name ?? "", input.tool_input ?? {});
+	const tool = input.tool_name ?? "";
+	if (!POLICY.test(tool)) return "";
+	const verdict = decide(tool, input.tool_input ?? {});
 	if (verdict.decision === "allow" && !verdict.explicit) return "";
 	return JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: verdict.decision, permissionDecisionReason: verdict.reason } });
 }

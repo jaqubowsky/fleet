@@ -14,6 +14,11 @@ test("the claude hook denies what the policy denies and speaks only for plain re
 	assert.equal(answer({ tool_name: "Bash", tool_input: { command: "npm test" } }), "");
 });
 
+test("the claude hook leaves a tool its policy was never written for to Claude Code", () => {
+	assert.equal(answer({ tool_name: "TaskStop", tool_input: { task_id: "b7x2k" } }), "");
+	assert.match(answer({ tool_name: "mcp__linear__create_issue", tool_input: { description: "token dump ghp_AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH" } }), /"permissionDecision":"deny"/);
+});
+
 test("the wrapper answers through node and refuses when the policy cannot run", () => {
 	const ok = spawnSync(wrapper, { input: JSON.stringify({ tool_name: "Read", tool_input: { file_path: "~/.ssh/config" } }), encoding: "utf8" });
 	assert.equal(ok.status, 0);
