@@ -70,6 +70,19 @@ test("usage assigns commits to the run that was live when they were made", () =>
 	assert.deepEqual(summary.runs.map((r) => r.commits), [[], ["aaa1111"], ["bbb2222"]]);
 });
 
+test("a Claude transcript is priced from its tokens", () => {
+	const turn = (id: string, model: string, usage: object) => JSON.stringify({ type: "assistant", timestamp: "2026-09-23T12:00:00Z", message: { id, role: "assistant", model, usage, content: [] } });
+	const transcript = [
+		turn("a", "claude-opus-5-5", { input_tokens: 1_000_000, output_tokens: 100_000, cache_read_input_tokens: 1_000_000, cache_creation_input_tokens: 1_000_000, cache_creation: { ephemeral_5m_input_tokens: 500_000, ephemeral_1h_input_tokens: 500_000 } }),
+		turn("b", "claude-sonnet-5", { input_tokens: 1_000_000, output_tokens: 0 }),
+		turn("c", "claude-unpriced-9", { input_tokens: 1_000_000 }),
+	].join("\n");
+
+	const summary = summarize(parseEntries(transcript));
+
+	assert.ok(Math.abs(summary.totals.cost - (4 + 2 + 0.2 + 2.5 + 4 + 2)) < 1e-9, String(summary.totals.cost));
+});
+
 test("usage survives an empty or broken transcript", () => {
 	assert.deepEqual(summarize(parseEntries("")).runs, []);
 	assert.deepEqual(summarize(parseEntries("{not json\n")).runs, []);

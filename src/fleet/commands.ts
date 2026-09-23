@@ -159,11 +159,13 @@ export function artifacts(repo: string, io: Io): string {
 }
 
 function sessionUsage(task: string, io: Io, branch?: string, repo?: string): Summary | undefined {
-	const files = collect(`${task}/logs/sessions`, "", io, [])
-		.filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/") && !f.path.includes("/subagents/"))
-		.sort((a, b) => a.path.localeCompare(b.path));
+	const files = collect(`${task}/logs/sessions`, "", io, []).filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/"));
 	if (!files.length) return undefined;
-	const entries = files.flatMap((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""));
+	const firstAt = (session: ReturnType<typeof parseEntries>) => session.find((e) => e.timestamp)?.timestamp ?? "";
+	const entries = files
+		.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""))
+		.sort((a, b) => firstAt(a).localeCompare(firstAt(b)))
+		.flat();
 	const first = entries.find((e) => e.type === "message" && e.message?.role === "assistant")?.timestamp;
 	const commits = repo && first && branch
 		? io.git(["log", "--format=%h\t%cI", `--since=${first}`, branch], repo).split("\n").filter(Boolean).map((line) => {

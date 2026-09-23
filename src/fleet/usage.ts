@@ -40,7 +40,36 @@ export type Summary = {
 const SKILL_FILE = /\/skills\/([^/]+)\/SKILL\.md$/;
 const DIRECT = "direct";
 
-type ClaudeUsage = { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+type ClaudeUsage = {
+	input_tokens?: number;
+	output_tokens?: number;
+	cache_read_input_tokens?: number;
+	cache_creation_input_tokens?: number;
+	cache_creation?: { ephemeral_5m_input_tokens?: number; ephemeral_1h_input_tokens?: number };
+};
+
+const CLAUDE_USD_PER_MTOK: Record<string, { input: number; output: number; cacheRead: number }> = {
+	"claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
+	"claude-fable-5": { input: 10, output: 50, cacheRead: 1 },
+	"claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2 },
+	"claude-opus-5": { input: 5, output: 25, cacheRead: 0.5 },
+	"claude-sonnet-5": { input: 2, output: 10, cacheRead: 0.2 },
+	"claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1 },
+};
+
+export function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
+	const price = CLAUDE_USD_PER_MTOK[(model ?? "").replace(/\[.*\]$/, "")];
+	if (!price) return 0;
+	const written = usage.cache_creation_input_tokens ?? 0;
+	const hour = usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
+	const tokens =
+		(usage.input_tokens ?? 0) * price.input +
+		(usage.output_tokens ?? 0) * price.output +
+		(usage.cache_read_input_tokens ?? 0) * price.cacheRead +
+		(written - hour) * price.input * 1.25 +
+		hour * price.input * 2;
+	return tokens / 1_000_000;
+}
 type ClaudePart = { type: string; name?: string; input?: { file_path?: string; skill?: string } };
 type ClaudeLine = { type: string; subtype?: string; timestamp?: string; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
 
@@ -68,7 +97,7 @@ function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
 			message: {
 				role: "assistant",
 				model: line.message?.model,
-				usage: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens, cacheWrite: usage.cache_creation_input_tokens },
+				usage: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens, cacheWrite: usage.cache_creation_input_tokens, cost: { total: claudeCost(line.message?.model, usage) } },
 				content: claudeCalls(line.message?.content),
 			},
 		},
