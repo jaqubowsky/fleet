@@ -8,7 +8,7 @@ import { eventsLog, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import { taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
 
-function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }]) {
+function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	t.after(() => {
@@ -24,7 +24,7 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "wor
 	});
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: `${h.prefix}${a.name}`, workspaces: ["/w/repo"] })) },
-		"herdr agent list": { result: { agents } },
+		"herdr agent list": herdr,
 	}, h);
 	const events = (...lines: string[]) => {
 		io.files[`${io.home}/${eventsLog(h)}`] = `${lines.join("\n")}\n`;
@@ -64,9 +64,9 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 
 	assert.equal(a.messages.length, 1);
 	assert.match(a.messages[0].message.content, /^\[fleet\] worker:/);
-	assert.equal(a.notices.length, 1);
+	assert.equal(a.notices.filter((n) => n.startsWith("[fleet] worker:")).length, 1);
 	assert.deepEqual(b.messages, []);
-	assert.deepEqual(b.notices, []);
+	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] worker:")), []);
 });
 
 test("OMP exports its session owner and ignores another session's events", (t) => {
@@ -103,6 +103,17 @@ for (const h of [HARNESSES.pi, HARNESSES.omp]) {
 		assert.equal(run(`cat ~/${h.cli}-notes.md`), `cat ~/${h.cli}-notes.md`);
 	});
 }
+
+test("a watcher that cannot reach herdr says so in the session once per trouble", async (t) => {
+	const runtime = monitorRuntime(t, HARNESSES.omp, [], new Error("herdr: connection refused"));
+	const watcher = runtime.start("session-a");
+
+	await watcher.tools.fleet_watch.execute("call", { agents: "" });
+	t.mock.timers.tick(3100);
+	t.mock.timers.tick(3100);
+
+	assert.equal(watcher.notices.filter((n) => n.includes("connection refused")).length, 1);
+});
 
 test("explicit fleet watch delivers a follow-up turn without waiting for user input", async (t) => {
 	const runtime = monitorRuntime(t);

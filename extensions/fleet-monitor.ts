@@ -23,9 +23,15 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			pi.sendMessage({ customType: "fleet", content: text, display: true }, { deliverAs: h.deliverAs ?? "followUp", triggerTurn: true });
 			ui?.notify?.(text.split("\n")[0], "info");
 		};
+		const said = new Set<string>();
+		const say = (line: string) => {
+			if (!said.has(line)) ui?.notify?.(line, "info");
+			said.add(line);
+		};
 		const restart = () => {
 			watcher?.stop();
-			watcher = watch(scope, { ...io, log: () => {} }, deliver);
+			said.clear();
+			watcher = watch(scope, { ...io, log: say }, deliver);
 		};
 		const fleetCommand = new RegExp(`(^|[\\s;&|(])${h.cli}\\s`);
 		const refresh = () => watcher?.refresh();
