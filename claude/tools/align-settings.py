@@ -21,6 +21,8 @@ DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
 DRIFT_TARGET = HOME / ".claude" / "hooks" / "plugin-drift.sh"
 HERDR_SOURCE = REPO / "host" / "herdr.toml"
 HERDR_TARGET = HOME / ".config" / "herdr" / "config.toml"
+DETECTION_SOURCE = REPO / "host" / "agent-detection"
+DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
 ATTRIBUTION = {"sessionUrl": False, "commit": "", "pr": ""}
 HOOK_MATCHER = "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*"
@@ -225,6 +227,7 @@ def main():
         install_link(HOOK_SOURCE, HOOK_TARGET, args.apply),
         install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
         install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),
+        *(install_link(rules, DETECTION_TARGET / rules.name, args.apply, executable=False) for rules in sorted(DETECTION_SOURCE.glob("*.toml"))),
         process(MANAGED_SETTINGS, fix_managed, args.apply, root=True),
     ]
 
