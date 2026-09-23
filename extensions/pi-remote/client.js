@@ -92,9 +92,6 @@ function notifications() {
 		ask.hidden = Notification.permission !== "default";
 	});
 }
-function latestUserSequence(transcript) {
-	return Math.max(0, ...transcript.map((item) => item.seq ?? 0));
-}
 function matchingMessage(transcript, item) {
 	return transcript.find((message) =>
 		message.role === "user" && message.seq > item.after &&
@@ -393,7 +390,7 @@ async function send(action) {
 	controls();
 	const text = $("text").value;
 	const generation = snapshot.generation;
-	const after = latestUserSequence(snapshot.transcript);
+	const after = snapshot.userSequence;
 	try {
 		const accepted = await (await request("/command", {
 			method: "POST",

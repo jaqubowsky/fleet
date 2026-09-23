@@ -215,6 +215,7 @@ test("submitted text matches bounded user messages after history moves", async (
 	const client = await connect(remote);
 	const first = await (await client.get("/bootstrap")).json();
 	assert.equal(first.transcript[0].seq, 1);
+	assert.equal(first.userSequence, 1);
 
 	const long = "x".repeat(5000);
 	const accepted = await (await client.command({ generation, action: "followUp", text: long })).json();
@@ -237,7 +238,53 @@ test("submitted text matches bounded user messages after history moves", async (
 	});
 	const next = await (await client.get("/bootstrap")).json();
 	assert.equal(next.transcript.at(-1).seq, 2);
+	assert.equal(next.userSequence, 2);
 	assert.equal(next.transcript.some((item: { seq?: number }) => item.seq === 1), false);
+});
+
+test("snapshot keeps its user watermark when live tools hide history", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	const session = binding("history");
+	session.entries.push(...Array.from({ length: 3 }, (_, index) => ({
+		type: "message",
+		message: {
+			role: "assistant",
+			content: Array.from({ length: 32 }, (_, slot) => ({
+				type: "text", text: `${index}-${slot}:` + "x".repeat(4089),
+			})),
+		},
+	})));
+	remote.bind(owner, session);
+	await remote.start(0);
+	const client = await connect(remote);
+	const snapshot = () => client.get("/bootstrap").then((response) => response.json());
+	assert.equal((await snapshot()).transcript[0].seq, 1);
+
+	for (let index = 0; index < 16; index++) {
+		const toolCallId = `large-${index}`;
+		remote.publish(owner, {
+			type: "tool_execution_start", toolCallId, toolName: "edit",
+			args: { path: "file", edits: [{ oldText: "x".repeat(3000), newText: "y".repeat(3000) }] },
+		});
+		remote.publish(owner, {
+			type: "tool_execution_end", toolCallId, toolName: "edit", isError: false,
+			result: { content: [{ type: "text", text: "z".repeat(4096) }] },
+		});
+	}
+	const hidden = await snapshot();
+	assert.equal(hidden.userSequence, 1);
+	assert.equal(hidden.transcript.some((item: { seq?: number }) => item.seq === 1), false);
+
+	for (let index = 0; index < 16; index++)
+		remote.publish(owner, {
+			type: "tool_execution_start", toolCallId: `small-${index}`,
+			toolName: "bash", args: { command: "true" },
+		});
+	const restored = await snapshot();
+	assert.equal(restored.userSequence, 1);
+	assert.equal(restored.transcript[0].seq, 1);
 });
 
 test("protocol bounds input and projects only public text", async (t) => {

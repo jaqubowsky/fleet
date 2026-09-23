@@ -164,6 +164,7 @@ export class RemoteRuntime {
 			version: 2,
 			control,
 			generation: this.generation,
+			userSequence: this.userSequence,
 			revision: this.revision,
 			session: this.binding
 				? { id: text(this.binding.id, 128), name: text(this.binding.name, 256) }
