@@ -155,7 +155,9 @@ export class RemoteRuntime {
 					this.messages = fit(this.messages.map((item) => ({
 						...item,
 						blocks: item.blocks.map((block) =>
-							block.kind === "tool" && block.id === tool.id ? tool : block,
+							block.kind === "tool" && block.id === tool.id
+								? settle(block, event.isError, result.content, result.details)
+								: block,
 						),
 					})));
 				break;

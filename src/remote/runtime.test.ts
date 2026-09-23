@@ -206,6 +206,47 @@ test("completed tool and output reach both the stream and a fresh snapshot", asy
 	}
 });
 
+test("parallel completion preserves an evicted bash command", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("parallel"));
+	await remote.start(0);
+	const client = await connect(remote);
+	const calls = Array.from({ length: 17 }, (_, index) => ({
+		type: "toolCall", id: `bash-${index}`, name: "bash",
+		arguments: { command: `printf ${index}` },
+	}));
+
+	remote.publish(owner, {
+		type: "message_end", message: { role: "assistant", content: calls },
+	});
+	for (const call of calls)
+		remote.publish(owner, {
+			type: "tool_execution_start", toolCallId: call.id,
+			toolName: call.name, args: call.arguments,
+		});
+	remote.publish(owner, {
+		type: "tool_execution_end", toolCallId: "bash-0", toolName: "bash",
+		isError: false, result: { content: [{ type: "text", text: "0" }] },
+	});
+	const snapshot = await (await client.get("/bootstrap")).json();
+
+	assert.deepEqual(snapshot.transcript.at(-1).blocks[0], {
+		kind: "tool", id: "bash-0", name: "bash", summary: "printf 0",
+		state: "done", result: "0",
+	});
+	remote.publish(owner, {
+		type: "message_end", message: {
+			role: "toolResult", toolCallId: "bash-0", isError: false,
+			content: [{ type: "text", text: "confirmed 0" }],
+		},
+	});
+	const final = await (await client.get("/bootstrap")).json();
+	assert.equal(final.transcript.at(-1).blocks[0].summary, "printf 0");
+	assert.equal(final.transcript.at(-1).blocks[0].result, "confirmed 0");
+});
+
 test("submitted text matches bounded user messages after history moves", async (t) => {
 	const remote = new RemoteRuntime();
 	t.after(() => remote.stop());
