@@ -176,7 +176,7 @@ class Renderer {
 	}
 }
 
-function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, statusline: string, containerFiles: [string, string][]): void {
+function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, containerFiles: [string, string][]): void {
 	const { seat, harness } = r.input;
 	const modelsTarget = harness.name === "omp" ? "models.yml" : "models.json";
 	const rules = r.rules();
@@ -197,7 +197,8 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.skills(true, "home/skills");
 	r.extra([
 		["pi/models.json", `home/agent/${modelsTarget}`],
-		[statusline, "home/agent/extensions/statusline.ts"],
+		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
+		["src/statusline.ts", "home/agent/src/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
 		...containerFiles,
@@ -224,7 +225,8 @@ function claude(r: Renderer): void {
 	r.put("context/settings.json", r.settings("sbx.json"));
 	r.put("stage.sh", r.source("claude/sbx/stage.sh"));
 	r.extra([
-		["claude/statusline.mjs", "home/statusline.mjs"],
+		["claude/statusline.mjs", "home/fleet/claude/statusline.mjs"],
+		["src/statusline.ts", "home/fleet/src/statusline.ts"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
 	]);
@@ -239,9 +241,9 @@ export const OWNED: Record<HarnessName, string[]> = {
 export function render(input: RenderInput, io: Io): void {
 	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
-	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", "extensions/statusline.ts", []);
+	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", []);
 	else if (input.harness.name === "omp")
-		piFamily(r, "config.yml", "agent-config.yml", "omp/extensions/statusline.ts", [
+		piFamily(r, "config.yml", "agent-config.yml", [
 			["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"],
 		]);
 	else claude(r);

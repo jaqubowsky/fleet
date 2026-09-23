@@ -23,8 +23,6 @@ COPY --from=claude-home --chown=agent:agent plugins/  /home/agent/.claude/plugin
 
 COPY --chmod=0755 container/base-worktree.sh /usr/local/bin/base-worktree
 
-COPY --from=claude-home --chown=agent:agent statusline.mjs /home/agent/.claude/statusline.mjs
-
 COPY settings.json    /etc/claude-code/managed-settings.json
 
 COPY --from=claude-home --chown=agent:agent .gitconfig      /home/agent/.gitconfig

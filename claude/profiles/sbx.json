@@ -29,7 +29,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node ~/.claude/statusline.mjs",
+    "command": "node ~/fleet/claude/statusline.mjs",
     "padding": 0
   },
   "attribution": {

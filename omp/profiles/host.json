@@ -10,7 +10,7 @@
   "extensions": [
     "{{root}}/omp/extensions.ts",
     "{{root}}/extensions/handoff-on-error.ts",
-    "{{root}}/omp/extensions/statusline.ts"
+    "{{root}}/extensions/statusline.ts"
   ],
   "tools": {
     "approvalMode": "yolo",
