@@ -1,6 +1,6 @@
 import net from "node:net";
 import type { Io } from "./io.ts";
-import { type Agent, pickAgents, RING_MS, SETTLE_MS, type SandboxRow, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
+import { type Agent, RING_MS, SETTLE_MS, type SandboxRow, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { commitsProbe, fleetSandboxes, wake } from "./status.ts";
 
@@ -11,25 +11,33 @@ const STALL_TICK_MS = 60_000;
 type Frame = { event?: string; data?: { pane_id?: string; agent_status?: string } };
 type Tracked = { name: string; status: string; since: number; rang: number };
 
-export function fleetAgents(agents: Agent[], sandboxes: SandboxRow[], wanted: string[]): Agent[] {
+export function fleetAgents(agents: Agent[], sandboxes: SandboxRow[], wanted: string[] | undefined): Agent[] {
 	const fleet = new Set(sandboxes.map((s) => agentName(s.name)));
-	return pickAgents(agents, wanted, "").filter((a) => fleet.has(a.name ?? ""));
+	const names = new Set(wanted?.flatMap((w) => [w, agentName(w)]));
+	return agents.filter((a) => a.pane_id && fleet.has(a.name ?? "") && (!wanted || names.has(a.name ?? "") || names.has(a.pane_id)));
 }
 
 export function wakeLines(name: string, change: string, details: string): string {
 	return `[fleet] ${name}: ${change}\n${details}`;
 }
 
-export async function watch(wanted: string[], io: Io, socketPath = process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`): Promise<void> {
+export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: string) => void = io.log): { refresh: () => void; stop: () => void } {
+	const socketPath = process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; from: string | undefined }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
+	let stopped = false;
 
 	const sandboxes = (): SandboxRow[] => fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })), io.harness.prefix);
 
 	const details = (name: string): string => {
-		const rows = sandboxes();
+		let rows: SandboxRow[];
+		try {
+			rows = sandboxes();
+		} catch {
+			return wake(undefined, "");
+		}
 		const dir = taskDirOf(io.home, rows, name);
 		const sandbox = rows.find((s) => agentName(s.name) === name)?.name;
 		if (!dir || !sandbox) return wake(undefined, "");
@@ -40,7 +48,7 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 		return wake(io.read(`${dir}/status.md`), commits);
 	};
 
-	const emit = (name: string, change: string) => io.log(wakeLines(name, change, details(name)));
+	const emit = (name: string, change: string) => onWake(wakeLines(name, change, details(name)));
 
 	const settle = (pane: string, from: string | undefined) => {
 		const earlier = settling.get(pane);
@@ -111,6 +119,9 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 	};
 
 	const refresh = () => {
+		if (stopped) return;
+		const wanted = scope();
+		if (wanted?.length === 0 && !tracked.size) return;
 		let agents: Agent[];
 		try {
 			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
@@ -151,7 +162,14 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 
 	refresh();
 	if (!tracked.size) io.log(`[fleet] watching nothing yet; ${io.harness.cli} up adds containers within ${REFRESH_MS / 1000}s`);
-	setInterval(refresh, REFRESH_MS);
-	setInterval(ring, STALL_TICK_MS);
-	await new Promise(() => {});
+	const timers = [setInterval(refresh, REFRESH_MS), setInterval(ring, STALL_TICK_MS)];
+	return {
+		refresh,
+		stop: () => {
+			stopped = true;
+			for (const timer of timers) clearInterval(timer);
+			for (const { timer } of settling.values()) clearTimeout(timer);
+			sock?.destroy();
+		},
+	};
 }

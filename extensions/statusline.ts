@@ -207,23 +207,6 @@ const buildSegments = (ctx: any, usage: Usage | undefined, p: Palette) => {
   return segments;
 };
 
-const monitorLine = (): string | undefined => {
-  const list = (globalThis as any).__fleetMonitor;
-  if (!Array.isArray(list) || !list.length) return undefined;
-  const p = PALETTES[process.env.PI_STATUSLINE_PALETTE ?? ""] ?? PALETTES.catppuccin;
-  const [green, yellow, orange, red] = p.zones;
-  const statusSgr = (s: string) =>
-    s === "working" ? sgr(...fg(yellow))
-    : s === "blocked" || s === "exited" ? sgr(...fg(red))
-    : s === "done" ? sgr(...fg(green))
-    : sgr(...fg(p.text), DIM);
-  const sep = sgr(...fg(p.text), DIM) + " · " + RESET;
-  const body = list
-    .map((w: any) => sgr(...fg(p.text)) + w.name + " " + statusSgr(w.status) + w.status + RESET)
-    .join(sep);
-  return sgr(...fg(orange)) + " ◉ " + sgr(...fg(p.text)) + "watching  " + body + RESET;
-};
-
 const statusline = (ctx: any, usage: Usage | undefined, width: number) => {
   const p = PALETTES[process.env.PI_STATUSLINE_PALETTE ?? ""] ?? PALETTES.catppuccin;
   const sep = SEPARATORS[process.env.PI_STATUSLINE_SEPARATOR ?? ""] ?? SEPARATORS.slant;
@@ -260,8 +243,7 @@ export default function (pi: any) {
     if (!ctx.hasUI) return;
     ctx.ui.setFooter(() => ({
       render(width: number) {
-        const mon = monitorLine();
-        return mon ? ["", statusline(current, usage, width), mon] : ["", statusline(current, usage, width)];
+        return ["", statusline(current, usage, width)];
       },
       invalidate() {},
     }));

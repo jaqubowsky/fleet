@@ -124,7 +124,8 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	async watch(args) {
 		const { rest } = flags(args, []);
-		await watch(rest, io);
+		watch(() => (rest.length ? rest : undefined), io);
+		await new Promise(() => {});
 	},
 };
 

@@ -1,4 +1,4 @@
-{{watch.owner}} `fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `{{cli}} ls` prints; no name watches every agent.
+{{watch.owner}} `fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `{{cli}} ls` prints; no name watches every container.
 
 A watched container working on without settling wakes you with `working <n>m without settling`, and again while it goes on. That wake is a `{{cli}} peek`, then either a steer that names what to stop or the end of the turn.
 

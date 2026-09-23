@@ -5,8 +5,6 @@ export type Agent = {
 	name?: string;
 	pane_id?: string;
 	agent_status?: string;
-	agent_session_id?: string;
-	agent_session_path?: string;
 };
 export type SandboxRow = { name: string; workspaces: string[] };
 
@@ -22,19 +20,6 @@ export function shouldWake(prev: string | undefined, next: string): boolean {
 	if (TERMINAL.has(prev ?? "") && TERMINAL.has(next)) return false;
 
 	return WAKE.has(next);
-}
-
-export function pickAgents(
-	agents: Agent[],
-	wanted: string[],
-	selfPane: string,
-): Agent[] {
-	const others = agents.filter((a) => a.pane_id && a.pane_id !== selfPane);
-	if (!wanted.length) return others;
-	const names = new Set(wanted.flatMap((w) => [w, agentName(w)]));
-	return others.filter(
-		(a) => names.has(a.name ?? "") || names.has(a.pane_id ?? ""),
-	);
 }
 
 export function stalled(
