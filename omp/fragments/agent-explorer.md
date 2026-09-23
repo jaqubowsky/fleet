@@ -1,4 +1,4 @@
 tools: read, grep, glob
 model: "@smol"
-thinking-level: max
+thinking-level: {{thinking.explorer}}
 spawns: []

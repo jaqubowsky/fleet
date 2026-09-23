@@ -1,4 +1,4 @@
 tools: read, grep, glob
 model: "@slow"
-thinking-level: high
+thinking-level: {{thinking.reviewer}}
 spawns: []

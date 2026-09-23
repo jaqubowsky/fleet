@@ -1,5 +1,5 @@
 tools: web_search, fetch_content
-thinking: high
+thinking: {{thinking.researcher}}
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
