@@ -17,7 +17,7 @@ browser/       <run-id>/report.md, screenshots, a walkthrough video    check-fea
 logs/          sessions/, usage.json, <skill>-<id>/ evidence        {{harness}}, {{cli}} down, any skill
 ```
 
-`runbook/` at the root of `$FLEET_ARTIFACTS`, beside the task directories, holds how the app starts and how its screens drive (`run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md`, `gate-baseline.md`); every container on the repository shares it.
+`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role. `analysis.md` is a snapshot anchored to the analyzed commit and is replaced by a later analysis; accepted shared decisions and scope changes update `spec.md`, while slice-only changes update their ticket. A new reviewed head replaces `review.md`; `pr.md` appends one round at a time. Historical and run-specific evidence stays under versioned `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
 
@@ -50,7 +50,7 @@ attention: none | <one sentence naming what a person has to decide or provide>
 
 The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
-Rewrite the file whenever a completed unit changes what is true or what comes next, before long-running work or delegation, and before idle, blocked or handoff. Write it last before a chat report. Do not rewrite it for tool-by-tool activity that changes none of its fields. `## Log` grows by one line per finished deliverable, naming the outcome and ending in the file or commit that holds the detail.
+Rewrite the current-state fields whenever a completed unit changes what is true or what comes next, before long-running work or delegation, and before idle, blocked or handoff. Write the file last before a chat report. The moment a deliverable finishes, append one `## Log` line naming the outcome and ending in its canonical artifact or commit. The log is append-only: every later rewrite preserves its existing lines verbatim. Tool activity that changes no deliverable adds no line.
 
 ## analysis.md
 

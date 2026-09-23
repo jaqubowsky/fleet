@@ -14,10 +14,11 @@ You are the worker. The repository here is a private clone at the same absolute 
 
 ## Task directory
 
-1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: layout, the pipeline and the status contract are in `refs/artifacts.md` beside this file. Read that contract and `status.md` before your first command; a ticket, a bug or a feature starts with `analyze-task`. `runbook/` at the root of `$FLEET_ARTIFACTS` holds how this app starts and how its screens drive; the root is shared by every container on this repository and read by the person
-2. A red gate is yours only when the same command is green on the base. `$FLEET_ARTIFACTS/runbook/gate-baseline.md` says which gates are red on the base already, with the command, the base sha and the counts per file: read it before running anything twice. A gate it does not cover runs once in `base-worktree <base-commit>`, which builds `/tmp/base` with deps, env files and generated code linked in, and the result goes into that file for the next container; a build output under suspicion is shared through those links, so rebuild it there first
-3. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137
-4. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
+1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: layout, the pipeline and the status contract are in `refs/artifacts.md` beside this file. Read that contract and `status.md` before your first command; a ticket, a bug or a feature starts with `analyze-task`. `runbook/` at the root of `$FLEET_ARTIFACTS` may hold how this app starts and how its screens drive; the root is shared by every container on this repository and read by the person
+2. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md`, `~/.omp/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
+3. A red gate is yours only when the same command is green on the base. If `$FLEET_ARTIFACTS/runbook/gate-baseline.md` exists, read it before running anything twice; it records the command, base sha and counts per file for known base failures. A gate absent from that file, or every gate when the file is absent, runs once in `base-worktree <base-commit>`, which builds `/tmp/base` with deps, env files and generated code linked in and records the result for the next container. A build output under suspicion is shared through those links, so rebuild it there first
+4. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137
+5. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 
 ## Finish
 
