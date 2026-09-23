@@ -42,8 +42,12 @@ The repository inside a container is a private clone, so writes there stay there
 ## Watching
 
 {{file:watching}}
+- `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means {{harness}} died in it; read the tab.
+- Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 
 ## Session handoff
+
+When `attention:` says `session handoff requested`, approval is routine local execution only for a task the user explicitly delegated end to end: the host may approve without asking again. For a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission.
 
 {{file:session-handoff}}
 

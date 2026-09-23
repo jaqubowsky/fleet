@@ -1,3 +1,1 @@
-When `attention:` says `session handoff requested`, approval is routine local execution only for a task the user explicitly delegated end to end: the host may approve without asking again. For a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission.
-
 A Claude container cannot replace its own session, so the host does it once the container is idle: `cfleet steer <sandbox> "/clear"`, and the next `[fleet]` wake confirms it settled on an empty context. For an end-to-end task, then steer `Continue the previous task: set attention to none, read current durable artifacts and follow Next step in status.md.` For a manual task, the fresh session waits for the user's next message.
