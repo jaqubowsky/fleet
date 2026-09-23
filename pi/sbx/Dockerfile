@@ -8,11 +8,7 @@ ENV NODE_OPTIONS=--disable-warning=UNDICI-EHPA
 
 ARG PI_VERSION=0.87.1
 
-RUN sudo apt-get update \
- && sudo apt-get install -y --no-install-recommends fd-find jq \
- && sudo rm -rf /var/lib/apt/lists/* \
- && sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd \
- && sudo npm install -g --prefix /usr/local/share/npm-global "@earendil-works/pi-coding-agent@$PI_VERSION" \
+RUN sudo npm install -g --prefix /usr/local/share/npm-global "@earendil-works/pi-coding-agent@$PI_VERSION" \
  && sudo ln -sf /usr/local/share/npm-global/bin/pi /usr/local/bin/pi \
  && pi --version
 

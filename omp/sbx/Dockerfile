@@ -10,11 +10,7 @@ ARG OMP_VERSION=18.2.8
 ARG OMP_SHA256_ARM64=a9aa63e43c95ccaa0683e9fed03463c401829e220ad2bbc414b341d2d49e5806
 ARG OMP_SHA256_AMD64=b0c01da7339d87fd5d26d7faa7b61c131a50648399962783899fd93a6d8b1d65
 
-RUN sudo apt-get update \
- && sudo apt-get install -y --no-install-recommends fd-find jq \
- && sudo rm -rf /var/lib/apt/lists/* \
- && sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd \
- && case "$(dpkg --print-architecture)" in \
+RUN case "$(dpkg --print-architecture)" in \
       arm64) asset=omp-linux-arm64; sum="$OMP_SHA256_ARM64" ;; \
       amd64) asset=omp-linux-x64; sum="$OMP_SHA256_AMD64" ;; \
       *) echo "omp: unsupported architecture $(dpkg --print-architecture)" >&2; exit 1 ;; \
