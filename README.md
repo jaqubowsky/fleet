@@ -18,9 +18,9 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `src/fleet/` | the fleet CLI behind `fleet`, `ofleet` and `cfleet`; `node --test` |
 | `src/guard/` | the tool-call policy all three hosts enforce, driven by the case corpus in `host/tests/` |
 | `src/statusline/` | the status line pi and Claude draw: folder, branch, model, a context bar toward the 250k handoff, usage limits, in the terminal's own ANSI colours |
-| `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, pi's statusline, phone remote |
+| `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, the container's end of the state relay, pi's statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
-| `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config and the screen rules herdr reads a sandboxed pi by |
+| `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config and the blocker rules herdr reads on a pi screen |
 | `pi/` | pi profiles, the model overrides pi and OMP both read (`models.json`), its Ayu Mirage theme, its host extension entry, kit, image |
 | `omp/` | OMP profiles, its Ayu Mirage theme, its host extension entry, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
@@ -57,6 +57,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 | Concern | pi | OMP | Claude Code | Why it cannot be shared |
 | --- | --- | --- | --- | --- |
 | Waking the host when a container settles | `extensions/fleet-monitor.ts` runs the shared `src/fleet/watch.ts` in process and turns each wake into a turn | the same extension, `deliverAs: nextTurn` | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
+| Where herdr gets a container's working, blocked and done | herdr's own pi integration inside the container; `fleet relay` in the pane hands each report to herdr as `fleet:pi` | the same with herdr's OMP integration, `ofleet relay`, `fleet:omp` | herdr's screen rules for Claude | herdr's Claude integration reports only the session and herdr reads Claude's state from the screen |
 | Which containers a session watches by itself | the one the session put up or steered, by `PI_SESSION_ID` the monitor puts on its `fleet` commands | the same, by `OMP_SESSION_ID` on its `ofleet` commands | whatever `cfleet watch` names | Claude Code has no API for an extension to start a turn |
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Handoff at 250k context | `session_handoff` suggests in `status.md`; `/session-handoff` from the user or host opens the fresh session | the same | a `Stop` hook suggests in `status.md`; `/clear` from the user or host, a `SessionStart` hook records it | Claude Code cannot replace a session from inside it |

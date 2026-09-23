@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Harness } from "../harness.ts";
@@ -18,6 +18,7 @@ export type Io = {
 	mkdir(path: string): void;
 	log(line: string): void;
 	run(command: string, args: string[]): void;
+	launch(command: string, args: string[]): Promise<number>;
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
@@ -89,6 +90,12 @@ export function realIo(home: string, harness: Harness): Io {
 			if (result.error) throw result.error;
 			if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 		},
+		launch: (command, args) =>
+			new Promise((resolve, reject) => {
+				const child = spawn(command, args, { stdio: "inherit" });
+				child.on("error", reject);
+				child.on("exit", (code) => resolve(code ?? 1));
+			}),
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,

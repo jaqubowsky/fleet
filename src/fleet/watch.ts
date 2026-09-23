@@ -7,8 +7,6 @@ import { type Agent, commitsProbe, type Sandbox, sandboxes, wake } from "./statu
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
-const SAMPLE_MS = 2000;
-const SCREEN_LINES = 8;
 
 type Frame = { event?: string; data?: { pane_id?: string; agent_status?: string } };
 type Tracked = { name: string; status: string; since: number; rang: number };
@@ -24,8 +22,6 @@ export function wakeLines(name: string, change: string, details: string): string
 }
 
 export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: string) => void = io.log): { refresh: () => void; stop: () => void } {
-	const spinner = io.harness.spinner;
-	const settleMs = spinner ? SAMPLE_MS + SETTLE_MS : SETTLE_MS;
 	const socketPath = process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; from: string | undefined }>();
@@ -52,11 +48,6 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 
 	const emit = (name: string, change: string) => onWake(wakeLines(name, change, details(name)));
 
-	const onScreen = (pane: string): string => {
-		const bottom = io.herdrText(["agent", "read", pane, "--source", "detection"]).split("\n").filter((line) => line.trim()).slice(-SCREEN_LINES).join("\n");
-		return spinner?.test(bottom) ? "working" : "idle";
-	};
-
 	const settle = (pane: string, from: string | undefined) => {
 		const earlier = settling.get(pane);
 		if (earlier) clearTimeout(earlier.timer);
@@ -67,7 +58,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 			if (!current || !TERMINAL.has(current.status)) return;
 			const change = transition(start, current.status);
 			if (change) emit(current.name, change);
-		}, settleMs);
+		}, SETTLE_MS);
 		settling.set(pane, { timer, from: start });
 	};
 
@@ -104,7 +95,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		let buf = "";
 		current.on("connect", () => {
 			const subscriptions = [...tracked.keys()].flatMap((pane_id) => [
-				...(spinner ? [] : [{ type: "pane.agent_status_changed", pane_id }]),
+				{ type: "pane.agent_status_changed", pane_id },
 				{ type: "pane.exited", pane_id },
 			]);
 			current.write(`${JSON.stringify({ id: "fleet", method: "events.subscribe", params: { subscriptions } })}\n`);
@@ -132,7 +123,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		let agents: Agent[];
 		try {
 			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
-			agents = fleetAgents(listed, sandboxes(io), wanted).map((a) => (spinner ? { ...a, agent_status: onScreen(a.pane_id) } : a));
+			agents = fleetAgents(listed, sandboxes(io), wanted);
 		} catch (error) {
 			io.log(`[fleet] watch: refresh: ${error instanceof Error ? error.message : String(error)}`);
 			setTimeout(refresh, RECONNECT_MS);
@@ -167,17 +158,9 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		}
 	};
 
-	const sample = () => {
-		for (const pane of [...tracked.keys()]) {
-			try {
-				onFrame({ data: { pane_id: pane, agent_status: onScreen(pane) } });
-			} catch {}
-		}
-	};
-
 	refresh();
 	if (!tracked.size) io.log(`[fleet] watching nothing yet; ${io.harness.cli} up adds containers within ${REFRESH_MS / 1000}s`);
-	const timers = [setInterval(refresh, REFRESH_MS), setInterval(ring, STALL_TICK_MS), ...(spinner ? [setInterval(sample, SAMPLE_MS)] : [])];
+	const timers = [setInterval(refresh, REFRESH_MS), setInterval(ring, STALL_TICK_MS)];
 	return {
 		refresh,
 		stop: () => {

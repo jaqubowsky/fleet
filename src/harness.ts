@@ -6,7 +6,6 @@ export type Harness = {
 	home: string;
 	prefix: string;
 	agent: string;
-	spinner?: RegExp;
 	image: string;
 	owner: "session" | "pane" | "none";
 	sessionIdEnv?: string;
@@ -16,6 +15,7 @@ export type Harness = {
 	agentArgs: string[];
 	resume: string;
 	sessionEnv?: string;
+	herdrIntegration?: string;
 	codex?: { auth: string; kit: string };
 	projectConfig?: string;
 	containerSessions?: string;
@@ -46,6 +46,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		agentArgs: ["--approve"],
 		resume: "-c",
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
+		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "pi" },
 		cache: "cache",
 		deliverAs: "followUp",
@@ -70,7 +71,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		home: ".omp",
 		prefix: "omp-",
 		agent: "omp",
-		spinner: /^\s*[\u{F12B7}\u{238B}]\s+\S/mu,
 		image: "my-omp:v1",
 		owner: "session",
 		sessionIdEnv: "OMP_SESSION_ID",
@@ -80,6 +80,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		agentArgs: ["--yolo"],
 		resume: "-c",
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
+		herdrIntegration: "agent/extensions/herdr-omp-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "omp" },
 		cache: "cache",
 		deliverAs: "nextTurn",

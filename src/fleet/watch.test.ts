@@ -148,93 +148,28 @@ test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
 	assert.equal(io.calls.length, asked);
 });
 
-const OMP_WORKING = ["npm test", "", "  \u{F12B7} Reverting unrelated formatter output", "", "> ", "opus · 41%"].join("\n");
-const OMP_IDLE = ["npm test", "230 pass", "", "> ", "opus · 41%"].join("\n");
-
-test("the omp watch reads work from the omp screen while herdr says idle", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
-	let screen = OMP_WORKING;
-	io.herdrText = (args) => (args.join(" ") === "agent read w1:p1 --source detection" ? screen : "");
+test("an omp container wakes its host on herdr's status like any other harness", (t: TestContext) => {
+	const { io, status } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "working" }], HARNESSES.omp);
 	const wakes: string[] = [];
 	watch(() => undefined, io, (text) => wakes.push(text));
 
-	intervals.get(30_000)?.();
-	t.mock.timers.tick(3000);
-	screen = OMP_IDLE;
-	intervals.get(2000)?.();
-	t.mock.timers.tick(3000);
+	status("w1:p1", "done");
+	t.mock.timers.tick(1100);
 
 	assert.ok(io.lines.includes("[fleet] watching omp-webapp-a working"), io.lines.join("\n"));
 	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> idle\n/);
+	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> done\n/);
+	assert.ok(!io.calls.some((c) => c[0] === "herdr" && c[1] === "agent" && c[2] === "read"));
 });
 
-test("one idle omp screen between two working ones wakes nothing", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
-	let screen = OMP_WORKING;
-	io.herdrText = () => screen;
-	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
-
-	screen = OMP_IDLE;
-	intervals.get(2000)?.();
-	t.mock.timers.tick(2000);
-	screen = OMP_WORKING;
-	intervals.get(2000)?.();
-	t.mock.timers.tick(2000);
-
-	assert.deepEqual(wakes, []);
-});
-
-test("a working omp pane rings after 20 minutes without settling", (t: TestContext) => {
-	let now = 0;
-	t.mock.method(Date, "now", () => now);
-	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
-	io.herdrText = () => OMP_WORKING;
-	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
-
-	now = 20 * 60_000;
-	intervals.get(2000)?.();
-	intervals.get(60_000)?.();
-
-	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working 20m without settling\n/);
-});
-
-test("an omp screen herdr cannot read leaves the pane as it was", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "idle" }], HARNESSES.omp);
-	let screen: string | Error = OMP_WORKING;
-	io.herdrText = () => {
-		if (screen instanceof Error) throw screen;
-		return screen;
-	};
-	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
-
-	screen = new Error("herdr agent read w1:p1 --source detection failed (1)");
-	intervals.get(2000)?.();
-	t.mock.timers.tick(3000);
-	screen = OMP_IDLE;
-	intervals.get(2000)?.();
-	t.mock.timers.tick(3000);
-
-	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> idle\n/);
-});
-
-for (const [h, types] of [
-	[HARNESSES.pi, ["pane.agent_status_changed", "pane.exited"]],
-	[HARNESSES.claude, ["pane.agent_status_changed", "pane.exited"]],
-	[HARNESSES.omp, ["pane.exited"]],
-] as const) {
-	test(`the ${h.name} watch subscribes to ${types.join(" and ")}`, (t: TestContext) => {
+for (const h of Object.values(HARNESSES)) {
+	test(`the ${h.name} watch subscribes to herdr's status and exit events`, (t: TestContext) => {
 		const { io, sockets } = herdr(t, [{ name: `${h.prefix}webapp-a`, pane_id: "w1:p1", agent_status: "working" }], h);
 		watch(() => undefined, io);
 
 		sockets[0].emit("connect");
 
 		const { params } = JSON.parse(sockets[0].written[0]) as { params: { subscriptions: { type: string }[] } };
-		assert.deepEqual(params.subscriptions.map((s) => s.type), types);
+		assert.deepEqual(params.subscriptions.map((s) => s.type), ["pane.agent_status_changed", "pane.exited"]);
 	});
 }

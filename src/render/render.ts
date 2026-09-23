@@ -197,6 +197,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.extra([
 		...agentFiles.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
+		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
 		...containerFiles,
 	]);

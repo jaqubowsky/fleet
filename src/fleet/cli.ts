@@ -5,6 +5,7 @@ import { render } from "../render/render.ts";
 import { artifacts, build, copy, down, exec, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
+import { relay } from "./relay.ts";
 import { up } from "./up.ts";
 import { watch } from "./watch.ts";
 
@@ -27,6 +28,7 @@ const usage = `usage:
   ${cli} build                                        render the container seat and rebuild ${h.image} from it
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
   ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor, persistent: true
+  ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi or omp tab: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
@@ -121,6 +123,11 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		if (typeof opts.out === "string") render({ root, harness: h, seat, out: resolve(opts.out) }, io);
 		else if (seat === "host") renderHost(root, io);
 		else throw new Error("the container seat needs --out <dir>");
+	},
+	async relay(args) {
+		const { rest } = flags(args, []);
+		const [sandbox, task, ...agentArgs] = rest;
+		process.exitCode = await relay(need(sandbox, "sandbox"), need(task, "task directory"), agentArgs, io);
 	},
 	async watch(args) {
 		const { rest } = flags(args, []);

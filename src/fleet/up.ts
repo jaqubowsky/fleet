@@ -84,6 +84,8 @@ export async function up(
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
 			if (io.harness.projectConfig) seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
+			const integration = io.harness.herdrIntegration;
+			if (integration) io.sbx(["cp", `${io.home}/${io.harness.home}/${integration}`, `${sandbox}:/home/agent/${io.harness.home}/${integration}`], { quiet: true });
 			if (input.branch)
 				io.sbx(
 					[
@@ -140,13 +142,11 @@ export async function up(
 	}
 
 	const { pane, running } = openPane(io, basename(input.repo), agent, found);
-	if (!running)
-		io.herdr([
-			"pane",
-			"run",
-			pane,
-			`HERDR_AGENT=${io.harness.agent} sbx run --name ${sandbox} -- ${agentArgs(io.harness, input.model, io.list(`${task}/logs/sessions`).length > 0 || (Boolean(existing) && Boolean(io.harness.containerSessions)))}`,
-		]);
+	if (!running) {
+		const args = agentArgs(io.harness, input.model, io.list(`${task}/logs/sessions`).length > 0 || (Boolean(existing) && Boolean(io.harness.containerSessions)));
+		const start = io.harness.herdrIntegration ? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}` : `sbx run --name ${sandbox}`;
+		io.herdr(["pane", "run", pane, `HERDR_AGENT=${io.harness.agent} ${start} -- ${args}`]);
+	}
 	await waitForAgent(io, pane);
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);

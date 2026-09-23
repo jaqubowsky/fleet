@@ -67,6 +67,22 @@ test("pi and omp each carry their own theme, and only pi draws its status line i
 	assert.equal(omp.files["/stage/home/agent/extensions/statusline.ts"], undefined);
 });
 
+test("a pi or omp container carries the state relay for herdr's integration, and neither host does", () => {
+	const relay = { "read /root/extensions/state-relay.ts": "relay\n", "stat /root/extensions/state-relay.ts": { size: 6, mtime: new Date(0), dir: false } };
+	const pi = fakeIo(sources(relay));
+	const omp = fakeIo(sources({ ...relay, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+
+	for (const io of [pi, omp]) {
+		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+	}
+
+	assert.equal(pi.files["/stage/home/agent/extensions/state-relay.ts"], "relay\n");
+	assert.equal(omp.files["/stage/home/agent/extensions/state-relay.ts"], "relay\n");
+	assert.equal(pi.files["/home/agent/extensions/state-relay.ts"], undefined);
+	assert.equal(omp.files["/home/agent/extensions/state-relay.ts"], undefined);
+});
+
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 

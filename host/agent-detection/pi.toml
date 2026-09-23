@@ -1,7 +1,7 @@
 id = "pi"
-version = "2026.09.15.3"
+version = "2026.09.23.1"
 min_engine_version = 1
-updated_at = "2026-09-15T00:00:00Z"
+updated_at = "2026-09-23T00:00:00Z"
 aliases = ["herdr:pi"]
 
 # --- blocked: the worker is stuck waiting for a human ---
@@ -53,41 +53,3 @@ any = [
   { contains = ["y/N"] },
   { contains = ["Y/n"] },
 ]
-
-# --- working: nested async subagents still running in the sandbox ---
-# The parent turn ends and the top-level banner clears, but pi-subagents keeps a
-# live FleetView / pi-lens panel at the bottom of the screen while background
-# children run. There is no herdr inside the sandbox, so this screen panel is the
-# only signal. Match the active-run count and running markers in the bottom panel
-# only (not the static spawn tool-output higher up), so the pane reads `working`
-# until the children settle and the panel flips to `0 active` / `complete`.
-
-[[rules]]
-id = "subagents_active"
-state = "working"
-priority = 120
-region = "bottom_non_empty_lines(10)"
-visible_working = true
-any = [
-  { regex = ['[1-9][0-9]* active\b'] },
-  { contains = ["· running"] },
-  { contains = ["workflow · running"] },
-]
-
-# --- working: the model is producing output ---
-
-[[rules]]
-id = "working_banner"
-state = "working"
-priority = 110
-region = "whole_recent"
-visible_working = true
-regex = ['(?m)^\s*[─—-]+\s*[\x{2800}-\x{28FF}]\s*Working\s*[─—-]+']
-
-[[rules]]
-id = "working_literal"
-state = "working"
-priority = 100
-region = "whole_recent"
-visible_working = true
-contains = ["Working..."]

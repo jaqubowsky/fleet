@@ -9,7 +9,7 @@ import { fakeIo } from "./fake-io.ts";
 import { taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
 
 function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h.prefix}worker`, pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
-	t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
+	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	t.after(() => {
 		if (!h.sessionIdEnv) return;
@@ -26,8 +26,6 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h
 		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, workspaces: ["/w/repo"] })) },
 		"herdr agent list": herdr,
 	}, h);
-	const screens = new Map(agents.map((a) => [a.pane_id, a.agent_status === "working" ? "  \u{F12B7} Running tests" : "> "]));
-	io.herdrText = (args) => screens.get(args[2]) ?? "";
 	const events = (...lines: string[]) => {
 		io.files[`${io.home}/${eventsLog(h)}`] = `${lines.join("\n")}\n`;
 	};
@@ -48,9 +46,8 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h
 		return { handlers, tools, messages, notices };
 	};
 	const settle = (pane = "worker:pane") => {
-		screens.set(pane, "> ");
-		if (!h.spinner) for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`));
-		t.mock.timers.tick(h.spinner ? 5100 : 1100);
+		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`));
+		t.mock.timers.tick(1100);
 	};
 	return { events, start, settle };
 }
