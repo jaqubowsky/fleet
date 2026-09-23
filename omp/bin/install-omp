@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version=18.2.8
+version=18.2.11
 case "$(uname -s)-$(uname -m)" in
-	Darwin-arm64) asset=omp-darwin-arm64; sum=cf8d34a7fe6f60de1acbe74f29c82026e4c07888e9d89f7ebceeb922159e5787 ;;
-	Darwin-x86_64) asset=omp-darwin-x64; sum=b385c2bbacddc09b266ec19ba95ebb2882301293d49390d7fd32cc3a12a1da41 ;;
-	Linux-aarch64) asset=omp-linux-arm64; sum=a9aa63e43c95ccaa0683e9fed03463c401829e220ad2bbc414b341d2d49e5806 ;;
-	Linux-x86_64) asset=omp-linux-x64; sum=b0c01da7339d87fd5d26d7faa7b61c131a50648399962783899fd93a6d8b1d65 ;;
+	Darwin-arm64) asset=omp-darwin-arm64; sum=faeffd57674cffa253e2f127d72ddfe6dcd81e1eb91eb5d2148913e62a010a28 ;;
+	Darwin-x86_64) asset=omp-darwin-x64; sum=1271717213125a60db7882b46bb55e1ff70f7929ae801ff1176f732433835f98 ;;
+	Linux-aarch64) asset=omp-linux-arm64; sum=c115f95a0a0081d3724a3c878231fb8c3b2fdb25ad5ad6c3b30d152a82b3939e ;;
+	Linux-x86_64) asset=omp-linux-x64; sum=97cf39557bf3d98327dd4c9814380b7e6bcb76e41169edd9b0ff30424c733a2a ;;
 	*) printf 'unsupported platform: %s-%s\n' "$(uname -s)" "$(uname -m)" >&2; exit 1 ;;
 esac
 
