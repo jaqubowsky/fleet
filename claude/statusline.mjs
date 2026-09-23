@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { PALETTES, SEPARATORS, statusline } from "../src/statusline/statusline.ts";
+import { PALETTES, statusline } from "../src/statusline/statusline.ts";
 
 const FIVE_HOURS = 5 * 3600;
 const SEVEN_DAYS = 7 * 86400;
@@ -46,16 +46,11 @@ const SCENARIOS = [
 ];
 
 if (process.argv[2] === "--demo") {
-  const separator = process.env.STATUSLINE_SEPARATOR ?? "slant";
   for (const [name, p] of Object.entries(PALETTES)) {
     console.log(`\n  \x1b[1m${name}\x1b[0m  \x1b[2m— ${p.label}\x1b[0m`);
     for (const [label, tok, fiveH] of SCENARIOS) {
-      console.log(`  \x1b[2m${label.padEnd(7)}\x1b[0m${statusline(status(DEMO_PAYLOAD(tok, fiveH)), { palette: name, separator })}`);
+      console.log(`  \x1b[2m${label.padEnd(7)}\x1b[0m${statusline(status(DEMO_PAYLOAD(tok, fiveH)), { palette: name })}`);
     }
-  }
-  console.log(`\n  \x1b[1mseparatory\x1b[0m`);
-  for (const name of Object.keys(SEPARATORS)) {
-    console.log(`  \x1b[2m${name.padEnd(10)}\x1b[0m${statusline(status(DEMO_PAYLOAD(270_000, 81)), { separator: name })}`);
   }
   console.log();
 } else {

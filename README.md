@@ -17,7 +17,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `src/render/` | renders rules, skills, agents and settings for a harness seat |
 | `src/fleet/` | the fleet CLI behind `fleet`, `ofleet` and `cfleet`; `node --test` |
 | `src/guard/` | the tool-call policy all three hosts enforce, driven by the case corpus in `host/tests/` |
-| `src/statusline/` | the status line every harness draws: segments, palettes, separators |
+| `src/statusline/` | the status line every harness draws: folder, branch, model, a context bar toward the 250k handoff, usage limits; palettes by `STATUSLINE_PALETTE` |
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, the pi and OMP statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |

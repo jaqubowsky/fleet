@@ -12,49 +12,20 @@ const GIT_SEARCH_DEPTH = 6;
 const BRANCH_MAX_LENGTH = 18;
 const DETACHED_SHA_LENGTH = 7;
 const EPOCH_MS_THRESHOLD = 1e12;
+const BAR_CELLS = 10;
+const GAP = "   ";
 
 export const PALETTES: Record<string, Palette> = {
-  mahogany: {
-    label: "Mahogany",
-    accent: "#c4a050", accentInk: "#181210", ink: "#181210",
-    text: "#ece4d8", muted: "#8a847c",
-    zones: ["#6a7c5d", "#c4a050", "#d4a574", "#9d4451"],
-  },
-  catppuccin: {
-    label: "Catppuccin Mocha",
-    accent: "#89b4fa", accentInk: "#11111b", ink: "#11111b",
-    text: "#cdd6f4", muted: "#7f849c",
-    zones: ["#a6e3a1", "#f9e2af", "#fab387", "#f38ba8"],
-  },
-  dracula: {
-    label: "Dracula",
-    accent: "#bd93f9", accentInk: "#282a36", ink: "#282a36",
-    text: "#f8f8f2", muted: "#6272a4",
-    zones: ["#50fa7b", "#f1fa8c", "#ffb86c", "#ff5555"],
-  },
-  tokyonight: {
-    label: "Tokyo Night",
-    accent: "#7aa2f7", accentInk: "#16161e", ink: "#16161e",
-    text: "#c0caf5", muted: "#545c7e",
-    zones: ["#9ece6a", "#e0af68", "#ff9e64", "#f7768e"],
-  },
-  gruvbox: {
-    label: "Gruvbox dark",
-    accent: "#83a598", accentInk: "#282828", ink: "#282828",
-    text: "#ebdbb2", muted: "#928374",
-    zones: ["#b8bb26", "#fabd2f", "#fe8019", "#fb4934"],
-  },
+  mahogany: { label: "Mahogany", accent: "#c4a050", text: "#ece4d8", muted: "#8a847c", zones: ["#6a7c5d", "#c4a050", "#d4a574", "#9d4451"] },
+  catppuccin: { label: "Catppuccin Mocha", accent: "#89b4fa", text: "#cdd6f4", muted: "#7f849c", zones: ["#a6e3a1", "#f9e2af", "#fab387", "#f38ba8"] },
+  dracula: { label: "Dracula", accent: "#bd93f9", text: "#f8f8f2", muted: "#6272a4", zones: ["#50fa7b", "#f1fa8c", "#ffb86c", "#ff5555"] },
+  tokyonight: { label: "Tokyo Night", accent: "#7aa2f7", text: "#c0caf5", muted: "#545c7e", zones: ["#9ece6a", "#e0af68", "#ff9e64", "#f7768e"] },
+  gruvbox: { label: "Gruvbox dark", accent: "#83a598", text: "#ebdbb2", muted: "#928374", zones: ["#b8bb26", "#fabd2f", "#fe8019", "#fb4934"] },
 };
 
-export const SEPARATORS: Record<string, Separator> = {
-  slant: { open: "", close: "", thin: "" },
-  slantBack: { open: "", close: "", thin: "" },
-  arrow: { open: "", close: "", thin: "" },
-};
 const BRANCH_GLYPH = "";
 const BOLD = 1;
 const DIM = 2;
-const DEFAULT_BG = 49;
 const RESET = "\x1b[0m";
 const CUBE_STEPS = [0, 95, 135, 175, 215, 255];
 const CUBE_BASE = 16;
@@ -63,10 +34,9 @@ const GREY_START = 8;
 const GREY_STEP = 10;
 const GREY_LAST = 23;
 
-type Palette = { label: string; accent: string; accentInk: string; ink: string; text: string; muted: string; zones: string[] };
-type Separator = { open: string; close: string; thin: string };
-type Run = { text: string; color: string | null; mods: number[] };
-type Segment = { fill: string | null; color: string; runs: Run[] };
+type Palette = { label: string; accent: string; text: string; muted: string; zones: string[] };
+type Run = { text: string; color: string; mods: number[] };
+type Group = { rank: number; runs: Run[] };
 export type Window = { usedPercent: number; seconds?: number; resetsAt?: number };
 export type Status = { dir?: string; branch?: string; model?: string; effort?: string; tokens: number; percent: number; windows: Window[] };
 
@@ -85,31 +55,14 @@ const nearest256 = (hex: string) => {
 
 const TRUECOLOR = process.env.STATUSLINE_COLOR_MODE !== "256";
 const fg = (hex: string) => (TRUECOLOR ? [38, 2, ...rgb(hex)] : [38, 5, nearest256(hex)]);
-const bg = (hex: string | null) => (hex ? (TRUECOLOR ? [48, 2, ...rgb(hex)] : [48, 5, nearest256(hex)]) : [DEFAULT_BG]);
 const sgr = (...codes: number[]) => `\x1b[${codes.join(";")}m`;
 
 const tokenLevel = (t: number) => (t >= DUMB_ZONE_TOKENS ? 3 : t >= NEAR_DUMB_TOKENS ? 2 : t >= WATCH_TOKENS ? 1 : 0);
 const percentLevel = (p: number) => (p >= WINDOW_CRITICAL_PCT ? 3 : p >= WINDOW_HIGH_PCT ? 2 : p >= WINDOW_HALF_PCT ? 1 : 0);
 
-const run = (text: string, color: string | null = null, ...mods: number[]): Run => ({ text, color, mods });
-const segment = (fill: string | null, color: string, runs: Run[]): Segment => ({ fill, color, runs });
+const run = (text: string, color: string, ...mods: number[]): Run => ({ text, color, mods });
 
-const renderLine = (segments: Segment[], p: Palette, sep: Separator) => {
-  const parts: string[] = [];
-  segments.forEach((seg, i) => {
-    const prev = segments[i - 1];
-    if (seg.fill && !prev?.fill) parts.push(sgr(DEFAULT_BG, ...fg(seg.fill)) + sep.open);
-    parts.push(seg.runs.map((r) => sgr(...bg(seg.fill), ...fg(r.color ?? seg.color), ...r.mods) + r.text).join(""));
-    const next = segments[i + 1];
-    if (seg.fill) {
-      parts.push(next?.fill ? sgr(...bg(next.fill), ...fg(seg.fill)) + sep.close : sgr(DEFAULT_BG, ...fg(seg.fill)) + sep.close);
-    } else if (next && !next.fill) {
-      parts.push(sgr(DEFAULT_BG, ...fg(p.muted), DIM) + sep.thin);
-    }
-    parts.push(RESET);
-  });
-  return parts.join("");
-};
+const draw = (groups: Group[]) => ` ${groups.map((g) => g.runs.map((r) => sgr(...fg(r.color), ...r.mods) + r.text + RESET).join("")).join(GAP)}`;
 
 const visibleWidth = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "").length;
 
@@ -159,47 +112,47 @@ const windowLabel = (seconds: number | undefined) => {
   return h <= LONG_WINDOW_HOURS ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`;
 };
 
-const segments = (s: Status, p: Palette) => {
-  const out: Segment[] = [];
+const bar = (tokens: number, zone: string, p: Palette) => {
+  const filled = Math.min(BAR_CELLS, Math.round((tokens / DUMB_ZONE_TOKENS) * BAR_CELLS));
+  return [run("━".repeat(filled), zone), run("─".repeat(BAR_CELLS - filled), p.muted, DIM)];
+};
 
-  if (s.dir) out.push(segment(p.accent, p.accentInk, [run(` ${fmtDir(s.dir)} `)]));
+const groups = (s: Status, p: Palette): Group[] => {
+  const out: Group[] = [];
+
+  if (s.dir) out.push({ rank: 4, runs: [run(fmtDir(s.dir), p.accent, BOLD)] });
 
   const branch = s.branch ?? (s.dir ? gitBranch(s.dir) : "");
   if (branch) {
     const label = branch.length > BRANCH_MAX_LENGTH ? `${branch.slice(0, BRANCH_MAX_LENGTH - 1)}…` : branch;
-    out.push(segment(null, p.text, [run(` ${BRANCH_GLYPH} ${label} `)]));
+    out.push({ rank: 1, runs: [run(`${BRANCH_GLYPH} ${label}`, p.muted)] });
   }
 
-  if (s.model) {
-    const runs = [run(` ${s.model} `)];
-    if (s.effort) runs.push(run(`${s.effort} `, p.muted));
-    out.push(segment(null, p.text, runs));
-  }
+  if (s.model) out.push({ rank: 2, runs: [run(s.model, p.text), ...(s.effort ? [run(` ${s.effort}`, p.muted, DIM)] : [])] });
 
   const pct = Math.floor(s.percent);
   const zone = p.zones[Math.max(tokenLevel(s.tokens), percentLevel(pct))];
-  out.push(segment(zone, p.ink, [run(` ${fmtTokens(s.tokens)} `, null, BOLD)]));
-  out.push(segment(null, zone, [run(` ${pct}% `)]));
+  out.push({ rank: 5, runs: [...bar(s.tokens, zone, p), run(`  ${fmtTokens(s.tokens)}`, zone, BOLD), run(` ${pct}%`, p.muted)] });
 
   for (const w of s.windows) {
     const used = Math.round(w.usedPercent);
     const long = !!w.seconds && w.seconds > LONG_WINDOW_HOURS * 3600;
-    const runs = [run(` ${windowLabel(w.seconds)} ${used}% `, p.zones[percentLevel(used)])];
-    if (w.resetsAt != null) runs.push(run(`↻${fmtReset(w.resetsAt, long)} `, p.text, DIM));
-    out.push(segment(null, p.text, runs));
+    const runs = [run(`${windowLabel(w.seconds)} `, p.muted), run(`${used}%`, p.zones[percentLevel(used)])];
+    if (w.resetsAt != null) runs.push(run(` ↻${fmtReset(w.resetsAt, long)}`, p.muted, DIM));
+    out.push({ rank: 3, runs });
   }
 
   return out;
 };
 
-export function statusline(s: Status, options: { palette?: string; separator?: string; width?: number } = {}): string {
+export function statusline(s: Status, options: { palette?: string; width?: number } = {}): string {
   const p = PALETTES[options.palette ?? process.env.STATUSLINE_PALETTE ?? ""] ?? PALETTES.mahogany;
-  const sep = SEPARATORS[options.separator ?? process.env.STATUSLINE_SEPARATOR ?? ""] ?? SEPARATORS.slant;
-  const parts = segments(s, p);
-  let line = renderLine(parts, p, sep);
-  while (options.width !== undefined && visibleWidth(line) > options.width && parts.length > 1) {
-    parts.splice(1, 1);
-    line = renderLine(parts, p, sep);
+  const shown = groups(s, p);
+  let line = draw(shown);
+  while (options.width !== undefined && visibleWidth(line) > options.width && shown.length > 1) {
+    const ranks = shown.map((g) => g.rank);
+    shown.splice(ranks.lastIndexOf(Math.min(...ranks)), 1);
+    line = draw(shown);
   }
   return line;
 }
