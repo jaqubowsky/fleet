@@ -28,7 +28,8 @@
     "enabled": true,
     "enableSkillCommands": true,
     "enablePiUser": false,
-    "enablePiProject": false
+    "enablePiProject": false,
+    "customDirectories": ["~/.omp/skills"]
   },
   "lsp": {
     "enabled": true,
