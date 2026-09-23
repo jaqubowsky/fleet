@@ -37,7 +37,7 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 
 1. Before first mutation: name the done-check that proves it. Command or observable state. None exists -> ask for one, one line, then start
 2. Done = that done-check run after the LAST change, output read. A check handed to the user to run is not a check you ran
-3. The repo's own gate stays on: no `--no-verify`, no `--no-hooks`, no skipped pre-commit. A hook the environment cannot run and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
+3. The repo's own gate stays on: no `--no-verify`, no `--no-hooks`, no skipped pre-commit. A hook the environment cannot run, as a plain commit's output shows, and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
 4. Improvement work: same number before and after. No baseline -> no improvement claim, say so
 5. Run checks through the project's declared scripts, scoped to the question: a runner filter for one package, a path for one file
 
