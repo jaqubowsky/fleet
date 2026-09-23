@@ -151,6 +151,13 @@ export class RemoteRuntime {
 					...this.tools.filter((item) => item.id !== tool.id),
 					tool,
 				].slice(-16);
+				if (event.type === "tool_execution_end")
+					this.messages = fit(this.messages.map((item) => ({
+						...item,
+						blocks: item.blocks.map((block) =>
+							block.kind === "tool" && block.id === tool.id ? tool : block,
+						),
+					})));
 				break;
 			}
 			default:

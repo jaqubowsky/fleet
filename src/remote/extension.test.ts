@@ -161,6 +161,50 @@ test("renaming preserves live activity and pending phone commands", async (t) =>
 	});
 });
 
+test("completed bash stays settled when the result message is delayed", async (t) => {
+	const runtime = processRuntime();
+	const current = session("bash-result");
+	t.after(async () => {
+		await current.emit("session_shutdown", { reason: "quit" });
+		await runtime.stop();
+	});
+	await current.emit("session_start");
+	await runtime.start(0);
+	const { origin, token } = runtime.identity()!;
+	const snapshot = () => fetch(`${origin}/bootstrap`, {
+		headers: { Authorization: `Bearer ${token}` },
+	}).then((response) => response.json());
+
+	await current.emit("agent_start");
+	await current.emit("message_end", {
+		message: { role: "assistant", content: [
+			{ type: "toolCall", id: "bash-1", name: "bash", arguments: { command: "printf done" } },
+		] },
+	});
+	await current.emit("tool_execution_start", {
+		toolCallId: "bash-1", toolName: "bash", args: { command: "printf done" },
+	});
+	await current.emit("tool_execution_end", {
+		toolCallId: "bash-1", toolName: "bash", isError: false,
+		result: { content: [{ type: "text", text: "done from Pi tool" }], details: {} },
+	});
+	const completed = await snapshot();
+
+	await current.emit("message_end", {
+		message: { role: "assistant", content: [{ type: "text", text: "Final answer" }] },
+	});
+	await current.emit("agent_settled");
+	const idle = await snapshot();
+	assert.equal(idle.status, "idle");
+	assert.equal(idle.transcript.at(-1).blocks[0].text, "Final answer");
+	const expected = {
+		kind: "tool", id: "bash-1", name: "bash", summary: "printf done",
+		state: "done", result: "done from Pi tool",
+	};
+	assert.deepEqual(idle.transcript.at(-2).blocks, [expected]);
+	assert.deepEqual(completed.transcript.at(-1).blocks, [expected]);
+});
+
 test("extension controls a process runtime across fresh factories", {
 	timeout: 15000,
 }, async (t) => {
