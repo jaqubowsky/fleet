@@ -3,8 +3,13 @@ import hljs from "/vendor/highlight.js";
 import { marked } from "/vendor/marked.js";
 import { tree } from "/markdown.js";
 
-const token = location.hash.slice(1);
-history.replaceState(null, "", location.pathname);
+const fragment = location.hash.slice(1);
+const token = /^[a-f0-9]{64}$/.test(fragment)
+	? fragment
+	: sessionStorage.getItem("pi-remote-credential") ?? "";
+if (/^[a-f0-9]{64}$/.test(fragment))
+	sessionStorage.setItem("pi-remote-credential", fragment);
+if (location.hash) history.replaceState(null, "", location.pathname);
 const headers = { Authorization: `Bearer ${token}` };
 const $ = (id) => document.getElementById(id);
 let snapshot;
@@ -14,6 +19,7 @@ let controller;
 let delivery = "followUp";
 let previousStatus;
 let resyncing = false;
+const submitted = [];
 
 function controls() {
 	const control = snapshot?.control !== false;
@@ -42,9 +48,9 @@ function banner(message, tone) {
 	if (tone) node.dataset.tone = tone;
 	else delete node.dataset.tone;
 }
-const BOTTOM = 48;
 const atBottom = () =>
-	window.innerHeight + window.scrollY >= document.body.scrollHeight - BOTTOM;
+	$("thread").getBoundingClientRect().bottom <=
+		document.querySelector(".dock").getBoundingClientRect().top;
 
 function facts(header) {
 	if (!header) return [];
@@ -85,13 +91,26 @@ function notifications() {
 		ask.hidden = Notification.permission !== "default";
 	});
 }
-function render(next) {
-	const follow = atBottom();
+function userCount(transcript, text) {
+	return transcript.filter((message) =>
+		message.role === "user" && message.blocks.some((block) =>
+			block.kind === "text" && block.text === text,
+		),
+	).length;
+}
+function render(next, follow = !snapshot || atBottom()) {
+	if (snapshot?.generation !== next.generation) submitted.length = 0;
+	for (let index = submitted.length - 1; index >= 0; index--) {
+		const item = submitted[index];
+		if (userCount(next.transcript, item.text) > item.occurrence)
+			submitted.splice(index, 1);
+	}
 	const previous = previousStatus;
 	if (previous === "running" && SETTLED.includes(next.status))
 		announce(next.status);
 	previousStatus = next.status;
 	snapshot = next;
+	document.body.dataset.working = String(next.status === "running");
 	$("session-name").textContent = next.session?.name ?? "Session changing";
 	$("status").textContent = next.status;
 	$("status").dataset.state = next.status;
@@ -117,6 +136,7 @@ function render(next) {
 	$("activity").replaceChildren(
 		...(next.assistant ? [turn(next.assistant, true)] : []),
 		...next.tools.filter((block) => !settled.has(block.id)).map(tool),
+		...submitted.map((item) => pendingMessage(item.text)),
 	);
 	controls();
 	if (follow) scrollToLatest();
@@ -125,6 +145,17 @@ function render(next) {
 function scrollToLatest() {
 	window.scrollTo({ top: document.body.scrollHeight });
 	$("jump").hidden = true;
+}
+function pendingMessage(text) {
+	const article = document.createElement("article");
+	article.className = "turn submitted";
+	const label = document.createElement("p");
+	label.className = "turn-label";
+	label.textContent = "You · submitted, awaiting transcript";
+	const body = document.createElement("p");
+	body.textContent = text;
+	article.append(label, body);
+	return article;
 }
 function turn(message, streaming) {
 	const article = document.createElement("article");
@@ -269,9 +300,11 @@ function codeBlock(node) {
 	caption.append(name, copy);
 	const pre = document.createElement("pre");
 	const code = document.createElement("code");
-	if (language && hljs.getLanguage(language))
-		code.innerHTML = hljs.highlight(source, { language }).value;
-	else code.textContent = source;
+	code.textContent = source;
+	if (language && hljs.getLanguage(language)) {
+		code.className = `language-${language}`;
+		hljs.highlightElement(code);
+	}
 	pre.append(code);
 	figure.append(caption, pre);
 	return figure;
@@ -346,18 +379,29 @@ async function send(action) {
 	sending = true;
 	controls();
 	const text = $("text").value;
+	const generation = snapshot.generation;
+	const occurrence = userCount(snapshot.transcript, text) +
+		submitted.filter((item) => item.text === text).length;
 	try {
 		await request("/command", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				generation: snapshot.generation,
+				generation,
 				action,
 				...(action === "abort" ? {} : { text }),
 			}),
 		});
-		if (action !== "abort" && $("text").value === text) $("text").value = "";
+		const follow = atBottom();
+		if (action === "abort") submitted.length = 0;
+		else {
+			if (snapshot.generation === generation &&
+				userCount(snapshot.transcript, text) <= occurrence)
+				submitted.push({ text, occurrence });
+			if ($("text").value === text) $("text").value = "";
+		}
 		$("feedback").textContent = "Accepted";
+		render(snapshot, follow);
 	} catch (error) {
 		$("feedback").textContent = `${error.message} Not retried automatically.`;
 		controller.abort();

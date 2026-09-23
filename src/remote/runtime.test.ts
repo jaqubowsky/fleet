@@ -152,6 +152,60 @@ test(
 	},
 );
 
+test("completed tool and output reach both the stream and a fresh snapshot", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	remote.bind(owner, binding("tools"));
+	await remote.start(0);
+	const events = await stream(remote);
+	t.after(() => events.close());
+	await events.next();
+	remote.publish(owner, {
+		type: "tool_execution_start",
+		toolCallId: "c1",
+		toolName: "bash",
+		args: { command: "printf complete" },
+	});
+	remote.publish(owner, {
+		type: "message_end",
+		message: {
+			role: "assistant",
+			content: [{ type: "toolCall", id: "c1", name: "bash", arguments: { command: "printf complete" } }],
+		},
+	});
+	remote.publish(owner, {
+		type: "tool_execution_end",
+		toolCallId: "c1",
+		toolName: "bash",
+		result: { content: [{ type: "text", text: "complete" }] },
+		isError: false,
+	});
+	remote.publish(owner, {
+		type: "message_end",
+		message: {
+			role: "toolResult",
+			toolCallId: "c1",
+			content: [{ type: "text", text: "complete" }],
+			isError: false,
+		},
+	});
+	const live = await events.next();
+	const fresh = await (await (await connect(remote)).get("/bootstrap")).json();
+	const expected = {
+		kind: "tool",
+		id: "c1",
+		name: "bash",
+		summary: "printf complete",
+		state: "done",
+		result: "complete",
+	};
+	for (const snapshot of [live, fresh]) {
+		assert.deepEqual(snapshot.transcript.at(-1).blocks, [expected]);
+		assert.deepEqual(snapshot.tools, [expected]);
+	}
+});
+
 test("protocol bounds input and projects only public text", async (t) => {
 	const received: string[] = [];
 	const remote = new RemoteRuntime();

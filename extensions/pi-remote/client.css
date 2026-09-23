@@ -69,7 +69,7 @@ html {
 }
 body {
 	margin: 0;
-	padding-bottom: var(--dock);
+	padding-bottom: calc(var(--dock) + var(--step-5));
 	background: var(--bg);
 	color: var(--text);
 	font:
@@ -517,6 +517,19 @@ button:disabled {
 	color: var(--text);
 	line-height: var(--line);
 	resize: none;
+}
+body[data-working="true"] .composer textarea {
+	border-color: var(--accent);
+	animation: working-outline 2s ease-in-out infinite;
+}
+@keyframes working-outline {
+	50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+	body[data-working="true"] .composer textarea { animation: none; }
+}
+.submitted {
+	opacity: 0.75;
 }
 .row {
 	display: flex;

@@ -102,6 +102,19 @@ export class RemoteRuntime {
 					this.assistant = message(event.message);
 				break;
 			case "message_end": {
+				const result = record(event.message);
+				if (result.role === "toolResult") {
+					const id = text(result.toolCallId, 128);
+					this.messages = fit(this.messages.map((item) => ({
+						...item,
+						blocks: item.blocks.map((block) =>
+							block.kind === "tool" && block.id === id
+								? settle(block, result.isError, result.content, result.details)
+								: block,
+						),
+					})));
+					break;
+				}
 				const projected = message(event.message);
 				if (projected)
 					this.messages = fit(
@@ -113,7 +126,7 @@ export class RemoteRuntime {
 			case "tool_execution_start":
 			case "tool_execution_update":
 			case "tool_execution_end": {
-				const started = call({
+				const started = this.tools.find((item) => item.id === event.toolCallId) ?? call({
 					id: event.toolCallId,
 					name: event.toolName,
 					arguments: event.args,
