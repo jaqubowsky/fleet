@@ -22,6 +22,10 @@ export function withAttention(status: string, text: string): string {
 	return status.replace(/^attention: .*$/m, () => `attention: ${text}`);
 }
 
+export function contextNote(threshold: number, end: string): string {
+	return `The context has passed ${threshold} tokens, and every turn now reads all of it again. End this session at the next point where status.md and the task files hold what the work needs: ${end}.`;
+}
+
 export function pointer(taskDirectory: string): string {
 	return `Previous task directory: ${JSON.stringify(taskDirectory)}. This is optional background. If the user's next message asks to continue or refers to this task, read its current durable artifacts. For unrelated work, ignore it.`;
 }
@@ -109,11 +113,16 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 		},
 	});
 
-	pi.on("before_agent_start", (event: { systemPrompt: string }, ctx: any) => {
+	let noted = false;
+	pi.on("turn_end", (_event: unknown, ctx: any) => {
 		const tokens = ctx.getContextUsage()?.tokens;
-		if (tokens == null || tokens < threshold) return;
-		return {
-			systemPrompt: `${event.systemPrompt}\n\nActive context has reached the configured session handoff threshold. Decide whether the work is at an appropriate handoff point. If it is, keep durable artifacts current, call session_handoff to suggest a fresh session, and end the turn; otherwise continue the work.`,
-		};
+		if (tokens == null) return;
+		if (tokens < threshold) {
+			noted = false;
+			return;
+		}
+		if (noted) return;
+		noted = true;
+		pi.sendMessage({ customType: "session-handoff", content: contextNote(threshold, "call session_handoff"), display: false }, { deliverAs: "steer" });
 	});
 }

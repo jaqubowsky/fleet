@@ -70,7 +70,7 @@ async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}
 		state: () => ({ attempts, sessions }),
 		editor: () => editor,
 		readStatus: () => readFileSync(join(dir, "status.md"), "utf8"),
-		prompt: () => events.before_agent_start?.({ systemPrompt: "Existing system prompt" }, ctx),
+		turnEnd: () => events.turn_end?.({}, ctx),
 	};
 }
 
@@ -80,23 +80,24 @@ const pointer = (dir: string) => ({
 	display: false,
 });
 
-test("context threshold adds only a neutral system advisory", async (t) => {
-	const r = await runtime(t);
+test("a context past the threshold says once, mid-turn, that ending the session is worth it, and again after it drops", async (t) => {
+	const r = await runtime(t, { replaces: false });
 
-	for (const tokens of [undefined, null, 249999]) {
+	for (const tokens of [undefined, null, 249999, 250000, 300000]) {
 		r.usage(tokens);
-		assert.equal(await r.prompt(), undefined);
+		r.turnEnd();
 	}
-	for (const tokens of [250000, 300000]) {
+	const once = [...r.sent];
+	for (const tokens of [1000, 300000]) {
 		r.usage(tokens);
-		const result = await r.prompt();
-		assert.ok(result?.systemPrompt.startsWith("Existing system prompt\n\n"));
-		assert.match(result.systemPrompt, /appropriate handoff point/);
-		assert.match(result.systemPrompt, /session_handoff/);
-		assert.equal(result.message, undefined);
+		r.turnEnd();
 	}
+
+	assert.equal(once.length, 1);
+	assert.deepEqual(once[0].options, { deliverAs: "steer" });
+	assert.equal(once[0].message.content, "The context has passed 250000 tokens, and every turn now reads all of it again. End this session at the next point where status.md and the task files hold what the work needs: call session_handoff.");
+	assert.equal(r.sent.length, 2);
 	assert.equal(r.readStatus(), r.status);
-	assert.deepEqual(r.sent, []);
 	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
 });
 
@@ -105,12 +106,16 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 		"read /root/pi/profiles/settings.json": '{"unknown":{"keep":true}}',
 		"read /root/pi/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
 	});
-	const r = await runtime(t, { settings: seatSettings(io, "/root", HARNESSES.pi, "sbx.json") });
+	const r = await runtime(t, { settings: seatSettings(io, "/root", HARNESSES.pi, "sbx.json"), replaces: false });
 
 	r.usage(83);
-	assert.equal(await r.prompt(), undefined);
+	r.turnEnd();
+	const below = r.sent.length;
 	r.usage(84);
-	assert.ok((await r.prompt())?.systemPrompt);
+	r.turnEnd();
+
+	assert.equal(below, 0);
+	assert.match(r.sent[0].message.content, /passed 84 tokens/);
 });
 
 test("a suggestion reaches the host attention line with the command that approves it", async (t) => {

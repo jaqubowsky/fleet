@@ -64,12 +64,12 @@ for (const seat of ["host", "sbx"]) {
 			assert.equal(settings.sessionHandoff, undefined);
 			assert.equal(tool, undefined);
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), false);
-			assert.equal(extensions.some((extension) => extension.handlers.has("before_agent_start")), false);
+			assert.equal(extensions.some((extension) => extension.handlers.has("turn_end")), false);
 			assert.deepEqual(old.messages, []);
 		} else {
 			assert.ok(tool);
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), true);
-			assert.equal(extensions.some((extension) => extension.handlers.has("before_agent_start")), true);
+			assert.equal(extensions.some((extension) => extension.handlers.has("turn_end")), true);
 			const readStarted = Promise.withResolvers();
 			const finishRead = Promise.withResolvers();
 			const edit = createEditTool(dir, { operations: {
