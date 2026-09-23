@@ -1,4 +1,4 @@
-Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `cfleet watch`, held with `Monitor` and `persistent: true`. Start it before the first steer and keep one per session. With no names it watches every `claude-` container and picks up new ones within 30 seconds; names narrow it to those sandboxes. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it.
+Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `cfleet watch`, held with `Monitor`. Start it before the first steer and keep one per session. With no names it watches every `claude-` container and picks up new ones within 30 seconds; names narrow it to those sandboxes. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it.
 
 A watched container working on without settling prints `working <n>m without settling`, and again while it goes on. That line is a `cfleet peek`, then either a steer that names what to stop or the end of the turn.
 

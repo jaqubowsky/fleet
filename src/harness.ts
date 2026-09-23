@@ -119,7 +119,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"tool.ask": "AskUserQuestion",
 			"skill.ingest": "/ingest",
 			refs: "`refs/artifacts.md` in `~/.claude/rules`",
-			watch: "Steer returns at once; the `[fleet]` wake is where the outcome lands, and it reaches you only through `cfleet watch` held with `Monitor`, `persistent: true`: start it before the first steer, one per session.",
+			watch: "Steer returns at once; the `[fleet]` wake is where the outcome lands, and it reaches you only through `cfleet watch` held with `Monitor`: start it before the first steer, one per session.",
 			"review.saver": "the calling session",
 			"steer.result": "steered; claude takes it as its next message, and `cfleet watch` reports how it settles",
 			"delegation.parallel": "\"Parallel\" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis",

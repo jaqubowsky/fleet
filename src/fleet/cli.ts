@@ -27,7 +27,7 @@ const usage = `usage:
   ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
   ${cli} build                                        render the container seat and rebuild ${h.image} from it
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
-  ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor, persistent: true
+  ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor
   ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi or omp tab: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
