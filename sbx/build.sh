@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RENDERED="${1:?usage: build.sh <stage the fleet build command rendered>}"
+usage="usage: build.sh <harness> <image> <stage the fleet build command rendered>"
+NAME="${1:?$usage}"
+IMAGE="${2:?$usage}"
+RENDERED="${3:?$usage}"
 STAGE="$RENDERED/home"
+BUILD_ARGS=()
 trap 'rm -rf "$RENDERED"' EXIT
 
 cp -L "$HOME/.gitconfig" "$HOME/.gitconfig-work" "$HOME/.gitconfig-alice" "$STAGE/"
@@ -31,10 +35,13 @@ cat >>"$STAGE/.gitconfig-alice" <<'EOF'
 	insteadOf = git@github.com-personal:acme/
 EOF
 
-TAR="${TMPDIR:-/tmp}/my-pi.tar"
+if [ -f "$RENDERED/stage.sh" ]; then . "$RENDERED/stage.sh"; fi
+
+TAR="${TMPDIR:-/tmp}/${IMAGE%%:*}.tar"
 docker buildx build --provenance=false --sbom=false \
-	--build-context pi-home="$STAGE" \
-	--output "type=docker,dest=$TAR" -t my-pi:v1 "$RENDERED/context"
-sbx template rm my-pi:v1 --force 2>/dev/null </dev/null || sbx template rm my-pi:v1 2>/dev/null </dev/null || true
+	${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"} \
+	--build-context "$NAME-home=$STAGE" \
+	--output "type=docker,dest=$TAR" -t "$IMAGE" "$RENDERED/context"
+sbx template rm "$IMAGE" --force 2>/dev/null </dev/null || sbx template rm "$IMAGE" 2>/dev/null </dev/null || true
 sbx template load "$TAR"
 rm -f "$TAR"

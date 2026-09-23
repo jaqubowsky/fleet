@@ -185,7 +185,7 @@ test("artifacts says so when the container left nothing", () => {
 	assert.match(artifacts("/w/webapp", fakeIo()), /nothing left here yet/);
 });
 
-test("build renders the container seat into a stage and hands it to the harness build script", () => {
+test("build renders the container seat into a stage and hands it to the shared build script", () => {
 	const io = fakeIo({
 		"list /root/rules": ["core.md"],
 		"read /root/rules/core.md": "# Core\n\n- be exact\n",
@@ -200,8 +200,8 @@ test("build renders the container seat into a stage and hands it to the harness 
 	});
 	build("/root", io);
 
-	const [run, script, stage] = io.calls.at(-1) ?? [];
-	assert.deepEqual([run, script], ["run", "/root/pi/sbx/build.sh"]);
+	const [run, script, name, image, stage] = io.calls.at(-1) ?? [];
+	assert.deepEqual([run, script, name, image], ["run", "/root/sbx/build.sh", "pi", "my-pi:v1"]);
 	assert.match(io.files[`${stage}/home/agent/AGENTS.md`] ?? "", /a fresh rule/);
 });
 

@@ -49,7 +49,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 <cli> watch [<sandbox>...]
 ```
 
-`render` writes the host seat into the harness home; `build` renders the container seat into a stage and hands it to `<harness>/sbx/build.sh`. A pi or OMP host reloads with `/reload`; a Claude host reads its rules at the next session.
+`render` writes the host seat into the harness home; `build` renders the container seat into a stage and hands it to `sbx/build.sh`, which runs a harness's own `stage.sh` when the render carries one (Claude's plugins). A pi or OMP host reloads with `/reload`; a Claude host reads its rules at the next session.
 
 ## What stays different, and why
 

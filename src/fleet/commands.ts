@@ -77,7 +77,7 @@ export function renderHost(root: string, io: Io): void {
 export function build(root: string, io: Io): void {
 	const stage = `${io.tmp}/${io.harness.name}-sbx-stage-${io.now().getTime()}`;
 	render({ root, harness: io.harness, seat: "container", out: stage }, io);
-	io.run(`${root}/${io.harness.name}/sbx/build.sh`, [stage]);
+	io.run(`${root}/sbx/build.sh`, [io.harness.name, io.harness.image, stage]);
 }
 
 export function copy(from: string, to: string, io: Io): void {

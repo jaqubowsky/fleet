@@ -222,6 +222,7 @@ function claude(r: Renderer): void {
 	r.put("home/CLAUDE.md", r.text("claude/CLAUDE.md"));
 	r.context();
 	r.put("context/settings.json", r.settings("sbx.json"));
+	r.put("stage.sh", r.source("claude/sbx/stage.sh"));
 	r.extra([
 		["claude/statusline.mjs", "home/statusline.mjs"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],

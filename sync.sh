@@ -120,7 +120,7 @@ fi
 while read -r name cli home image owned <&3; do
 	echo "== $name: image $image"
 	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat container --out "$WORK/$name-image" >/dev/null
-	want="$(seat_hash "$WORK/$name-image" "$ROOT/$name/sbx/build.sh" "$(image_agent_version "$name")")"
+	want="$(seat_hash "$WORK/$name-image" "$ROOT/sbx/build.sh" "$(image_agent_version "$name")")"
 	if [ "$want" != "$(cat "$STAMPS/$name" 2>/dev/null || true)" ] || ! template_loaded "$image"; then
 		act "$ROOT/bin/$cli" build
 		if [ "$apply" = 1 ]; then
