@@ -32,6 +32,7 @@ STAMPS="$HOME/.cache/harness/images"
 LEFTOVERS=(
 	"$HOME/.pi/node_modules"
 	"$HOME/.omp/node_modules"
+	"$HOME/.omp/agent/models.json"
 	"$HOME/.pi/artifacts"
 	"$HOME/.pi/.claude"
 	"$HOME/.claude/settings.json.bak"

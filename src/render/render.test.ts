@@ -92,6 +92,40 @@ test("claude agents and container settings take their seat's model and effort", 
 	});
 });
 
+test("omp renders YAML model overrides and removes its legacy host JSON", () => {
+	const models = `${JSON.stringify(
+		{
+			providers: {
+				"openai-codex": {
+					modelOverrides: {
+						"gpt-6-sol": { contextWindow: 1050000 },
+					},
+				},
+			},
+		},
+		null,
+		2,
+	)}\n`;
+	const io = fakeIo(
+		sources({
+			"read /root/omp/fragments/agent-explorer.md": "tools: read, grep\n",
+			"read /root/omp/models.json": models,
+			"stat /root/omp/models.json": { size: models.length, mtime: new Date(0), dir: false },
+		}),
+		HARNESSES.omp,
+	);
+	io.files["/home/agent/models.json"] = "legacy";
+
+	render({ root: "/root", harness: HARNESSES.omp, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: HARNESSES.omp, seat: "container", out: "/stage" }, io);
+
+	assert.equal(io.files["/home/agent/models.yml"], models);
+	const renderedModels = JSON.parse(io.files["/home/agent/models.yml"]!);
+	assert.equal(renderedModels.providers["openai-codex"].modelOverrides["gpt-6-sol"].contextWindow, 1050000);
+	assert.equal(io.files["/home/agent/models.json"], undefined);
+	assert.equal(io.files["/stage/home/agent/models.yml"], models);
+});
+
 test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
 	const io = fakeIo(sources(), HARNESSES.claude);
 	io.files["/home/skills/retired/SKILL.md"] = "old";
