@@ -28,6 +28,7 @@ function monitor(h: Harness, pi: any) {
 	let sock: net.Socket | undefined;
 	let gen = 0;
 	let sessionId: string | undefined;
+	let sessionPath: string | undefined;
 	let ticker: ReturnType<typeof setInterval> | undefined;
 	const status = new Map<string, string>();
 	const names = new Map<string, string>();
@@ -117,11 +118,32 @@ function monitor(h: Harness, pi: any) {
 		settling.set(pane, { timer, from });
 	};
 
+	const updateStatus = (pane: string, next: string) => {
+		const previous = status.get(pane);
+		const change = transition(previous, next);
+		if (!change) return;
+		const who = names.get(pane) ?? pane;
+		const wakeable = shouldWake(previous, next);
+		track(pane, next);
+		publish();
+		if (TERMINAL.has(next)) {
+			if (wakeable || settling.has(pane)) settle(pane, who, previous);
+			return;
+		}
+		cancelSettling(pane);
+		if (wakeable) void wake(who, change);
+	};
+
 	const listAgents = async (wanted: string[]): Promise<Agent[] | undefined> => {
 		const out = await pi.exec("herdr", ["agent", "list"]).catch(() => undefined);
 		const text = typeof out === "string" ? out : (out?.stdout ?? "");
 		try {
-			return pickAgents(JSON.parse(text)?.result?.agents ?? [], wanted, selfPane);
+			const agents = JSON.parse(text)?.result?.agents ?? [];
+			const ownPane = selfPane || agents.find((a: Agent) =>
+				(sessionId && a.agent_session_id === sessionId) ||
+				(sessionPath && a.agent_session_path === sessionPath)
+			)?.pane_id || "";
+			return pickAgents(agents, wanted, ownPane);
 		} catch {
 			return undefined;
 		}
@@ -220,19 +242,7 @@ function monitor(h: Harness, pi: any) {
 					publish();
 					continue;
 				}
-				const next = frame.data?.agent_status ?? "unknown";
-				const previous = status.get(pane);
-				const change = transition(previous, next);
-				if (!change) continue;
-				const wakeable = shouldWake(previous, next);
-				track(pane, next);
-				publish();
-				if (TERMINAL.has(next)) {
-					if (wakeable || settling.has(pane)) settle(pane, who, previous);
-					continue;
-				}
-				cancelSettling(pane);
-				if (wakeable) void wake(who, change);
+				updateStatus(pane, frame.data?.agent_status ?? "unknown");
 			}
 		});
 		sock.on("error", () => {});
@@ -248,6 +258,11 @@ function monitor(h: Harness, pi: any) {
 		if (!agents) {
 			if (!sock || sock.destroyed) connect(wanted, myGen);
 			return;
+		}
+		for (const agent of agents) {
+			const pane = agent.pane_id;
+			if (pane && status.has(pane))
+				updateStatus(pane, agent.agent_status ?? "unknown");
 		}
 		for (const pane of [...status.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
@@ -331,6 +346,8 @@ function monitor(h: Harness, pi: any) {
 	});
 	pi.on("session_start", (_event: unknown, ctx: any) => {
 		sessionId = ctx.sessionManager?.getSessionId?.();
+		sessionPath = ctx.sessionManager?.getSessionFile?.();
+		if (sessionId && h.sessionIdEnv) process.env[h.sessionIdEnv] = sessionId;
 		ui = ctx.ui ?? ui;
 		ticker = setInterval(ring, STALL_TICK_MS);
 		sweep();

@@ -10,6 +10,7 @@ import { HARNESSES } from "../harness.ts";
 import { logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import {
+	type Agent,
 	taskDirOf,
 	pickAgents,
 	shouldWake,
@@ -17,25 +18,39 @@ import {
 	transition,
 } from "./monitor.ts";
 
-function monitorRuntime(t: TestContext) {
+function immediate(): Promise<void> {
+	return new Promise((resolve) => setImmediate(resolve));
+}
+
+function monitorRuntime(t: TestContext, h = HARNESSES.pi) {
 	const home = mkdtempSync(join(os.tmpdir(), "fleet-monitor-"));
-	mkdirSync(join(home, ".pi/agent"), { recursive: true });
+	mkdirSync(join(home, `${h.home}/agent`), { recursive: true });
 	t.mock.method(os, "homedir", () => home);
-	const previous = process.env.HERDR_PANE_ID;
+	const previousPane = process.env.HERDR_PANE_ID;
+	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	delete process.env.HERDR_PANE_ID;
-	t.after(() => { if (previous !== undefined) process.env.HERDR_PANE_ID = previous; rmSync(home, { recursive: true, force: true }); });
+	if (h.sessionIdEnv) delete process.env[h.sessionIdEnv];
+	t.after(() => {
+		if (previousPane === undefined) delete process.env.HERDR_PANE_ID;
+		else process.env.HERDR_PANE_ID = previousPane;
+		if (h.sessionIdEnv) {
+			if (previousOwner === undefined) delete process.env[h.sessionIdEnv];
+			else process.env[h.sessionIdEnv] = previousOwner;
+		}
+		rmSync(home, { recursive: true, force: true });
+	});
 	const sockets: EventEmitter[] = [];
 	t.mock.method(net, "createConnection", () => {
 		const socket = Object.assign(new EventEmitter(), { destroyed: false, write() {}, destroy() { this.destroyed = true; } });
 		sockets.push(socket);
 		return socket as unknown as net.Socket;
 	});
-	const start = async (sessionId: string, agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }]) => {
+	const start = async (sessionId: string, agents: Agent[] = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }]) => {
 		const events: Record<string, (...args: any[]) => any> = {};
 		const tools: Record<string, { execute: (...args: any[]) => any }> = {};
 		const messages: { message: { content: string }; options: { deliverAs: string; triggerTurn: boolean } }[] = [];
 		const notices: string[] = [];
-		fleetMonitor(HARNESSES.pi)({
+		fleetMonitor(h)({
 			on: (name: string, fn: any) => { events[name] = fn; },
 			registerTool: (tool: any) => { tools[tool.name] = tool; },
 			registerCommand() {},
@@ -45,18 +60,22 @@ function monitorRuntime(t: TestContext) {
 		});
 		t.after(() => events.session_shutdown());
 		await events.session_start?.({}, { sessionManager: { getSessionId: () => sessionId } });
-		await new Promise((resolve) => setImmediate(resolve));
+		await immediate();
 		return { tools, messages, notices };
 	};
 	const status = async (next: string, pane = "worker:pane") => {
-		for (const socket of sockets) socket.emit("data", Buffer.from(JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: next } }) + "\n"));
-		await new Promise((resolve) => setImmediate(resolve));
+		for (const socket of sockets) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: next } })}\n`));
+		await immediate();
+	};
+	const refresh = async () => {
+		for (const socket of sockets) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "tab_closed" })}\n`));
+		await immediate();
 	};
 	const settle = async (pane = "worker:pane") => {
 		await status("idle", pane);
 		await new Promise((resolve) => setTimeout(resolve, 1100));
 	};
-	return { home, start, settle, status };
+	return { home, start, settle, status, refresh };
 }
 
 test("only the invoking Pi session receives automatic fleet notifications", async (t) => {
@@ -74,6 +93,47 @@ test("only the invoking Pi session receives automatic fleet notifications", asyn
 	assert.equal(a.notices.length, 1);
 	assert.deepEqual(b.messages, []);
 	assert.deepEqual(b.notices, []);
+});
+
+test("OMP exports its session owner and ignores another session's events", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const runtime = monitorRuntime(t, HARNESSES.omp);
+	const log = [
+		"2026-09-16T10:00:00.000Z - up worker-a session=session-a",
+		"2026-09-16T10:01:00.000Z - up worker-b session=session-b",
+	].join("\n");
+	writeFileSync(join(runtime.home, ".omp/agent/fleet-events.log"), `${log}\n`);
+	const watcher = await runtime.start("session-a", [
+		{ name: "worker-a", pane_id: "worker-a:pane", agent_status: "working" },
+		{ name: "worker-b", pane_id: "worker-b:pane", agent_status: "working" },
+	]);
+
+	await runtime.status("idle", "worker-a:pane");
+	await runtime.status("idle", "worker-b:pane");
+	t.mock.timers.tick(1100);
+	await immediate();
+
+	assert.equal(process.env.OMP_SESSION_ID, "session-a");
+	assert.equal(watcher.messages.length, 1);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] worker-a: working -> idle\n/);
+});
+
+test("OMP watch-all excludes its own session without a pane environment", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const runtime = monitorRuntime(t, HARNESSES.omp);
+	const watcher = await runtime.start("session-a", [
+		{ name: "host", pane_id: "host:pane", agent_status: "working", agent_session_id: "session-a" },
+		{ name: "worker", pane_id: "worker:pane", agent_status: "working", agent_session_id: "container-session" },
+	]);
+	await watcher.tools.fleet_watch.execute("call", { agents: "" });
+
+	await runtime.status("idle", "host:pane");
+	await runtime.status("idle", "worker:pane");
+	t.mock.timers.tick(1100);
+	await immediate();
+
+	assert.equal(watcher.messages.length, 1);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] worker: working -> idle\n/);
 });
 
 test("explicit fleet watch delivers a follow-up turn without waiting for user input", async (t) => {
@@ -117,6 +177,27 @@ test("different containers wake independently while an identical transition stay
 	assert.match(watcher.messages[1].message.content, /^\[fleet\] second: working -> idle\nstatus:/);
 	assert.doesNotMatch(watcher.messages[0].message.content, /second/);
 	for (const { options } of watcher.messages) assert.deepEqual(options, { deliverAs: "followUp", triggerTurn: true });
+});
+
+test("a refresh recovers a missed terminal status once", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const runtime = monitorRuntime(t);
+	const agents = [{ name: "worker", pane_id: "worker:pane", agent_status: "working" }];
+	const watcher = await runtime.start("session-a", agents);
+	await watcher.tools.fleet_watch.execute("call", { agents: "worker" });
+
+	agents[0].agent_status = "idle";
+	await runtime.refresh();
+	await runtime.refresh();
+	t.mock.timers.tick(1100);
+	await immediate();
+	agents[0].agent_status = "done";
+	await runtime.refresh();
+	t.mock.timers.tick(1100);
+	await immediate();
+
+	assert.equal(watcher.messages.length, 1);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] worker: working -> idle\n/);
 });
 
 test("watch everyone but self, or only the named agents", () => {

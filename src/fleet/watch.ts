@@ -5,6 +5,7 @@ import { agentName } from "./name.ts";
 import { commitsProbe, fleetSandboxes, wake } from "./status.ts";
 
 const REFRESH_MS = 30_000;
+const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
 
 type Frame = { event?: string; data?: { pane_id?: string; agent_status?: string } };
@@ -23,6 +24,7 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; from: string | undefined }>();
 	let sock: net.Socket | undefined;
+	let connection = 0;
 
 	const sandboxes = (): SandboxRow[] => fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })), io.harness.prefix);
 
@@ -80,18 +82,19 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 	};
 
 	const connect = () => {
+		const myConnection = ++connection;
 		sock?.destroy();
-		const panes = [...tracked.keys()];
-		sock = net.createConnection(socketPath);
+		const current = net.createConnection(socketPath);
+		sock = current;
 		let buf = "";
-		sock.on("connect", () => {
-			const subscriptions = panes.flatMap((pane_id) => [
+		current.on("connect", () => {
+			const subscriptions = [...tracked.keys()].flatMap((pane_id) => [
 				{ type: "pane.agent_status_changed", pane_id },
 				{ type: "pane.exited", pane_id },
 			]);
-			sock?.write(`${JSON.stringify({ id: "fleet", method: "events.subscribe", params: { subscriptions } })}\n`);
+			current.write(`${JSON.stringify({ id: "fleet", method: "events.subscribe", params: { subscriptions } })}\n`);
 		});
-		sock.on("data", (chunk: Buffer) => {
+		current.on("data", (chunk: Buffer) => {
 			buf += chunk.toString();
 			for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
 				const line = buf.slice(0, nl);
@@ -101,12 +104,20 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 				} catch {}
 			}
 		});
-		sock.on("error", (error) => io.log(`[fleet] watch: herdr socket ${socketPath}: ${error.message}`));
+		current.on("error", (error) => io.log(`[fleet] watch: herdr socket ${socketPath}: ${error.message}`));
+		current.on("close", () => {
+			if (myConnection === connection) setTimeout(refresh, RECONNECT_MS);
+		});
 	};
 
 	const refresh = () => {
 		const agents = fleetAgents(io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents, sandboxes(), wanted);
 		const fresh = agents.filter((a) => a.pane_id && !tracked.has(a.pane_id));
+		for (const agent of agents) {
+			const pane = agent.pane_id;
+			if (pane && tracked.has(pane))
+				onFrame({ data: { pane_id: pane, agent_status: agent.agent_status } });
+		}
 		for (const pane of [...tracked.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
 			const gone = tracked.get(pane);
@@ -114,10 +125,9 @@ export async function watch(wanted: string[], io: Io, socketPath = process.env.H
 			tracked.delete(pane);
 		}
 		for (const a of fresh) tracked.set(a.pane_id!, { name: a.name ?? a.pane_id!, status: a.agent_status ?? "unknown", since: Date.now(), rang: Date.now() });
-		if (fresh.length) {
+		if (fresh.length)
 			io.log(`[fleet] watching ${[...tracked.values()].map((t) => `${t.name} ${t.status}`).join(", ")}`);
-			connect();
-		}
+		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();
 	};
 
 	const ring = () => {

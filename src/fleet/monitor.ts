@@ -1,7 +1,13 @@
 import { basename } from "node:path";
 import { agentName } from "./name.ts";
 
-export type Agent = { name?: string; pane_id?: string; agent_status?: string };
+export type Agent = {
+	name?: string;
+	pane_id?: string;
+	agent_status?: string;
+	agent_session_id?: string;
+	agent_session_path?: string;
+};
 export type SandboxRow = { name: string; workspaces: string[] };
 
 export const SETTLE_MS = 1000;
