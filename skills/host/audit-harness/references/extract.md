@@ -38,4 +38,4 @@ Skill loads are `Skill` tool calls or `Read` calls on a `SKILL.md` path. Sub-age
 - Done-check after the last change (Acceptance): last mutating call versus the last test or check command.
 - Repeats (friction): `sort | uniq -c | sort -rn` over the extracted tool calls.
 - Push, sign, Linear writes (Autonomy): grep the tool calls for `git push`, `-S`, `gpgsign`, and MCP names containing `create` or `update`.
-- Sub-agents (Delegation): count of `explorer`/`researcher`/`reviewer` tool calls in pi, `Agent` calls in Claude, against what the session's skill asked for.
+- Sub-agents (Delegation): count of `explorer`/`researcher`/`reviewer` tool calls in pi, items of `task` batches in OMP, `Agent` calls in Claude, against what the session's skill asked for.
