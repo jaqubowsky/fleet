@@ -19,6 +19,7 @@ let controller;
 let delivery = "followUp";
 let previousStatus;
 let resyncing = false;
+let inFlightAfter;
 const submitted = [];
 const acknowledged = new Set();
 
@@ -112,9 +113,10 @@ function render(next, follow = !snapshot || atBottom()) {
 			submitted.splice(index, 1);
 		} else index++;
 	}
-	const visible = new Set(next.transcript.map((item) => item.seq));
+	const oldestPending = submitted.reduce((oldest, item) =>
+		Math.min(oldest, item.after), inFlightAfter ?? Infinity);
 	for (const seq of acknowledged)
-		if (!visible.has(seq)) acknowledged.delete(seq);
+		if (seq <= oldestPending) acknowledged.delete(seq);
 	const previous = previousStatus;
 	if (previous === "running" && SETTLED.includes(next.status))
 		announce(next.status);
@@ -391,6 +393,7 @@ async function send(action) {
 	const text = $("text").value;
 	const generation = snapshot.generation;
 	const after = snapshot.userSequence;
+	inFlightAfter = after;
 	try {
 		const accepted = await (await request("/command", {
 			method: "POST",
@@ -418,6 +421,7 @@ async function send(action) {
 		$("feedback").textContent = `${error.message} Not retried automatically.`;
 		controller.abort();
 	} finally {
+		inFlightAfter = undefined;
 		sending = false;
 		controls();
 	}
