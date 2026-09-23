@@ -197,7 +197,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.extra([
 		...agentFiles.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
 		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
-		["src/statusline.ts", "home/agent/src/statusline.ts"],
+		["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
 		...containerFiles,
@@ -225,7 +225,7 @@ function claude(r: Renderer): void {
 	r.put("stage.sh", r.source("claude/sbx/stage.sh"));
 	r.extra([
 		["claude/statusline.mjs", "home/fleet/claude/statusline.mjs"],
-		["src/statusline.ts", "home/fleet/src/statusline.ts"],
+		["src/statusline/statusline.ts", "home/fleet/src/statusline/statusline.ts"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
 	]);

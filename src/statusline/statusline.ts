@@ -14,6 +14,12 @@ const DETACHED_SHA_LENGTH = 7;
 const EPOCH_MS_THRESHOLD = 1e12;
 
 export const PALETTES: Record<string, Palette> = {
+  mahogany: {
+    label: "Mahogany",
+    accent: "#c4a050", accentInk: "#181210", ink: "#181210",
+    text: "#ece4d8", muted: "#8a847c",
+    zones: ["#6a7c5d", "#c4a050", "#d4a574", "#9d4451"],
+  },
   catppuccin: {
     label: "Catppuccin Mocha",
     accent: "#89b4fa", accentInk: "#11111b", ink: "#11111b",
@@ -187,7 +193,7 @@ const segments = (s: Status, p: Palette) => {
 };
 
 export function statusline(s: Status, options: { palette?: string; separator?: string; width?: number } = {}): string {
-  const p = PALETTES[options.palette ?? process.env.STATUSLINE_PALETTE ?? ""] ?? PALETTES.catppuccin;
+  const p = PALETTES[options.palette ?? process.env.STATUSLINE_PALETTE ?? ""] ?? PALETTES.mahogany;
   const sep = SEPARATORS[options.separator ?? process.env.STATUSLINE_SEPARATOR ?? ""] ?? SEPARATORS.slant;
   const parts = segments(s, p);
   let line = renderLine(parts, p, sep);

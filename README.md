@@ -17,7 +17,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `src/render/` | renders rules, skills, agents and settings for a harness seat |
 | `src/fleet/` | the fleet CLI behind `fleet`, `ofleet` and `cfleet`; `node --test` |
 | `src/guard/` | the tool-call policy all three hosts enforce, driven by the case corpus in `host/tests/` |
-| `src/statusline.ts` | the status line every harness draws: segments, palettes, separators |
+| `src/statusline/` | the status line every harness draws: segments, palettes, separators |
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, the pi and OMP statusline, phone remote |
 | `sbx/container/` | the container rule, `base-worktree` and the toolchain every image installs (`toolchain.Dockerfile`, rendered into each `<harness>/sbx/Dockerfile` at `{{toolchain}}`) |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |
@@ -62,7 +62,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 | Handoff at 250k context | `session_handoff` tool opens a fresh session | the same | a `Stop` hook raises attention; the host sends `/clear` | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | the same | `StopFailure` hook | each agent's own error event |
 | Phone control | `extensions/pi-remote` over Tailscale Serve | not loaded | Remote Control, a product setting | OMP lacks `agent_settled` and `session_info_changed`; Claude ships its own |
-| Statusline | `extensions/statusline.ts` draws the footer | the same extension | `claude/statusline.mjs` reads the JSON Claude Code pipes in | Claude Code runs a command where pi and OMP take a footer; both draw with `src/statusline.ts` |
+| Statusline | `extensions/statusline.ts` draws the footer | the same extension | `claude/statusline.mjs` reads the JSON Claude Code pipes in | Claude Code runs a command where pi and OMP take a footer; both draw with `src/statusline/` |
 | Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | seats in `claude/profiles/models.json`, `--model` per container | all three read model seats; Claude also takes `effort` per agent, and `CLAUDE_CODE_SUBAGENT_MODEL` stays unset so a sub-agent keeps its own (anthropics/claude-code#10993) |
 | Transcripts | written into the task directory as they happen | the same | copied out of the container by `cfleet down` | Claude Code has no session directory setting |
 | Cost in `usage.json` | from the session's own cost records | the same | tokens only | Claude transcripts carry no cost |

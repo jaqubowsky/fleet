@@ -1,4 +1,4 @@
-import { type Status, statusline, type Window } from "../src/statusline.ts";
+import { type Status, statusline, type Window } from "../src/statusline/statusline.ts";
 
 const CODEX_PROVIDER = "openai-codex";
 const CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { PALETTES, SEPARATORS, statusline } from "../src/statusline.ts";
+import { PALETTES, SEPARATORS, statusline } from "../src/statusline/statusline.ts";
 
 const FIVE_HOURS = 5 * 3600;
 const SEVEN_DAYS = 7 * 86400;
