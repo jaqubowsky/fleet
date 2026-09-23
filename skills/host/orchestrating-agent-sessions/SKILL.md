@@ -9,21 +9,21 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
-| put up a container for ticket X | `{{cli}} up <label> --repo <path> [--branch <name>] [--base <name>] [--model {{model.flag}}] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); {{harness}} waiting, no prompt sent |
+| put up a container for a task | `{{cli}} up <label> --repo <path> [--branch <name>] [--base <name>] [--model {{model.flag}}] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise); {{harness}} waiting, no prompt sent |
 | what is running | `{{cli}} ls` | one line per container: status, herdr state, branch, dirty count, time since its first prompt, cost so far |
 | what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | git status, log, diff --stat, install log, pane tail |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
-| bring the branch home | `{{cli}} land <sandbox> [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks |
+| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
 
 ## Wording a steer
 
-A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. A decision arrives as `Decided: <what>`, whoever took it.
+A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself. How the work runs (reviews, commits, session handoffs) is the container's rules' to decide, and a decision already sits in `spec.md` once the container has it, so after a handoff the stock continue is the whole steer; on a run without `spec.md`, the continue carries the `Decided:` lines again. Keep a steer to a few sentences: a long one reaches the container as pasted content, which it may read as data rather than an order.
 
 ```text
 Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings back only the organizations deleted with it. Stop at ready-for-host.
@@ -36,7 +36,7 @@ Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings ba
 | where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
 | which commits | `{{cli}} ls` for the branch and its dirty count, `git log <base>..<branch>` after `{{cli}} land` |
 | what did the analysis find | `analysis.md` |
-| what did the reviewer find, which checks ran with which exit | `review.md` |
+| what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered |
 | what is happening on the PR | `pr.md` |
 | what is it doing this minute, before `status.md` moved | `{{cli}} peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
@@ -50,12 +50,12 @@ The repository inside a container is a private clone, so writes there stay there
 ## Watching
 
 {{file:watching}}
-- `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed, and `working -> unknown` usually means {{harness}} died in it; read the tab.
+- `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed. A settle or `unknown` while `status.md` says the work goes on usually means {{harness}} waits on something in the background, a sub-agent or a long command; `{{cli}} peek` tells that from a crash before you act on it.
 - Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 
 ## Session handoff
 
-When `attention:` says `session handoff suggested`, approval is routine local execution only for a task the user explicitly delegated end to end: the host may approve without asking again. For a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission.
+When `attention:` says `session handoff suggested`, approval is routine local execution only for a task the user explicitly delegated end to end: the host may approve without asking again. For a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission. Approve at a settle, once `{{cli}} peek` shows nothing running in the background, since a handoff ends whatever is.
 
 {{file:session-handoff}}
 
