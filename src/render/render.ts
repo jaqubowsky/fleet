@@ -176,9 +176,8 @@ class Renderer {
 	}
 }
 
-function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, containerFiles: [string, string][]): void {
-	const { seat, harness } = r.input;
-	const modelsTarget = harness.name === "omp" ? "models.yml" : "models.json";
+function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, agentFiles: [string, string][], containerFiles: [string, string][]): void {
+	const { seat } = r.input;
 	const rules = r.rules();
 	if (seat === "host") {
 		r.put(`agent/${settingsFile}`, r.settings("host.json"));
@@ -186,7 +185,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		for (const name of r.refs()) r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agent/agents");
 		r.skills(false, "skills");
-		r.extra([["pi/models.json", `agent/${modelsTarget}`]]);
+		r.extra(agentFiles.map(([from, to]): [string, string] => [from, `agent/${to}`]));
 		return;
 	}
 	r.context();
@@ -196,7 +195,7 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.agents("home/agent/agents");
 	r.skills(true, "home/skills");
 	r.extra([
-		["pi/models.json", `home/agent/${modelsTarget}`],
+		...agentFiles.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
 		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
 		["src/statusline.ts", "home/agent/src/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
@@ -233,7 +232,7 @@ function claude(r: Renderer): void {
 }
 
 export const OWNED: Record<HarnessName, string[]> = {
-	pi: ["skills", "agent/refs", "agent/agents"],
+	pi: ["skills", "agent/refs", "agent/agents", "agent/themes"],
 	omp: ["skills", "agent/refs", "agent/agents", "agent/models.json"],
 	claude: ["rules", "skills", "agents"],
 };
@@ -241,9 +240,9 @@ export const OWNED: Record<HarnessName, string[]> = {
 export function render(input: RenderInput, io: Io): void {
 	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
-	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", []);
+	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", [["pi/models.json", "models.json"], ["pi/themes/mahogany.json", "themes/mahogany.json"]], []);
 	else if (input.harness.name === "omp")
-		piFamily(r, "config.yml", "agent-config.yml", [
+		piFamily(r, "config.yml", "agent-config.yml", [["pi/models.json", "models.yml"]], [
 			["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"],
 		]);
 	else claude(r);

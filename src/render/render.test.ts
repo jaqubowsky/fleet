@@ -48,6 +48,23 @@ test("an image takes the shared toolchain between its own lines", () => {
 	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
 
+test("pi carries its own theme into both seats, omp keeps its built-in one", () => {
+	const theme = '{"name":"mahogany"}\n';
+	const withTheme = { "read /root/pi/themes/mahogany.json": theme, "stat /root/pi/themes/mahogany.json": { size: theme.length, mtime: new Date(0), dir: false } };
+	const pi = fakeIo(sources(withTheme));
+	const omp = fakeIo(sources({ ...withTheme, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+
+	for (const io of [pi, omp]) {
+		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+	}
+
+	assert.equal(pi.files["/home/agent/themes/mahogany.json"], theme);
+	assert.equal(pi.files["/stage/home/agent/themes/mahogany.json"], theme);
+	assert.equal(omp.files["/home/agent/themes/mahogany.json"], undefined);
+	assert.equal(omp.files["/stage/home/agent/themes/mahogany.json"], undefined);
+});
+
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 

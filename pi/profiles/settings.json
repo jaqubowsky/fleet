@@ -1,7 +1,7 @@
 {
   "tuiMode": "fullscreen",
   "fullscreenExitOutput": "resume-hint",
-  "theme": "dark",
+  "theme": "mahogany",
   "quietStartup": true,
   "hideThinkingBlock": true,
   "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 },
