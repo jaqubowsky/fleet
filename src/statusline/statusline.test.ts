@@ -13,16 +13,11 @@ const full: Status = {
 	windows: [{ usedPercent: 62, seconds: 5 * 3600 }, { usedPercent: 91, seconds: 7 * 86400 }],
 };
 
-test("the status line draws in mahogany unless a palette is named", (t) => {
-	const named = process.env.STATUSLINE_PALETTE;
-	delete process.env.STATUSLINE_PALETTE;
-	t.after(() => {
-		if (named !== undefined) process.env.STATUSLINE_PALETTE = named;
-	});
-
+test("the status line speaks the terminal's own palette, so it follows the terminal theme", () => {
 	const line = statusline({ dir: "/tmp", branch: "", tokens: 0, percent: 0, windows: [] });
 
-	assert.match(line, /38;2;196;160;80;1m\/tmp/);
+	assert.match(line, /\x1b\[33;1m\/tmp/);
+	assert.doesNotMatch(line, /38;2;/);
 });
 
 test("the context bar fills toward the 250k handoff", () => {

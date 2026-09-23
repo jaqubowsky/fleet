@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { PALETTES, statusline } from "../src/statusline/statusline.ts";
+import { statusline } from "../src/statusline/statusline.ts";
 
 const FIVE_HOURS = 5 * 3600;
 const SEVEN_DAYS = 7 * 86400;
@@ -46,11 +46,9 @@ const SCENARIOS = [
 ];
 
 if (process.argv[2] === "--demo") {
-  for (const [name, p] of Object.entries(PALETTES)) {
-    console.log(`\n  \x1b[1m${name}\x1b[0m  \x1b[2m— ${p.label}\x1b[0m`);
-    for (const [label, tok, fiveH] of SCENARIOS) {
-      console.log(`  \x1b[2m${label.padEnd(7)}\x1b[0m${statusline(status(DEMO_PAYLOAD(tok, fiveH)), { palette: name })}`);
-    }
+  console.log();
+  for (const [label, tok, fiveH] of SCENARIOS) {
+    console.log(`  \x1b[2m${label.padEnd(11)}\x1b[0m${statusline(status(DEMO_PAYLOAD(tok, fiveH)))}`);
   }
   console.log();
 } else {
