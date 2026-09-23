@@ -9,9 +9,8 @@ import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
 import {
 	agentFor,
-	fleetSandboxes,
+	sandboxes,
 	type Agent,
-	type Sandbox,
 } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
@@ -61,14 +60,6 @@ const DETECT_TIMEOUT_MS = 90_000;
 const DEFAULT_CPUS = "4";
 const KNOWN_STATUS = new Set(["idle", "done", "working", "blocked"]);
 
-function parseSandboxList(text: string): { sandboxes?: Sandbox[] } {
-	try {
-		return JSON.parse(text) as { sandboxes?: Sandbox[] };
-	} catch (error) {
-		throw new Error("sbx ls returned invalid JSON", { cause: error });
-	}
-}
-
 export async function up(
 	input: UpInput,
 	io: Io,
@@ -82,10 +73,7 @@ export async function up(
 	const sandbox = sandboxName(input.repo, input.label, io.harness.prefix);
 	const agent = agentName(sandbox);
 	const origin = io.git(["remote", "get-url", "origin"], input.repo);
-	const existing = fleetSandboxes(
-		parseSandboxList(io.sbx(["ls", "--json"], { quiet: true })),
-		io.harness.prefix,
-	).find((s: Sandbox) => s.name === sandbox);
+	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {

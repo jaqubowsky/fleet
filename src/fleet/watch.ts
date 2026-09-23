@@ -1,8 +1,8 @@
 import net from "node:net";
 import type { Io } from "./io.ts";
-import { type Agent, RING_MS, SETTLE_MS, type SandboxRow, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
+import { RING_MS, SETTLE_MS, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { commitsProbe, fleetSandboxes, wake } from "./status.ts";
+import { type Agent, commitsProbe, type Sandbox, sandboxes, wake } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
@@ -11,7 +11,7 @@ const STALL_TICK_MS = 60_000;
 type Frame = { event?: string; data?: { pane_id?: string; agent_status?: string } };
 type Tracked = { name: string; status: string; since: number; rang: number };
 
-export function fleetAgents(agents: Agent[], sandboxes: SandboxRow[], wanted: string[] | undefined): Agent[] {
+export function fleetAgents(agents: Agent[], sandboxes: Pick<Sandbox, "name" | "workspaces">[], wanted: string[] | undefined): Agent[] {
 	const fleet = new Set(sandboxes.map((s) => agentName(s.name)));
 	const names = new Set(wanted?.flatMap((w) => [w, agentName(w)]));
 	return agents.filter((a) => a.pane_id && fleet.has(a.name ?? "") && (!wanted || names.has(a.name ?? "") || names.has(a.pane_id)));
@@ -29,12 +29,10 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 	let connection = 0;
 	let stopped = false;
 
-	const sandboxes = (): SandboxRow[] => fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })), io.harness.prefix);
-
 	const details = (name: string): string => {
-		let rows: SandboxRow[];
+		let rows: Sandbox[];
 		try {
-			rows = sandboxes();
+			rows = sandboxes(io);
 		} catch {
 			return wake(undefined, "");
 		}
@@ -125,7 +123,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		let agents: Agent[];
 		try {
 			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
-			agents = fleetAgents(listed, sandboxes(), wanted);
+			agents = fleetAgents(listed, sandboxes(io), wanted);
 		} catch (error) {
 			io.log(`[fleet] watch: refresh: ${error instanceof Error ? error.message : String(error)}`);
 			setTimeout(refresh, RECONNECT_MS);
@@ -143,7 +141,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 			if (gone) emit(gone.name, `${gone.status} -> gone`);
 			tracked.delete(pane);
 		}
-		for (const a of fresh) tracked.set(a.pane_id!, { name: a.name ?? a.pane_id!, status: a.agent_status ?? "unknown", since: Date.now(), rang: Date.now() });
+		for (const a of fresh) tracked.set(a.pane_id, { name: a.name ?? a.pane_id, status: a.agent_status ?? "unknown", since: Date.now(), rang: Date.now() });
 		if (fresh.length)
 			io.log(`[fleet] watching ${[...tracked.values()].map((t) => `${t.name} ${t.status}`).join(", ")}`);
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();

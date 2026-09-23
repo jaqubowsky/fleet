@@ -4,17 +4,13 @@ import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, taskDir } from "./up.ts";
-import { agentFor, checkoutProbe, elapsed, fleetSandboxes, formatRows, parseCheckout, type Agent, type Row, type Sandbox } from "./status.ts";
+import { agentFor, checkoutProbe, elapsed, formatRows, parseCheckout, sandboxes, type Agent, type Row } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 type Agents = { result: { agents: Agent[] } };
 
 function agents(io: Io): Agent[] {
 	return io.herdr<Agents>(["agent", "list"]).result.agents;
-}
-
-function sandboxes(io: Io): Sandbox[] {
-	return fleetSandboxes(JSON.parse(io.sbx(["ls", "--json"], { quiet: true })), io.harness.prefix);
 }
 
 export function resolveSandbox(name: string, io: Io): string {

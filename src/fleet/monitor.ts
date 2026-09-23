@@ -1,12 +1,6 @@
 import { basename } from "node:path";
 import { agentName } from "./name.ts";
-
-export type Agent = {
-	name?: string;
-	pane_id?: string;
-	agent_status?: string;
-};
-export type SandboxRow = { name: string; workspaces: string[] };
+import type { Sandbox } from "./status.ts";
 
 export const SETTLE_MS = 1000;
 export const STALL_MS = 20 * 60_000;
@@ -43,7 +37,7 @@ export function transition(
 
 export function taskDirOf(
 	home: string,
-	sandboxes: SandboxRow[],
+	sandboxes: Pick<Sandbox, "name" | "workspaces">[],
 	agent: string,
 ): string | undefined {
 	const hit = sandboxes.find((s) => agentName(s.name) === agent);
