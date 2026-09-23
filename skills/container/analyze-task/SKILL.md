@@ -104,7 +104,16 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### The run and the one question
 
-The run this analysis calls for, in one line with the reason: the pipeline (`to-tickets`, `implement` per ticket, `two-axis-review`, `check-feature`), or the short run (`implement` with `tdd`, `two-axis-review`) when the change is one accepted behaviour at one seam in one commit. Under it, the proposed split into tickets and the test seams, one line each.
+The run this analysis calls for, in one line with the reason: the pipeline or the short run, as {{refs}} orders and picks them. Under it, the proposed split into tickets and the test seams, one line each. Then the one question: every open decision a numbered item, the run, the split and its seams always the last.
+
+```md
+1. <decision>
+   - <option> (recommended). Downside: <one>
+   - <option>. Downside: <one>
+2. The run, the split and the test seams above
+   - as listed (recommended). Downside: <one>
+   - <another split>. Downside: <one>
+```
 
 Define a term before using it, and keep one name per concept across the whole report. State the mechanism instead of naming it; no framing labels ("the key insight", "at its core"), no metaphor standing in for the mechanism.
 

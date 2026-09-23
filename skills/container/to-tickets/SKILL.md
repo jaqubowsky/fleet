@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: 'Turn an analysis, a plan or the current conversation into spec.md and tracer-bullet tickets: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants a spec, implementation tickets, or work broken down.'
+description: 'Turn an analysis, a plan or the current conversation into spec.md and tickets, one review and one commit each: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants a spec, implementation tickets, or work broken down.'
 ---
 
 # To tickets
@@ -13,13 +13,13 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 1. **Read what exists.** `analysis.md` when there is one, the reference the user passed, `docs/PRD.md` if it exists (the feature serves a capability the PRD names and keeps its constraints), `CONTEXT.md` for vocabulary, the ADRs in the area. Note every source while it is in hand: tracker issue, ADR, document, pull request, prior art in the code. They go into the spec as pointers, one line each, never summarised.
 
-2. **Write `spec.md`** from the template below. `Status: ready-for-agent` at the top.
+2. **Write `spec.md`** from the template below. `Status: ready-for-agent` at the top. A product decision (who may do what, what the user sees, parity with old behaviour) enters `Decisions` only with the source or the answer that settled it. One nothing settled stops the run here, before any ticket, as the one question in `analysis.md`, in the shape `analyze-task` gives it, under `status: blocked`.
 
-3. **Cut the slices.** Each ticket is a tracer bullet: a narrow, complete path through every layer the feature touches (schema, API, UI, tests), demoable on its own, sized to one commit and one review. Prefactoring that makes a slice easy is its own first ticket. Give each ticket its blocking edges: the tickets that must be done before it starts.
+3. **Cut the slices.** Each ticket is one review and one commit, so cut as few as the work allows: a complete path through every layer the feature touches (schema, API, UI, tests), demoable on its own, holding every slice that shares a seam with it (the same module, router or test file). Delete and restore on one router and one test file are one ticket. A new ticket starts where the work reaches a seam the earlier ones never touch, or where one part has to land green before the next can start. Give each ticket its blocking edges: the tickets that must be done before it starts.
 
    A wide refactor (rename a column, retype a shared symbol) breaks thousands of call sites at once, so no slice lands green: sequence it as expand, migrate in batches sized by blast radius, contract. Each batch is a ticket blocked by the expand; the contract is blocked by every batch.
 
-4. **Confirm the split.** Outside a task directory, show the numbered list (title, blocked by, what it delivers) and ask about granularity and edges until the user approves. In a task directory the split was proposed and answered in `analysis.md` as the pipeline's one question: take it from there, and a change to it is a change to `analysis.md` first.
+4. **Confirm the split.** Outside a task directory, show the numbered list (title, blocked by, what it delivers) and ask about granularity and edges until the user approves. In a task directory the split was the last item of the pipeline's one question in `analysis.md`; quote there what accepted it, the answer or an order to deliver end to end. An answer accepts the split it names and nothing more, so a split it never named, or one that changed after the question went out, goes back as the one question under `status: blocked`; an order to deliver end to end accepts the split as cut. A change to the split is a change to `analysis.md` first.
 
 5. **Write the tickets**, `<NN>-<slug>.md` numbered from `01` in dependency order, so the numbering is the implementation order and "Blocked by" names real files. `Status: ready-for-agent` unless the user named another. The spec stays as written; the tickets are the only other files this skill writes.
 

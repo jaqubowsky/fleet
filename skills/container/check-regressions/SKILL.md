@@ -1,6 +1,6 @@
 ---
 name: check-regressions
-description: 'Walk the neighbours of a change: every behaviour that passes through a seam the diff modified, on the base checkout and on this one. Use when review.md names a shared seam, or when the user asks whether a change broke something beside it.'
+description: 'Walk the neighbours of a change: every behaviour that passes through a seam the diff modified, on the base checkout and on this one. Use when a review of the task names a shared seam, or when the user asks whether a change broke something beside it.'
 compatibility: Requires a container that can start the project's app, plus playwright-cli and base-worktree
 ---
 

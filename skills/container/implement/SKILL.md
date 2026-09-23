@@ -15,14 +15,24 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 3. **Load context.** `analysis.md` from the task directory, the parent spec (`spec.md` beside `issues/`) if it exists, plus `CONTEXT.md` and any ADRs touching the area.
 
-4. **Name the gate.** Before the first edit, state the command that will prove this ticket done and the one-line reason it is the right command. The ticket's acceptance criteria are the source; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 9 re-runs, so name it now, not later.
+4. **Name the goal, the boundaries and the gate.** Before the first edit, print these three lines:
+
+   ```text
+   Goal: <what this ticket makes work>
+   Boundaries: <what stays untouched>
+   Done-check: <the command that proves this ticket done>, <why it is the right command>
+   ```
+
+   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 7 runs, so name it now, not later.
 
 5. **Build at the pre-agreed seams.** Read skill `tdd` before the first test and run its loop: one seam, one red, one implementation.
 
-6. Run typechecking regularly and single test files regularly. The full suite belongs to step 9, not here.
+6. Run typechecking regularly and single test files regularly. The full suite belongs to step 7, not here.
 
-7. **Resolve the ticket.** Tick the acceptance criteria you satisfied and set `Status: done`. A changed shared decision or accepted scope updates `spec.md`; slice-only findings go under a `## Comments` heading at the bottom of the ticket file.
+7. **Run the gate.** Run the step 4 check once on the finished tree. Gate output goes to `logs/gate-<timestamp>/` in the task directory.
 
-8. **Commit** your work to the current branch.
+8. **Review before the commit.** Run the `two-axis-review` skill on the uncommitted diff, with the step 7 logs as its checks, and close its findings as its step 5 says.
 
-9. **Close the gate.** Run the `two-axis-review` skill against the commit you just made, then re-run the step 4 check against `HEAD`. Anything the review changes means a new commit and another run of the check: a review that ran before the final commit proves the previous commit, not this one. Gate output goes to `logs/gate-<timestamp>/` in the task directory. Report the command, its exit code, and name anything you did not run and why. When another ticket remains, start it at step 1 in this same session.
+9. **Commit** the reviewed work together with its fixes to the current branch.
+
+10. **Resolve the ticket.** Tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. Set `Status: done`. A changed shared decision or accepted scope updates `spec.md`; slice-only findings go under a `## Comments` heading at the bottom of the ticket file. Report the command, its exit code, and name anything you did not run and why. When another ticket remains, start it at step 1 in this same session.

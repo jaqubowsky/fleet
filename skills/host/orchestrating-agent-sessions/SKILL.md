@@ -21,6 +21,14 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
 
+## Wording a steer
+
+A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. A decision arrives as `Decided: <what>`, whoever took it.
+
+```text
+Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings back only the organizations deleted with it. Stop at ready-for-host.
+```
+
 ## Reading a task
 
 | Question | Read |
