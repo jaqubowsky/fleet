@@ -588,6 +588,6 @@ test("cfleet up starts claude straight through sbx run and copies no herdr integ
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
-	assert.equal(io.calls.find((c) => c[1] === "pane")![4], "HERDR_AGENT=claude sbx run --name claude-webapp-web-1 -- --dangerously-skip-permissions");
+	assert.equal(io.calls.find((c) => c[1] === "pane")![4], "HERDR_AGENT=claude sbx run --name claude-webapp-web-1");
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });

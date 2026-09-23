@@ -145,7 +145,7 @@ export async function up(
 	if (!running) {
 		const args = agentArgs(io.harness, input.model, io.list(`${task}/logs/sessions`).length > 0 || (Boolean(existing) && Boolean(io.harness.containerSessions)));
 		const start = io.harness.herdrIntegration ? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}` : `sbx run --name ${sandbox}`;
-		io.herdr(["pane", "run", pane, `HERDR_AGENT=${io.harness.agent} ${start} -- ${args}`]);
+		io.herdr(["pane", "run", pane, `HERDR_AGENT=${io.harness.agent} ${start}${args ? ` -- ${args}` : ""}`]);
 	}
 	await waitForAgent(io, pane);
 	logEvent(io, "up", agent);
@@ -223,8 +223,7 @@ function create(
 		artifacts,
 		cache,
 		`${knowledgeBase}:ro`,
-		"--",
-		...h.agentArgs,
+		...(h.agentArgs.length ? ["--", ...h.agentArgs] : []),
 	]);
 }
 

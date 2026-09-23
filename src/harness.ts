@@ -110,7 +110,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		sbxFlags: ["-t", "my-claude:v1", "--skills=off"],
 		env: ["FORCE_COLOR=3"],
 		agentSpec: () => "claude",
-		agentArgs: ["--dangerously-skip-permissions"],
+		agentArgs: [],
 		resume: "--continue",
 		projectConfig: ".claude",
 		containerSessions: "/home/agent/.claude/projects",
