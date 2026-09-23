@@ -43,7 +43,7 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: "wor
 		});
 		t.after(() => handlers.session_shutdown());
 		handlers.session_start({}, { sessionManager: { getSessionId: () => sessionId } });
-		return { tools, messages, notices };
+		return { handlers, tools, messages, notices };
 	};
 	const settle = (pane = "worker:pane") => {
 		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`));
@@ -87,6 +87,22 @@ test("OMP exports its session owner and ignores another session's events", (t) =
 	assert.equal(watcher.messages.length, 1);
 	assert.match(watcher.messages[0].message.content, /^\[fleet\] worker-a: working -> idle\n/);
 });
+
+for (const h of [HARNESSES.pi, HARNESSES.omp]) {
+	test(`a fleet command the ${h.name} model runs carries the session that owns it`, (t) => {
+		const watcher = monitorRuntime(t, h).start("session-a");
+		const run = (command: string) => {
+			const event = { toolName: "bash", input: { command } };
+			const result = watcher.handlers.tool_call(event);
+			return result?.input?.command ?? event.input.command;
+		};
+
+		assert.equal(run(`${h.cli} steer ${h.prefix}worker "go"`), `export ${h.sessionIdEnv}="session-a"; ${h.cli} steer ${h.prefix}worker "go"`);
+		assert.equal(run(`cd /w/repo && ${h.cli} up task`), `export ${h.sessionIdEnv}="session-a"; cd /w/repo && ${h.cli} up task`);
+		assert.equal(run("git status"), "git status");
+		assert.equal(run(`cat ~/${h.cli}-notes.md`), `cat ~/${h.cli}-notes.md`);
+	});
+}
 
 test("explicit fleet watch delivers a follow-up turn without waiting for user input", async (t) => {
 	const runtime = monitorRuntime(t);

@@ -27,6 +27,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			watcher?.stop();
 			watcher = watch(scope, { ...io, log: () => {} }, deliver);
 		};
+		const fleetCommand = new RegExp(`(^|[\\s;&|(])${h.cli}\\s`);
 		const refresh = () => watcher?.refresh();
 		const start = (args: string) => {
 			named = args.trim().split(/[\s,]+/).filter(Boolean);
@@ -85,6 +86,12 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			ui = ctx.ui ?? ui;
 			restart();
 			watchFile(log, { interval: LOG_POLL_MS }, refresh);
+		});
+		pi.on("tool_call", (event: { toolName: string; input: { command?: unknown } }) => {
+			const command = event.input?.command;
+			if (event.toolName !== "bash" || !sessionId || !h.sessionIdEnv || typeof command !== "string" || !fleetCommand.test(command)) return;
+			event.input.command = `export ${h.sessionIdEnv}=${JSON.stringify(sessionId)}; ${command}`;
+			return { input: event.input };
 		});
 		pi.on("session_shutdown", () => {
 			watcher?.stop();

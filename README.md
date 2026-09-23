@@ -57,7 +57,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 | Concern | pi | OMP | Claude Code | Why it cannot be shared |
 | --- | --- | --- | --- | --- |
 | Waking the host when a container settles | `extensions/fleet-monitor.ts` runs the shared `src/fleet/watch.ts` in process and turns each wake into a turn | the same extension, `deliverAs: nextTurn` | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
-| Which containers a session watches by itself | the one the session put up, by `PI_SESSION_ID` | the one the session put up, by `OMP_SESSION_ID` exported by the monitor | whatever `cfleet watch` names | Claude Code has no API for an extension to start a turn |
+| Which containers a session watches by itself | the one the session put up or steered, by `PI_SESSION_ID` the monitor puts on its `fleet` commands | the same, by `OMP_SESSION_ID` on its `ofleet` commands | whatever `cfleet watch` names | Claude Code has no API for an extension to start a turn |
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Handoff at 250k context | `session_handoff` tool opens a fresh session | the same | a `Stop` hook raises attention; the host sends `/clear` | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | the same | `StopFailure` hook | each agent's own error event |

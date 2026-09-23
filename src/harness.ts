@@ -25,6 +25,7 @@ export type Harness = {
 
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const PI_WATCH = "Steer returns at once and puts the container under watch; the `[fleet]` wake is where the outcome lands.";
+const watchOwner = (agent: string, cli: string, env: string) => `Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch.`;
 
 export const HARNESSES: Record<HarnessName, Harness> = {
 	pi: {
@@ -52,7 +53,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			watch: PI_WATCH,
 			"review.saver": "the runtime",
 			"steer.result": "steered; pi takes it after its current tool call, and the container is under watch from now on",
-			"watch.owner": "Only the Pi session that ran `fleet up` or `fleet steer` auto-watches that container: the event carries the shell's `PI_SESSION_ID`, matched against the extension's current session ID. Resuming that same session restores its watches. Legacy or ownerless events never auto-watch.",
+			"watch.owner": watchOwner("Pi", "fleet", "PI_SESSION_ID"),
 			"delegation.parallel": "\"Parallel\" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
 			"models.row": "| switch models for new containers | `fleet render` after editing `pi/profiles/models.json` in the harness repo | files rewritten; host sees it after `/reload`, containers after `fleet build` |",
@@ -83,7 +84,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			watch: PI_WATCH,
 			"review.saver": "the runtime",
 			"steer.result": "steered; omp takes it after its current tool call, and the container is under watch from now on",
-			"watch.owner": "Only the OMP session that ran `ofleet up` or `ofleet steer` auto-watches that container: the fleet monitor exports its stable session ID to `ofleet`, and a restart of that session restores its watches. Ownerless events never auto-watch.",
+			"watch.owner": watchOwner("OMP", "ofleet", "OMP_SESSION_ID"),
 			"delegation.parallel": "\"Parallel\" = one `task` batch holding several independent `explorer` or `researcher` items, started together, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
 			"models.row": "| switch models for new containers | `ofleet render` after editing `omp/profiles/models.json` in the harness repo | files rewritten; host sees it after `/reload`, containers after `ofleet build` |",
