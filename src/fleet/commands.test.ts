@@ -238,7 +238,7 @@ test("exec picks up the repo's own toolchain before running anything", () => {
 	assert.ok(script.trimEnd().endsWith("yarn build"), script);
 });
 
-test("ls shows how long a container has worked and what it cost", () => {
+test("ls prints a container whose branch the host repo has never seen", () => {
 	const task = "/home/me/.sandboxes/r/pi-a";
 	const req = (at: string) => JSON.stringify({ type: "message", timestamp: at, message: { role: "assistant", model: "m", usage: { input: 10, output: 1, cacheRead: 0, cacheWrite: 0, cost: { total: 0.21 } }, content: [] } });
 	const io = fakeIo({
@@ -247,7 +247,11 @@ test("ls shows how long a container has worked and what it cost", () => {
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`stat ${task}/logs/sessions/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
 		[`read ${task}/logs/sessions/s1.jsonl`]: [req("2026-09-16T09:30:00Z"), req("2026-09-16T09:40:00Z")].join("\n"),
+		"git log": new Error("git log --format=%h\t%cI --since=2026-09-16T09:30:00Z web-1 failed (128)\nfatal: ambiguous argument 'web-1': unknown revision or path not in the working tree."),
 	});
 
-	assert.equal(ls(io), "pi-a  running  gone     web-1  30m  $0.42");
+	const table = ls(io);
+
+	assert.equal(table, "pi-a  running  gone     web-1  30m  $0.42");
+	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
 });

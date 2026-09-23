@@ -26,7 +26,7 @@ export function ls(io: Io): string {
 	const rows: Row[] = sandboxes(io).map((s) => {
 		const checkout = s.status === "running" ? parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true })) : { branch: "?", dirty: 0, head: "" };
 		const repo = s.workspaces[0];
-		const usage = repo ? sessionUsage(taskDir(repo, s.name, io), checkout.branch, repo, io) : undefined;
+		const usage = repo ? sessionUsage(taskDir(repo, s.name, io), io) : undefined;
 		const started = usage?.runs[0]?.started_at;
 		return {
 			sandbox: s.name,
@@ -158,7 +158,7 @@ export function artifacts(repo: string, io: Io): string {
 	return [root, ...lines.map((l) => (l.detail ? `${l.indent}${l.name.padEnd(width)}  ${l.detail}` : `${l.indent}${l.name}`))].join("\n");
 }
 
-function sessionUsage(task: string, branch: string, repo: string | undefined, io: Io): Summary | undefined {
+function sessionUsage(task: string, io: Io, branch?: string, repo?: string): Summary | undefined {
 	const files = collect(`${task}/logs/sessions`, "", io, [])
 		.filter((f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/") && !f.path.includes("/subagents/"))
 		.sort((a, b) => a.path.localeCompare(b.path));
@@ -208,7 +208,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
 	if (io.harness.containerSessions) harvest(sandbox, task, io.harness.containerSessions, opts.force === true, io);
-	const summary = sessionUsage(task, checkout.branch, repo, io);
+	const summary = sessionUsage(task, io, checkout.branch, repo);
 	if (summary) {
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
