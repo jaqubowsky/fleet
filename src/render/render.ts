@@ -95,7 +95,7 @@ class Renderer {
 	text(path: string): string {
 		const { root, harness } = this.input;
 		const body = this.source(path);
-		const tokens = { ...harness.tokens, ...this.seats, root };
+		const tokens = { ...harness.tokens, cli: harness.cli, harness: harness.name, cache: `~/${harness.home}/${harness.cache}/<repo>`, ...this.seats, root };
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
 			return where === undefined ? undefined : renderText(this.io.read(where) ?? "", tokens, () => undefined, where);
