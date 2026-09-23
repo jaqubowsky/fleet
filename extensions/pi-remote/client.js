@@ -20,6 +20,7 @@ let delivery = "followUp";
 let previousStatus;
 let resyncing = false;
 const submitted = [];
+const acknowledged = new Set();
 
 function controls() {
 	const control = snapshot?.control !== false;
@@ -91,20 +92,32 @@ function notifications() {
 		ask.hidden = Notification.permission !== "default";
 	});
 }
-function userCount(transcript, text) {
-	return transcript.filter((message) =>
-		message.role === "user" && message.blocks.some((block) =>
-			block.kind === "text" && block.text === text,
+function latestUserSequence(transcript) {
+	return Math.max(0, ...transcript.map((item) => item.seq ?? 0));
+}
+function matchingMessage(transcript, item) {
+	return transcript.find((message) =>
+		message.role === "user" && message.seq > item.after &&
+		!acknowledged.has(message.seq) && message.blocks.some((block) =>
+			block.kind === "text" && block.text === item.text,
 		),
-	).length;
+	);
 }
 function render(next, follow = !snapshot || atBottom()) {
-	if (snapshot?.generation !== next.generation) submitted.length = 0;
-	for (let index = submitted.length - 1; index >= 0; index--) {
-		const item = submitted[index];
-		if (userCount(next.transcript, item.text) > item.occurrence)
-			submitted.splice(index, 1);
+	if (snapshot?.generation !== next.generation) {
+		submitted.length = 0;
+		acknowledged.clear();
 	}
+	for (let index = 0; index < submitted.length;) {
+		const match = matchingMessage(next.transcript, submitted[index]);
+		if (match) {
+			acknowledged.add(match.seq);
+			submitted.splice(index, 1);
+		} else index++;
+	}
+	const visible = new Set(next.transcript.map((item) => item.seq));
+	for (const seq of acknowledged)
+		if (!visible.has(seq)) acknowledged.delete(seq);
 	const previous = previousStatus;
 	if (previous === "running" && SETTLED.includes(next.status))
 		announce(next.status);
@@ -380,10 +393,9 @@ async function send(action) {
 	controls();
 	const text = $("text").value;
 	const generation = snapshot.generation;
-	const occurrence = userCount(snapshot.transcript, text) +
-		submitted.filter((item) => item.text === text).length;
+	const after = latestUserSequence(snapshot.transcript);
 	try {
-		await request("/command", {
+		const accepted = await (await request("/command", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -391,13 +403,16 @@ async function send(action) {
 				action,
 				...(action === "abort" ? {} : { text }),
 			}),
-		});
+		})).json();
 		const follow = atBottom();
 		if (action === "abort") submitted.length = 0;
 		else {
-			if (snapshot.generation === generation &&
-				userCount(snapshot.transcript, text) <= occurrence)
-				submitted.push({ text, occurrence });
+			if (snapshot.generation === generation) {
+				const item = { text: accepted.display, after };
+				const match = matchingMessage(snapshot.transcript, item);
+				if (match) acknowledged.add(match.seq);
+				else submitted.push(item);
+			}
 			if ($("text").value === text) $("text").value = "";
 		}
 		$("feedback").textContent = "Accepted";

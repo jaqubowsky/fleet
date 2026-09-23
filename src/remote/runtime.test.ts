@@ -206,6 +206,40 @@ test("completed tool and output reach both the stream and a fresh snapshot", asy
 	}
 });
 
+test("submitted text matches bounded user messages after history moves", async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const owner = Symbol();
+	const generation = remote.bind(owner, binding("queue"));
+	await remote.start(0);
+	const client = await connect(remote);
+	const first = await (await client.get("/bootstrap")).json();
+	assert.equal(first.transcript[0].seq, 1);
+
+	const long = "x".repeat(5000);
+	const accepted = await (await client.command({ generation, action: "followUp", text: long })).json();
+	assert.ok(accepted.display.length <= 4096);
+	assert.match(accepted.display, /characters omitted/);
+	assert.ok(accepted.display.startsWith("xxx") && accepted.display.endsWith("xxx"));
+	const masked = await (await client.command({
+		generation, action: "followUp", text: "token sk-ant-abcdefgh12345678 end",
+	})).json();
+	assert.equal(masked.display, "token [redacted] end");
+
+	for (let index = 0; index < 64; index++)
+		remote.publish(owner, {
+			type: "message_end",
+			message: { role: "assistant", content: `filler ${index}` },
+		});
+	remote.publish(owner, {
+		type: "message_end",
+		message: { role: "user", content: "hello queue" },
+	});
+	const next = await (await client.get("/bootstrap")).json();
+	assert.equal(next.transcript.at(-1).seq, 2);
+	assert.equal(next.transcript.some((item: { seq?: number }) => item.seq === 1), false);
+});
+
 test("protocol bounds input and projects only public text", async (t) => {
 	const received: string[] = [];
 	const remote = new RemoteRuntime();
@@ -216,7 +250,7 @@ test("protocol bounds input and projects only public text", async (t) => {
 	const client = await connect(remote);
 	const snapshot = await (await client.get("/bootstrap")).json();
 	assert.deepEqual(snapshot.transcript, [
-		{ role: "user", blocks: [{ kind: "text", text: "hello one" }] },
+		{ role: "user", blocks: [{ kind: "text", text: "hello one" }], seq: 1 },
 	]);
 	assert.equal(JSON.stringify(snapshot).includes("private"), false);
 	for (const action of ["prompt", "steer", "followUp", "abort"]) {

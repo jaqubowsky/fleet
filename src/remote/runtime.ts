@@ -7,9 +7,11 @@ import {
 } from "node:http";
 import {
 	call,
+	clamp,
 	content,
 	fit,
 	header,
+	mask,
 	MESSAGE_LIMIT,
 	SNAPSHOT_LIMIT,
 	message,
@@ -47,6 +49,7 @@ export class RemoteRuntime {
 	private binding?: Binding;
 	private generation = 0;
 	private revision = 0;
+	private userSequence = 0;
 	private status = "reconnecting";
 	private messages: Message[] = [];
 	private assistant?: Message;
@@ -60,7 +63,10 @@ export class RemoteRuntime {
 		this.owner = owner;
 		this.binding = binding;
 		this.generation++;
-		this.messages = transcript(binding.entries);
+		this.userSequence = 0;
+		this.messages = transcript(binding.entries).map((item) =>
+			item.role === "user" ? { ...item, seq: ++this.userSequence } : item,
+		);
 		this.assistant = undefined;
 		this.tools = [];
 		this.status = binding.idle() ? "idle" : "running";
@@ -118,7 +124,9 @@ export class RemoteRuntime {
 				const projected = message(event.message);
 				if (projected)
 					this.messages = fit(
-						[...this.messages, projected].slice(-MESSAGE_LIMIT),
+						[...this.messages, projected.role === "user"
+							? { ...projected, seq: ++this.userSequence }
+							: projected].slice(-MESSAGE_LIMIT),
 					);
 				if (projected?.role === "assistant") this.assistant = undefined;
 				break;
@@ -396,7 +404,10 @@ export class RemoteRuntime {
 					command.text as string,
 					action as "prompt" | "steer" | "followUp",
 				);
-			this.json(res, 202, { accepted: true });
+			this.json(res, 202, {
+				accepted: true,
+				...(action === "abort" ? {} : { display: clamp(mask(command.text)) }),
+			});
 		} catch {
 			this.json(res, 409, { error: "Command not accepted" });
 		}

@@ -22,6 +22,7 @@ export type Message = {
 	role: "user" | "assistant";
 	blocks: Block[];
 	at?: number;
+	seq?: number;
 };
 
 const ENTRY_LIMIT = 1024;
