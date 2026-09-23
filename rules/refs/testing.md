@@ -11,4 +11,3 @@ Reached from `rules/core.md` when a test is written, changed or read.
 7. Red from import error or TypeError says nothing about behavior. Fix mechanics, get real red
 8. While red never weaken test: no value copied from actual, no loosened matcher, no skip/only, no raised timeout, no renamed scenario
 9. Wrong expectation -> stop, quote spec or ask user. Never re-derive from what code returns
-10. Green right after red -> mutation check. Break the line, confirm red, revert

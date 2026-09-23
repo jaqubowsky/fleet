@@ -32,6 +32,6 @@ Outside a task directory, ask: "What's the public interface, and which seams sho
 ## Rules of the loop
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
-- **A red test accuses the code, not itself.** Diagnose before editing, never weaken an assertion to reach green, and mutate the implementation to prove the green is real. The procedure is [red.md](red.md); it applies to every failure in the loop.
+- **A red test accuses the code, not itself.** Diagnose before editing and never weaken an assertion to reach green. The procedure is [red.md](red.md); it applies to every failure in the loop.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs to the review stage (see the `two-axis-review` skill), not the red → green implementation cycle.

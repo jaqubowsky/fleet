@@ -60,14 +60,6 @@ When the expectation is genuinely wrong, the correction comes from the same plac
 
 Before writing implementation, confirm the test failed at the assertion, with roughly the expected and actual you predicted. A red for the wrong reason gives no evidence, and the green that follows proves only that the mechanics got fixed.
 
-## Verify the green
-
-A test that passed the moment the implementation landed has never been shown to be able to fail against that implementation. Mutate the production line the test targets: invert the condition, return a wrong constant, drop the call. Rerun. The test must go red. Revert the mutation.
-
-Still green means one of: the assertion does not reach the behavior, the expected value was derived the way the code derives it (tautological, see [SKILL.md](SKILL.md)), or a double is answering instead of the code. Fix the test before moving to the next slice.
-
-Skip the check only for a test whose red you already observed for the right reason in this same cycle: that red is the same evidence.
-
 ## Attempt budget
 
 Two failed attempts at the same red and you stop. Report the failure output, the diagnosis, and the options. Three consecutive edits chasing one assertion is the pattern that ends with the test rewritten.
