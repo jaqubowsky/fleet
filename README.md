@@ -21,7 +21,7 @@ Rules, skills, sub-agents, the guard policy, the fleet CLI and the container sca
 | `sbx/container/` | the container rule and `base-worktree`, the same in every image |
 | `host/` | the no-ssh-agent kit, the guard corpus and test runner, herdr's config |
 | `pi/` | pi profiles and models, its host extension entry, kit, image |
-| `omp/` | OMP profiles, its host extension entry, statusline, herdr state reporter, kit, image, installer, auth import |
+| `omp/` | OMP profiles, its host extension entry, statusline, kit, image, installer, auth import |
 | `claude/` | Claude Code's guard hook, container hooks, statusline, managed settings, settings aligner, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: the one CLI with its harness set |
 | `sync.sh` | brings every harness home, link, image and setting in line with this repository and removes what nothing uses; prints the plan, `--apply` makes it |

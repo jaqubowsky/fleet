@@ -230,7 +230,6 @@ export function render(input: RenderInput, io: Io): void {
 	if (input.harness.name === "pi") piFamily(r, "settings.json", "agent-settings.json", "extensions/statusline.ts", []);
 	else if (input.harness.name === "omp")
 		piFamily(r, "config.yml", "agent-config.yml", "omp/extensions/statusline.ts", [
-			["omp/extensions/herdr-agent-state.ts", "home/agent/extensions/herdr-agent-state.ts"],
 			["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"],
 		]);
 	else claude(r);
