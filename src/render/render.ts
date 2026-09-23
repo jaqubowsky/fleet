@@ -196,8 +196,6 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 	r.skills(true, "home/skills");
 	r.extra([
 		...agentFiles.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
-		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
-		["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
 		...containerFiles,
@@ -249,7 +247,10 @@ export function render(input: RenderInput, io: Io): void {
 				["pi/models.json", "models.json"],
 				["pi/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
 			],
-			[],
+			[
+				["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
+				["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
+			],
 		);
 	else if (input.harness.name === "omp")
 		piFamily(

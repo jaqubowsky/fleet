@@ -32,6 +32,15 @@
   "recap": {
     "enabled": false
   },
+  "statusLine": {
+    "preset": "custom",
+    "separator": "none",
+    "sessionAccent": false,
+    "transparent": true,
+    "showHookStatus": false,
+    "leftSegments": ["path", "git", "model"],
+    "rightSegments": ["context_pct", "usage"]
+  },
   "tui": {
     "reactions": false,
     "titleState": false,

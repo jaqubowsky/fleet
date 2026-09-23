@@ -48,9 +48,9 @@ test("an image takes the shared toolchain between its own lines", () => {
 	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
 
-test("pi and omp each carry their own theme", () => {
+test("pi and omp each carry their own theme, and only pi draws its status line itself", () => {
 	const file = (path: string, body: string) => ({ [`read /root/${path}`]: body, [`stat /root/${path}`]: { size: body.length, mtime: new Date(0), dir: false } });
-	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("omp/themes/ayu-mirage.json", "omp theme\n") };
+	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("omp/themes/ayu-mirage.json", "omp theme\n"), ...file("extensions/statusline.ts", "footer\n") };
 	const pi = fakeIo(sources(themes));
 	const omp = fakeIo(sources({ ...themes, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
@@ -63,6 +63,8 @@ test("pi and omp each carry their own theme", () => {
 	assert.equal(pi.files["/stage/home/agent/themes/ayu-mirage.json"], "pi theme\n");
 	assert.equal(omp.files["/home/agent/themes/ayu-mirage.json"], "omp theme\n");
 	assert.equal(omp.files["/stage/home/agent/themes/ayu-mirage.json"], "omp theme\n");
+	assert.equal(pi.files["/stage/home/agent/extensions/statusline.ts"], "footer\n");
+	assert.equal(omp.files["/stage/home/agent/extensions/statusline.ts"], undefined);
 });
 
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
