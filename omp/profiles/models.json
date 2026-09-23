@@ -14,11 +14,11 @@
     },
     "explorer": {
       "model": "openai-codex/gpt-6-luna",
-      "thinking": "max"
+      "thinking": "high"
     },
     "researcher": {
       "model": "openai-codex/gpt-6-luna",
-      "thinking": "max"
+      "thinking": "xhigh"
     }
   }
 }
