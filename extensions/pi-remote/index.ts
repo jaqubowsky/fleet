@@ -29,6 +29,7 @@ export type Context = {
 	ui: {
 		notify(text: string, level?: "info" | "warning" | "error"): void;
 		setWidget(key: string, content: Widget | undefined): void;
+		setStatus(key: string, text: string | undefined): void;
 	};
 };
 type Event = { type: string; reason?: string };
@@ -72,10 +73,77 @@ function agentHome() {
 	);
 }
 
+function assets() {
+	const JS = "text/javascript; charset=utf-8";
+	const CSS = "text/css; charset=utf-8";
+	const asset = (file: string, type: string) => ({
+		type,
+		body: readFileSync(new URL(file, import.meta.url), "utf8"),
+	});
+	const vendor = (specifier: string, type: string) => ({
+		type,
+		body: readFileSync(createRequire(import.meta.url).resolve(specifier), "utf8"),
+	});
+	const shared = {
+		"/client.css": asset("client.css", CSS),
+		"/connection.js": asset("connection.js", JS),
+		"/manifest.webmanifest": asset(
+			"manifest.webmanifest",
+			"application/manifest+json; charset=utf-8",
+		),
+		"/icon.svg": asset("icon.svg", "image/svg+xml; charset=utf-8"),
+	};
+	return {
+		session: {
+			...shared,
+			"/": asset("client.html", "text/html; charset=utf-8"),
+			"/client.js": asset("client.js", JS),
+			"/markdown.js": asset("markdown.js", JS),
+			"/vendor/marked.js": vendor("marked", JS),
+			"/vendor/highlight.js": vendor("@highlightjs/cdn-assets/es/highlight.min.js", JS),
+			"/vendor/highlight-dark.css": vendor(
+				"@highlightjs/cdn-assets/styles/github-dark.min.css",
+				CSS,
+			),
+			"/vendor/highlight-light.css": vendor(
+				"@highlightjs/cdn-assets/styles/github.min.css",
+				CSS,
+			),
+		},
+		hub: {
+			...shared,
+			"/": asset("dashboard.html", "text/html; charset=utf-8"),
+			"/dashboard.js": asset("dashboard.js", JS),
+		},
+	};
+}
+
+function settings(home: string) {
+	const file = join(home, "settings.json");
+	let value;
+	try {
+		value = JSON.parse(readFileSync(file, "utf8"));
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+			throw new Error(`Cannot read remote settings: ${file}`, { cause: error });
+	}
+	const remote = value?.remote ?? {};
+	if (typeof remote !== "object" || Array.isArray(remote))
+		throw new Error("remote must be an object");
+	const { autoStart = false, port = 8787 } = remote;
+	if (typeof autoStart !== "boolean")
+		throw new Error("remote.autoStart must be true or false");
+	if (!Number.isInteger(port) || port < 1 || port > 65535)
+		throw new Error("remote.port must be an integer in 1..65535");
+	return { autoStart, port };
+}
+
 export default function remoteExtension(pi: RemoteAPI) {
 	const remote = processRemote();
 	const { runtime } = remote;
-	const dir = join(agentHome(), "remote");
+	const home = agentHome();
+	const configured = settings(home);
+	const dir = join(home, "remote");
 	let owner = Symbol("remote binding");
 	function bind(ctx: Context) {
 		owner = Symbol("remote binding");
@@ -92,6 +160,11 @@ export default function remoteExtension(pi: RemoteAPI) {
 				queued: ctx.hasPendingMessages?.() ?? false,
 			}),
 			abort: () => ctx.abort(),
+			listening: (phones) =>
+				ctx.ui.setStatus(
+					"pi-remote",
+					phones === undefined ? undefined : phones ? `⌁ remote ${phones}` : "⌁ remote",
+				),
 			send: (text, mode) =>
 				pi.sendUserMessage(
 					text,
@@ -99,7 +172,16 @@ export default function remoteExtension(pi: RemoteAPI) {
 				),
 		});
 	}
-	pi.on("session_start", (_event, ctx) => bind(ctx));
+	pi.on("session_start", async (event, ctx) => {
+		bind(ctx);
+		if (!configured.autoStart || event.reason !== "startup" || ctx.mode !== "tui")
+			return;
+		try {
+			await remote.start(dir, configured.port, assets());
+		} catch (error) {
+			ctx.ui.notify(`Remote failed to start: ${(error as Error).message}`, "error");
+		}
+	});
 	pi.on("session_shutdown", async (event, ctx) => {
 		if (!runtime.detach(owner)) return;
 		if (ctx.mode === "tui") ctx.ui.setWidget("pi-remote", undefined);
@@ -144,60 +226,13 @@ export default function remoteExtension(pi: RemoteAPI) {
 				return;
 			}
 			if (action === "start") {
-				const port = argument === undefined ? 8787 : Number(argument);
+				const port = argument === undefined ? configured.port : Number(argument);
 				if (!Number.isInteger(port) || port < 1 || port > 65535) {
 					ctx.ui.notify("Port must be 1..65535", "error");
 					return;
 				}
-				const JS = "text/javascript; charset=utf-8";
-				const CSS = "text/css; charset=utf-8";
-				const asset = (file: string, type: string) => ({
-					type,
-					body: readFileSync(new URL(file, import.meta.url), "utf8"),
-				});
-				const vendor = (specifier: string, type: string) => ({
-					type,
-					body: readFileSync(
-						createRequire(import.meta.url).resolve(specifier),
-						"utf8",
-					),
-				});
-				const shared = {
-					"/client.css": asset("client.css", CSS),
-					"/connection.js": asset("connection.js", JS),
-					"/manifest.webmanifest": asset(
-						"manifest.webmanifest",
-						"application/manifest+json; charset=utf-8",
-					),
-					"/icon.svg": asset("icon.svg", "image/svg+xml; charset=utf-8"),
-				};
 				try {
-					await remote.start(dir, port, {
-						session: {
-							...shared,
-							"/": asset("client.html", "text/html; charset=utf-8"),
-							"/client.js": asset("client.js", JS),
-							"/markdown.js": asset("markdown.js", JS),
-							"/vendor/marked.js": vendor("marked", JS),
-							"/vendor/highlight.js": vendor(
-								"@highlightjs/cdn-assets/es/highlight.min.js",
-								JS,
-							),
-							"/vendor/highlight-dark.css": vendor(
-								"@highlightjs/cdn-assets/styles/github-dark.min.css",
-								CSS,
-							),
-							"/vendor/highlight-light.css": vendor(
-								"@highlightjs/cdn-assets/styles/github.min.css",
-								CSS,
-							),
-						},
-						hub: {
-							...shared,
-							"/": asset("dashboard.html", "text/html; charset=utf-8"),
-							"/dashboard.js": asset("dashboard.js", JS),
-						},
-					});
+					await remote.start(dir, port, assets());
 				} catch (error) {
 					ctx.ui.notify(
 						`Remote failed to start: ${(error as Error).message}`,
@@ -207,7 +242,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 				}
 			} else if (action !== "status" && action !== "link") {
 				ctx.ui.notify(
-					"/remote start [port] | stop | status | link [--view] | revoke\nThe port, 8787 by default, serves Sessions: every started pi, whichever pi holds the port, and another takes it over when that pi quits. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords: they stay valid across stop and restart until revoke replaces them. Remote input can run tools with this process's permissions. Stop or process exit ends remote control for this session.",
+					"/remote start [port] | stop | status | link [--view] | revoke\nThe port, remote.port in settings (8787 by default), serves Sessions: every started pi, whichever pi holds the port, and another takes it over when that pi quits. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords: they stay valid across stop and restart until revoke replaces them. Remote input can run tools with this process's permissions. Stop or process exit ends remote control for this session.",
 				);
 				return;
 			}

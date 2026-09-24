@@ -31,6 +31,7 @@ function binding(name: string, idle = true, received: string[] = []): Binding {
 			received.push(`${mode}:${text}`);
 		},
 		abort() {},
+		listening() {},
 	};
 }
 

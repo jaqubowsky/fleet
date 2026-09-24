@@ -32,6 +32,7 @@ export type Binding = {
 	header(): Partial<Header>;
 	send(text: string, mode: "prompt" | "steer" | "followUp"): void;
 	abort(): void;
+	listening(phones?: number): void;
 };
 export type Assets = Readonly<Record<string, { type: string; body: string }>>;
 export type Credentials = { control: string; view: string };
@@ -133,6 +134,7 @@ export class RemoteRuntime {
 		this.tools = [];
 		this.status = binding.idle() ? "idle" : "running";
 		this.broadcast();
+		this.announce();
 		return this.generation;
 	}
 
@@ -277,6 +279,7 @@ export class RemoteRuntime {
 						this.write(client, ": heartbeat\n\n");
 				}, 15000);
 				this.heartbeat.unref();
+				this.announce();
 				resolve();
 			});
 		});
@@ -325,12 +328,17 @@ export class RemoteRuntime {
 		this.server = undefined;
 		this.bound = undefined;
 		this.keys = undefined;
+		this.binding?.listening();
 		if (server) {
 			server.closeAllConnections();
 			await new Promise<void>((resolve, reject) =>
 				server.close((error) => (error ? reject(error) : resolve())),
 			);
 		}
+	}
+
+	private announce() {
+		if (this.server) this.binding?.listening(this.clients.size);
 	}
 
 	private broadcast() {
@@ -375,7 +383,11 @@ export class RemoteRuntime {
 				Connection: "keep-alive",
 			});
 			this.clients.set(res, control);
-			res.on("close", () => this.clients.delete(res));
+			res.on("close", () => {
+				this.clients.delete(res);
+				this.announce();
+			});
+			this.announce();
 			this.write(res, this.frame(control));
 			return;
 		}

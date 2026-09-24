@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import remoteExtension, {
 	type Context,
 	type RemoteAPI,
@@ -15,6 +15,12 @@ process.env.PI_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "pi-agent-"));
 
 const keys = () => ({ control: "a".repeat(64), view: "b".repeat(64) });
 
+function settings(t: TestContext, value: unknown) {
+	const file = join(process.env.PI_CODING_AGENT_DIR!, "settings.json");
+	writeFileSync(file, JSON.stringify(value));
+	t.after(() => rmSync(file, { force: true }));
+}
+
 async function port() {
 	const server = createServer();
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -24,19 +30,20 @@ async function port() {
 	return address.port;
 }
 
-function session(id: string) {
+function session(id: string, mode = "tui") {
 	const handlers = new Map<string, Parameters<RemoteAPI["on"]>[1]>();
 	let command: Parameters<RemoteAPI["registerCommand"]>[1];
 	const sent: string[] = [];
 	const notices: string[] = [];
 	let widget: Widget | undefined;
+	let marker: string | undefined;
 	let stale = false;
 	let name = id;
 	const active = () => {
 		assert.equal(stale, false, "old session is never accessed");
 	};
 	const context: Context = {
-		mode: "tui",
+		mode,
 		cwd: "/Users/someone/work",
 		model: { id: "claude-opus-5", name: "Opus 5" },
 		getContextUsage: () => ({ tokens: 4270, contextWindow: 10000, percent: 42.7 }),
@@ -81,6 +88,11 @@ function session(id: string) {
 			setWidget: (_key, lines) => {
 				widget = lines;
 			},
+			setStatus: (key, text) => {
+				active();
+				assert.equal(key, "pi-remote");
+				marker = text;
+			},
 		},
 	};
 	remoteExtension({
@@ -99,6 +111,7 @@ function session(id: string) {
 		sent,
 		notices,
 		widget: () => widget,
+		marker: () => marker,
 		widgetLines: (width = 80) =>
 			typeof widget === "function"
 				? widget(undefined, undefined).render(width)
@@ -352,4 +365,103 @@ test("extension controls a process runtime across fresh factories", {
 	);
 	await current.emit("session_shutdown", { reason: "quit" });
 	assert.ok(remote.identity() === undefined, "quit closes the listener");
+});
+
+test("a host pi joins remote control at startup without a word", async (t) => {
+	const hub = await port();
+	settings(t, { remote: { autoStart: true, port: hub } });
+	const remote = processRemote();
+	t.after(() => remote.stop());
+	const current = session("startup");
+
+	await current.emit("session_start", { reason: "startup" });
+
+	assert.equal(remote.identity()?.origin, `http://127.0.0.1:${hub}`);
+	assert.equal(current.widget(), undefined);
+	assert.deepEqual(current.notices, []);
+});
+
+test("an autostart that fails says so once", async (t) => {
+	settings(t, { remote: { autoStart: true, port: await port() } });
+	const credentials = join(process.env.PI_CODING_AGENT_DIR!, "remote", "credentials.json");
+	mkdirSync(join(credentials, ".."), { recursive: true });
+	writeFileSync(credentials, "{}");
+	t.after(() => rmSync(credentials, { force: true }));
+	const current = session("failing");
+
+	await current.emit("session_start", { reason: "startup" });
+
+	assert.equal(processRemote().identity(), undefined);
+	assert.equal(current.notices.length, 1);
+	assert.match(current.notices[0], /Remote failed to start: Invalid remote credentials/);
+});
+
+test("reload, other modes and autoStart off leave remote control to /remote start", async (t) => {
+	const remote = processRemote();
+	t.after(() => remote.stop());
+	const cases = [
+		[true, "reload", "tui"],
+		[true, "startup", "rpc"],
+		[true, "startup", "print"],
+		[false, "startup", "tui"],
+	] as const;
+
+	for (const [autoStart, reason, mode] of cases) {
+		settings(t, { remote: { autoStart, port: await port() } });
+		const current = session(`${reason}-${mode}`, mode);
+		await current.emit("session_start", { reason });
+		assert.equal(remote.identity(), undefined, `${reason} in ${mode}, autoStart ${autoStart}`);
+		assert.equal(current.marker(), undefined, "no marker while remote is off");
+	}
+	const hub = await port();
+	settings(t, { remote: { port: hub } });
+	await session("manual").command("start");
+
+	assert.equal(remote.identity()?.origin, `http://127.0.0.1:${hub}`, "start takes the configured port");
+});
+
+test("a malformed remote setting stops the extension from loading", (t) => {
+	for (const remote of [{ port: 70000 }, { port: "8787" }, { autoStart: "yes" }]) {
+		settings(t, { remote });
+		assert.throws(() => session("malformed"), /remote\./, JSON.stringify(remote));
+	}
+	for (const remote of [true, 8787]) {
+		settings(t, { remote });
+		assert.throws(() => session("malformed"), /remote must be an object/, JSON.stringify(remote));
+	}
+});
+
+test("the footer marker counts the phones watching this session", { timeout: 10000 }, async (t) => {
+	settings(t, { remote: { autoStart: true, port: await port() } });
+	const remote = processRemote();
+	t.after(() => remote.stop());
+	const first = session("marked");
+	await first.emit("session_start", { reason: "startup" });
+	const { session: origin, token } = remote.identity()!;
+	const quiet = first.marker();
+	const reader = (await fetch(`${origin}/events`, { headers: { Authorization: `Bearer ${token}` } })).body!.getReader();
+	await reader.read();
+	const watched = first.marker();
+	await reader.cancel();
+	const deadline = Date.now() + 3000;
+	while (first.marker() !== "⌁ remote" && Date.now() < deadline)
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	const left = first.marker();
+
+	await first.emit("session_shutdown", { reason: "new" });
+	first.retire();
+	const next = session("next");
+	await next.emit("session_start", { reason: "new" });
+	const replaced = next.marker();
+	const phone = (await fetch(`${origin}/events`, { headers: { Authorization: `Bearer ${token}` } })).body!.getReader();
+	await phone.read();
+	await next.command("stop");
+
+	assert.deepEqual([quiet, watched, left, replaced, next.marker()], [
+		"⌁ remote",
+		"⌁ remote 1",
+		"⌁ remote",
+		"⌁ remote",
+		undefined,
+	]);
 });

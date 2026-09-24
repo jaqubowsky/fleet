@@ -22,6 +22,7 @@ function binding(id: string, received: string[] = []): Binding {
 		abort: () => {
 			received.push("abort");
 		},
+		listening() {},
 	};
 }
 
@@ -818,4 +819,22 @@ test("a frame of many small turns is bounded by its transcript", async (t) => {
 		frame.length <= 524_288,
 		`the whole frame stays inside 512 KiB, got ${frame.length}`,
 	);
+});
+
+test("the session hears how many phones watch it while it listens", { timeout: 10000 }, async (t) => {
+	const remote = new RemoteRuntime();
+	t.after(() => remote.stop());
+	const counts: (number | undefined)[] = [];
+	remote.bind(Symbol(), { ...binding("counted"), listening: (phones) => counts.push(phones) });
+	await remote.start(0, {}, keys);
+
+	const phone = await stream(remote);
+	await phone.next();
+	await phone.close();
+	const deadline = Date.now() + 3000;
+	while (counts.at(-1) !== 0 && Date.now() < deadline)
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	await remote.stop();
+
+	assert.deepEqual(counts, [0, 1, 0, undefined]);
 });

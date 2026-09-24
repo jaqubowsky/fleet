@@ -3,6 +3,7 @@
   "defaultModel": "{{models.host}}",
   "defaultThinkingLevel": "{{thinking.host}}",
   "defaultProjectTrust": "ask",
+  "remote": { "autoStart": true, "port": 8787 },
   "skills": ["~/.pi/skills/shared", "~/.pi/skills/host"],
   "extensions": [
     "{{root}}/pi/extensions.ts",
