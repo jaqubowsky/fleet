@@ -23,7 +23,7 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 5. **Write the tickets**, `<NN>-<slug>.md` numbered from `01` in dependency order, so the numbering is the implementation order and "Blocked by" names real files. `Status: ready-for-agent` unless the user named another. The spec stays as written; the tickets are the only other files this skill writes.
 
-Then `implement` works the frontier, one ticket at a time, in this session: any ticket whose blockers are all done.
+Then `implement` works the frontier, one ticket at a time: any ticket whose blockers are all done. In a task directory the written tickets are a natural break: suggest a session handoff first, as the container rule says.
 
 <spec-template>
 

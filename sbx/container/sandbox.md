@@ -22,15 +22,16 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Session handoff
 
-A session handoff is yours to suggest at a natural break: what you started is finished and on disk, in a commit or a task-directory file, so a fresh session reading `status.md` would take your next step.
+A fresh session reads only `status.md`, the task files and git, so each unit of work starts clean. Suggest a session handoff at every natural break:
 
-| Work in hand | Natural break | Work on while |
+| Natural break | Next | The fresh session starts from |
 | --- | --- | --- |
-| ticket | its commit has landed; the next ticket is not claimed | a test is red or a review finding is open |
-| analysis or plan | `analysis.md`, or `spec.md` with `issues/`, is written | the question is still being traced |
-| review | `review.md` is written; its findings are not fixed | the reviewer or a check still runs |
-| research | the brief or report is saved in the task directory | sources are still being read |
-| user's question | the answer is given and recorded | the answer rests on an unchecked claim |
+| the plan is written: `spec.md` with `issues/`, or `analysis.md` for a short run | the first change | the plan |
+| a ticket is committed and its file says `Status: done` | the next ticket's claim | that ticket and `spec.md` |
+| the last ticket is committed | the browser check of every criterion | `spec.md` and `issues/` |
+| a task without tickets is answered and recorded | the next task | `status.md` |
+
+Between natural breaks, work on, past a context reminder too. A ticket runs from its claim to its commit in one session: the reviewer sub-agent already reviews with fresh context, and the fixes need the context that wrote the code.
 
 To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
 

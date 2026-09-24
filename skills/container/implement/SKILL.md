@@ -1,6 +1,6 @@
 ---
 name: implement
-description: 'Building a ticket, spec or analysis into working code, one ticket at a time in the same session. Use when the user hands one to implement or asks for the next ticket of a feature.'
+description: 'Building a ticket, spec or analysis into working code, one ticket at a time. Use when the user hands one to implement or asks for the next ticket of a feature.'
 ---
 
 # Implement
@@ -35,4 +35,4 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 9. **Commit** the reviewed work together with its fixes to the current branch.
 
-10. **Resolve the ticket.** Tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. Set `Status: done`. A changed shared decision or accepted scope updates `spec.md`; slice-only findings go under a `## Comments` heading at the bottom of the ticket file. Report the command, its exit code, and name anything you did not run and why. When another ticket remains, start it at step 1 in this same session.
+10. **Resolve the ticket.** Tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. Set `Status: done`. A changed shared decision or accepted scope updates `spec.md`; slice-only findings go under a `## Comments` heading at the bottom of the ticket file. Report the command, its exit code, and name anything you did not run and why. In a task directory the commit is a natural break: suggest a session handoff as the container rule says. When another ticket remains, it starts at step 1 in whichever session takes it.
