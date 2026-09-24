@@ -162,31 +162,41 @@ export default function remoteExtension(pi: RemoteAPI) {
 						"utf8",
 					),
 				});
+				const shared = {
+					"/client.css": asset("client.css", CSS),
+					"/connection.js": asset("connection.js", JS),
+					"/manifest.webmanifest": asset(
+						"manifest.webmanifest",
+						"application/manifest+json; charset=utf-8",
+					),
+					"/icon.svg": asset("icon.svg", "image/svg+xml; charset=utf-8"),
+				};
 				try {
 					await remote.start(dir, port, {
-						"/": asset("client.html", "text/html; charset=utf-8"),
-						"/client.js": asset("client.js", JS),
-						"/client.css": asset("client.css", CSS),
-						"/markdown.js": asset("markdown.js", JS),
-						"/connection.js": asset("connection.js", JS),
-						"/manifest.webmanifest": asset(
-							"manifest.webmanifest",
-							"application/manifest+json; charset=utf-8",
-						),
-						"/icon.svg": asset("icon.svg", "image/svg+xml; charset=utf-8"),
-						"/vendor/marked.js": vendor("marked", JS),
-						"/vendor/highlight.js": vendor(
-							"@highlightjs/cdn-assets/es/highlight.min.js",
-							JS,
-						),
-						"/vendor/highlight-dark.css": vendor(
-							"@highlightjs/cdn-assets/styles/github-dark.min.css",
-							CSS,
-						),
-						"/vendor/highlight-light.css": vendor(
-							"@highlightjs/cdn-assets/styles/github.min.css",
-							CSS,
-						),
+						session: {
+							...shared,
+							"/": asset("client.html", "text/html; charset=utf-8"),
+							"/client.js": asset("client.js", JS),
+							"/markdown.js": asset("markdown.js", JS),
+							"/vendor/marked.js": vendor("marked", JS),
+							"/vendor/highlight.js": vendor(
+								"@highlightjs/cdn-assets/es/highlight.min.js",
+								JS,
+							),
+							"/vendor/highlight-dark.css": vendor(
+								"@highlightjs/cdn-assets/styles/github-dark.min.css",
+								CSS,
+							),
+							"/vendor/highlight-light.css": vendor(
+								"@highlightjs/cdn-assets/styles/github.min.css",
+								CSS,
+							),
+						},
+						hub: {
+							...shared,
+							"/": asset("dashboard.html", "text/html; charset=utf-8"),
+							"/dashboard.js": asset("dashboard.js", JS),
+						},
 					});
 				} catch (error) {
 					ctx.ui.notify(
@@ -197,7 +207,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 				}
 			} else if (action !== "status" && action !== "link") {
 				ctx.ui.notify(
-					"/remote start [port] | stop | status | link [--view] | revoke\nDefault port 8787. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords: they stay valid across stop and restart until revoke replaces them. Remote input can run tools with this process's permissions. Stop or process exit ends remote control for this session.",
+					"/remote start [port] | stop | status | link [--view] | revoke\nThe port, 8787 by default, serves Sessions: every started pi, whichever pi holds the port, and another takes it over when that pi quits. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords: they stay valid across stop and restart until revoke replaces them. Remote input can run tools with this process's permissions. Stop or process exit ends remote control for this session.",
 				);
 				return;
 			}
@@ -208,7 +218,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 			}
 			const serve = await inspectServe(identity.origin);
 			ctx.ui.notify(
-				`Remote listening at ${identity.origin}. ${serve.url ? `Serve: ${serve.url}` : `Serve ${serve.available ? "not configured for this port" : "unavailable"}. One-time command:\n${serve.command}`}`,
+				`Remote listening at ${identity.session}. Sessions at ${identity.origin}, ${identity.hub ? "served by this pi" : "served by another process"}. ${serve.url ? `Serve: ${serve.url}` : `Serve ${serve.available ? "not configured for this port" : "unavailable"}. One-time command:\n${serve.command}`}`,
 			);
 			if (action !== "link") return;
 			if (ctx.mode !== "tui") {

@@ -612,3 +612,40 @@ body[data-working="true"] .composer textarea {
 		transition: none !important;
 	}
 }
+
+a.quiet {
+	text-decoration: none;
+}
+body.dashboard {
+	padding-bottom: var(--step-5);
+}
+.sessions {
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--step-2);
+}
+.session {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--step-1) var(--step-2);
+	min-height: var(--control);
+	padding: var(--step-3) var(--step-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	text-decoration: none;
+}
+.session strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.session-detail {
+	grid-column: 1 / -1;
+	color: var(--muted);
+	font-size: var(--text-sm);
+}

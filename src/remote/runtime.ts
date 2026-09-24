@@ -39,10 +39,72 @@ export type Credentials = { control: string; view: string };
 const CLIENT_LIMIT = 8;
 const VIEW_LIMIT = 4;
 
+export function json(res: ServerResponse, status: number, body: unknown) {
+	res.writeHead(status, { "Content-Type": "application/json" });
+	res.end(JSON.stringify(body));
+}
+
+export function listener(
+	handle: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
+) {
+	const server = createServer({ maxHeaderSize: 8192 }, (req, res) => {
+		void handle(req, res).catch(() => {
+			if (res.headersSent) res.destroy();
+			else json(res, 500, { error: "Request failed" });
+		});
+	});
+	server.requestTimeout = 15000;
+	server.headersTimeout = 10000;
+	server.maxConnections = 32;
+	return server;
+}
+
+export function guard(req: IncomingMessage, res: ServerResponse) {
+	res.setHeader("Cache-Control", "no-store");
+	res.setHeader(
+		"Content-Security-Policy",
+		"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+	);
+	res.setHeader("Referrer-Policy", "no-referrer");
+	res.setHeader("X-Content-Type-Options", "nosniff");
+	if (!req.headers.origin) return true;
+	let same = false;
+	try {
+		same = new URL(req.headers.origin).host === req.headers.host;
+	} catch {}
+	if (!same) json(res, 403, { error: "Origin rejected" });
+	return same;
+}
+
+export function authorize(
+	authorization: string | undefined,
+	keys: Credentials,
+): boolean | undefined {
+	const actual = Buffer.from(authorization ?? "");
+	for (const [credential, control] of [
+		[keys.control, true],
+		[keys.view, false],
+	] as const) {
+		const expected = Buffer.from(`Bearer ${credential}`);
+		if (expected.length === actual.length && timingSafeEqual(expected, actual))
+			return control;
+	}
+	return undefined;
+}
+
+export function asset(req: IncomingMessage, res: ServerResponse, assets: Assets) {
+	const path = req.url ?? "";
+	const found = Object.hasOwn(assets, path) ? assets[path] : undefined;
+	if (req.method !== "GET" || !found) return false;
+	res.writeHead(200, { "Content-Type": found.type });
+	res.end(found.body);
+	return true;
+}
+
 export class RemoteRuntime {
 	private server?: Server;
 	private keys?: () => Credentials;
-	private origin?: string;
+	private bound?: number;
 	private starting?: Promise<void>;
 	private stopping?: Promise<void>;
 	private owner?: symbol;
@@ -168,6 +230,16 @@ export class RemoteRuntime {
 		if (!this.update) this.update = setTimeout(() => this.broadcast(), 100);
 	}
 
+	summary() {
+		return {
+			session: this.binding
+				? { id: text(this.binding.id, 128), name: text(this.binding.name, 256) }
+				: null,
+			status: this.status,
+			header: this.binding ? header(this.binding.header()) : null,
+		};
+	}
+
 	snapshot(control = true) {
 		const frame = (transcript: Message[]) => ({
 			version: 2,
@@ -175,11 +247,7 @@ export class RemoteRuntime {
 			generation: this.generation,
 			userSequence: this.userSequence,
 			revision: this.revision,
-			session: this.binding
-				? { id: text(this.binding.id, 128), name: text(this.binding.name, 256) }
-				: null,
-			status: this.status,
-			header: this.binding ? header(this.binding.header()) : null,
+			...this.summary(),
 			transcript,
 			assistant: this.assistant,
 			tools: this.tools,
@@ -194,15 +262,7 @@ export class RemoteRuntime {
 		if (this.server) return;
 		this.assets = assets;
 		this.keys = keys;
-		const server = createServer({ maxHeaderSize: 8192 }, (req, res) => {
-			void this.handle(req, res).catch(() => {
-				if (res.headersSent) res.destroy();
-				else this.json(res, 500, { error: "Request failed" });
-			});
-		});
-		server.requestTimeout = 15000;
-		server.headersTimeout = 10000;
-		server.maxConnections = 32;
+		const server = listener((req, res) => this.handle(req, res));
 		this.starting = new Promise<void>((resolve, reject) => {
 			server.once("error", reject);
 			server.listen(port, "127.0.0.1", () => {
@@ -211,7 +271,7 @@ export class RemoteRuntime {
 				if (!address || typeof address === "string")
 					return reject(new Error("No listening address"));
 				this.server = server;
-				this.origin = `http://127.0.0.1:${address.port}`;
+				this.bound = address.port;
 				this.heartbeat = setInterval(() => {
 					for (const client of this.clients.keys())
 						this.write(client, ": heartbeat\n\n");
@@ -230,10 +290,14 @@ export class RemoteRuntime {
 		}
 	}
 
+	get port() {
+		return this.bound;
+	}
+
 	identity() {
-		if (!this.origin || !this.keys) return undefined;
+		if (!this.bound || !this.keys) return undefined;
 		const { control, view } = this.keys();
-		return { origin: this.origin, token: control, view };
+		return { origin: `http://127.0.0.1:${this.bound}`, token: control, view };
 	}
 
 	async stop() {
@@ -259,7 +323,7 @@ export class RemoteRuntime {
 		this.endStreams();
 		const server = this.server;
 		this.server = undefined;
-		this.origin = undefined;
+		this.bound = undefined;
 		this.keys = undefined;
 		if (server) {
 			server.closeAllConnections();
@@ -291,64 +355,20 @@ export class RemoteRuntime {
 		} else client.write(frame);
 	}
 
-	private authorize(authorization?: string): boolean | undefined {
-		if (!this.keys) return undefined;
-		const keys = this.keys();
-		const actual = Buffer.from(authorization ?? "");
-		for (const [credential, control] of [
-			[keys.control, true],
-			[keys.view, false],
-		] as const) {
-			const expected = Buffer.from(`Bearer ${credential}`);
-			if (
-				expected.length === actual.length &&
-				timingSafeEqual(expected, actual)
-			)
-				return control;
-		}
-		return undefined;
-	}
-
-	private json(res: ServerResponse, status: number, body: unknown) {
-		res.writeHead(status, { "Content-Type": "application/json" });
-		res.end(JSON.stringify(body));
-	}
-
 	private async handle(req: IncomingMessage, res: ServerResponse) {
-		res.setHeader("Cache-Control", "no-store");
-		res.setHeader(
-			"Content-Security-Policy",
-			"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
-		);
-		res.setHeader("Referrer-Policy", "no-referrer");
-		res.setHeader("X-Content-Type-Options", "nosniff");
-		if (req.headers.origin) {
-			let same = false;
-			try {
-				same = new URL(req.headers.origin).host === req.headers.host;
-			} catch {
-				return this.json(res, 403, { error: "Origin rejected" });
-			}
-			if (!same) return this.json(res, 403, { error: "Origin rejected" });
-		}
+		if (!guard(req, res) || asset(req, res, this.assets)) return;
 		const path = req.url ?? "";
-		const asset = Object.hasOwn(this.assets, path)
-			? this.assets[path]
-			: undefined;
-		if (req.method === "GET" && asset) {
-			res.writeHead(200, { "Content-Type": asset.type });
-			res.end(asset.body);
-			return;
-		}
-		const control = this.authorize(req.headers.authorization);
+		const control = this.keys && authorize(req.headers.authorization, this.keys());
 		if (control === undefined)
-			return this.json(res, 401, { error: "Unauthorized" });
+			return json(res, 401, { error: "Unauthorized" });
+		if (req.method === "GET" && path === "/summary")
+			return json(res, 200, this.summary());
 		if (req.method === "GET" && path === "/bootstrap")
-			return this.json(res, 200, this.snapshot(control));
+			return json(res, 200, this.snapshot(control));
 		if (req.method === "GET" && path === "/events") {
 			const viewers = [...this.clients.values()].filter((held) => !held).length;
 			if (this.clients.size >= CLIENT_LIMIT || (!control && viewers >= VIEW_LIMIT))
-				return this.json(res, 429, { error: "Too many clients" });
+				return json(res, 429, { error: "Too many clients" });
 			res.writeHead(200, {
 				"Content-Type": "text/event-stream",
 				"X-Accel-Buffering": "no",
@@ -360,11 +380,11 @@ export class RemoteRuntime {
 			return;
 		}
 		if (req.method !== "POST" || path !== "/command")
-			return this.json(res, 404, { error: "Not found" });
+			return json(res, 404, { error: "Not found" });
 		if (!control)
-			return this.json(res, 403, { error: "This link is view-only" });
+			return json(res, 403, { error: "This link is view-only" });
 		if (req.headers["content-type"] !== "application/json")
-			return this.json(res, 415, { error: "Expected JSON" });
+			return json(res, 415, { error: "Expected JSON" });
 		const owner = this.owner;
 		const chunks: Buffer[] = [];
 		let size = 0;
@@ -372,7 +392,7 @@ export class RemoteRuntime {
 		for await (const chunk of req) {
 			size += chunk.length;
 			if (size > 16384) {
-				this.json(res, 413, { error: "Command too large" });
+				json(res, 413, { error: "Command too large" });
 				return;
 			}
 			chunks.push(chunk);
@@ -381,7 +401,7 @@ export class RemoteRuntime {
 		try {
 			command = record(JSON.parse(Buffer.concat(chunks).toString("utf8")));
 		} catch {
-			return this.json(res, 400, { error: "Invalid JSON" });
+			return json(res, 400, { error: "Invalid JSON" });
 		}
 		const { action, generation } = command;
 		if (
@@ -397,16 +417,16 @@ export class RemoteRuntime {
 					!command.text.trim() ||
 					command.text.length > 8192)
 		) {
-			return this.json(res, 400, { error: "Invalid command" });
+			return json(res, 400, { error: "Invalid command" });
 		}
 		const binding = this.binding;
-		if (!binding) return this.json(res, 503, { error: "Session reconnecting" });
+		if (!binding) return json(res, 503, { error: "Session reconnecting" });
 		if (owner !== this.owner || generation !== this.generation)
-			return this.json(res, 409, {
+			return json(res, 409, {
 				error: "Session changed; resync before sending",
 			});
 		if (action === "prompt" && !binding.idle())
-			return this.json(res, 409, {
+			return json(res, 409, {
 				error: "Agent busy; use steer or followUp",
 			});
 		try {
@@ -416,12 +436,12 @@ export class RemoteRuntime {
 					command.text as string,
 					action as "prompt" | "steer" | "followUp",
 				);
-			this.json(res, 202, {
+			json(res, 202, {
 				accepted: true,
 				...(action === "abort" ? {} : { display: clamp(mask(command.text)) }),
 			});
 		} catch {
-			this.json(res, 409, { error: "Command not accepted" });
+			json(res, 409, { error: "Command not accepted" });
 		}
 	}
 }

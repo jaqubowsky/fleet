@@ -223,10 +223,10 @@ test("extension controls a process runtime across fresh factories", {
 	const identity = remote.identity();
 	assert.ok(identity);
 	const headers = { Authorization: `Bearer ${identity.token}` };
-	const initial = await fetch(`${identity.origin}/bootstrap`, { headers });
+	const initial = await fetch(`${identity.session}/bootstrap`, { headers });
 	assert.equal(initial.status, 200);
 	assert.equal((await initial.json()).session.id, "original");
-	const page = await fetch(`${identity.origin}/`);
+	const page = await fetch(`${identity.session}/`);
 	assert.equal(page.status, 200);
 	assert.match(
 		page.headers.get("content-security-policy")!,
@@ -247,16 +247,32 @@ test("extension controls a process runtime across fresh factories", {
 		"/manifest.webmanifest",
 		"/icon.svg",
 	]) {
-		const library: Response = await fetch(identity.origin + path);
+		const library: Response = await fetch(identity.session + path);
 		assert.equal(library.status, 200, `${path} is public`);
 		assert.ok((await library.text()).length > 0, `${path} has a body`);
 	}
 	assert.equal(
-		(await fetch(`${identity.origin}/vendor/anything-else.js`)).status,
+		(await fetch(`${identity.session}/vendor/anything-else.js`)).status,
 		401,
 		"only the listed assets are public",
 	);
-	const stream = await fetch(`${identity.origin}/events`, { headers });
+	const dashboard = await fetch(`${identity.origin}/`);
+	assert.match(await dashboard.text(), /Sessions/);
+	for (const path of ["/dashboard.js", "/client.css", "/connection.js", "/manifest.webmanifest", "/icon.svg"])
+		assert.equal((await fetch(identity.origin + path)).status, 200, `${path} is public on the hub`);
+	const proxied = new URL(`/s/${remote.id}/`, identity.origin);
+	const html = await (await fetch(proxied)).text();
+	const script = await (await fetch(new URL("client.js", proxied))).text();
+	for (const [reference, base] of [
+		...[...html.matchAll(/(?:href|src)="([^"]+)"/g)].map((match) => [match[1], proxied] as const),
+		...[...script.matchAll(/^import .* from "([^"]+)";$/gm)].map((match) => [match[1], new URL("client.js", proxied)] as const),
+	]) {
+		if (reference === "../../") continue;
+		const url = new URL(reference, base);
+		assert.ok(url.pathname.startsWith(proxied.pathname), `${reference} stays under the session's prefix`);
+		assert.equal((await fetch(url)).status, 200, `${reference} loads through the hub`);
+	}
+	const stream = await fetch(`${identity.session}/events`, { headers });
 	const reader = stream.body!.getReader();
 	t.after(() => reader.cancel());
 	assert.match(
@@ -267,7 +283,7 @@ test("extension controls a process runtime across fresh factories", {
 	const widgetLines = current.widgetLines();
 	assert.equal(typeof current.widget(), "function");
 	assert.ok(widgetLines && widgetLines.length > 10);
-	assert.ok(widgetLines.join("").includes(`#${identity.token}`));
+	assert.ok(widgetLines.join("").includes(`${identity.origin}/#${identity.token}`), "the link opens Sessions");
 	assert.ok(widgetLines.every((line) => !line.includes("widget truncated")));
 	await current.command("link --view");
 	const viewLines = current.widgetLines();
@@ -282,6 +298,7 @@ test("extension controls a process runtime across fresh factories", {
 		current.widget() === undefined,
 		"status hides the credential widget",
 	);
+	assert.match(current.notices.at(-1)!, /served by this pi/);
 
 	for (const reason of ["new", "resume", "fork", "reload"]) {
 		const old = current;
@@ -303,10 +320,10 @@ test("extension controls a process runtime across fresh factories", {
 			"stale quit preserves identity",
 		);
 		const bootstrap = await (
-			await fetch(`${identity.origin}/bootstrap`, { headers })
+			await fetch(`${identity.session}/bootstrap`, { headers })
 		).json();
 		assert.equal(bootstrap.session.id, reason);
-		const result: Response = await fetch(`${identity.origin}/command`, {
+		const result: Response = await fetch(`${identity.session}/command`, {
 			method: "POST",
 			headers: { ...headers, "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -321,7 +338,7 @@ test("extension controls a process runtime across fresh factories", {
 	await reader.cancel();
 	await current.command("stop");
 	assert.ok(remote.identity() === undefined, "stop closes the listener");
-	await assert.rejects(fetch(`${identity.origin}/bootstrap`, { headers }));
+	await assert.rejects(fetch(`${identity.session}/bootstrap`, { headers }));
 	await current.command(`start ${await port()}`);
 	assert.equal(remote.identity()!.token, identity.token, "restart keeps the link");
 	await current.command("link");
@@ -329,7 +346,7 @@ test("extension controls a process runtime across fresh factories", {
 	assert.ok(current.widget() === undefined, "revoke hides the old link");
 	assert.notEqual(remote.identity()!.token, identity.token, "revoke rotates the link");
 	assert.equal(
-		(await fetch(`${remote.identity()!.origin}/bootstrap`, { headers })).status,
+		(await fetch(`${remote.identity()!.session}/bootstrap`, { headers })).status,
 		401,
 		"the old link is refused",
 	);

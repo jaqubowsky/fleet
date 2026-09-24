@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="theme-color"
+      content="#fbfbfa"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#12120f"
+      media="(prefers-color-scheme: dark)"
+    />
+    <title>Pi remote</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="client.css" />
+    <script type="module" src="dashboard.js"></script>
+  </head>
+  <body class="dashboard">
+    <header class="topbar">
+      <div class="topbar-row">
+        <h1>Sessions</h1>
+      </div>
+    </header>
+
+    <p id="banner" class="banner" hidden></p>
+
+    <main class="thread">
+      <ul id="sessions" class="sessions" aria-label="Pi sessions"></ul>
+      <div id="empty" class="empty" hidden>
+        <h2>No sessions</h2>
+        <p>Start pi on the Mac and it appears here.</p>
+      </div>
+    </main>
+  </body>
+</html>

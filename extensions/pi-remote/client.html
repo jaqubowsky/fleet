@@ -20,22 +20,23 @@
     <title>Pi remote</title>
     <link
       rel="stylesheet"
-      href="/vendor/highlight-light.css"
+      href="vendor/highlight-light.css"
       media="(prefers-color-scheme: light)"
     />
     <link
       rel="stylesheet"
-      href="/vendor/highlight-dark.css"
+      href="vendor/highlight-dark.css"
       media="(prefers-color-scheme: dark)"
     />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="stylesheet" href="/client.css" />
-    <script type="module" src="/client.js"></script>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="client.css" />
+    <script type="module" src="client.js"></script>
   </head>
   <body>
     <header class="topbar">
       <div class="topbar-row">
+        <a id="sessions" class="quiet" href="../../" hidden>Sessions</a>
         <h1 id="session-name">Pi remote</h1>
         <span id="status" class="chip" data-state="offline">offline</span>
         <button id="notify" class="quiet" type="button" hidden>Notify</button>

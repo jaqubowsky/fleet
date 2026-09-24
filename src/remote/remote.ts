@@ -8,6 +8,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { Hub, register, unregister } from "./hub.ts";
 import { RemoteRuntime, type Assets, type Credentials } from "./runtime.ts";
 
 const CREDENTIAL = /^[a-f0-9]{64}$/;
@@ -41,16 +42,24 @@ function stored(dir: string): Credentials {
 }
 
 export class Remote {
+	readonly id = randomBytes(8).toString("hex");
 	readonly runtime = new RemoteRuntime();
+	private hub?: Hub;
+	private dir?: string;
 	private watched?: string;
 	private readonly revoked = () => this.runtime.endStreams();
 
-	async start(dir: string, port: number, assets: Assets) {
-		stored(dir);
-		await this.runtime.start(port, assets, () => stored(dir));
-		if (this.watched) return;
+	async start(dir: string, port: number, assets: { session: Assets; hub: Assets }) {
+		const keys = () => stored(dir);
+		keys();
+		await this.runtime.start(0, assets.session, keys);
+		if (this.hub) return;
+		this.dir = dir;
+		register(dir, this.id, this.runtime.port!);
+		this.hub = new Hub(port, dir, assets.hub, keys);
 		this.watched = join(dir, "credentials.json");
 		watchFile(this.watched, { interval: 1000, persistent: false }, this.revoked);
+		await this.hub.claim();
 	}
 
 	revoke(dir: string) {
@@ -61,11 +70,22 @@ export class Remote {
 	async stop() {
 		if (this.watched) unwatchFile(this.watched, this.revoked);
 		this.watched = undefined;
-		await this.runtime.stop();
+		if (this.dir) unregister(this.dir, this.id);
+		const hub = this.hub;
+		this.hub = undefined;
+		await Promise.all([hub?.release(), this.runtime.stop()]);
 	}
 
 	identity() {
-		return this.runtime.identity();
+		const session = this.runtime.identity();
+		if (!session || !this.hub) return undefined;
+		return {
+			origin: `http://127.0.0.1:${this.hub.port}`,
+			session: session.origin,
+			token: session.token,
+			view: session.view,
+			hub: this.hub.serving,
+		};
 	}
 }
 

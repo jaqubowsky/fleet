@@ -443,7 +443,7 @@ test("only the bearer holder can read a session", async (t) => {
 	assert.equal(allowed.status, 200);
 	assert.match(origin, /^http:\/\/127\.0\.0\.1:\d+$/);
 	assert.equal(JSON.stringify(await allowed.json()).includes(token), false);
-	for (const path of ["/bootstrap", "/events", "/command"]) {
+	for (const path of ["/bootstrap", "/summary", "/events", "/command"]) {
 		assert.equal(
 			(
 				await fetch(origin + path, {

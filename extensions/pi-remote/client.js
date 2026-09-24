@@ -1,17 +1,12 @@
-import { deliberate, terminal } from "/connection.js";
-import hljs from "/vendor/highlight.js";
-import { marked } from "/vendor/marked.js";
-import { tree } from "/markdown.js";
+import { CREDENTIAL, credential, deliberate, terminal } from "./connection.js";
+import hljs from "./vendor/highlight.js";
+import { marked } from "./vendor/marked.js";
+import { tree } from "./markdown.js";
 
-const fragment = location.hash.slice(1);
-const token = /^[a-f0-9]{64}$/.test(fragment)
-	? fragment
-	: localStorage.getItem("pi-remote-credential") ?? "";
-if (/^[a-f0-9]{64}$/.test(fragment))
-	localStorage.setItem("pi-remote-credential", fragment);
-if (location.hash) history.replaceState(null, "", location.pathname);
+const token = credential(location, history, localStorage);
 const headers = { Authorization: `Bearer ${token}` };
 const $ = (id) => document.getElementById(id);
+$("sessions").hidden = !location.pathname.startsWith("/s/");
 let snapshot;
 let connected = false;
 let sending = false;
@@ -334,14 +329,16 @@ async function request(path, options = {}) {
 		throw new Error(
 			response.status === 401
 				? "Link expired. Scan /remote link again."
-				: response.status === 429
+				: response.status === 404
+					? "Session ended. Open Sessions."
+					: response.status === 429
 					? "Too many phones are watching this link. Close one and open it again."
 					: `Request rejected (${response.status}). Resync before retrying.`,
 		);
 	return response;
 }
 async function connect() {
-	if (!/^[a-f0-9]{64}$/.test(token)) {
+	if (!CREDENTIAL.test(token)) {
 		banner("Open the private URL that /remote link shows.", "danger");
 		return;
 	}
@@ -349,8 +346,8 @@ async function connect() {
 		controller = new AbortController();
 		let reader;
 		try {
-			render(await (await request("/bootstrap")).json());
-			reader = (await request("/events")).body.getReader();
+			render(await (await request("bootstrap")).json());
+			reader = (await request("events")).body.getReader();
 			const decoder = new TextDecoder();
 			let pending = "";
 			for (;;) {
@@ -397,7 +394,7 @@ async function send(action) {
 	const after = snapshot.userSequence;
 	inFlightAfter = after;
 	try {
-		const accepted = await (await request("/command", {
+		const accepted = await (await request("command", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
