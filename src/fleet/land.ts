@@ -38,13 +38,15 @@ export function land(input: LandInput, io: Io): void {
 	} catch (error) {
 		throw new Error(`${branch} in the container is not a descendant of the one here, so importing it would drop what this repo already holds, signatures included\n${(error as Error).message}\nresync the container with git fetch origin && git reset --hard origin/${branch}, or delete ${branch} here when the container's history is the one you want`);
 	}
+	const remote = input.sign || input.push;
+	if (remote && base.startsWith("origin/")) io.git(["fetch", "--quiet", "origin", base.slice("origin/".length)], input.repo);
+	const pushed = remote ? remoteBranch(input.repo, branch, io) : undefined;
+
 	io.log(`${branch} <- ${input.sandbox} (base ${base})`);
 	io.log(io.git(["--no-pager", "log", "--format=%h %G? %s", `${base}..${branch}`], input.repo));
 	io.log(io.git(["--no-pager", "diff", "--stat", `${base}...${branch}`], input.repo));
 
-	const pushed = input.sign || input.push ? remoteBranch(input.repo, branch, io) : undefined;
-
-	if (input.sign) sign(input.repo, branch, pushed ?? base, io);
+	if (input.sign) sign(input.repo, branch, pushed ? [base, pushed] : [base], io);
 	else io.log(`unsigned commits stay unsigned; rerun with --sign to sign them (one Touch ID tap per commit)`);
 
 	if (input.push) push(input.repo, branch, io);
@@ -70,8 +72,8 @@ function push(repo: string, branch: string, io: Io): void {
 	io.log(`${branch} -> origin`);
 }
 
-function sign(repo: string, branch: string, from: string, io: Io): void {
-	const commits = io.git(["rev-list", "--reverse", `${from}..${branch}`], repo).split("\n").filter(Boolean);
+function sign(repo: string, branch: string, published: string[], io: Io): void {
+	const commits = io.git(["rev-list", "--reverse", branch, "--not", ...published], repo).split("\n").filter(Boolean);
 	if (!commits.length) return;
 	const worktree = `${io.tmp}/fleet-sign-${branch.replace(/[^a-z0-9_-]+/gi, "-")}`;
 	try { io.git(["worktree", "remove", "--force", worktree], repo); } catch {}

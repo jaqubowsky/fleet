@@ -77,7 +77,7 @@ test("land --sign signs only the commits origin does not have yet", () => {
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 
 	assert.ok(gits.includes("fetch --quiet origin web-1"));
-	assert.ok(gits.includes("rev-list --reverse origin/web-1..web-1"));
+	assert.ok(gits.includes("rev-list --reverse web-1 --not origin/main origin/web-1"));
 });
 
 test("land --sign takes the whole branch when origin has never seen it", () => {
@@ -85,7 +85,19 @@ test("land --sign takes the whole branch when origin has never seen it", () => {
 	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 
-	assert.ok(gits.includes("rev-list --reverse origin/main..web-1"));
+	assert.ok(gits.includes("rev-list --reverse web-1 --not origin/main"));
+});
+
+test("land --sign refreshes the base before it lists or counts the commits to sign", () => {
+	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
+
+	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
+	const refresh = gits.indexOf("fetch --quiet origin main");
+	assert.ok(refresh >= 0);
+	assert.ok(refresh < gits.findIndex((g) => g.startsWith("--no-pager log")));
+	assert.ok(refresh < gits.findIndex((g) => g.startsWith("rev-list --reverse")));
 });
 
 test("land --push never forces, and a rejected push names whose command the force is", () => {
