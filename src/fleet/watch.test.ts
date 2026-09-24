@@ -125,6 +125,26 @@ test("different containers wake independently while an identical transition stay
 	assert.doesNotMatch(wakes[0], /claude-second/);
 });
 
+test("each wake carries only the log lines that container added since its previous wake", (t: TestContext) => {
+	const { io, status } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	const file = "/home/me/.sandboxes/webapp/claude-worker/status.md";
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	io.files[file] = "status: analyzing\n\n## Log\n- Scope set; analysis.md\n";
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	status("worker:pane", "working");
+	io.files[file] = "status: implementing\n\n## Log\n- Scope set; analysis.md\n- Baseline build passed; logs/initial-build.log\n";
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[0], /log \(latest\):\n- Scope set; analysis\.md\ncommits:/);
+	assert.match(wakes[1], /log since last wake:\n- Baseline build passed; logs\/initial-build\.log\ncommits:/);
+	assert.doesNotMatch(wakes[1], /Scope set/);
+});
+
 test("an empty scope asks herdr and sbx nothing", (t: TestContext) => {
 	const { io, intervals } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
 

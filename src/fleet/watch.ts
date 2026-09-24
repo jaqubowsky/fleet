@@ -2,7 +2,7 @@ import net from "node:net";
 import type { Io } from "./io.ts";
 import { RING_MS, SETTLE_MS, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { type Agent, commitsProbe, type Sandbox, sandboxes, wake } from "./status.ts";
+import { type Agent, commitsProbe, logLines, type Sandbox, sandboxes, wake } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
@@ -25,6 +25,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 	const socketPath = process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; from: string | undefined }>();
+	const logShown = new Map<string, string[]>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
@@ -43,7 +44,10 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		try {
 			commits = io.sbx(["exec", sandbox, "sh", "-c", commitsProbe], { quiet: true });
 		} catch {}
-		return wake(io.read(`${dir}/status.md`), commits);
+		const status = io.read(`${dir}/status.md`);
+		const text = wake(status, commits, logShown.get(name));
+		logShown.set(name, logLines(status));
+		return text;
 	};
 
 	const emit = (name: string, change: string) => onWake(wakeLines(name, change, details(name)));

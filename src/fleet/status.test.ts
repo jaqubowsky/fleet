@@ -43,14 +43,47 @@ test("a status brief carries summary and continuation without copying the log", 
 	assert.equal(brief(status), "status: implementing\nattention: none\nsummary: The regression is reproduced. The fix awaits review; see [analysis](analysis.md).\nnext step: Run two-axis-review against abc1234.");
 });
 
-test("a wake projects status and commits without review or log content", () => {
+test("a wake projects status and commits, and no log line the host already saw", () => {
 	const status = "status: done\nattention: none\n\n## Summary\nThe fix passes.\nReview is complete; see review.md.\n\n## Next step\nWait for the host.\n\n## Log\n- internal detail\n";
 
 	assert.equal(
-		wake(status, "abc1234 fix(documents): exclude rebookings\n"),
+		wake(status, "abc1234 fix(documents): exclude rebookings\n", ["- internal detail"]),
 		"status: done\nattention: none\nsummary: The fix passes. Review is complete; see review.md.\nnext step: Wait for the host.\ncommits: abc1234 fix(documents): exclude rebookings",
 	);
 	assert.equal(wake(undefined, ""), "status: no status.md\nattention: not recorded\nsummary: not recorded\nnext step: not recorded\ncommits: none");
+});
+
+test("a wake carries the log lines written since the previous wake", () => {
+	const status = "status: implementing\nattention: none\n\n## Summary\nx\n\n## Next step\ny\n\n## Log\n- Scope set; analysis.md\n- Baseline build passed; logs/initial-build.log\n- Decided: keep the stacked layout under 860 px, because the ticket covers wide screens only; analysis.md\n";
+
+	const result = wake(status, "", ["- Scope set; analysis.md"]);
+
+	assert.equal(
+		result,
+		"status: implementing\nattention: none\nsummary: x\nnext step: y\nlog since last wake:\n- Baseline build passed; logs/initial-build.log\n- Decided: keep the stacked layout under 860 px, because the ticket covers wide screens only; analysis.md\ncommits: none",
+	);
+});
+
+test("a wake shows the latest five new log lines, each cut to 200 characters, and counts the ones before them", () => {
+	const status = `status: implementing\n\n## Log\n${Array.from({ length: 7 }, (_, i) => `- step ${i + 1}`).join("\n")}\n- ${"x".repeat(500)}\n`;
+
+	const result = wake(status, "", []);
+
+	assert.match(result, new RegExp(`\\nlog since last wake \\(3 earlier in status\\.md\\):\\n- step 4\\n- step 5\\n- step 6\\n- step 7\\n- ${"x".repeat(195)}\\.\\.\\.\\ncommits: none$`));
+});
+
+test("a wake from a watch that has not shown this container before calls its log lines the latest, not new", () => {
+	const status = "status: implementing\n\n## Log\n- Scope set; analysis.md\n";
+
+	assert.match(wake(status, ""), /\nlog \(latest\):\n- Scope set; analysis\.md\n/);
+});
+
+test("a log line written again word for word still reaches the wake", () => {
+	const status = "status: implementing\n\n## Log\n- Gate passed; logs/gate.log\n- Commit a1\n- Gate passed; logs/gate.log\n";
+
+	const result = wake(status, "", ["- Gate passed; logs/gate.log", "- Commit a1"]);
+
+	assert.match(result, /\nlog since last wake:\n- Gate passed; logs\/gate\.log\ncommits: none$/);
 });
 
 test("a wake bounds every status field and commit list", () => {

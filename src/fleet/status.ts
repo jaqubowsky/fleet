@@ -35,14 +35,37 @@ function bounded(text: string, limit: number): string {
 	return compact.length > limit ? `${compact.slice(0, limit - 3)}...` : compact;
 }
 
+function sectionOf(statusMd: string | undefined, name: string): string | undefined {
+	return statusMd?.replace(/\r\n/g, "\n").split(/^## /m).find((part) => part.startsWith(`${name}\n`))?.slice(name.length + 1);
+}
+
+export function fieldsOf(statusMd: string | undefined): { status?: string; attention?: string; summary?: string; next?: string } {
+	const header = (name: string) => statusMd?.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1];
+	const section = (name: string) => sectionOf(statusMd, name)?.trim() || undefined;
+	return { status: header("status"), attention: header("attention"), summary: section("Summary"), next: section("Next step") };
+}
+
+export function logLines(statusMd: string | undefined): string[] {
+	return sectionOf(statusMd, "Log")?.split("\n").filter((line) => line.startsWith("- ")) ?? [];
+}
+
+export function addedLines(lines: string[], before: string[]): string[] {
+	const left = new Map<string, number>();
+	for (const line of before) left.set(line, (left.get(line) ?? 0) + 1);
+	return lines.filter((line) => {
+		const count = left.get(line) ?? 0;
+		if (count) left.set(line, count - 1);
+		return !count;
+	});
+}
+
 export function brief(statusMd: string | undefined): string {
-	const sections = statusMd?.replace(/\r\n/g, "\n").split(/^## /m) ?? [];
-	const section = (name: string) => sections.find((part) => part.startsWith(`${name}\n`))?.slice(name.length + 1).trim() || "not recorded";
+	const fields = fieldsOf(statusMd);
 	return [
-		`status: ${bounded(statusMd?.match(/^status: (.*)$/m)?.[1] ?? (statusMd === undefined ? "no status.md" : "not recorded"), 80)}`,
-		`attention: ${bounded(statusMd?.match(/^attention: (.*)$/m)?.[1] ?? "not recorded", 300)}`,
-		`summary: ${bounded(section("Summary"), 600)}`,
-		`next step: ${bounded(section("Next step"), 300)}`,
+		`status: ${bounded(fields.status ?? (statusMd === undefined ? "no status.md" : "not recorded"), 80)}`,
+		`attention: ${bounded(fields.attention ?? "not recorded", 300)}`,
+		`summary: ${bounded(fields.summary ?? "not recorded", 600)}`,
+		`next step: ${bounded(fields.next ?? "not recorded", 300)}`,
 	].join("\n");
 }
 
@@ -56,9 +79,14 @@ export function formatRows(rows: Row[]): string {
 
 export const commitsProbe = 'cd "$WORKSPACE_DIR" && base="$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)" && git log --oneline "$base"..HEAD 2>/dev/null | head -5';
 
-export function wake(statusMd: string | undefined, commits: string): string {
+export function wake(statusMd: string | undefined, commits: string, shown?: string[]): string {
 	const recent = commits.split("\n").filter((line) => line.trim()).slice(0, 5).map((line) => bounded(line, 120));
-	return `${brief(statusMd)}\ncommits: ${recent.join("; ") || "none"}`;
+	const added = addedLines(logLines(statusMd), shown ?? []);
+	const latest = added.slice(-5).map((line) => bounded(line, 200));
+	const earlier = added.length - latest.length;
+	const heading = shown ? "log since last wake" : "log (latest)";
+	const log = latest.length ? `\n${heading}${earlier ? ` (${earlier} earlier in status.md)` : ""}:\n${latest.join("\n")}` : "";
+	return `${brief(statusMd)}${log}\ncommits: ${recent.join("; ") || "none"}`;
 }
 
 export function elapsed(from: Date, to: Date): string {
