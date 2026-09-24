@@ -59,6 +59,11 @@
     "lm-studio",
     "vllm"
   ],
+  "retry": {
+    "maxRetries": 10,
+    "baseDelayMs": 5000,
+    "maxDelayMs": 120000
+  },
   "compaction": {
     "enabled": false,
     "reserveTokens": 16384,
