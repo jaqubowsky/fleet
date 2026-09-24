@@ -10,7 +10,6 @@ type Session = {
 	sendUserMessage(text: string): Promise<void> | void;
 };
 
-export const COMMAND = "/session-handoff";
 export const COMPLETE = "session handoff complete; fresh session idle";
 const CANCELLED = "session handoff cancelled; still in the previous session";
 
@@ -23,8 +22,12 @@ export function withAttention(status: string, text: string): string {
 	return status.replace(/^attention: .*$/m, () => `attention: ${text}`);
 }
 
-export function contextNote(threshold: number, end: string): string {
-	return `The context has passed ${threshold} tokens, and every turn now reads all of it again. End this session at the next point where status.md and the task files hold what the work needs: ${end}.`;
+export function contextNote(level: number): string {
+	return `The context has passed ${level} tokens, and every turn now reads all of it again: suggest a session handoff at the next natural break, as your Session handoff rule describes.`;
+}
+
+export function reminderLevel(tokens: number, threshold: number): number | undefined {
+	return tokens < threshold ? undefined : threshold + Math.floor((tokens - threshold) / 100_000) * 100_000;
 }
 
 export function pointer(taskDirectory: string): string {
@@ -88,18 +91,6 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 		if (prompt) await session.sendUserMessage(prompt);
 	};
 
-	pi.registerTool({
-		name: "session_handoff",
-		label: "Session handoff",
-		description: `At an appropriate handoff point, keep durable artifacts current, then call session_handoff and end your turn. It records the suggestion in status.md, where the host sees it. The user or the host approves by running ${COMMAND}, which opens a fresh idle session with only hidden optional task-directory context; tell the user that command. You cannot approve it yourself.`,
-		parameters: { type: "object", properties: {}, additionalProperties: false },
-		concurrency: "exclusive",
-		async execute() {
-			await attention(suggested(COMMAND));
-			return { content: [{ type: "text", text: `Handoff suggested in status.md. The user or the host approves with ${COMMAND}; no session switch started.` }], terminate: true };
-		},
-	});
-
 	pi.registerCommand("session-handoff", {
 		description: "Open a fresh session for this task; text after the command becomes its first prompt",
 		handler: async (args: string, ctx: any) => {
@@ -118,16 +109,17 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 		},
 	});
 
-	let noted = false;
+	let reminded = 0;
 	pi.on("turn_end", (_event: unknown, ctx: any) => {
 		const tokens = ctx.getContextUsage()?.tokens;
 		if (tokens == null) return;
-		if (tokens < threshold) {
-			noted = false;
+		const level = reminderLevel(tokens, threshold);
+		if (level === undefined) {
+			reminded = 0;
 			return;
 		}
-		if (noted) return;
-		noted = true;
-		pi.sendMessage({ customType: "session-handoff", content: contextNote(threshold, "call session_handoff"), display: false }, { deliverAs: "steer" });
+		if (level <= reminded) return;
+		reminded = level;
+		pi.sendMessage({ customType: "session-handoff", content: contextNote(level), display: false }, { deliverAs: "steer" });
 	});
 }

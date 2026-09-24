@@ -4,7 +4,7 @@ import { test, type TestContext } from "node:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { clearedNote, contextAdvice, contextTokens, handoffNote, tail } from "../../claude/hooks/container.ts";
+import { clearedNote, contextTokens, tail } from "../../claude/hooks/container.ts";
 
 const turn = (input: number, cached: number) => JSON.stringify({ type: "assistant", message: { usage: { input_tokens: input, cache_read_input_tokens: cached, cache_creation_input_tokens: 0 } } });
 const status = "status: implementing\nattention: none\n\n## Summary\nx\n";
@@ -28,23 +28,32 @@ test("the context is read from the end of a transcript larger than the tail", (t
 	assert.equal(contextTokens(window), 250300);
 });
 
-test("past the threshold the agent hears that ending the session is worth it", () => {
-	assert.equal(contextAdvice(249_999, 250_000), undefined);
-	assert.match(contextAdvice(250_000, 250_000) ?? "", /passed 250000 tokens.*End this session.*end your turn, and the host starts a fresh session\.$/);
+test("past the threshold the agent hears once per 100k tokens that the next natural break is worth a handoff", (t) => {
+	const { task, hook } = container(t, status);
+	const transcript = join(task, "session.jsonl");
+	const toolCall = (tokens: number) => {
+		writeFileSync(transcript, turn(0, tokens));
+		return hook("post-tool-use", JSON.stringify({ transcript_path: transcript })).toString();
+	};
+
+	const heard = [249_999, 250_000, 260_000, 350_000, 449_999, 450_000].map(toolCall);
+
+	assert.deepEqual(heard.map((out) => out.match(/passed (\d+) tokens/)?.[1] ?? ""), ["", "250000", "", "350000", "", "450000"]);
+	assert.match(heard[1], /suggest a session handoff at the next natural break/);
 });
 
-test("a context past the threshold suggests /clear once, and never over a person's attention line", () => {
-	assert.equal(handoffNote(status, 249_999, 250_000), undefined);
-	assert.equal(handoffNote(status, 250_000, 250_000), status.replace("attention: none", "attention: session handoff suggested; approve with /clear"));
-	assert.equal(handoffNote(status.replace("attention: none", "attention: pick a date format"), 300_000, 250_000), undefined);
-});
+test("a turn that ends past the threshold leaves the handoff to the agent", (t) => {
+	const { task, hook } = container(t, status);
+	const transcript = join(task, "session.jsonl");
+	writeFileSync(transcript, turn(300, 300_000));
 
-test("no handoff is suggested while background work runs", () => {
-	assert.equal(handoffNote(status, 300_000, 250_000, true), undefined);
+	hook("stop", JSON.stringify({ transcript_path: transcript }));
+
+	assert.equal(readFileSync(join(task, "status.md"), "utf8"), status);
 });
 
 test("a clear that approves the suggestion records the fresh session", () => {
-	const suggested = handoffNote(status, 250_000, 250_000) ?? "";
+	const suggested = status.replace("attention: none", "attention: session handoff suggested; approve with /clear");
 
 	assert.equal(clearedNote(suggested), status.replace("attention: none", "attention: session handoff complete; fresh session idle"));
 });

@@ -20,6 +20,11 @@ You run in an isolated container. Someone outside watches this session and gives
 4. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling goes into `runbook/gate-baseline.md` as not runnable here, with the memory it had, and once into `attention:`, so the host can give the next container more, and every later gate with no more memory than that names it as not run instead of starting it again
 5. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 
+## Session handoff
+
+1. A session handoff is yours to suggest at a natural break: the piece of work in hand is finished (a commit, a written analysis or report, an answered question) and `status.md` with the task files carries everything the next step needs. Mid-change, or with reasoning the files do not hold yet, work on to the next natural break
+2. To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session
+
 ## Finish
 
 1. Commit unsigned on the task branch; signing, push and merge belong to the host. Before `ready-for-host`, and as long as the branch has never been pushed, `git fetch origin && git rebase origin/<base>` so the host lands a branch that applies to today's base; a fetch that cannot authenticate leaves the rebase to the host, with the base the branch sits on in `attention:`, and no credential is asked for. A pushed branch follows the stale-base rules of skill `babysit-pr` instead, because a rebase there is a force push. Signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything

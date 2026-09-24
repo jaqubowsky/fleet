@@ -4,11 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import handoff, { COMPLETE, suggested } from "../../extensions/session-handoff.ts";
-import { clearedNote, handoffNote } from "../../claude/hooks/container.ts";
+import { clearedNote } from "../../claude/hooks/container.ts";
 import { fakeIo } from "./fake-io.ts";
-import { seatSettings } from "../render/render.ts";
+import { renderText, seatSettings } from "../render/render.ts";
 import { HARNESSES } from "../harness.ts";
-import { brief } from "./status.ts";
 
 async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}) {
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
@@ -24,7 +23,6 @@ async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}
 	writeFileSync(join(dir, "settings.json"), settings);
 	const events: Record<string, (...args: any[]) => any> = {};
 	const commands: Record<string, { handler: (...args: any[]) => any }> = {};
-	const tools: Record<string, { execute: (...args: any[]) => any }> = {};
 	const sent: any[] = [];
 	const prompts: string[] = [];
 	let tokens: number | null | undefined;
@@ -52,14 +50,13 @@ async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}
 	await handoff({
 		on: (name: string, fn: any) => { events[name] = fn; },
 		registerCommand: (name: string, command: any) => { commands[name] = command; },
-		registerTool: (tool: any) => { tools[tool.name] = tool; },
 		sendMessage: replaces ? () => assert.fail("the old session's API is stale after a replacement") : into.sendMessage,
 		sendUserMessage: replaces ? () => assert.fail("the old session's API is stale after a replacement") : into.sendUserMessage,
 	}, async (_path, mutation) => mutation());
 	return {
 		ctx, taskDirectory, status, sent, prompts,
 		usage: (value: typeof tokens) => { tokens = value; },
-		suggest: () => tools.session_handoff.execute("call", {}, undefined, undefined, ctx),
+		suggest: () => writeFileSync(join(dir, "status.md"), status.replace("attention: none", `attention: ${suggested("/session-handoff")}`)),
 		approve: (args = "") => commands["session-handoff"].handler(args, ctx),
 		cancel: () => { cancelled = true; },
 		busy: () => {
@@ -80,7 +77,7 @@ const pointer = (dir: string) => ({
 	display: false,
 });
 
-test("a context past the threshold says once, mid-turn, that ending the session is worth it, and again after it drops", async (t) => {
+test("a context past the threshold says once, mid-turn, that the next natural break is worth a handoff, and again after it drops", async (t) => {
 	const r = await runtime(t, { replaces: false });
 
 	for (const tokens of [undefined, null, 249999, 250000, 300000]) {
@@ -95,10 +92,21 @@ test("a context past the threshold says once, mid-turn, that ending the session 
 
 	assert.equal(once.length, 1);
 	assert.deepEqual(once[0].options, { deliverAs: "steer" });
-	assert.equal(once[0].message.content, "The context has passed 250000 tokens, and every turn now reads all of it again. End this session at the next point where status.md and the task files hold what the work needs: call session_handoff.");
+	assert.equal(once[0].message.content, "The context has passed 250000 tokens, and every turn now reads all of it again: suggest a session handoff at the next natural break, as your Session handoff rule describes.");
 	assert.equal(r.sent.length, 2);
 	assert.equal(r.readStatus(), r.status);
 	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
+});
+
+test("a context that keeps growing hears it again at every further 100k tokens", async (t) => {
+	const r = await runtime(t, { replaces: false });
+
+	for (const tokens of [250000, 349999, 350000, 360000, 470000]) {
+		r.usage(tokens);
+		r.turnEnd();
+	}
+
+	assert.deepEqual(r.sent.map((sent) => sent.message.content.match(/passed (\d+) tokens/)?.[1]), ["250000", "350000", "450000"]);
 });
 
 test("sandbox uses an overridden rendered threshold", async (t) => {
@@ -118,31 +126,9 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 	assert.match(r.sent[0].message.content, /passed 84 tokens/);
 });
 
-test("a suggestion reaches the host attention line with the command that approves it", async (t) => {
-	const r = await runtime(t);
-
-	const result = await r.suggest();
-
-	assert.equal(result.terminate, true);
-	assert.match(result.content[0].text, /\/session-handoff/);
-	assert.match(brief(r.readStatus()), /attention: session handoff suggested; approve with \/session-handoff/);
-	assert.equal(r.readStatus().replace(/^attention: .*$/m, "attention: none"), r.status);
-	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
-});
-
-test("the model cannot approve its own suggestion", async (t) => {
-	const r = await runtime(t);
-
-	await r.suggest();
-	await r.suggest();
-
-	assert.deepEqual(r.state(), { attempts: 0, sessions: 0 });
-	assert.deepEqual(r.prompts, []);
-});
-
 test("the command opens an idle fresh session holding only hidden optional context", async (t) => {
 	const r = await runtime(t);
-	await r.suggest();
+	r.suggest();
 
 	await r.approve();
 
@@ -153,17 +139,16 @@ test("the command opens an idle fresh session holding only hidden optional conte
 	assert.deepEqual(r.state(), { attempts: 1, sessions: 1 });
 });
 
-test("each attention note the handoff writes is kept as a version, the command's own included", async (t) => {
+test("the attention note the command writes is kept as a version", async (t) => {
 	const r = await runtime(t);
+	r.suggest();
 
-	await r.suggest();
 	await r.approve();
 
 	const dir = join(r.taskDirectory, "logs/status");
 	const kept = readdirSync(dir).sort().map((name) => readFileSync(join(dir, name), "utf8"));
-	assert.equal(kept.length, 2);
-	assert.match(kept[0], /^attention: session handoff suggested; approve with \/session-handoff$/m);
-	assert.match(kept[1], /^attention: session handoff complete; fresh session idle$/m);
+	assert.equal(kept.length, 1);
+	assert.match(kept[0], /^attention: session handoff complete; fresh session idle$/m);
 });
 
 test("text after the command becomes the fresh session's first prompt", async (t) => {
@@ -200,7 +185,7 @@ test("the command waits for the old turn to finish", async (t) => {
 
 test("a cancelled replacement reports that it stayed put", async (t) => {
 	const r = await runtime(t);
-	await r.suggest();
+	r.suggest();
 	r.cancel();
 
 	await r.approve("Continue.");
@@ -211,13 +196,13 @@ test("a cancelled replacement reports that it stayed put", async (t) => {
 	assert.match(r.readStatus(), /^attention: session handoff cancelled; still in the previous session$/m);
 });
 
-test("every harness suggests a handoff with the command its host is told to steer", async (t) => {
-	const r = await runtime(t);
-	await r.suggest();
-	const claude = handoffNote(r.status, 250_000, 250_000) ?? "";
+test("every harness's container rule suggests a handoff with the command its host is told to steer", () => {
+	const rule = readFileSync("sbx/container/sandbox.md", "utf8");
+	const claude = `status: implementing\nattention: ${suggested(HARNESSES.claude.tokens["handoff.command"])}\n`;
 
-	for (const name of ["pi", "omp"] as const) assert.match(r.readStatus(), new RegExp(`^attention: ${suggested(HARNESSES[name].tokens["handoff.command"])}$`, "m"));
-	assert.match(claude, new RegExp(`^attention: ${suggested(HARNESSES.claude.tokens["handoff.command"])}$`, "m"));
+	const rendered = Object.values(HARNESSES).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: harness.cli }, () => undefined, "sandbox.md") }));
+
+	for (const { harness, text } of rendered) assert.ok(text.includes(`attention: ${suggested(harness.tokens["handoff.command"])}`), harness.name);
 	assert.match(clearedNote(claude) ?? "", new RegExp(`^attention: ${COMPLETE}$`, "m"));
 });
 

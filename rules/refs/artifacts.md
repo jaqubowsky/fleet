@@ -60,7 +60,7 @@ Write the file at each event below, before the next tool call.
 | `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step |
 | a commit lands | `status`, Summary, Next step |
 | the work waits on a person | `status`, `attention`, Summary, Next step |
-| a session handoff is about to be suggested | Summary, Next step |
+| a session handoff is suggested | `attention`, Summary, Next step |
 | the turn ends, before the chat report | every field that no longer holds |
 
 Summary and Next step hold only the present, so `## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. Each turning point appends one line in the next write, whichever event that write is for:

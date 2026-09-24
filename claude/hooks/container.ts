@@ -3,11 +3,11 @@ import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, wri
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deathNote } from "../../extensions/handoff-on-error.ts";
-import { COMPLETE, contextNote, pointer, suggested, withAttention } from "../../extensions/session-handoff.ts";
+import { COMPLETE, contextNote, pointer, reminderLevel, suggested, withAttention } from "../../extensions/session-handoff.ts";
 import { snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
-type HookInput = { transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string; background_tasks?: unknown[] };
+type HookInput = { transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string };
 
 const SUGGESTED = `attention: ${suggested("/clear")}`;
 const THRESHOLD = Number(process.env.FLEET_HANDOFF_TOKENS ?? 250000);
@@ -40,15 +40,6 @@ export function contextTokens(transcript: string): number {
 	return 0;
 }
 
-export function handoffNote(status: string, tokens: number, threshold: number, busy = false): string | undefined {
-	if (busy || tokens < threshold || !/^attention: none$/m.test(status)) return undefined;
-	return withAttention(status, suggested("/clear"));
-}
-
-export function contextAdvice(tokens: number, threshold: number): string | undefined {
-	return tokens < threshold ? undefined : contextNote(threshold, "end your turn, and the host starts a fresh session");
-}
-
 export function clearedNote(status: string): string | undefined {
 	if (!status.split("\n").includes(SUGGESTED)) return undefined;
 	return withAttention(status, COMPLETE);
@@ -57,17 +48,16 @@ export function clearedNote(status: string): string | undefined {
 function next(event: string, status: string, input: HookInput): string | undefined {
 	if (event === "stop-failure") return deathNote(status, input.error ?? input.error_type ?? "API error");
 	if (event === "session-start") return input.source === "clear" ? clearedNote(status) : undefined;
-	if (event !== "stop" || !input.transcript_path) return undefined;
-	return handoffNote(status, contextTokens(tail(input.transcript_path)), THRESHOLD, Boolean(input.background_tasks?.length));
+	return undefined;
 }
 
-function adviseOnce(transcript: string): void {
-	const marker = join(tmpdir(), `fleet-context-${createHash("sha256").update(transcript).digest("hex").slice(0, 16)}`);
+function remind(transcript: string): void {
+	const level = reminderLevel(contextTokens(tail(transcript)), THRESHOLD);
+	if (level === undefined) return;
+	const marker = join(tmpdir(), `fleet-context-${createHash("sha256").update(transcript).digest("hex").slice(0, 16)}-${level}`);
 	if (existsSync(marker)) return;
-	const note = contextAdvice(contextTokens(tail(transcript)), THRESHOLD);
-	if (note === undefined) return;
 	writeFileSync(marker, "");
-	process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: note } }));
+	process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: contextNote(level) } }));
 }
 
 if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && process.env.SANDBOX_NAME) {
@@ -76,7 +66,7 @@ if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && p
 	const event = process.argv[2] ?? "";
 	try {
 		const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
-		if (event === "post-tool-use" && input.transcript_path && !input.agent_id) adviseOnce(input.transcript_path);
+		if (event === "post-tool-use" && input.transcript_path && !input.agent_id) remind(input.transcript_path);
 		const updated = next(event, readFileSync(file, "utf8"), input);
 		if (updated !== undefined) writeFileSync(file, updated);
 		if (updated !== undefined || event !== "session-start") snapshot(task);

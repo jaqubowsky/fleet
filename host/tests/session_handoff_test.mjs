@@ -58,38 +58,16 @@ for (const seat of ["host", "sbx"]) {
 	try {
 		await bind(runtime.session);
 		const old = runtime.session;
-		const tool = old.agent.state.tools.find((tool) => tool.name === "session_handoff");
 		const extensions = runtime.services.resourceLoader.getExtensions().extensions;
 		if (seat === "host") {
 			assert.equal(settings.sessionHandoff, undefined);
-			assert.equal(tool, undefined);
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), false);
 			assert.equal(extensions.some((extension) => extension.handlers.has("turn_end")), false);
 			assert.deepEqual(old.messages, []);
 		} else {
-			assert.ok(tool);
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), true);
 			assert.equal(extensions.some((extension) => extension.handlers.has("turn_end")), true);
-			const readStarted = Promise.withResolvers();
-			const finishRead = Promise.withResolvers();
-			const edit = createEditTool(dir, { operations: {
-				access: async () => {},
-				readFile: async (path) => {
-					const snapshot = readFileSync(path);
-					readStarted.resolve();
-					await finishRead.promise;
-					return snapshot;
-				},
-				writeFile: async (path, content) => { writeFileSync(path, content); },
-			} });
-			const editing = edit.execute("update-summary", { path: "task/status.md", edits: [{ oldText: "Ready for review.", newText: "Ready for independent review." }] });
-			await readStarted.promise;
-			const requesting = tool.execute("request", {});
-			await new Promise((resolve) => setImmediate(resolve));
-			finishRead.resolve();
-			await Promise.all([editing, requesting]);
-			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff suggested; approve with \/session-handoff/);
-			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /Ready for independent review\./);
+			await createEditTool(dir).execute("suggest", { path: "task/status.md", edits: [{ oldText: "attention: none", newText: "attention: session handoff suggested; approve with /session-handoff" }] });
 			assert.equal(runtime.session, old);
 			assert.equal(replacement, undefined);
 			await old.prompt("/session-handoff");
