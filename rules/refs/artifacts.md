@@ -14,7 +14,7 @@ issues/        NN-<slug>.md, one ticket per commit                  to-tickets; 
 review.md      verdict line, findings, checks read, shared seams   two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
 browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
-logs/          sessions/, usage.json, <skill>-<id>/ evidence        {{harness}}, {{cli}} down, any skill
+logs/          sessions/, status/, usage.json, <skill>-<id>/ evidence    {{harness}}, {{cli}} down, any skill
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
@@ -34,7 +34,7 @@ attention: none | <one sentence of at most 300 characters naming what a person h
 <exact workflow continuation, at most 300 characters>
 
 ## Log
-- <delivered outcome>; <canonical artifact or commit>
+- <turning point>; <file, log or commit that shows it>
 ```
 
 | status | holds when |
@@ -50,18 +50,32 @@ attention: none | <one sentence of at most 300 characters naming what a person h
 
 The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
-Write the file at each event below, before the next tool call. Only a row with a Log line appends to `## Log`; the log is append-only, and every later rewrite preserves its existing lines verbatim.
+Write the file at each event below, before the next tool call.
 
-| Event | Rewrite | `## Log` line |
-| --- | --- | --- |
-| a prompt or a steer arrives, before its first command | `status`, Summary, Next step | none |
-| a skill starts | `status`, Summary, Next step | none |
-| a sub-agent starts or returns | `status`, Summary, Next step | none |
-| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
-| a commit lands | `status`, Summary, Next step | the outcome; the commit |
-| the work waits on a person | `status`, `attention`, Summary, Next step | none |
-| a session handoff is about to be suggested | Summary, Next step | none |
-| the turn ends, before the chat report | every field that no longer holds | none |
+| Event | Rewrite |
+| --- | --- |
+| a prompt or a steer arrives, before its first command | `status`, Summary, Next step |
+| a skill starts | `status`, Summary, Next step |
+| a sub-agent starts or returns | `status`, Summary, Next step |
+| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step |
+| a commit lands | `status`, Summary, Next step |
+| the work waits on a person | `status`, `attention`, Summary, Next step |
+| a session handoff is about to be suggested | Summary, Next step |
+| the turn ends, before the chat report | every field that no longer holds |
+
+Summary and Next step hold only the present, so `## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. Each turning point appends one line in the next write, whichever event that write is for:
+
+| Turning point | Line |
+| --- | --- |
+| a finding, yours or a sub-agent's, that changes the plan or the scope | what was found; the file or log that shows it |
+| a check that closes a step: the baseline, a done-check, the gate, a browser walk | its result; its log |
+| a decision, yours or a person's | `Decided: <what>, because <why>`; where it is recorded |
+| an approach dropped | `Dropped: <what>, because <why>`; the log that shows it |
+| a file from the event table is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
+| a commit lands | the outcome; the commit |
+| the work starts waiting on a person | what it waits on |
+
+The log is append-only: every rewrite keeps its existing lines verbatim. The harness copies each version of this file into `logs/status/` by itself.
 
 ## analysis.md
 
