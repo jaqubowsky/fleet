@@ -3,3 +3,4 @@ thinking: {{thinking.researcher}}
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+completionGuard: false
