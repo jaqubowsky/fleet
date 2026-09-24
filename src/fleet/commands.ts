@@ -4,7 +4,7 @@ import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
-import { artifactsDir, taskDir } from "./up.ts";
+import { artifactsDir, harnessStamp, imageStampPath, taskDir } from "./up.ts";
 import { addedLines, agentFor, checkoutProbe, elapsed, fieldsOf, formatRows, logLines, parseCheckout, sandboxes, type Agent, type Row } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
@@ -78,7 +78,10 @@ export function renderHost(root: string, io: Io): void {
 export function build(root: string, io: Io): void {
 	const stage = `${io.tmp}/${io.harness.name}-sbx-stage-${io.now().getTime()}`;
 	render({ root, harness: io.harness, seat: "container", out: stage }, io);
+	const stamp = harnessStamp(root, io);
 	io.run(`${root}/sbx/build.sh`, [io.harness.name, io.harness.image, stage]);
+	io.mkdir(`${io.home}/${io.harness.home}/${io.harness.cache}`);
+	io.write(imageStampPath(io), `${stamp}\n`);
 }
 
 export function copy(from: string, to: string, io: Io): void {

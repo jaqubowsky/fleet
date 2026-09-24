@@ -197,12 +197,15 @@ test("build renders the container seat into a stage and hands it to the shared b
 		"read /root/pi/profiles/sbx.json": "{}",
 		"read /root/sbx/container/toolchain.Dockerfile": "RUN install node\n",
 		"read /root/pi/sbx/Dockerfile": "FROM base\n{{toolchain}}\n",
+		"git log -1 --format=%h": "31e3d51",
+		"git status --porcelain": "",
 	});
 	build("/root", io);
 
-	const [run, script, name, image, stage] = io.calls.at(-1) ?? [];
+	const [run, script, name, image, stage] = io.calls.find((c) => c[0] === "run") ?? [];
 	assert.deepEqual([run, script, name, image], ["run", "/root/sbx/build.sh", "pi", "my-pi:v1"]);
 	assert.match(io.files[`${stage}/home/agent/AGENTS.md`] ?? "", /a fresh rule/);
+	assert.equal(io.files["/home/me/.pi/cache/image-stamp"], "31e3d51\n");
 });
 
 test("exec streams what the container prints instead of swallowing it", () => {

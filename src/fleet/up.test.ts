@@ -591,3 +591,14 @@ test("cfleet up starts claude straight through sbx run and copies no herdr integ
 	assert.equal(io.calls.find((c) => c[1] === "pane")![4], "HERDR_AGENT=claude sbx run --name claude-webapp-web-1");
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
+
+test("up says when the image predates the harness it would carry", async () => {
+	const stale = fakeIo({ ...base, "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "31e3d51\n" });
+	const fresh = fakeIo({ ...base, "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "f7e7f1a\n" });
+
+	await up({ repo, label: "web-1", root: "/root" }, stale);
+	await up({ repo, label: "web-1", root: "/root" }, fresh);
+
+	assert.ok(stale.lines.some((line) => /built from 31e3d51, and the harness is now f7e7f1a: run fleet build/.test(line)), stale.lines.join("\n"));
+	assert.ok(!fresh.lines.some((line) => /built from/.test(line)));
+});
