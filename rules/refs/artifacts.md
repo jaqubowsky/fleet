@@ -50,16 +50,12 @@ attention: none | <one sentence of at most 300 characters naming what a person h
 
 The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
-Write the file at each event below, before the next tool call.
+Write the file at each event below, before the next tool call: edit the fields the event names in place and append the Log line.
 
-| Event | Rewrite |
+| Event | Edit |
 | --- | --- |
-| a prompt or a steer arrives, before its first command | `status`, Summary, Next step |
-| a skill starts | `status`, Summary, Next step |
-| a sub-agent starts or returns | `status`, Summary, Next step |
-| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | `status`, Summary, Next step |
-| a commit lands | `status`, Summary, Next step |
-| the work waits on a person | `status`, `attention`, Summary, Next step |
+| the `status:` value changes | `status`, Summary, Next step |
+| the work starts waiting on a person | `status`, `attention`, Summary, Next step |
 | a session handoff is suggested | `attention`, Summary, Next step |
 | the turn ends, before the chat report | every field that no longer holds |
 
@@ -71,7 +67,7 @@ Summary and Next step hold only the present, so `## Log` is the run's timeline: 
 | a check that closes a step: the baseline, a done-check, the gate, a browser walk | its result; its log |
 | a decision, yours or a person's | `Decided: <what>, because <why>`; where it is recorded |
 | an approach dropped | `Dropped: <what>, because <why>`; the log that shows it |
-| a file from the event table is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
+| `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
 | a commit lands | the outcome; the commit |
 | the work starts waiting on a person | what it waits on |
 
