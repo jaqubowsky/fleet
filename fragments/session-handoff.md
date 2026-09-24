@@ -1,1 +1,6 @@
-A container suggests a fresh session by setting `attention:` to `session handoff suggested; approve with {{handoff.command}}` and ending its turn, and stays in its session until approved. Once authorized, send `{{cli}} steer <sandbox> "{{handoff.command}}"`; the user may also type {{handoff.command}} in the container's tab. {{handoff.continue}} For a manual task, the fresh session waits for the user's next message; it carries only a hidden pointer to the task directory, not a continuation request. `attention:` then reads `session handoff complete; fresh session idle`. A declined suggestion costs nothing: the steer that sends the container on replaces it at its next `status.md` update.
+| Step | What happens |
+| --- | --- |
+| suggest | the container sets `attention:` to `session handoff suggested; approve with {{handoff.command}}`, ends its turn and stays in its session |
+| approve | `{{cli}} steer <sandbox> "{{handoff.command}}"`, or the user types {{handoff.command}} in the container's tab. {{handoff.continue}} |
+| after approval | `attention:` reads `session handoff complete; fresh session idle`; the fresh session holds only a hidden pointer to the task directory, and on a manual task waits for the user's next message |
+| decline | the steer that sends the container on replaces the suggestion at its next `status.md` update |

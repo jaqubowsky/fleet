@@ -200,7 +200,7 @@ test("every harness's container rule suggests a handoff with the command its hos
 	const rule = readFileSync("sbx/container/sandbox.md", "utf8");
 	const claude = `status: implementing\nattention: ${suggested(HARNESSES.claude.tokens["handoff.command"])}\n`;
 
-	const rendered = Object.values(HARNESSES).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: harness.cli }, () => undefined, "sandbox.md") }));
+	const rendered = Object.values(HARNESSES).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: harness.cli }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
 
 	for (const { harness, text } of rendered) assert.ok(text.includes(`attention: ${suggested(harness.tokens["handoff.command"])}`), harness.name);
 	assert.match(clearedNote(claude) ?? "", new RegExp(`^attention: ${COMPLETE}$`, "m"));

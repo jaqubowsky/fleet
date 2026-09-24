@@ -57,7 +57,27 @@ The repository inside a container is a private clone, so writes there stay there
 
 ## Session handoff
 
-A container suggests a session handoff at what it judged a natural break, and the host judges it again. It is one when `{{cli}} peek` shows nothing running in the background, since a handoff ends whatever is, the last step in the `## Log` is one of the container's natural breaks (the plan written, a ticket committed, the last ticket before the browser check, a task without tickets answered), and the Next step in `status.md` lets a fresh session pick the work up cold: approve it. Otherwise steer the container on in its session, naming what is left before the next natural break. The host may also start a handoff unasked, at a natural break it reads the same way. For a task the user explicitly delegated end to end, each of these is routine local execution the host decides without asking again; for a manually driven task, ask the user and wait for explicit approval. This is the authority rule for session handoff; it grants no other permission.
+A container suggests a session handoff at a natural break, from the same table it holds:
+
+{{file:natural-breaks}}
+
+The host judges it again, with `{{cli}} peek` for what runs, since a handoff ends whatever is:
+
+| `attention:` | The last `## Log` line | Background | The host |
+| --- | --- | --- | --- |
+| the suggestion | a natural break | idle | approves |
+| the suggestion | a natural break | running | waits for the next wake and judges again |
+| the suggestion | anything else | any | steers the container on in its session, naming what is left before the next natural break |
+| no suggestion | a natural break | idle | may start the handoff itself |
+
+Who decides:
+
+| Task | Decision |
+| --- | --- |
+| delegated end to end by the user, explicitly | the host, without asking again |
+| driven manually | the user; ask and wait for explicit approval |
+
+This is the authority rule for session handoff; it grants no other permission.
 
 {{file:session-handoff}}
 
