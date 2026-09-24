@@ -22,7 +22,7 @@ test("install script runs a declared generator before it reports ready", () => {
 });
 
 
-async function run(files: Record<string, string>) {
+async function run(files: Record<string, string>, tools: Record<string, string> = {}) {
 	const { mkdtempSync, writeFileSync, mkdirSync, readFileSync, chmodSync } =
 		await import("node:fs");
 	const { tmpdir } = await import("node:os");
@@ -37,16 +37,25 @@ async function run(files: Record<string, string>) {
 		`#!/bin/sh\necho "$@" >> ${trace}\n[ "$1" = env ] && echo ":"\nexit 0\n`,
 	);
 	chmodSync(join(bin, "fnm"), 0o755);
+	for (const [name, body] of Object.entries(tools)) {
+		writeFileSync(join(bin, name), body);
+		chmodSync(join(bin, name), 0o755);
+	}
 	for (const [name, body] of Object.entries(files))
 		writeFileSync(join(workspace, name), body);
-	const log = execFileSync("bash", ["-c", installScript], {
-		env: {
-			...process.env,
-			WORKSPACE_DIR: workspace,
-			PATH: `${bin}:${process.env.PATH}`,
-		},
-		encoding: "utf8",
-	});
+	let log: string;
+	try {
+		log = execFileSync("bash", ["-c", installScript], {
+			env: {
+				...process.env,
+				WORKSPACE_DIR: workspace,
+				PATH: `${bin}:${process.env.PATH}`,
+			},
+			encoding: "utf8",
+		});
+	} catch (error) {
+		log = String((error as { stdout?: string }).stdout ?? "");
+	}
 	let calls = "";
 	try {
 		calls = readFileSync(trace, "utf8");
@@ -69,4 +78,15 @@ test("a repository that declares a node version goes through fnm", async () => {
 
 	assert.match(log, /deps: ready/);
 	assert.match(calls, /use --install-if-missing/);
+});
+
+test("an install that fails names its root and exit instead of leaving the log mid-run", async () => {
+	const { log } = await run(
+		{ "package.json": "{}", "package-lock.json": "{}" },
+		{ npm: "#!/bin/sh\necho registry down\nexit 3\n" },
+	);
+
+	assert.match(log, /registry down/);
+	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in \. with exit 3$/);
+	assert.doesNotMatch(log, /deps: ready/);
 });
