@@ -115,6 +115,8 @@ Before theorising from the broken code alone, find the nearest thing that works:
 
 Then diff it against the broken path and list **every** difference, including the ones you are certain don't matter. "That can't matter" is where the cause hides. Each difference is a hypothesis that arrives with its prediction attached: make the broken path match on that one axis, and the loop goes green.
 
+A difference is ruled out only by reading it from the failing environment itself: the deployed image (`node -p process.versions`), the lockfile at the deployed tag. A proxy (a registry date, the local runtime) keeps the hypothesis ranked, and the verdict names it unverified with the command that would settle it.
+
 No working example within reach: say so, and rank on mechanism instead.
 
 **Show the ranked list to the user before testing.** They often have domain knowledge that re-ranks instantly ("we just deployed a change to #3"), or know hypotheses they've already ruled out. Cheap checkpoint, big time saver. Don't block on it: proceed with your ranking if the user is AFK.
