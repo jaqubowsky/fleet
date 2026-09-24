@@ -102,5 +102,5 @@ test("a session that stops on an API error keeps its blocked status as a version
 
 	hook("stop-failure", JSON.stringify({ error: "402 Payment Required" }));
 
-	assert.deepEqual(kept(), ["status: blocked\nattention: the agent stopped on an error before done: 402 Payment Required\n"]);
+	assert.deepEqual(kept(), ["status: blocked\nattention: the agent stopped on an error: 402 Payment Required\n"]);
 });

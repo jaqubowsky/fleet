@@ -1,8 +1,10 @@
 import net from "node:net";
+import { STOPPED } from "../../extensions/handoff-on-error.ts";
+import { eventsLog, lifecycle } from "./events.ts";
 import type { Io } from "./io.ts";
 import { RING_MS, SETTLE_MS, shouldWake, STALL_MS, stalled, taskDirOf, TERMINAL, transition } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { type Agent, commitsProbe, logLines, type Sandbox, sandboxes, wake } from "./status.ts";
+import { type Agent, commitsProbe, fieldsOf, logLines, type Sandbox, sandboxes, wake } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
@@ -10,6 +12,7 @@ const STALL_TICK_MS = 60_000;
 
 type Frame = { event?: string; data?: { pane_id?: string; agent_status?: string } };
 type Tracked = { name: string; status: string; since: number; rang: number };
+type Woken = { status: string | undefined; at: string };
 
 export function fleetAgents(agents: Agent[], sandboxes: Pick<Sandbox, "name" | "workspaces">[], wanted: string[] | undefined): Agent[] {
 	const fleet = new Set(sandboxes.map((s) => agentName(s.name)));
@@ -21,36 +24,60 @@ export function wakeLines(name: string, change: string, details: string): string
 	return `[fleet] ${name}: ${change}\n${details}`;
 }
 
+export function wakeName(text: string): string | undefined {
+	return text.match(/^\[fleet\] ([^:\s]+):/)?.[1];
+}
+
 export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: string) => void = io.log): { refresh: () => void; stop: () => void } {
 	const socketPath = process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
+	const events = `${io.home}/${eventsLog(io.harness)}`;
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<string, { timer: ReturnType<typeof setTimeout>; from: string | undefined }>();
 	const logShown = new Map<string, string[]>();
+	const woken = new Map<string, Woken>();
+	const deaths = new Map<string, string>();
+	const dirs = new Map<string, { dir: string; sandbox: string }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
+	let failing: string | undefined;
 
-	const details = (name: string): string => {
-		let rows: Sandbox[];
-		try {
-			rows = sandboxes(io);
-		} catch {
-			return wake(undefined, "");
-		}
+	const locate = (name: string, rows: Sandbox[]) => {
 		const dir = taskDirOf(io.home, rows, name);
 		const sandbox = rows.find((s) => agentName(s.name) === name)?.name;
-		if (!dir || !sandbox) return wake(undefined, "");
+		if (dir && sandbox) dirs.set(name, { dir, sandbox });
+		return dirs.get(name);
+	};
+
+	const statusOf = (name: string): string | undefined => {
+		const where = dirs.get(name);
+		return where ? io.read(`${where.dir}/status.md`) : undefined;
+	};
+
+	const details = (name: string, status: string | undefined): string => {
+		const where = dirs.get(name);
+		if (!where) return wake(undefined, "");
 		let commits = "";
 		try {
-			commits = io.sbx(["exec", sandbox, "sh", "-c", commitsProbe], { quiet: true });
+			commits = io.sbx(["exec", where.sandbox, "sh", "-c", commitsProbe], { quiet: true });
 		} catch {}
-		const status = io.read(`${dir}/status.md`);
 		const text = wake(status, commits, logShown.get(name));
 		logShown.set(name, logLines(status));
 		return text;
 	};
 
-	const emit = (name: string, change: string) => onWake(wakeLines(name, change, details(name)));
+	const emit = (name: string, change: string, settled = false) => {
+		const { closed, steered } = lifecycle(io.read(events) ?? "");
+		if (closed.has(name)) return;
+		try {
+			locate(name, sandboxes(io));
+		} catch {}
+		const status = statusOf(name);
+		const last = woken.get(name);
+		if (settled && last && last.status === status && (steered.get(name) ?? "") <= last.at) return;
+		woken.set(name, { status, at: io.now().toISOString() });
+		onWake(wakeLines(name, change, details(name, status)));
+	};
 
 	const settle = (pane: string, from: string | undefined) => {
 		const earlier = settling.get(pane);
@@ -61,7 +88,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 			const current = tracked.get(pane);
 			if (!current || !TERMINAL.has(current.status)) return;
 			const change = transition(start, current.status);
-			if (change) emit(current.name, change);
+			if (change) emit(current.name, change, true);
 		}, SETTLE_MS);
 		settling.set(pane, { timer, from: start });
 	};
@@ -120,16 +147,35 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 		});
 	};
 
+	const noticeDeaths = (rows: Sandbox[]) => {
+		for (const t of tracked.values()) {
+			if (t.status !== "working" || !locate(t.name, rows)) continue;
+			const attention = fieldsOf(statusOf(t.name)).attention ?? "";
+			if (!attention.startsWith(STOPPED)) {
+				deaths.delete(t.name);
+				continue;
+			}
+			if (deaths.get(t.name) === attention) continue;
+			deaths.set(t.name, attention);
+			emit(t.name, `${t.status} -> stopped on an error`);
+		}
+	};
+
 	const refresh = () => {
 		if (stopped) return;
 		const wanted = scope();
 		if (wanted?.length === 0 && !tracked.size) return;
 		let agents: Agent[];
+		let rows: Sandbox[];
 		try {
 			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
-			agents = fleetAgents(listed, sandboxes(io), wanted);
+			rows = sandboxes(io);
+			agents = fleetAgents(listed, rows, wanted);
+			failing = undefined;
 		} catch (error) {
-			io.log(`[fleet] watch: refresh: ${error instanceof Error ? error.message : String(error)}`);
+			const message = error instanceof Error ? error.message : String(error);
+			if (message !== failing) io.log(`[fleet] watch: refresh: ${message}`);
+			failing = message;
 			setTimeout(refresh, RECONNECT_MS);
 			return;
 		}
@@ -146,6 +192,7 @@ export function watch(scope: () => string[] | undefined, io: Io, onWake: (text: 
 			tracked.delete(pane);
 		}
 		for (const a of fresh) tracked.set(a.pane_id, { name: a.name ?? a.pane_id, status: a.agent_status ?? "unknown", since: Date.now(), rang: Date.now() });
+		noticeDeaths(rows);
 		if (fresh.length)
 			io.log(`[fleet] watching ${[...tracked.values()].map((t) => `${t.name} ${t.status}`).join(", ")}`);
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();

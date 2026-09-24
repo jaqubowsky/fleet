@@ -2,9 +2,9 @@ import { unwatchFile, watchFile } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 import type { Harness } from "../src/harness.ts";
-import { eventAgents, eventsLog } from "../src/fleet/events.ts";
+import { eventAgents, eventsLog, lifecycle } from "../src/fleet/events.ts";
 import { type Io, realIo } from "../src/fleet/io.ts";
-import { watch } from "../src/fleet/watch.ts";
+import { wakeName, watch } from "../src/fleet/watch.ts";
 
 const LOG_POLL_MS = 2000;
 
@@ -19,9 +19,21 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 
 		const owned = () => eventAgents(io.read(log) ?? "", h.owner === "session" ? { sessionId } : { pane: io.pane });
 		const scope = () => (every ? undefined : [...named, ...owned()]);
-		const deliver = (text: string) => {
+		let running = false;
+		const held: string[] = [];
+		const send = (text: string) => {
 			pi.sendMessage({ customType: "fleet", content: text, display: true }, { deliverAs: h.deliverAs ?? "followUp", triggerTurn: true });
 			ui?.notify?.(text.split("\n")[0], "info");
+		};
+		const deliver = (text: string) => {
+			if (running) held.push(text);
+			else send(text);
+		};
+		const release = () => {
+			running = false;
+			const { closed } = lifecycle(io.read(log) ?? "");
+			const kept = held.splice(0).filter((text) => !closed.has(wakeName(text) ?? ""));
+			if (kept.length) send(kept.join("\n\n"));
 		};
 		const said = new Set<string>();
 		const say = (line: string) => {
@@ -99,6 +111,10 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			event.input.command = `export ${h.sessionIdEnv}=${JSON.stringify(sessionId)}; ${command}`;
 			return { input: event.input };
 		});
+		pi.on("agent_start", () => {
+			running = true;
+		});
+		pi.on("agent_end", release);
 		pi.on("session_shutdown", () => {
 			watcher?.stop();
 			watcher = undefined;

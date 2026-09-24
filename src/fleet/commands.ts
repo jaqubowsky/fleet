@@ -230,6 +230,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	if (!landed(checkout.head, entry.workspaces[0], io) && !opts.force) {
 		throw new Error(`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${io.harness.cli} land first or pass --force to discard`);
 	}
+	logEvent(io, "down", agentName(sandbox));
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
 	if (io.harness.containerSessions) harvest(sandbox, task, io.harness.containerSessions, opts.force === true, io);

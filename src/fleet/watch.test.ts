@@ -193,3 +193,72 @@ for (const h of Object.values(HARNESSES)) {
 		assert.deepEqual(params.subscriptions.map((s) => s.type), ["pane.agent_status_changed", "pane.exited"]);
 	});
 }
+
+test("a turn that ends with status.md unchanged and no steer since the last wake wakes nobody", (t: TestContext) => {
+	const { io, status } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: reviewing\nattention: none\n";
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	for (const next of ["done", "working", "idle", "working", "done"]) {
+		status("worker:pane", next);
+		t.mock.timers.tick(1100);
+	}
+
+	assert.equal(wakes.length, 1);
+});
+
+test("a steer since the last wake lets the next settle wake the host again", (t: TestContext) => {
+	const { io, status } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: blocked\nattention: waiting\n";
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = '2026-09-16T10:05:00.000Z w1:host steer claude-worker session= "go on"\n';
+	status("worker:pane", "working");
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 2);
+});
+
+test("a container taken down wakes nobody, neither its last settle nor its exit", (t: TestContext) => {
+	const { io, status, sockets } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = "2026-09-16T10:05:00.000Z w1:host down claude-worker session=\n";
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	for (const socket of sockets) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.exited", data: { pane_id: "worker:pane" } })}\n`));
+
+	assert.deepEqual(wakes, []);
+});
+
+test("a working container whose status.md says it stopped on an error wakes the host once", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: blocked\nattention: the agent stopped on an error: fetch failed\n";
+	intervals.get(30_000)?.();
+	intervals.get(30_000)?.();
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: working -> stopped on an error\nstatus: blocked/);
+});
+
+test("a refresh that keeps failing the same way logs it once", (t: TestContext) => {
+	const { io } = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" }]);
+	io.herdr = (() => {
+		throw new Error("sbx ls --json failed (1) docker hub refresh lock held");
+	}) as typeof io.herdr;
+	watch(() => undefined, io);
+
+	t.mock.timers.tick(3000);
+	t.mock.timers.tick(3000);
+
+	assert.equal(io.lines.filter((line) => line.includes("refresh lock")).length, 1);
+});

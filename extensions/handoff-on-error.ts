@@ -4,11 +4,13 @@ import { snapshot } from "./status-history.ts";
 
 type Message = { role?: string; stopReason?: string; errorMessage?: string };
 
+export const STOPPED = "the agent stopped on an error";
+
 export function deathNote(status: string | undefined, error: string): string | undefined {
 	if (status === undefined) return undefined;
 	const current = status.match(/^status: (.*)$/m)?.[1];
-	if (current === undefined || current === "done" || current === "blocked") return undefined;
-	const attention = `attention: the agent stopped on an error before done: ${error.split("\n")[0]}`;
+	if (current === undefined || current === "blocked") return undefined;
+	const attention = `attention: ${STOPPED}: ${error.split("\n")[0]}`;
 	const lines = status.split("\n").filter((l) => !l.startsWith("attention: "));
 	const at = lines.findIndex((l) => l.startsWith("status: "));
 	lines[at] = "status: blocked";

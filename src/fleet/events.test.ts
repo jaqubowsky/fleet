@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { eventAgents, logEvent } from "./events.ts";
+import { eventAgents, lifecycle, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
 import { realIo } from "./io.ts";
@@ -63,10 +63,26 @@ test("a harness without a shell session id owns events by pane", () => {
 	assert.deepEqual(eventAgents(log, { pane: "w1:host" }), ["worker-a"]);
 });
 
-test("a harness that watches through its CLI logs no events", () => {
+test("a harness that watches through its CLI logs events in its writable fleet cache", () => {
 	const io = fakeIo({}, HARNESSES.claude);
 
-	logEvent(io, "up", "worker-a");
+	logEvent(io, "down", "worker-a");
 
-	assert.deepEqual(io.calls, []);
+	assert.deepEqual(io.calls, [["append", "/home/me/.claude/fleet-cache/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
+});
+
+test("a container taken down is closed until it comes up again", () => {
+	const log = [
+		"2026-09-16T10:00:00.000Z w1:host up worker-a session=s",
+		'2026-09-16T10:01:00.000Z w1:host steer worker-a session=s "go"',
+		"2026-09-16T10:02:00.000Z w1:host down worker-a session=s",
+		"2026-09-16T10:03:00.000Z w1:host down worker-b session=s",
+		"2026-09-16T10:04:00.000Z w1:host up worker-b session=s",
+	].join("\n");
+
+	const { closed, steered } = lifecycle(log);
+
+	assert.deepEqual([...closed], ["worker-a"]);
+	assert.equal(steered.get("worker-a"), "2026-09-16T10:01:00.000Z");
+	assert.deepEqual(eventAgents(log, { sessionId: "s" }), ["worker-b"]);
 });

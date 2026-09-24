@@ -161,3 +161,31 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 	assert.equal(taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
 	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
 });
+
+test("a wake that lands while the host works waits for its turn to end", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = runtime.start("session-a");
+	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
+
+	watcher.handlers.agent_start();
+	runtime.settle();
+	const during = watcher.messages.length;
+	watcher.handlers.agent_end();
+
+	assert.equal(during, 0);
+	assert.equal(watcher.messages.length, 1);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] pi-worker: working -> idle\n/);
+});
+
+test("a held wake for a container the host took down meanwhile never arrives", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = runtime.start("session-a");
+	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
+
+	watcher.handlers.agent_start();
+	runtime.settle();
+	runtime.events("2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a");
+	watcher.handlers.agent_end();
+
+	assert.deepEqual(watcher.messages, []);
+});

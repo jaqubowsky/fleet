@@ -81,5 +81,5 @@ test("an agent that dies on an API error leaves its blocked status as a version"
 
 	const kept = readdirSync(join(dir, "logs/status"));
 	assert.equal(kept.length, 1);
-	assert.match(readFileSync(join(dir, "logs/status", kept[0]), "utf8"), /^status: blocked\nattention: the agent stopped on an error before done: 402 Payment Required$/m);
+	assert.match(readFileSync(join(dir, "logs/status", kept[0]), "utf8"), /^status: blocked\nattention: the agent stopped on an error: 402 Payment Required$/m);
 });

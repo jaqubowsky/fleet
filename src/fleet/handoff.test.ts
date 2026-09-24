@@ -9,12 +9,11 @@ test("a session dying mid-work leaves status blocked with the error as attention
 
 	assert.equal(
 		next,
-		"status: blocked\nattention: the agent stopped on an error before done: 402 Payment Required: insufficient credits\nnow: 01-fix, red written\n\n## Log\n- analysis: a defect; analysis.md\n",
+		"status: blocked\nattention: the agent stopped on an error: 402 Payment Required: insufficient credits\nnow: 01-fix, red written\n\n## Log\n- analysis: a defect; analysis.md\n",
 	);
 });
 
-test("a task already done or blocked keeps its status", () => {
-	assert.equal(deathNote(running.replace("implementing", "done"), "boom"), undefined);
+test("a blocked task keeps the blocker it already names", () => {
 	assert.equal(deathNote(running.replace("implementing", "blocked"), "boom"), undefined);
 	assert.equal(deathNote(undefined, "boom"), undefined);
 });
@@ -22,5 +21,5 @@ test("a task already done or blocked keeps its status", () => {
 test("a status without an attention line gets one", () => {
 	const next = deathNote("status: implementing\nnow: fix\n", "boom");
 
-	assert.equal(next, "status: blocked\nattention: the agent stopped on an error before done: boom\nnow: fix\n");
+	assert.equal(next, "status: blocked\nattention: the agent stopped on an error: boom\nnow: fix\n");
 });
