@@ -35,3 +35,21 @@ test("a narrow line gives up the branch, the model and the limits before the fol
 	assert.match(line, /125k 12%/);
 	assert.doesNotMatch(line, /main|gpt-6-sol|5h|7d/);
 });
+
+test("remote control shows as a quiet marker at the end of the line", () => {
+	const line = statusline({ ...full, remote: "⌁ remote" });
+
+	assert.match(line, /\x1b\[90m⌁ remote\x1b\[0m$/);
+});
+
+test("the marker takes the accent while phones watch", () => {
+	const line = statusline({ ...full, remote: "⌁ remote 2" });
+
+	assert.match(line, /\x1b\[33m⌁ remote 2\x1b\[0m$/);
+});
+
+test("a narrow line gives up the marker before anything else", () => {
+	const width = visible(statusline(full)).length;
+
+	assert.equal(statusline({ ...full, remote: "⌁ remote 2" }, { width }), statusline(full));
+});

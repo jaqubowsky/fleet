@@ -22,12 +22,13 @@ const BRANCH = [34];
 const MODEL = [39];
 const EFFORT = [35];
 const MUTED = [90];
+const ACCENT = [33];
 const ZONES = [[32], [33], [31], [91, 1]];
 
 type Run = { text: string; codes: number[] };
 type Group = { rank: number; runs: Run[] };
 export type Window = { usedPercent: number; seconds?: number; resetsAt?: number };
-export type Status = { dir?: string; branch?: string; model?: string; effort?: string; tokens: number; percent: number; windows: Window[] };
+export type Status = { dir?: string; branch?: string; model?: string; effort?: string; tokens: number; percent: number; windows: Window[]; remote?: string };
 
 const tokenLevel = (t: number) => (t >= DUMB_ZONE_TOKENS ? 3 : t >= NEAR_DUMB_TOKENS ? 2 : t >= WATCH_TOKENS ? 1 : 0);
 const percentLevel = (p: number) => (p >= WINDOW_CRITICAL_PCT ? 3 : p >= WINDOW_HIGH_PCT ? 2 : p >= WINDOW_HALF_PCT ? 1 : 0);
@@ -113,6 +114,8 @@ const groups = (s: Status): Group[] => {
     if (w.resetsAt != null) runs.push(run(` ↻${fmtReset(w.resetsAt, long)}`, MUTED));
     out.push({ rank: 3, runs });
   }
+
+  if (s.remote) out.push({ rank: 0, runs: [run(s.remote, /\d$/.test(s.remote) ? ACCENT : MUTED)] });
 
   return out;
 };

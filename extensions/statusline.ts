@@ -37,7 +37,7 @@ const fetchUsage = async (ctx: any): Promise<Usage | undefined> => {
   return { windows, fetchedAt: Date.now() };
 };
 
-const status = (ctx: any, usage: Usage | undefined): Status => {
+const status = (ctx: any, usage: Usage | undefined, remote: string | undefined): Status => {
   const context = ctx.getContextUsage?.();
   const tokens: number = context?.tokens ?? 0;
   const window: number = context?.contextWindow ?? ctx.model?.contextWindow ?? 0;
@@ -48,6 +48,7 @@ const status = (ctx: any, usage: Usage | undefined): Status => {
     tokens,
     percent: context?.percent ?? (window ? (tokens / window) * 100 : 0),
     windows: usage?.windows ?? [],
+    remote,
   };
 };
 
@@ -71,9 +72,9 @@ export default function (pi: any) {
   const install = (ctx: any) => {
     current = ctx;
     if (!ctx.hasUI) return;
-    ctx.ui.setFooter(() => ({
+    ctx.ui.setFooter((_tui: any, _theme: any, footerData: any) => ({
       render(width: number) {
-        return ["", statusline(status(current, usage), { width })];
+        return ["", statusline(status(current, usage, footerData.getExtensionStatuses().get("pi-remote")), { width })];
       },
       invalidate() {},
     }));
