@@ -22,8 +22,17 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Session handoff
 
-1. A session handoff is yours to suggest at a natural break: the piece of work in hand is finished (a commit, a written analysis or report, an answered question) and `status.md` with the task files carries everything the next step needs. Mid-change, or with reasoning the files do not hold yet, work on to the next natural break
-2. To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session
+A session handoff is yours to suggest at a natural break: what you started is finished and on disk, in a commit or a task-directory file, so a fresh session reading `status.md` would take your next step.
+
+| Work in hand | Natural break | Work on while |
+| --- | --- | --- |
+| ticket | its commit has landed; the next ticket is not claimed | a test is red or a review finding is open |
+| analysis or plan | `analysis.md`, or `spec.md` with `issues/`, is written | the question is still being traced |
+| review | `review.md` is written; its findings are not fixed | the reviewer or a check still runs |
+| research | the brief or report is saved in the task directory | sources are still being read |
+| user's question | the answer is given and recorded | the answer rests on an unchecked claim |
+
+To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
 
 ## Finish
 
