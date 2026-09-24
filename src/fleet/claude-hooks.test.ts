@@ -104,3 +104,25 @@ test("a session that stops on an API error keeps its blocked status as a version
 
 	assert.deepEqual(kept(), ["status: blocked\nattention: the agent stopped on an error: 402 Payment Required\n"]);
 });
+
+test("the first edit of the repository waits until the agent has printed its done-check", (t) => {
+	const { task } = container(t, status);
+	const workspace = join(task, "repo");
+	const transcript = join(task, "session.jsonl");
+	const say = (text: string) => JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text }] } });
+	const edit = (file: string) =>
+		execFileSync(process.execPath, [join(import.meta.dirname, "../../claude/hooks/container.ts"), "pre-tool-use"], {
+			input: JSON.stringify({ transcript_path: transcript, tool_input: { file_path: file } }),
+			env: { ...process.env, FLEET_ARTIFACTS: join(task, ".."), SANDBOX_NAME: "claude-a", WORKSPACE_DIR: workspace },
+		}).toString();
+
+	writeFileSync(transcript, say("Zaczynam od testu."));
+	const before = edit(join(workspace, "src/a.ts"));
+	const statusFile = edit(join(task, "status.md"));
+	writeFileSync(transcript, [say("Zaczynam od testu."), say("Goal: x\nBoundaries: y\nDone-check: npm test")].join("\n"));
+	const after = edit(join(workspace, "src/a.ts"));
+
+	assert.match(before, /"permissionDecision":"deny"/);
+	assert.equal(statusFile, "");
+	assert.equal(after, "");
+});

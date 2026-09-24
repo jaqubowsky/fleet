@@ -7,10 +7,11 @@ import { COMPLETE, contextNote, pointer, reminderLevel, suggested, withAttention
 import { snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
-type HookInput = { transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string };
+type HookInput = { transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string; tool_input?: { file_path?: string; notebook_path?: string } };
 
 const SUGGESTED = `attention: ${suggested("/clear")}`;
 const THRESHOLD = Number(process.env.FLEET_HANDOFF_TOKENS ?? 250000);
+const RESTATE = "Print Goal, Boundaries and Done-check, one line each, before the first change to the repository (Communication 7 in the rules, implement step 4), then make this edit again.";
 
 export function tail(path: string, bytes = 1 << 20): string {
 	const fd = openSync(path, "r");
@@ -45,6 +46,31 @@ export function clearedNote(status: string): string | undefined {
 	return withAttention(status, COMPLETE);
 }
 
+export function restated(transcript: string): boolean {
+	return transcript.split("\n").some((line) => {
+		try {
+			const entry = JSON.parse(line);
+			const content = entry.type === "assistant" ? entry.message?.content : undefined;
+			return Array.isArray(content) && content.some((part: { type?: string; text?: string }) => part.type === "text" && /done-check/i.test(part.text ?? ""));
+		} catch {
+			return false;
+		}
+	});
+}
+
+function gate(input: HookInput): void {
+	const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path ?? "";
+	const workspace = process.env.WORKSPACE_DIR;
+	if (!workspace || !input.transcript_path || input.agent_id || !target.startsWith(`${workspace}/`)) return;
+	const marker = join(tmpdir(), `fleet-restated-${createHash("sha256").update(input.transcript_path).digest("hex").slice(0, 16)}`);
+	if (existsSync(marker)) return;
+	if (restated(readFileSync(input.transcript_path, "utf8"))) {
+		writeFileSync(marker, "");
+		return;
+	}
+	process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: RESTATE } }));
+}
+
 function next(event: string, status: string, input: HookInput): string | undefined {
 	if (event === "stop-failure") return deathNote(status, input.error ?? input.error_type ?? "API error");
 	if (event === "session-start") return input.source === "clear" ? clearedNote(status) : undefined;
@@ -66,11 +92,14 @@ if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && p
 	const event = process.argv[2] ?? "";
 	try {
 		const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
-		if (event === "post-tool-use" && input.transcript_path && !input.agent_id) remind(input.transcript_path);
-		const updated = next(event, readFileSync(file, "utf8"), input);
-		if (updated !== undefined) writeFileSync(file, updated);
-		if (updated !== undefined || event !== "session-start") snapshot(task);
-		if (updated !== undefined && event === "session-start")
-			process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: pointer(task) } }));
+		if (event === "pre-tool-use") gate(input);
+		else {
+			if (event === "post-tool-use" && input.transcript_path && !input.agent_id) remind(input.transcript_path);
+			const updated = next(event, readFileSync(file, "utf8"), input);
+			if (updated !== undefined) writeFileSync(file, updated);
+			if (updated !== undefined || event !== "session-start") snapshot(task);
+			if (updated !== undefined && event === "session-start")
+				process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: pointer(task) } }));
+		}
 	} catch {}
 }
