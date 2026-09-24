@@ -6,7 +6,7 @@ import vm from "node:vm";
 const source = readFileSync(new URL("../../extensions/pi-remote/client.js", import.meta.url), "utf8").replace(/^import .*;\n/gm, "");
 const credential = "a".repeat(64);
 
-function load(tab: { hash: string; storage: Map<string, string> }, requests: string[]) {
+function load(browser: { hash: string; storage: Map<string, string> }, requests: string[]) {
 	class Element {
 		dataset: Record<string, string> = {};
 		style = { setProperty() {} };
@@ -34,7 +34,7 @@ function load(tab: { hash: string; storage: Map<string, string> }, requests: str
 		createElementNS: () => new Element(),
 		addEventListener() {},
 	};
-	const location = { pathname: "/", hash: tab.hash };
+	const location = { pathname: "/", hash: browser.hash };
 	const snapshot = { version: 2, generation: 1, control: true, session: { id: "one", name: "one" }, status: "idle", header: {}, transcript: [], assistant: null, tools: [] };
 	const context = vm.createContext({
 		location,
@@ -42,8 +42,7 @@ function load(tab: { hash: string; storage: Map<string, string> }, requests: str
 			assert.equal(path, "/");
 			location.hash = "";
 		} },
-		sessionStorage: { getItem: (key: string) => tab.storage.get(key) ?? null, setItem: (key: string, value: string) => tab.storage.set(key, value) },
-		localStorage: { setItem: () => assert.fail("credential must not use durable storage") },
+		localStorage: { getItem: (key: string) => browser.storage.get(key) ?? null, setItem: (key: string, value: string) => browser.storage.set(key, value) },
 		document,
 		window: { innerHeight: 800, scrollY: 0, scrollTo() {}, addEventListener() {} },
 		navigator: {},
@@ -65,21 +64,21 @@ function load(tab: { hash: string; storage: Map<string, string> }, requests: str
 	return { location, banner: get("banner") };
 }
 
-test("same tab reload authenticates without exposing the credential in URLs", async () => {
-	const tab = { hash: `#${credential}`, storage: new Map<string, string>() };
+test("a link opened once keeps working on later visits without appearing in a URL", async () => {
+	const browser = { hash: `#${credential}`, storage: new Map<string, string>() };
 	const requests: string[] = [];
-	const first = load(tab, requests);
+	const first = load(browser, requests);
 	await new Promise((resolve) => setTimeout(resolve, 0));
 	assert.equal(first.location.hash, "");
-	tab.hash = first.location.hash;
-	const second = load(tab, requests);
+	browser.hash = first.location.hash;
+	const later = load(browser, requests);
 	await new Promise((resolve) => setTimeout(resolve, 0));
 
-	assert.equal(second.banner.textContent, "");
+	assert.equal(later.banner.textContent, "");
 	assert.equal(requests.filter((request) => request === `/bootstrap:Bearer ${credential}`).length, 2);
 	assert.equal(requests.some((request) => request.startsWith("/events:Bearer ")), true);
 	assert.equal(requests.some((request) => request.split(":")[0].includes(credential)), false);
-	const separateTab = load({ hash: "", storage: new Map() }, requests);
-	assert.equal(separateTab.banner.textContent, "Open the private URL that /remote link shows.");
+	const stranger = load({ hash: "", storage: new Map() }, requests);
+	assert.equal(stranger.banner.textContent, "Open the private URL that /remote link shows.");
 	assert.equal(requests.filter((request) => request.startsWith("/bootstrap:")).length, 2);
 });

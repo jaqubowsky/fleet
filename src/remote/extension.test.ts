@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import remoteExtension, {
 	type Context,
 	type RemoteAPI,
 	type Widget,
 } from "../../extensions/pi-remote/index.ts";
-import { processRuntime } from "./runtime.ts";
+import { processRemote } from "./remote.ts";
+
+process.env.PI_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "pi-agent-"));
+
+const keys = () => ({ control: "a".repeat(64), view: "b".repeat(64) });
 
 async function port() {
 	const server = createServer();
@@ -109,11 +116,11 @@ function session(id: string) {
 }
 
 test("renaming preserves live activity and pending phone commands", async (t) => {
-	const runtime = processRuntime();
+	const { runtime } = processRemote();
 	const current = session("running");
 	t.after(() => current.emit("session_shutdown", { reason: "quit" }));
 	await current.emit("session_start");
-	await runtime.start(0);
+	await runtime.start(0, {}, keys);
 	const identity = runtime.identity()!;
 	const headers = { Authorization: `Bearer ${identity.token}` };
 	const snapshot = () =>
@@ -162,14 +169,14 @@ test("renaming preserves live activity and pending phone commands", async (t) =>
 });
 
 test("completed bash stays settled when the result message is delayed", async (t) => {
-	const runtime = processRuntime();
+	const { runtime } = processRemote();
 	const current = session("bash-result");
 	t.after(async () => {
 		await current.emit("session_shutdown", { reason: "quit" });
 		await runtime.stop();
 	});
 	await current.emit("session_start");
-	await runtime.start(0);
+	await runtime.start(0, {}, keys);
 	const { origin, token } = runtime.identity()!;
 	const snapshot = () => fetch(`${origin}/bootstrap`, {
 		headers: { Authorization: `Bearer ${token}` },
@@ -208,12 +215,12 @@ test("completed bash stays settled when the result message is delayed", async (t
 test("extension controls a process runtime across fresh factories", {
 	timeout: 15000,
 }, async (t) => {
-	const runtime = processRuntime();
-	t.after(() => runtime.stop());
+	const remote = processRemote();
+	t.after(() => remote.stop());
 	let current = session("original");
 	await current.emit("session_start", { reason: "startup" });
 	await current.command(`start ${await port()}`);
-	const identity = runtime.identity();
+	const identity = remote.identity();
 	assert.ok(identity);
 	const headers = { Authorization: `Bearer ${identity.token}` };
 	const initial = await fetch(`${identity.origin}/bootstrap`, { headers });
@@ -282,17 +289,17 @@ test("extension controls a process runtime across fresh factories", {
 		old.retire();
 		current = session(reason);
 		await current.emit("session_start", { reason });
-		const reimported = await import(`./runtime.ts?${reason}`);
-		assert.equal(reimported.processRuntime(), runtime);
+		const reimported = await import(`./remote.ts?${reason}`);
+		assert.equal(reimported.processRemote(), remote);
 		assert.ok(
-			runtime.identity()?.token === identity.token &&
-				runtime.identity()?.origin === identity.origin,
+			remote.identity()?.token === identity.token &&
+				remote.identity()?.origin === identity.origin,
 			"factory replacement preserves identity",
 		);
 		await old.emit("session_shutdown", { reason: "quit" });
 		assert.ok(
-			runtime.identity()?.token === identity.token &&
-				runtime.identity()?.origin === identity.origin,
+			remote.identity()?.token === identity.token &&
+				remote.identity()?.origin === identity.origin,
 			"stale quit preserves identity",
 		);
 		const bootstrap = await (
@@ -313,13 +320,19 @@ test("extension controls a process runtime across fresh factories", {
 	}
 	await reader.cancel();
 	await current.command("stop");
-	assert.ok(runtime.identity() === undefined, "stop revokes identity");
+	assert.ok(remote.identity() === undefined, "stop closes the listener");
 	await assert.rejects(fetch(`${identity.origin}/bootstrap`, { headers }));
 	await current.command(`start ${await port()}`);
-	assert.ok(
-		runtime.identity()!.token !== identity.token,
-		"restart rotates token",
+	assert.equal(remote.identity()!.token, identity.token, "restart keeps the link");
+	await current.command("link");
+	await current.command("revoke");
+	assert.ok(current.widget() === undefined, "revoke hides the old link");
+	assert.notEqual(remote.identity()!.token, identity.token, "revoke rotates the link");
+	assert.equal(
+		(await fetch(`${remote.identity()!.origin}/bootstrap`, { headers })).status,
+		401,
+		"the old link is refused",
 	);
 	await current.emit("session_shutdown", { reason: "quit" });
-	assert.ok(runtime.identity() === undefined, "quit revokes identity");
+	assert.ok(remote.identity() === undefined, "quit closes the listener");
 });

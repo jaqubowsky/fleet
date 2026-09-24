@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import {
 	createServer,
 	type IncomingMessage,
@@ -34,14 +34,14 @@ export type Binding = {
 	abort(): void;
 };
 export type Assets = Readonly<Record<string, { type: string; body: string }>>;
+export type Credentials = { control: string; view: string };
 
 const CLIENT_LIMIT = 8;
 const VIEW_LIMIT = 4;
 
 export class RemoteRuntime {
 	private server?: Server;
-	private token?: string;
-	private view?: string;
+	private keys?: () => Credentials;
 	private origin?: string;
 	private starting?: Promise<void>;
 	private stopping?: Promise<void>;
@@ -188,13 +188,12 @@ export class RemoteRuntime {
 		return frame(fit(this.messages, SNAPSHOT_LIMIT - overhead));
 	}
 
-	async start(port = 8787, assets: Assets = {}) {
+	async start(port: number, assets: Assets, keys: () => Credentials) {
 		if (this.stopping) await this.stopping;
 		if (this.starting) return this.starting;
 		if (this.server) return;
 		this.assets = assets;
-		this.token = randomBytes(32).toString("hex");
-		this.view = randomBytes(32).toString("hex");
+		this.keys = keys;
 		const server = createServer({ maxHeaderSize: 8192 }, (req, res) => {
 			void this.handle(req, res).catch(() => {
 				if (res.headersSent) res.destroy();
@@ -224,8 +223,7 @@ export class RemoteRuntime {
 		try {
 			await this.starting;
 		} catch (error) {
-			this.token = undefined;
-			this.view = undefined;
+			this.keys = undefined;
 			throw error;
 		} finally {
 			this.starting = undefined;
@@ -233,9 +231,9 @@ export class RemoteRuntime {
 	}
 
 	identity() {
-		return this.origin && this.token && this.view
-			? { origin: this.origin, token: this.token, view: this.view }
-			: undefined;
+		if (!this.origin || !this.keys) return undefined;
+		const { control, view } = this.keys();
+		return { origin: this.origin, token: control, view };
 	}
 
 	async stop() {
@@ -248,18 +246,21 @@ export class RemoteRuntime {
 		}
 	}
 
+	endStreams() {
+		for (const client of this.clients.keys()) client.destroy();
+		this.clients.clear();
+	}
+
 	private async close() {
 		if (this.starting) await this.starting.catch(() => {});
 		clearInterval(this.heartbeat);
 		clearTimeout(this.update);
 		this.update = undefined;
-		for (const client of this.clients.keys()) client.destroy();
-		this.clients.clear();
+		this.endStreams();
 		const server = this.server;
 		this.server = undefined;
 		this.origin = undefined;
-		this.token = undefined;
-		this.view = undefined;
+		this.keys = undefined;
 		if (server) {
 			server.closeAllConnections();
 			await new Promise<void>((resolve, reject) =>
@@ -291,12 +292,13 @@ export class RemoteRuntime {
 	}
 
 	private authorize(authorization?: string): boolean | undefined {
+		if (!this.keys) return undefined;
+		const keys = this.keys();
 		const actual = Buffer.from(authorization ?? "");
 		for (const [credential, control] of [
-			[this.token, true],
-			[this.view, false],
+			[keys.control, true],
+			[keys.view, false],
 		] as const) {
-			if (!credential) continue;
 			const expected = Buffer.from(`Bearer ${credential}`);
 			if (
 				expected.length === actual.length &&
@@ -422,10 +424,4 @@ export class RemoteRuntime {
 			this.json(res, 409, { error: "Command not accepted" });
 		}
 	}
-}
-
-const key = Symbol.for("pi.remote.runtime.v1");
-export function processRuntime(): RemoteRuntime {
-	const host = globalThis as typeof globalThis & { [key]?: RemoteRuntime };
-	return (host[key] ??= new RemoteRuntime());
 }

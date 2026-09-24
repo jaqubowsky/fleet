@@ -6,9 +6,9 @@ import { tree } from "/markdown.js";
 const fragment = location.hash.slice(1);
 const token = /^[a-f0-9]{64}$/.test(fragment)
 	? fragment
-	: sessionStorage.getItem("pi-remote-credential") ?? "";
+	: localStorage.getItem("pi-remote-credential") ?? "";
 if (/^[a-f0-9]{64}$/.test(fragment))
-	sessionStorage.setItem("pi-remote-credential", fragment);
+	localStorage.setItem("pi-remote-credential", fragment);
 if (location.hash) history.replaceState(null, "", location.pathname);
 const headers = { Authorization: `Bearer ${token}` };
 const $ = (id) => document.getElementById(id);

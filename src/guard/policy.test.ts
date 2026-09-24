@@ -77,7 +77,7 @@ test("a command after a newline is held to the same rules as one after a semicol
 });
 
 test("every harness keeps every harness's credentials off limits", () => {
-	for (const path of ["~/.claude/.credentials.json", "/Users/me/.claude.json", "~/.pi/agent/auth.json", "/Users/me/.omp/agent/auth.json", "~/.omp/agent/agent.db"]) {
+	for (const path of ["~/.claude/.credentials.json", "/Users/me/.claude.json", "~/.pi/agent/auth.json", "~/.pi/agent/remote/credentials.json", "/Users/me/.omp/agent/auth.json", "~/.omp/agent/agent.db"]) {
 		assert.equal(decide("Read", { file_path: path }).decision, "deny", path);
 		assert.equal(decide("Bash", { command: `cat ${path}` }).decision, "deny", path);
 	}

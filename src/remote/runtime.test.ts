@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { RemoteRuntime, type Binding } from "./runtime.ts";
 
+const keys = () => ({ control: "a".repeat(64), view: "b".repeat(64) });
+
 function binding(id: string, received: string[] = []): Binding {
 	return {
 		id,
@@ -74,7 +76,7 @@ test(
 		t.after(() => remote.stop());
 		let owner = Symbol();
 		remote.bind(owner, binding("initial"));
-		await remote.start(0);
+		await remote.start(0, {}, keys);
 		const identity = remote.identity();
 		const client = await connect(remote);
 		const events = await stream(remote);
@@ -157,7 +159,7 @@ test("completed tool and output reach both the stream and a fresh snapshot", asy
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("tools"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const events = await stream(remote);
 	t.after(() => events.close());
 	await events.next();
@@ -211,7 +213,7 @@ test("parallel completion preserves an evicted bash command", async (t) => {
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("parallel"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const calls = Array.from({ length: 17 }, (_, index) => ({
 		type: "toolCall", id: `bash-${index}`, name: "bash",
@@ -252,7 +254,7 @@ test("submitted text matches bounded user messages after history moves", async (
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	const generation = remote.bind(owner, binding("queue"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const first = await (await client.get("/bootstrap")).json();
 	assert.equal(first.transcript[0].seq, 1);
@@ -298,7 +300,7 @@ test("snapshot keeps its user watermark when live tools hide history", async (t)
 		},
 	})));
 	remote.bind(owner, session);
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const snapshot = () => client.get("/bootstrap").then((response) => response.json());
 	assert.equal((await snapshot()).transcript[0].seq, 1);
@@ -334,7 +336,7 @@ test("protocol bounds input and projects only public text", async (t) => {
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	const generation = remote.bind(owner, binding("one", received));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const snapshot = await (await client.get("/bootstrap")).json();
 	assert.deepEqual(snapshot.transcript, [
@@ -429,7 +431,7 @@ test("protocol bounds input and projects only public text", async (t) => {
 test("only the bearer holder can read a session", async (t) => {
 	const remote = new RemoteRuntime();
 	t.after(() => remote.stop());
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const { origin, token } = remote.identity()!;
 
 	const denied = await fetch(`${origin}/bootstrap`);
@@ -439,7 +441,6 @@ test("only the bearer holder can read a session", async (t) => {
 
 	assert.equal(denied.status, 401);
 	assert.equal(allowed.status, 200);
-	assert.ok(/^[a-f0-9]{64}$/.test(token), "token has 256 random bits");
 	assert.match(origin, /^http:\/\/127\.0\.0\.1:\d+$/);
 	assert.equal(JSON.stringify(await allowed.json()).includes(token), false);
 	for (const path of ["/bootstrap", "/events", "/command"]) {
@@ -477,10 +478,10 @@ test("snapshots and connected phones have finite bounds", async (t) => {
 			message: { role: "user", content: "x".repeat(10000) },
 		})),
 	});
-	await Promise.all([remote.start(0), remote.start(0)]);
+	await Promise.all([remote.start(0, {}, keys), remote.start(0, {}, keys)]);
 	const client = await connect(remote);
 	const before = remote.identity();
-	await remote.start(9999);
+	await remote.start(9999, {}, keys);
 	assert.ok(
 		remote.identity()?.origin === before?.origin &&
 			remote.identity()?.token === before?.token,
@@ -505,7 +506,7 @@ test("busy sessions reject prompts but accept steering and abort", async (t) => 
 		...binding("busy", sent),
 		idle: () => false,
 	});
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	assert.equal(
 		(await client.command({ generation, action: "prompt", text: "wait" }))
@@ -532,7 +533,7 @@ test(
 		t.after(() => remote.stop());
 		const owner = Symbol();
 		remote.bind(owner, binding("live"));
-		await remote.start(0);
+		await remote.start(0, {}, keys);
 		const phone = await stream(remote);
 		await phone.next();
 		remote.publish(owner, { type: "agent_start" });
@@ -578,7 +579,7 @@ test("the phone header says where the session stands", async (t) => {
 			queued: true,
 		}),
 	});
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 
 	const snapshot = await (await client.get("/bootstrap")).json();
@@ -596,7 +597,7 @@ test("a host that exposes nothing gets an empty header", async (t) => {
 	const remote = new RemoteRuntime();
 	t.after(() => remote.stop());
 	remote.bind(Symbol(), { ...binding("bare"), header: () => ({}) });
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 
 	const snapshot = await (await client.get("/bootstrap")).json();
@@ -608,7 +609,7 @@ test("the view link shows everything and controls nothing", async (t) => {
 	const remote = new RemoteRuntime();
 	t.after(() => remote.stop());
 	remote.bind(Symbol(), binding("shared"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const { origin, token, view } = remote.identity()!;
 	const as = (credential: string) => ({
 		Authorization: `Bearer ${credential}`,
@@ -627,7 +628,6 @@ test("the view link shows everything and controls nothing", async (t) => {
 		headers: as(token),
 	});
 
-	assert.ok(/^[a-f0-9]{64}$/.test(view), "view link has 256 random bits");
 	assert.notEqual(view, token);
 	assert.equal(seen.status, 200);
 	assert.equal((await seen.json()).control, false);
@@ -646,7 +646,7 @@ test("a long-running session keeps its snapshot inside the budget", async (t) =>
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("growing"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const filler = "y".repeat(200_000);
 
@@ -682,7 +682,7 @@ test("a finished tool reports how it ended", async (t) => {
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("settling"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 
 	remote.publish(owner, {
@@ -715,7 +715,7 @@ test("view-only phones never take the last stream from the control link", async 
 	const remote = new RemoteRuntime();
 	t.after(() => remote.stop());
 	remote.bind(Symbol(), binding("shared"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const { origin, token, view } = remote.identity()!;
 	const open = async (credential: string) => {
 		const response: Response = await fetch(`${origin}/events`, {
@@ -738,7 +738,7 @@ test("the whole frame stays inside the documented budget", async (t) => {
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("loaded"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 	const filler = "z".repeat(200_000);
 	const blocks = (turn: number) => [
@@ -793,7 +793,7 @@ test("a frame of many small turns is bounded by its transcript", async (t) => {
 	t.after(() => remote.stop());
 	const owner = Symbol();
 	remote.bind(owner, binding("chatty"));
-	await remote.start(0);
+	await remote.start(0, {}, keys);
 	const client = await connect(remote);
 
 	for (let turn = 0; turn < 64; turn++)

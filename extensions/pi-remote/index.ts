@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import qrcode from "qrcode-terminal";
-import { processRuntime } from "../../src/remote/runtime.ts";
+import { processRemote } from "../../src/remote/remote.ts";
 import { inspectServe } from "../../src/remote/tailscale.ts";
 
 export type Widget =
@@ -63,8 +65,17 @@ function spent(entries: unknown[]): number | undefined {
 	return seen ? total : undefined;
 }
 
+function agentHome() {
+	return (
+		process.env.PI_CODING_AGENT_DIR?.replace(/^~(?=\/|$)/, homedir()) ||
+		join(homedir(), ".pi", "agent")
+	);
+}
+
 export default function remoteExtension(pi: RemoteAPI) {
-	const runtime = processRuntime();
+	const remote = processRemote();
+	const { runtime } = remote;
+	const dir = join(agentHome(), "remote");
 	let owner = Symbol("remote binding");
 	function bind(ctx: Context) {
 		owner = Symbol("remote binding");
@@ -92,7 +103,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 	pi.on("session_shutdown", async (event, ctx) => {
 		if (!runtime.detach(owner)) return;
 		if (ctx.mode === "tui") ctx.ui.setWidget("pi-remote", undefined);
-		if (event.reason === "quit") await runtime.stop();
+		if (event.reason === "quit") await remote.stop();
 	});
 	for (const name of [
 		"agent_start",
@@ -112,7 +123,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 	for (const name of ["session_tree", "session_compact"])
 		pi.on(name, (_event, ctx) => bind(ctx));
 	pi.registerCommand("remote", {
-		description: "Remote control: start [port], stop, status, link, help",
+		description: "Remote control: start [port], stop, status, link, revoke, help",
 		handler: async (args, ctx) => {
 			const [action = "help", argument, ...rest] = args.trim().split(/\s+/);
 			if (ctx.mode === "tui") ctx.ui.setWidget("pi-remote", undefined);
@@ -122,9 +133,14 @@ export default function remoteExtension(pi: RemoteAPI) {
 				return;
 			}
 			if (action === "stop") {
-				await runtime.stop();
+				await remote.stop();
 				ctx.ui.setWidget("pi-remote", undefined);
-				ctx.ui.notify("Remote stopped. Existing links are revoked.");
+				ctx.ui.notify("Remote stopped. Links stay valid until /remote revoke.");
+				return;
+			}
+			if (action === "revoke") {
+				remote.revoke(dir);
+				ctx.ui.notify("Links revoked. Phones need the new /remote link.");
 				return;
 			}
 			if (action === "start") {
@@ -147,7 +163,7 @@ export default function remoteExtension(pi: RemoteAPI) {
 					),
 				});
 				try {
-					await runtime.start(port, {
+					await remote.start(dir, port, {
 						"/": asset("client.html", "text/html; charset=utf-8"),
 						"/client.js": asset("client.js", JS),
 						"/client.css": asset("client.css", CSS),
@@ -172,20 +188,20 @@ export default function remoteExtension(pi: RemoteAPI) {
 							CSS,
 						),
 					});
-				} catch {
+				} catch (error) {
 					ctx.ui.notify(
-						"Remote failed to start. Check the port and installed client files.",
+						`Remote failed to start: ${(error as Error).message}`,
 						"error",
 					);
 					return;
 				}
 			} else if (action !== "status" && action !== "link") {
 				ctx.ui.notify(
-					"/remote start [port] | stop | status | link [--view]\nDefault port 8787. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords. Remote input can run tools with this process's permissions. Only stop or process exit ends remote control.",
+					"/remote start [port] | stop | status | link [--view] | revoke\nDefault port 8787. Tailscale Serve is configured manually. Link shows a private QR in this terminal; --view shows the link that watches without controlling. Treat both as passwords: they stay valid across stop and restart until revoke replaces them. Remote input can run tools with this process's permissions. Stop or process exit ends remote control for this session.",
 				);
 				return;
 			}
-			const identity = runtime.identity();
+			const identity = remote.identity();
 			if (!identity) {
 				ctx.ui.notify("Remote stopped. Use /remote start.");
 				return;

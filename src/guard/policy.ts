@@ -34,7 +34,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	return deny(`Unknown tool policy: ${tool}`);
 }
 
-const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json)|\.omp/agent/(auth\.json|agent\.db|models\.db)|\.claude/\.credentials\.json|\.claude\.json)`;
+const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.omp/agent/(auth\.json|agent\.db|models\.db)|\.claude/\.credentials\.json|\.claude\.json)`;
 const HOST_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])/Users/[^/\s]+/${SECRET_PATHS}`);
 const HOME_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])(~|\$HOME)/${SECRET_PATHS}`);
 export const SECRET_MATERIAL = /(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,}|-----BEGIN\s[A-Z ]*PRIVATE KEY|op:\/\/)/;
