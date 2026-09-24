@@ -9,7 +9,7 @@ export function fleetSandboxes(sbxLs: { sandboxes?: Sandbox[] }, prefix: string)
 }
 
 export function sandboxes(io: Io): Sandbox[] {
-	const text = io.sbx(["ls", "--json"], { quiet: true });
+	const text = io.sbx(["ls", "--json"], { quiet: true, timeoutMs: 60_000 });
 	let listed: { sandboxes?: Sandbox[] };
 	try {
 		listed = JSON.parse(text);

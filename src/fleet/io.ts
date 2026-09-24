@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import type { Harness } from "../harness.ts";
 
 export type Io = {
-	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean }): string;
+	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number }): string;
 	herdr<T = unknown>(args: string[]): T;
 	herdrText(args: string[]): string;
 	git(args: string[], cwd: string): string;
@@ -28,16 +28,18 @@ export type Io = {
 	sessionId?: string;
 };
 
-function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string } = {}): string {
+function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string; timeoutMs?: number } = {}): string {
 	const result = spawnSync(cmd, args, {
 		cwd: opts.cwd,
 		input: "",
 		encoding: "utf8",
 		stdio: ["pipe", opts.stream ? "inherit" : "pipe", opts.quiet ? "pipe" : "inherit"],
+		timeout: opts.timeoutMs,
 	});
+	const shown = args.map((a) => (a.length > 80 ? `${a.slice(0, 77)}...` : a)).join(" ");
+	if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT") throw new Error(`${cmd} ${shown} gave no answer within ${(opts.timeoutMs ?? 0) / 1000}s`);
 	if (result.error) throw result.error;
 	if (result.status !== 0) {
-		const shown = args.map((a) => (a.length > 80 ? `${a.slice(0, 77)}...` : a)).join(" ");
 		const tail = [opts.quiet ? result.stderr : "", result.stdout].filter(Boolean).join("\n").trim().split("\n").slice(-20).join("\n");
 		throw new Error(`${cmd} ${shown} failed (${result.status})${tail ? `\n${tail}` : ""}`);
 	}
