@@ -1,10 +1,11 @@
 import type { Io } from "./io.ts";
+import { HISTORY, versions } from "../../extensions/status-history.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, taskDir } from "./up.ts";
-import { agentFor, checkoutProbe, elapsed, formatRows, parseCheckout, sandboxes, type Agent, type Row } from "./status.ts";
+import { addedLines, agentFor, checkoutProbe, elapsed, fieldsOf, formatRows, logLines, parseCheckout, sandboxes, type Agent, type Row } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 type Agents = { result: { agents: Agent[] } };
@@ -156,6 +157,28 @@ export function artifacts(repo: string, io: Io): string {
 	const width = Math.max(...lines.map((l) => l.name.length));
 
 	return [root, ...lines.map((l) => (l.detail ? `${l.indent}${l.name.padEnd(width)}  ${l.detail}` : `${l.indent}${l.name}`))].join("\n");
+}
+
+export function history(sandbox: string, repo: string, io: Io): string {
+	const running = sandboxes(io).find((s) => s.name === sandbox || agentName(s.name) === sandbox);
+	const dir = `${taskDir(running?.workspaces[0] ?? repo, running?.name ?? sandbox, io)}/${HISTORY}`;
+	const kept = versions(io.list(dir));
+	if (!kept.length) return `${dir}: no versions yet; the container keeps one each time status.md changes`;
+	const out: string[] = [];
+	let before: Record<string, string | undefined> = { attention: "none" };
+	let logged: string[] = [];
+	for (const version of kept) {
+		const text = io.read(`${dir}/${version.name}`) ?? "";
+		const fields = fieldsOf(text);
+		const now = { status: fields.status, attention: fields.attention, summary: fields.summary?.replace(/\s+/g, " "), "next step": fields.next?.replace(/\s+/g, " ") };
+		const log = logLines(text);
+		out.push(`${String(version.number).padStart(3, "0")}  ${version.at}  ${before.status && before.status !== now.status ? `${before.status} -> ` : ""}${now.status ?? "not recorded"}`);
+		for (const name of ["attention", "summary", "next step"] as const) if (now[name] && now[name] !== before[name]) out.push(`     ${name}: ${now[name]}`);
+		for (const line of addedLines(log, logged)) out.push(`     + ${line.slice(2)}`);
+		before = now;
+		logged = log;
+	}
+	return out.join("\n");
 }
 
 function sessionUsage(task: string, io: Io, branch?: string, repo?: string): Summary | undefined {

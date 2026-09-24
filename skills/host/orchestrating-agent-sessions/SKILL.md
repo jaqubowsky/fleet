@@ -15,6 +15,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
+| what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary, next step and the Log lines it added |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
@@ -34,6 +35,7 @@ Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings ba
 | Question | Read |
 | --- | --- |
 | where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
+| what happened, in order | `## Log` in `status.md`; every version of the file with `{{cli}} history` |
 | which commits | `{{cli}} ls` for the branch and its dirty count, `git log <base>..<branch>` after `{{cli}} land` |
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered |

@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { harness } from "../harness.ts";
 import { render } from "../render/render.ts";
-import { artifacts, build, copy, down, exec, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
+import { artifacts, build, copy, down, exec, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
 import { relay } from "./relay.ts";
@@ -22,6 +22,7 @@ const usage = `usage:
   ${cli} steer <sandbox> <text...>                    send the container's ${h.agent} this text
   ${cli} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${cli} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
+  ${cli} history <sandbox> [--repo <path>]            every status.md version in order: status, attention, summary, next step and the Log lines it added
   ${cli} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
   ${cli} land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
   ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
@@ -31,7 +32,7 @@ const usage = `usage:
   ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi or omp tab: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
-  --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory`;
+  --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory`;
 
 const BARE = new Set(["force", "push", "sign"]);
 
@@ -103,6 +104,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	artifacts(args) {
 		const { opts } = flags(args, ["repo"]);
 		io.log(artifacts(repoOf(opts), io));
+	},
+	history(args) {
+		const { opts, rest } = flags(args, ["repo"]);
+		io.log(history(need(rest[0], "sandbox"), repoOf(opts), io));
 	},
 	land(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "sign", "push"]);

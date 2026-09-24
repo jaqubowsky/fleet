@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { artifacts, build, down, exec, execScript, ls, peek, resolveSandbox, steer } from "./commands.ts";
+import { artifacts, build, down, exec, execScript, history, ls, peek, resolveSandbox, steer } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 
 const running = { "sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] }, "herdr agent list": { result: { agents: [] } } };
@@ -254,4 +254,46 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 
 	assert.equal(table, "pi-a  running  gone     web-1  30m  $0.42");
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
+});
+
+test("history lists every status.md version in local time with what changed in it and the log lines it added", (t) => {
+	const zone = process.env.TZ;
+	process.env.TZ = "Europe/Warsaw";
+	t.after(() => {
+		if (zone === undefined) delete process.env.TZ;
+		else process.env.TZ = zone;
+	});
+	const version = (summary: string, next: string, status: string, log: string[]) =>
+		`status: ${status}\nattention: none\n\n## Summary\n${summary}\n\n## Next step\n${next}\n\n## Log\n${log.map((line) => `- ${line}\n`).join("")}`;
+	const io = fakeIo({
+		...running,
+		[`list ${task}/logs/status`]: ["003-20260923T204358Z.md", "001-20260923T204013Z.md", "002-20260923T204306Z.md"],
+		[`read ${task}/logs/status/001-20260923T204013Z.md`]: version("Started WEB-1715.", "Read the ticket.", "analyzing", []),
+		[`read ${task}/logs/status/002-20260923T204306Z.md`]: version("The preview is about\n55% wide.", "Read the ticket.", "analyzing", ["Baseline build passed; logs/initial-build.log"]),
+		[`read ${task}/logs/status/003-20260923T204358Z.md`]: version("Analysis done.", "Change the grid.", "implementing", ["Baseline build passed; logs/initial-build.log", "Scope set; analysis.md"]),
+	});
+
+	const out = history("pi-a", "/somewhere/else", io);
+
+	assert.equal(
+		out,
+		[
+			"001  2026-09-23 22:40:13  analyzing",
+			"     summary: Started WEB-1715.",
+			"     next step: Read the ticket.",
+			"002  2026-09-23 22:43:06  analyzing",
+			"     summary: The preview is about 55% wide.",
+			"     + Baseline build passed; logs/initial-build.log",
+			"003  2026-09-23 22:43:58  analyzing -> implementing",
+			"     summary: Analysis done.",
+			"     next step: Change the grid.",
+			"     + Scope set; analysis.md",
+		].join("\n"),
+	);
+});
+
+test("history of a container already down reads the task directory of the repo it names", () => {
+	const io = fakeIo({ "sbx ls --json": { sandboxes: [] } });
+
+	assert.equal(history("pi-gone", "/w/webapp", io), "/home/me/.sandboxes/webapp/pi-gone/logs/status: no versions yet; the container keeps one each time status.md changes");
 });

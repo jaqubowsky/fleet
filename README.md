@@ -42,6 +42,7 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 <cli> steer <sandbox> <text...>
 <cli> exec <sandbox> -- <command...>
 <cli> artifacts [--repo <path>]
+<cli> history <sandbox> [--repo <path>]
 <cli> copy <src> <dst>
 <cli> land <sandbox> [--repo <path>] [--branch <name>] [--sign] [--push]
 <cli> down <sandbox> [--force]
@@ -62,8 +63,8 @@ The same verbs on every harness; `fleet` drives pi containers, `ofleet` OMP ones
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Handoff at 250k context | a `turn_end` note tells the model once; `session_handoff` suggests in `status.md`; `/session-handoff` from the user or host opens the fresh session | the same | a `PostToolUse` hook tells the model once; a `Stop` hook suggests in `status.md` when no background task runs; `/clear` from the user or host, a `SessionStart` hook records it | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | the same | `StopFailure` hook | each agent's own error event |
-| Phone control | `extensions/pi-remote` over Tailscale Serve | not loaded | Remote Control, a product setting | OMP lacks `agent_settled` and `session_info_changed`; Claude ships its own |
 | Status history | `tool_execution_end` copies each changed `status.md` into `logs/status/`, and so do the extensions' own writes | the same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event, whichever tool wrote the file |
+| Phone control | `extensions/pi-remote` over Tailscale Serve | not loaded | Remote Control, a product setting | OMP lacks `agent_settled` and `session_info_changed`; Claude ships its own |
 | Statusline | `extensions/statusline.ts` draws the footer with `src/statusline/` | native segments in `omp/profiles/settings.json`, coloured by `omp/themes/ayu-mirage.json` | `claude/statusline.mjs` draws with `src/statusline/` from the JSON Claude Code pipes in | OMP keeps `setFooter` a no-op and draws its own line; Claude Code runs a command |
 | Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | seats in `claude/profiles/models.json`, `--model` per container | all three read model seats; Claude also takes `effort` per agent, and `CLAUDE_CODE_SUBAGENT_MODEL` stays unset so a sub-agent keeps its own (anthropics/claude-code#10993) |
 | Transcripts | written into the task directory as they happen | the same | copied out of the container by `cfleet down` | Claude Code has no session directory setting |
