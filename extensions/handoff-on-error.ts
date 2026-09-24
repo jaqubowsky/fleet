@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { snapshot } from "./status-history.ts";
 
 type Message = { role?: string; stopReason?: string; errorMessage?: string };
 
@@ -29,6 +30,8 @@ export default function (pi: any) {
 			return;
 		}
 		const next = deathNote(status, last.errorMessage ?? "unknown error");
-		if (next !== undefined) writeFileSync(file, next);
+		if (next === undefined) return;
+		writeFileSync(file, next);
+		snapshot(dirname(file));
 	});
 }

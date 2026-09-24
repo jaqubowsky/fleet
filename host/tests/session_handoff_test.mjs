@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fakeIo } from "../../src/fleet/fake-io.ts";
@@ -18,7 +18,7 @@ for (const seat of ["host", "sbx"]) {
 	const agentDir = join(dir, "agent");
 	mkdirSync(agentDir);
 	mkdirSync(join(dir, "sbx/extensions"), { recursive: true });
-	copyFileSync(join(root, "extensions/session-handoff.ts"), join(dir, "sbx/extensions/session-handoff.ts"));
+	for (const file of ["session-handoff.ts", "status-history.ts"]) copyFileSync(join(root, "extensions", file), join(dir, "sbx/extensions", file));
 	const settings = JSON.parse(seatSettings(io, "/root", HARNESSES.pi, seat === "host" ? "host.json" : "sbx.json"));
 	writeFileSync(join(agentDir, "settings.json"), JSON.stringify(settings));
 	process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -97,6 +97,8 @@ for (const seat of ["host", "sbx"]) {
 			await replacement;
 			assert.notEqual(runtime.session, old);
 			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff complete; fresh session idle/);
+			const versions = readdirSync(join(dir, "task/logs/status")).sort();
+			assert.match(readFileSync(join(dir, "task/logs/status", versions.at(-1)), "utf8"), /attention: session handoff complete; fresh session idle/);
 			assert.equal(runtime.session.isStreaming, false);
 			assert.equal(runtime.session.pendingMessageCount, 0);
 			assert.equal(editor, "");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -151,6 +151,19 @@ test("the command opens an idle fresh session holding only hidden optional conte
 	assert.equal(r.editor(), "");
 	assert.match(r.readStatus(), /^attention: session handoff complete; fresh session idle$/m);
 	assert.deepEqual(r.state(), { attempts: 1, sessions: 1 });
+});
+
+test("each attention note the handoff writes is kept as a version, the command's own included", async (t) => {
+	const r = await runtime(t);
+
+	await r.suggest();
+	await r.approve();
+
+	const dir = join(r.taskDirectory, "logs/status");
+	const kept = readdirSync(dir).sort().map((name) => readFileSync(join(dir, name), "utf8"));
+	assert.equal(kept.length, 2);
+	assert.match(kept[0], /^attention: session handoff suggested; approve with \/session-handoff$/m);
+	assert.match(kept[1], /^attention: session handoff complete; fresh session idle$/m);
 });
 
 test("text after the command becomes the fresh session's first prompt", async (t) => {

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deathNote } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE, contextNote, pointer, suggested, withAttention } from "../../extensions/session-handoff.ts";
+import { snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
 type HookInput = { transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string; background_tasks?: unknown[] };
@@ -78,6 +79,7 @@ if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && p
 		if (event === "post-tool-use" && input.transcript_path && !input.agent_id) adviseOnce(input.transcript_path);
 		const updated = next(event, readFileSync(file, "utf8"), input);
 		if (updated !== undefined) writeFileSync(file, updated);
+		if (updated !== undefined || event !== "session-start") snapshot(task);
 		if (updated !== undefined && event === "session-start")
 			process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: pointer(task) } }));
 	} catch {}

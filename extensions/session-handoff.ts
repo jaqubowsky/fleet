@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { snapshot } from "./status-history.ts";
 
 type MutationQueue = <T>(path: string, mutation: () => Promise<T>) => Promise<T>;
 type Session = {
@@ -74,7 +75,11 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 	const threshold = settings.sessionHandoff?.suggestAtTokens ?? 250000;
 	if (!Number.isSafeInteger(threshold) || threshold <= 0) throw new Error("sessionHandoff.suggestAtTokens must be a positive integer");
 
-	const attention = (text: string) => mutate(statusFile, async () => writeFileSync(statusFile, withAttention(readFileSync(statusFile, "utf8"), text)));
+	const attention = (text: string) =>
+		mutate(statusFile, async () => {
+			writeFileSync(statusFile, withAttention(readFileSync(statusFile, "utf8"), text));
+			snapshot(taskDirectory);
+		});
 
 	const start = async (session: Session, prompt: string) => {
 		session.ui.setEditorText("");

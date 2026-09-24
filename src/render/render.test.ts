@@ -83,6 +83,25 @@ test("a pi or omp container carries the state relay for herdr's integration, and
 	assert.equal(omp.files["/home/agent/extensions/state-relay.ts"], undefined);
 });
 
+test("every container carries status history beside each module that imports it, and no host does", () => {
+	const history = { "read /root/extensions/status-history.ts": "history\n", "stat /root/extensions/status-history.ts": { size: 8, mtime: new Date(0), dir: false } };
+	const pi = fakeIo(sources(history));
+	const omp = fakeIo(sources({ ...history, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+	const claude = fakeIo(sources(history), HARNESSES.claude);
+
+	for (const io of [pi, omp, claude]) {
+		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+	}
+
+	for (const io of [pi, omp]) {
+		assert.equal(io.files["/stage/home/agent/extensions/status-history.ts"], "history\n");
+		assert.equal(io.files["/stage/context/extensions/status-history.ts"], "history\n");
+	}
+	assert.equal(claude.files["/stage/home/fleet/extensions/status-history.ts"], "history\n");
+	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && path.endsWith("status-history.ts")), []);
+});
+
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 
