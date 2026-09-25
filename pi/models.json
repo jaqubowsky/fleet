@@ -2,9 +2,6 @@
   "providers": {
     "openai-codex": {
       "modelOverrides": {
-        "gpt-6-astra": {
-          "contextWindow": 1050000
-        },
         "gpt-6-luna": {
           "contextWindow": 1050000,
           "maxTokens": 128000
