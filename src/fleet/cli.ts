@@ -5,6 +5,7 @@ import { render } from "../render/render.ts";
 import { artifacts, build, copy, down, exec, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
+import { permissions } from "./permissions.ts";
 import { relay } from "./relay.ts";
 import { up } from "./up.ts";
 import { watch } from "./watch.ts";
@@ -16,7 +17,8 @@ const io = realIo(home, h);
 const cli = h.cli;
 
 const usage = `usage:
-  ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, lay out the task directory, start pi in a herdr tab, send nothing
+  ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, branch off the freshest remote base, bind what its profile allows, lay out the task directory with permissions.md, start pi in a herdr tab, send nothing
+  ${cli} profile [<repo>] [--apply]                   what host/repos.json lets each seat do in <repo>, a checkout (default here) or owner/name; --apply sets the checkout's commit.gpgsign and, where the host pushes on its own, an HTTPS origin
   ${cli} ls                                           containers with herdr status, branch and dirty count
   ${cli} peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
   ${cli} steer <sandbox> <text...>                    send the container's ${h.agent} this text
@@ -34,7 +36,7 @@ const usage = `usage:
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory`;
 
-const BARE = new Set(["force", "push", "sign"]);
+const BARE = new Set(["apply", "force", "push", "sign"]);
 
 export function flags(args: string[], allowed: string[]): { opts: Record<string, string | true>; rest: string[] } {
 	const opts: Record<string, string | true> = {};
@@ -79,6 +81,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async up(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "base", "model", "memory", "cpus"]);
 		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, base: opts.base as string | undefined, model: opts.model as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
+	},
+	profile(args) {
+		const { opts, rest } = flags(args, ["apply"]);
+		io.log(permissions({ root, repo: rest[0] ?? process.cwd(), apply: opts.apply === true }, io));
 	},
 	ls(args) {
 		flags(args, []);

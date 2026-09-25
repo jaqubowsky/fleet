@@ -3,9 +3,11 @@ import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
 import { BRANCH_FROM_BASE, cacheStore, envFiles, up } from "./up.ts";
+import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
 const base = {
+	"read /root/host/repos.json": REAL_PROFILES,
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 	"sbx ls --json": { sandboxes: [] },
@@ -600,7 +602,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 		[`read ${task}/status.md`]: "status: implementing",
 	});
 	await up({ repo, label: "web-1", root: "/root" }, again);
-	assert.ok(!again.calls.some((c) => c[0] === "write"));
+	assert.deepEqual(again.calls.filter((c) => c[0] === "write").map((c) => c[1]), [`${task}/permissions.md`]);
 });
 
 test("up hands --model to pi and resumes the last session when one is on disk", async () => {
@@ -739,4 +741,63 @@ test("up says when the image predates the harness it would carry", async () => {
 		stale.lines.join("\n"),
 	);
 	assert.ok(!fresh.lines.some((line) => /built from/.test(line)));
+});
+
+test("up binds the token, Linear server and resources of the repository's profile, and writes and prints what they allow", async () => {
+	const io = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const secret = io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!;
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	const permissions = io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"];
+	assert.equal(secret.at(-1), "op://Dev/GitHub PAT webapp/credential");
+	assert.equal(run[run.indexOf("--static-mcp") + 1], "linear-acme-readonly");
+	assert.deepEqual([run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]], ["8g", "4"]);
+	assert.match(permissions, /^# Permissions: acme\/webapp\n/);
+	assert.match(permissions, /^- linear `read`: read Linear through `linear-acme-readonly`/m);
+	assert.ok(io.lines.includes(permissions));
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c.includes("gh")));
+});
+
+test("up attaches no Linear server where the profile gives none, and --memory and --cpus still win", async () => {
+	const io = fakeIo({ ...base, "git remote get-url origin": "git@github.com:alice/cv.git" });
+
+	await up({ repo, label: "web-1", root: "/root", memory: "16g", cpus: "8" }, io);
+
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.ok(!run.includes("--static-mcp"));
+	assert.deepEqual([run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]], ["16g", "8"]);
+	assert.equal(io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!.at(-1), "op://Dev/GitHub PAT Personal/credential");
+	assert.match(io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"], /^- resources: 16g memory, 8 cpus$/m);
+});
+
+const pushing = {
+	...base,
+	"read /root/host/repos.json": WITH_PRIVATE,
+	"git remote get-url origin": "git@github.com:alice/private-app.git",
+	"herdr workspace list": { result: { workspaces: [{ workspace_id: "w1", label: "private-app" }] } },
+};
+const privateRepos = "sbx exec claude-private-app-x gh api /user/repos";
+
+test("where the container may push, up keeps a token that sees this private repository alone", async () => {
+	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app" }, HARNESSES.claude);
+
+	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
+
+	assert.ok(io.calls.some((c) => c.join(" ").startsWith(privateRepos)));
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "rm"));
+	assert.equal(run[run.indexOf("--memory") + 1], "4g");
+});
+
+test("where the container may push, up removes the container whose token sees another private repository", async () => {
+	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app\nalice/diary" }, HARNESSES.claude);
+
+	await assert.rejects(
+		up({ repo: "/r/private-app", label: "x", root: "/root" }, io),
+		/container was removed[\s\S]*exactly one private repository, alice\/private-app; it sees alice\/private-app, alice\/diary/,
+	);
+	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "claude-private-app-x"]);
+	assert.equal(io.files["/home/me/.sandboxes/private-app/claude-private-app-x/permissions.md"], undefined);
 });

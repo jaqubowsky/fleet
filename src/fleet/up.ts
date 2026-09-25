@@ -2,11 +2,12 @@ import { basename } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript } from "./deps.ts";
 import { logEvent } from "./events.ts";
-import { githubRef, linearServer } from "./github.ts";
+import { describe, repoName, type Profile } from "../profile/profile.ts";
 import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
 import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
+import { repoProfile } from "./permissions.ts";
 import { agentFor, sandboxes, type Agent } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
@@ -81,7 +82,6 @@ type Created = {
 };
 
 const DETECT_TIMEOUT_MS = 90_000;
-const DEFAULT_CPUS = "4";
 const KNOWN_STATUS = new Set(["idle", "done", "working", "blocked"]);
 
 export async function up(
@@ -94,22 +94,22 @@ export async function up(
 		io.log(
 			`${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`,
 		);
-	const memory = input.memory ?? "8g";
-	const cpus = input.cpus ?? DEFAULT_CPUS;
 	input = {
 		...input,
 		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
 	};
 	const sandbox = sandboxName(input.repo, input.label, io.harness.prefix);
 	const agent = agentName(sandbox);
-	const origin = io.git(["remote", "get-url", "origin"], input.repo);
+	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
+	const profile = repoProfile(input.root, name, io);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const found = findPane(io, basename(input.repo), agent);
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {
-		create(input, sandbox, origin, memory, cpus, io);
+		create(input, sandbox, profile, io);
 		try {
+			if (profile.container.push === "auto") onlyRepository(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
@@ -145,6 +145,10 @@ export async function up(
 				`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`,
 			);
 		}
+		const resources = { memory: input.memory ?? profile.resources.memory, cpus: input.cpus ?? profile.resources.cpus };
+		const allowed = describe(name, { ...profile, resources }, io.harness.cli);
+		io.write(`${task}/permissions.md`, allowed);
+		io.log(allowed);
 		const locks = lockfiles(
 			io.git(
 				[
@@ -207,14 +211,19 @@ export async function up(
 	return { sandbox, agent, pane };
 }
 
-function create(
-	input: UpInput,
-	sandbox: string,
-	origin: string,
-	memory: string,
-	cpus: string,
-	io: Io,
-): void {
+function onlyRepository(io: Io, sandbox: string, name: string): void {
+	const seen = io
+		.sbx(["exec", sandbox, "gh", "api", "/user/repos", "--paginate", "--jq", ".[] | select(.private) | .full_name"], { quiet: true })
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+	if (seen.length === 1 && seen[0].toLowerCase() === name.toLowerCase()) return;
+	throw new Error(
+		`container.push is auto, so the token must see exactly one private repository, ${name || "this one"}; it sees ${seen.join(", ") || "none"}. Scope the token to ${name || "this repository"} alone, or lower container.push in the profile`,
+	);
+}
+
+function create(input: UpInput, sandbox: string, profile: Profile, io: Io): void {
 	const h = io.harness;
 	const artifacts = artifactsDir(input.repo, io);
 	const cache = cacheDir(input.repo, io);
@@ -230,16 +239,16 @@ function create(
 				"--sandbox",
 				sandbox,
 				"--ref",
-				githubRef(origin),
+				profile.container.token,
 			],
 			{ quiet: true },
 		);
 	} catch (error) {
 		io.log(
-			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`sbx secret set github --sandbox ${sandbox} --ref '${githubRef(origin)}'\``,
+			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`sbx secret set github --sandbox ${sandbox} --ref '${profile.container.token}'\``,
 		);
 	}
-	const linear = linearServer(origin);
+	const linear = profile.container.linear === "none" ? undefined : profile.container.linearServer;
 	const codex = h.codex
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
@@ -251,9 +260,9 @@ function create(
 		sandbox,
 		"--clone",
 		"--memory",
-		memory,
+		input.memory ?? profile.resources.memory,
 		"--cpus",
-		cpus,
+		input.cpus ?? profile.resources.cpus,
 		"-e",
 		"SSH_AUTH_SOCK_GATEWAY=",
 		"-e",
