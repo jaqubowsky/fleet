@@ -104,7 +104,6 @@ A pi or OMP host picks up a new render after `/reload`. A Claude host reads its 
 | Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | same, by `OMP_SESSION_ID` | every container, or the ones `cfleet watch` names | same as above |
 | Agent state in herdr | `fleet relay` in the pane reports as `fleet:pi` | `ofleet relay`, `fleet:omp` | herdr reads Claude's screen | herdr's Claude integration reports only the session |
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
-| Goal, boundaries, done-check before the first edit | rule only | rule only | a `PreToolUse` hook in the container refuses the first workspace edit until the agent has printed them | not built for pi or OMP yet |
 | Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | same | `StopFailure` hook | each agent's own error event |
 | Status history into `logs/status/` | `tool_execution_end` | same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
