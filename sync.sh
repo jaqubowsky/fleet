@@ -71,6 +71,15 @@ drift() {
 	done
 }
 
+render_host() {
+	local name="$1" home="$2" out="$3"
+	if [ -f "$HOME/$home/agent/mcp.json" ]; then
+		mkdir -p "$out/agent"
+		cp "$HOME/$home/agent/mcp.json" "$out/agent/mcp.json"
+	fi
+	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat host --out "$out" >/dev/null
+}
+
 seat_hash() {
 	(cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256; shasum -a 256 < "$2"; printf '%s\n' "${3-}") | shasum -a 256 | cut -c1-64
 }
@@ -100,7 +109,7 @@ done 3<<<"$HARNESS_ROWS"
 
 while read -r name cli home image owned <&3; do
 	echo "== $name: host seat in ~/$home"
-	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat host --out "$WORK/$name" >/dev/null
+	render_host "$name" "$home" "$WORK/$name"
 	stale="$(drift "$WORK/$name" "$HOME/$home" "$owned")"
 	if [ -n "$stale" ]; then
 		printf '%s\n' "$stale" | sed 's/^/    /'
@@ -169,7 +178,7 @@ elif [ "$apply" = 0 ]; then
 else
 	left=0
 	while read -r name cli home image owned <&3; do
-		FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat host --out "$WORK/$name-check" >/dev/null
+		render_host "$name" "$home" "$WORK/$name-check"
 		stale="$(drift "$WORK/$name-check" "$HOME/$home" "$owned")"
 		if [ -n "$stale" ]; then
 			left=1

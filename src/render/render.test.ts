@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
 import { HARNESSES } from "../harness.ts";
+import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { render, renderText } from "./render.ts";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -27,6 +28,7 @@ function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
 		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
+		"read /root/host/repos.json": REAL_PROFILES,
 		...extra,
 	};
 }
@@ -223,3 +225,39 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 		}
 	});
 }
+
+test("a profile that gives the host Linear adds its server to pi and omp mcp.json, beside the servers already there", () => {
+	const profiles = {
+		"read /root/host/repos.json": WITH_PRIVATE,
+		"read /home/agent/mcp.json": JSON.stringify({ mcpServers: { context7: { url: "https://mcp.context7.com/mcp" } } }),
+		"read /root/pi/profiles/host.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3"] }),
+		"read /root/pi/profiles/sbx.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"] }),
+	};
+	const pi = fakeIo(sources(profiles));
+	const omp = fakeIo(sources({ ...profiles, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+
+	for (const io of [pi, omp]) render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+
+	assert.deepEqual(JSON.parse(pi.files["/home/agent/mcp.json"]).mcpServers, {
+		context7: { url: "https://mcp.context7.com/mcp" },
+		"linear-private": { url: "https://mcp.linear.app/mcp", auth: "oauth" },
+	});
+	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"]);
+	assert.deepEqual(JSON.parse(omp.files["/home/agent/mcp.json"]).mcpServers, {
+		context7: { url: "https://mcp.context7.com/mcp" },
+		"linear-private": { type: "http", url: "https://mcp.linear.app/mcp" },
+	});
+});
+
+test("with no host Linear server in any profile, the host render writes no mcp.json and loads no adapter", () => {
+	const silent = Object.fromEntries(Object.entries(JSON.parse(WITH_PRIVATE)).map(([match, entry]: [string, any]) => [match, { ...entry, host: { ...entry.host, linear: "none", linearServer: undefined } }]));
+	const profiles = { "read /root/host/repos.json": JSON.stringify(silent) };
+	const pi = fakeIo(sources({ ...profiles, "read /root/pi/profiles/host.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3"] }) }));
+	const omp = fakeIo(sources({ ...profiles, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+
+	for (const io of [pi, omp]) render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+
+	assert.equal(pi.files["/home/agent/mcp.json"], undefined);
+	assert.equal(omp.files["/home/agent/mcp.json"], undefined);
+	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3"]);
+});

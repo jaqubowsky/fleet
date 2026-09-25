@@ -63,6 +63,32 @@ check("every other key survives", all(data[key] == value for key, value in kept.
 check("nothing else is invented", set(data) == set(kept) | {"model", "effortLevel", "$schema"})
 check("an aligned file reports no seat change", not [c for c in align.fix_user(dict(data)) if "host seat" in c])
 
+profiles = json.loads(align.PROFILES.read_text(encoding="utf-8"))
+private = {
+    **profiles,
+    "alice/private-app": {
+        "host": {"sign": "none", "push": "auto", "pr": "auto", "merge": "auto", "linear": "write", "linearServer": "linear-private"},
+        "container": {"push": "auto", "pr": "auto", "linear": "read", "linearServer": "linear-private-readonly", "token": "op://Dev/GitHub PAT private-app/credential"},
+        "resources": {"memory": "4g", "cpus": "4"},
+    },
+}
+context7 = {"type": "http", "url": "https://mcp.context7.com/mcp"}
+data = {**managed(align.HOOK_MATCHER), "managedMcpServers": {"context7": context7}}
+changes = align.fix_managed(data, json.dumps(private))
+
+check("host Linear server joins the managed servers", data["managedMcpServers"].get("linear-private") == {"type": "http", "url": "https://mcp.linear.app/mcp"})
+check("other managed servers survive", data["managedMcpServers"].get("context7") == context7)
+check("host Linear server is reported", any("linear-private" in change for change in changes))
+
+silent = {
+    match: {**entry, "host": {**{key: value for key, value in entry["host"].items() if key != "linearServer"}, "linear": "none"}}
+    for match, entry in private.items()
+}
+data = managed(align.HOOK_MATCHER)
+align.fix_managed(data, json.dumps(silent))
+
+check("profiles with no host Linear add no managed server", "managedMcpServers" not in data)
+
 with tempfile.TemporaryDirectory() as tmp:
     copy = Path(tmp) / "managed-settings.json"
     copy.write_text('{"stale": true}\n', encoding="utf-8")
@@ -74,5 +100,5 @@ with tempfile.TemporaryDirectory() as tmp:
     check("refreshed reference copy is reported", changed)
     check("current reference copy reports nothing", not align.mirror_reference(copy, live, True))
 
-print(f"align-settings.py: {4 + 6 + 3 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {4 + 6 + 4 + 3 - len(failures)} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)

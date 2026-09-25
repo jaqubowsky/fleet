@@ -81,6 +81,14 @@ export function profileFor(profiles: Profiles, repo: string): Profile {
 	return profiles[name] ?? profiles[`${name.split("/")[0]}/*`] ?? profiles["*"];
 }
 
+const LINEAR_URL = { read: "https://mcp.linear.app/mcp/readonly", write: "https://mcp.linear.app/mcp" };
+
+export function hostLinearServers(profiles: Profiles): Record<string, string> {
+	const servers: Record<string, string> = {};
+	for (const { host } of Object.values(profiles)) if (host.linear !== "none" && host.linearServer) servers[host.linearServer] = LINEAR_URL[host.linear];
+	return servers;
+}
+
 const linear = (entry: Host | Container): string =>
 	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : "; write only what you were told to"}`;
 

@@ -13,6 +13,7 @@ HOME = Path.home()
 REPO = Path(__file__).resolve().parents[2]
 USER_SETTINGS = HOME / ".claude" / "settings.json"
 HOST_SEAT = REPO / "claude" / "profiles" / "models.json"
+PROFILES = REPO / "host" / "repos.json"
 MANAGED_SETTINGS = Path("/Library/Application Support/ClaudeCode/managed-settings.json")
 REFERENCE = REPO / "claude" / "managed-settings.json"
 HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
@@ -27,6 +28,10 @@ DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 ATTRIBUTION = {"sessionUrl": False, "commit": "", "pr": ""}
 HOOK_MATCHER = "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*"
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
+HOST_LINEAR = """
+const { hostLinearServers, parseProfiles } = await import(`${process.argv[1]}/src/profile/profile.ts`);
+process.stdout.write(JSON.stringify(hostLinearServers(parseProfiles(await new Response(process.stdin).text()))));
+"""
 
 
 def load(path):
@@ -70,8 +75,22 @@ def registered(entries, script_name):
     )
 
 
-def fix_managed(data):
+def host_linear(profiles):
+    found = subprocess.run(
+        ["node", "--input-type=module", "-e", HOST_LINEAR, str(REPO)],
+        input=profiles, stdout=subprocess.PIPE, text=True, check=True,
+    )
+
+    return {name: {"type": "http", "url": url} for name, url in json.loads(found.stdout).items()}
+
+
+def fix_managed(data, profiles=None):
     changes = []
+
+    for name, server in host_linear(profiles if profiles is not None else PROFILES.read_text(encoding="utf-8")).items():
+        if data.get("managedMcpServers", {}).get(name) != server:
+            data.setdefault("managedMcpServers", {})[name] = server
+            changes.append(f"host Linear server {name} set to {server['url']} in managedMcpServers from host/repos.json")
 
     if "disableBypassPermissionsMode" in data:
         value = data.pop("disableBypassPermissionsMode")

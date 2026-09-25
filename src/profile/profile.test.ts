@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "./fixture.ts";
-import { describe, parseProfiles, profileFor, repoName } from "./profile.ts";
+import { describe, hostLinearServers, parseProfiles, profileFor, repoName } from "./profile.ts";
 
 const star = JSON.parse(REAL_PROFILES)["*"];
 
@@ -74,4 +74,14 @@ test("the description gives each seat one line per action, with its level and wh
 	assert.match(host, /^- merge `auto`: merge an accepted pull request with `gh pr merge`; the guard allows it$/m);
 	assert.match(host, /^- linear `write`: read and write Linear through `linear-private`/m);
 	assert.deepEqual(text.match(/^- \w+/gm), ["- push", "- pr", "- merge", "- linear", "- resources", "- sign", "- push", "- pr", "- merge", "- linear"]);
+});
+
+test("a host Linear level picks the server's endpoint: write the full one, read the read-only one", () => {
+	const profiles = JSON.parse(WITH_PRIVATE);
+	profiles["acme/*"].host = { ...profiles["acme/*"].host, linear: "read", linearServer: "linear-acme-host" };
+
+	assert.deepEqual(hostLinearServers(parseProfiles(JSON.stringify(profiles))), {
+		"linear-acme-host": "https://mcp.linear.app/mcp/readonly",
+		"linear-private": "https://mcp.linear.app/mcp",
+	});
 });
