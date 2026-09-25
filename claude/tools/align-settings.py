@@ -26,6 +26,7 @@ DETECTION_SOURCE = REPO / "host" / "agent-detection"
 DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
 ATTRIBUTION = {"sessionUrl": False, "commit": "", "pr": ""}
+FLEET_OUTSIDE = ["cfleet up*", "cfleet build*", "cfleet land*"]
 HOOK_MATCHER = "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*"
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
 HOST_LINEAR = """
@@ -105,6 +106,12 @@ def fix_managed(data, profiles=None):
         if data.get(key) is not False:
             data[key] = False
             changes.append(f"{key} set to false, so claude.ai account skills and plugins stay off this host")
+
+    excluded = data.setdefault("sandbox", {}).setdefault("excludedCommands", [])
+    for pattern in FLEET_OUTSIDE:
+        if pattern not in excluded:
+            excluded.append(pattern)
+            changes.append(f"sandbox.excludedCommands gains {pattern}: it needs docker, op or the container's git port")
 
     hooks = data.setdefault("hooks", {})
 
