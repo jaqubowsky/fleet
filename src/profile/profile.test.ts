@@ -57,7 +57,8 @@ test("the profile file holds today's three profiles", () => {
 	}
 	assert.deepEqual(globex.map((p) => p.container.token), ["op://Dev/GitHub PAT globex/credential", "op://Dev/GitHub PAT globex/credential"]);
 	assert.equal(personal.container.token, "op://Dev/GitHub PAT Personal/credential");
-	assert.deepEqual(new Set(Object.values(profiles).map((p) => p.resources.memory)), new Set(["8g"]));
+	assert.equal(webapp.resources.memory, "12g");
+	assert.deepEqual([...globex, personal].map((p) => p.resources.memory), ["8g", "8g", "8g"]);
 });
 
 test("the description gives each seat one line per action, with its level and what it means there", () => {
