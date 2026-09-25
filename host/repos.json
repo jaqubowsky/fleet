@@ -1,22 +1,67 @@
 {
   "acme/*": {
-    "host": { "sign": "none", "push": "human", "pr": "none", "merge": "none", "linear": "none" },
-    "container": { "push": "none", "pr": "auto", "linear": "read", "linearServer": "linear-acme-readonly", "token": "op://Dev/GitHub PAT webapp/credential" },
-    "resources": { "memory": "8g", "cpus": "4" }
+    "host": {
+      "sign": "none",
+      "push": "human",
+      "pr": "none",
+      "merge": "none",
+      "linear": "none"
+    },
+    "container": {
+      "push": "none",
+      "pr": "auto",
+      "linear": "read",
+      "linearServer": "linear-acme-readonly",
+      "token": "op://Dev/GitHub PAT webapp/credential"
+    },
+    "resources": { "memory": "12g", "cpus": "4" }
   },
   "globex/*": {
-    "host": { "sign": "human", "push": "human", "pr": "none", "merge": "none", "linear": "none" },
-    "container": { "push": "none", "pr": "auto", "linear": "none", "token": "op://Dev/GitHub PAT globex/credential" },
+    "host": {
+      "sign": "human",
+      "push": "human",
+      "pr": "none",
+      "merge": "none",
+      "linear": "none"
+    },
+    "container": {
+      "push": "none",
+      "pr": "auto",
+      "linear": "none",
+      "token": "op://Dev/GitHub PAT globex/credential"
+    },
     "resources": { "memory": "8g", "cpus": "4" }
   },
   "bob/*": {
-    "host": { "sign": "human", "push": "human", "pr": "none", "merge": "none", "linear": "none" },
-    "container": { "push": "none", "pr": "auto", "linear": "none", "token": "op://Dev/GitHub PAT globex/credential" },
+    "host": {
+      "sign": "human",
+      "push": "human",
+      "pr": "none",
+      "merge": "none",
+      "linear": "none"
+    },
+    "container": {
+      "push": "none",
+      "pr": "auto",
+      "linear": "none",
+      "token": "op://Dev/GitHub PAT globex/credential"
+    },
     "resources": { "memory": "8g", "cpus": "4" }
   },
   "*": {
-    "host": { "sign": "human", "push": "human", "pr": "none", "merge": "none", "linear": "none" },
-    "container": { "push": "none", "pr": "auto", "linear": "none", "token": "op://Dev/GitHub PAT Personal/credential" },
+    "host": {
+      "sign": "human",
+      "push": "human",
+      "pr": "none",
+      "merge": "none",
+      "linear": "none"
+    },
+    "container": {
+      "push": "none",
+      "pr": "auto",
+      "linear": "none",
+      "token": "op://Dev/GitHub PAT Personal/credential"
+    },
     "resources": { "memory": "8g", "cpus": "4" }
   }
 }
