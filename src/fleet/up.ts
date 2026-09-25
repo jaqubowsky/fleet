@@ -109,7 +109,7 @@ export async function up(
 	if (!existing) {
 		create(input, sandbox, profile, io);
 		try {
-			if (profile.container.push === "auto") onlyRepository(io, sandbox, name);
+			if (profile.container.push === "auto") refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
@@ -211,15 +211,15 @@ export async function up(
 	return { sandbox, agent, pane };
 }
 
-function onlyRepository(io: Io, sandbox: string, name: string): void {
+function refuseOtherPrivate(io: Io, sandbox: string, name: string): void {
 	const seen = io
 		.sbx(["exec", sandbox, "gh", "api", "/user/repos", "--paginate", "--jq", ".[] | select(.private) | .full_name"], { quiet: true })
 		.split("\n")
 		.map((line) => line.trim())
 		.filter(Boolean);
-	if (seen.length === 1 && seen[0].toLowerCase() === name.toLowerCase()) return;
+	if (seen.every((repo) => repo.toLowerCase() === name.toLowerCase())) return;
 	throw new Error(
-		`container.push is auto, so the token must see exactly one private repository, ${name || "this one"}; it sees ${seen.join(", ") || "none"}. Scope the token to ${name || "this repository"} alone, or lower container.push in the profile`,
+		`container.push is auto, so the token may see no private repository other than ${name || "this one"}; it sees ${seen.join(", ")}. Scope the token to ${name || "this repository"} alone, or lower container.push in the profile`,
 	);
 }
 

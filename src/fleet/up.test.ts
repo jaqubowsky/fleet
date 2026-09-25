@@ -791,12 +791,21 @@ test("where the container may push, up keeps a token that sees this private repo
 	assert.equal(run[run.indexOf("--memory") + 1], "4g");
 });
 
+test("where the container may push, up keeps a token that sees no private repository, as for a public project", async () => {
+	const io = fakeIo({ ...pushing, [privateRepos]: "" }, HARNESSES.claude);
+
+	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
+
+	assert.ok(io.calls.some((c) => c.join(" ").startsWith(privateRepos)));
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "rm"));
+});
+
 test("where the container may push, up removes the container whose token sees another private repository", async () => {
 	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app\nalice/diary" }, HARNESSES.claude);
 
 	await assert.rejects(
 		up({ repo: "/r/private-app", label: "x", root: "/root" }, io),
-		/container was removed[\s\S]*exactly one private repository, alice\/private-app; it sees alice\/private-app, alice\/diary/,
+		/container was removed[\s\S]*no private repository other than alice\/private-app; it sees alice\/private-app, alice\/diary/,
 	);
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "claude-private-app-x"]);
 	assert.equal(io.files["/home/me/.sandboxes/private-app/claude-private-app-x/permissions.md"], undefined);
