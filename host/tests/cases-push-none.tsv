@@ -29,3 +29,7 @@ deny	Bash	/usr/bin/git push
 deny	Bash	command git push
 deny	Bash	env git push
 deny	Bash	echo main | xargs git push origin
+deny	Bash	echo `#`; git push
+deny	Bash	`true`#; git push
+deny	Bash	$(sbx exec pi-cv true)git push origin main
+deny	Bash	sbx exec pi-cv cat <(git push)

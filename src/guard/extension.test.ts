@@ -50,3 +50,16 @@ test("the extension judges a pull request by the profile of the directory the ag
 	assert.equal(own, undefined);
 	assert.equal(work?.block, true);
 });
+
+test("the extension refuses an edit or a shell write of the host's permissions and lets it read them", () => {
+	const root = privateRoot();
+	const guard = handler(root);
+
+	const edit = guard({ toolName: "edit", input: { path: "host/repos.json" } }, { cwd: root });
+	const shell = guard({ toolName: "bash", input: { command: "sed -i s/none/auto/ host/repos.json" } }, { cwd: root });
+	const read = guard({ toolName: "read", input: { path: "host/repos.json" } }, { cwd: root });
+
+	assert.match(edit?.reason ?? "", /only the person changes it/);
+	assert.match(shell?.reason ?? "", /only the person changes it/);
+	assert.equal(read, undefined);
+});

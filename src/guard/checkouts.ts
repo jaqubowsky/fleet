@@ -1,8 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { WITH_PRIVATE } from "../profile/fixture.ts";
+import { join, resolve } from "node:path";
+import { today, WITH_PRIVATE } from "../profile/fixture.ts";
+import { hostAt } from "./host.ts";
+import type { Host, HostLevels } from "./policy.ts";
+
+export const at = (levels: HostLevels): Host => ({ ...hostAt(resolve(import.meta.dirname, "../..")), levels: () => levels });
+
+export const here = at(today());
 
 export function checkout(origin: string): string {
 	const dir = mkdtempSync(join(tmpdir(), "guard-checkout-"));

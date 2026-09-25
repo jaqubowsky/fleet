@@ -4,8 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { answer } from "../../claude/hooks/guard.ts";
-import { PRIVATE_REPO, today } from "../profile/fixture.ts";
-import { checkout, privateRoot } from "./checkouts.ts";
+import { PRIVATE_REPO } from "../profile/fixture.ts";
+import { checkout, here, privateRoot } from "./checkouts.ts";
 import { decide, POLICY_TOOLS } from "./policy.ts";
 
 const wrapper = resolve(import.meta.dirname, "../../claude/hooks/guard.sh");
@@ -41,10 +41,10 @@ test("the managed matcher sends the hook every tool the policy reads, and only t
 test("a heredoc body is text unless it feeds an interpreter", () => {
 	const heredoc = (head: string, body: string) => `${head} <<'EOF'\n${body}\nEOF`;
 
-	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }, today).decision, "allow");
-	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }, today).decision, "allow");
-	assert.equal(decide("Bash", { command: heredoc("bash", "cat ~/.ssh/id_ed25519") }, today).decision, "deny");
-	assert.equal(decide("Bash", { command: `cat ~/.ssh/config && ${heredoc("cat > d.md", "x")}` }, today).decision, "deny");
+	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }, here).decision, "allow");
+	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }, here).decision, "allow");
+	assert.equal(decide("Bash", { command: heredoc("bash", "cat ~/.ssh/id_ed25519") }, here).decision, "deny");
+	assert.equal(decide("Bash", { command: `cat ~/.ssh/config && ${heredoc("cat > d.md", "x")}` }, here).decision, "deny");
 });
 
 test("the claude hook judges a pull request by the profile of the session's working directory", () => {
@@ -56,4 +56,13 @@ test("the claude hook judges a pull request by the profile of the session's work
 
 	assert.equal(own, "");
 	assert.match(work, /"permissionDecision":"deny"/);
+});
+
+test("the claude hook refuses an edit or a shell write of the host's permissions and leaves reading them to Claude", () => {
+	const root = privateRoot();
+	const ask = (tool_name: string, tool_input: Record<string, unknown>) => answer({ tool_name, tool_input, cwd: root }, root);
+
+	assert.match(ask("Edit", { file_path: "host/repos.json" }), /"permissionDecision":"deny"/);
+	assert.match(ask("Bash", { command: "echo '{}' | tee host/repos.json" }), /"permissionDecision":"deny"/);
+	assert.equal(ask("Read", { file_path: "host/repos.json" }), "");
 });

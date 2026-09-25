@@ -3,12 +3,12 @@ import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import { PRIVATE_REPO } from "../profile/fixture.ts";
 import { checkout, privateRoot } from "./checkouts.ts";
-import { levelsAt } from "./levels.ts";
+import { hostAt } from "./host.ts";
 
 const own = `git@github.com:${PRIVATE_REPO}.git`;
 
 test("a checkout whose only remote is origin takes the host levels of origin's profile", () => {
-	const levels = levelsAt(checkout(own), privateRoot())();
+	const levels = hostAt(checkout(own), privateRoot()).levels();
 
 	assert.deepEqual([levels.push, levels.pr, levels.merge], ["auto", "auto", "auto"]);
 });
@@ -20,7 +20,7 @@ test("a second remote or a gh default repository takes pull requests away from t
 	execFileSync("git", ["-C", resolved, "config", "remote.origin.gh-resolved", "acme/webapp"]);
 
 	for (const dir of [upstream, resolved]) {
-		const levels = levelsAt(dir, privateRoot())();
+		const levels = hostAt(dir, privateRoot()).levels();
 
 		assert.deepEqual([levels.push, levels.pr, levels.merge], ["auto", "none", "none"], dir);
 	}

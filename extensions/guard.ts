@@ -1,5 +1,5 @@
 import type { Harness } from "../src/harness.ts";
-import { levelsAt } from "../src/guard/levels.ts";
+import { hostAt } from "../src/guard/host.ts";
 import { decide } from "../src/guard/policy.ts";
 import { TRUSTED, translate } from "../src/guard/translate.ts";
 
@@ -18,7 +18,7 @@ export default function guard(h: Harness, root?: string) {
 			if (!payload)
 				return { block: true, reason: `Unknown tool policy: ${event.toolName}` };
 
-			const verdict = decide(payload.tool_name, payload.tool_input, levelsAt(ctx.cwd, root));
+			const verdict = decide(payload.tool_name, payload.tool_input, hostAt(ctx.cwd, root));
 			if (verdict.decision === "allow") return;
 
 			return { block: true, reason: verdict.reason };

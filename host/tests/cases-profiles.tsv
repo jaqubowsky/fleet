@@ -1,0 +1,57 @@
+# The host reads host/repos.json and never writes it: only the person changes what the host may do.
+allow	Read	host/repos.json
+deny	Edit	host/repos.json
+deny	Write	host/repos.json
+deny	NotebookEdit	host/repos.json
+allow	Bash	cat host/repos.json
+allow	Bash	jq '.["*"].host' ~/harness/host/repos.json
+allow	Bash	grep -n push host/repos.json
+allow	Bash	cd ~/harness && git diff host/repos.json
+allow	Bash	cat host/repos.json | jq .
+allow	Bash	jq . host/repos.json > /tmp/profiles.json
+allow	Bash	git commit -m "feat(guard): refuse writes to host/repos.json"
+allow	Bash	sbx exec pi-harness sed -i s/none/auto/ host/repos.json
+deny	Bash	echo '{}' > host/repos.json
+deny	Bash	jq '.x' host/repos.json >| ~/harness/host/repos.json
+deny	Bash	cat /tmp/p.json >> "host/repos.json"
+deny	Bash	echo x | tee host/repos.json
+deny	Bash	sed -i 's/none/auto/' host/repos.json
+deny	Bash	sed -i.bak s/none/auto/ /Users/me/harness/host/repos.json
+deny	Bash	cp /tmp/p.json host/repos.json
+deny	Bash	mv /tmp/p.json ~/harness/host/repos.json
+deny	Bash	ln -sf /tmp/p.json host/repos.json
+deny	Bash	python3 -c "open('host/repos.json','w').write('{}')"
+deny	Bash	node -e 'require("fs").writeFileSync("host/repos.json","{}")'
+deny	Bash	cd host && perl -pi -e 's/none/auto/' repos.json
+deny	Bash	sed -i s/none/auto/ host/*.json
+deny	Bash	sed -i s/none/auto/ host/repo?.json
+deny	Bash	cat $(sed -i s/none/auto/ host/repos.json)
+deny	Bash	echo host/repos.json | xargs sed -i s/none/auto/
+deny	Bash	F=host/repos.json; sed -i s/none/auto/ "$F"
+deny	Bash	find . -name repos.json -exec sed -i s/none/auto/ {} +
+deny	Bash	sed -i s/none/auto/ host/rep"os".js\on
+allow	Bash	grep -rn "repos.*" docs/
+deny	Bash	sbx exec pi-harness cat host/repos.json > host/repos.json
+deny	Bash	echo '{}' | sbx exec pi-harness cat > host/repos.json
+deny	Bash	echo `#`; sed -i s/none/auto/ host/repos.json
+deny	Bash	`true`#; sed -i s/none/auto/ host/repos.json
+deny	Bash	$(sbx exec pi-harness true)sed -i s/none/auto/ host/repos.json
+deny	Bash	sed -i s/none/auto/ host/repo[s].json
+deny	Bash	sed -i s/none/auto/ host/{repos.json,}
+deny	Bash	sed -i s/none/auto/ host/{rep,x}os.json
+deny	Bash	sed -i s/none/auto/ host/repos.js${x}on
+deny	Bash	sed -i s/none/auto/ host/repo$(echo s).json
+deny	Bash	cat /tmp/p > host/repo[s].json
+deny	Bash	python3 -c "open('host/repos.json'+'','w').write('{}')"
+deny	Bash	git diff --output=host/repos.json
+deny	Bash	git grep -O'sed -i s/none/auto/' none host/repos.json
+deny	Bash	sed -i s/none/auto/ host/Repos.json
+deny	Bash	cd host && sed -i s/none/auto/ *
+allow	Bash	rm -rf dist/*
+allow	Bash	for f in *.json; do jq . "$f"; done
+allow	Bash	du -sh *
+allow	Edit	src/guard/policy.ts
+deny	Edit	.
+deny	Edit	host
+deny	Write	host/Repos.json
+allow	Bash	[ -f host/repos.json ] && test -s host/repos.json && echo yes

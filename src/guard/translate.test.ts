@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PRIVATE_REPO, today, WITH_PRIVATE } from "../profile/fixture.ts";
+import { PRIVATE_REPO, WITH_PRIVATE } from "../profile/fixture.ts";
 import { parseProfiles, profileFor } from "../profile/profile.ts";
+import { at, here } from "./checkouts.ts";
 import { decide } from "./policy.ts";
 import { TRUSTED, translate } from "./translate.ts";
 
@@ -9,7 +10,7 @@ const verdict = (tool: string, input: Record<string, unknown>) => {
 	const payload = translate(tool, input);
 	assert.ok(payload, `${tool} has no policy payload`);
 
-	return decide(payload.tool_name, payload.tool_input, today).decision;
+	return decide(payload.tool_name, payload.tool_input, here).decision;
 };
 
 test("a tool with no translation has no policy, so the caller refuses it", () => {
@@ -40,7 +41,7 @@ test("an mcp tool is judged on every string it carries", () => {
 });
 
 test("an omp bash call that moves its directory or sets its environment is judged as the command it runs", () => {
-	const auto = () => profileFor(parseProfiles(WITH_PRIVATE), PRIVATE_REPO).host;
+	const auto = at(profileFor(parseProfiles(WITH_PRIVATE), PRIVATE_REPO).host);
 	const judge = (input: Record<string, unknown>) => {
 		const payload = translate("bash", input)!;
 		return decide(payload.tool_name, payload.tool_input, auto).decision;

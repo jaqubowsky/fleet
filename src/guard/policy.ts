@@ -2,6 +2,8 @@ import type { Profile } from "../profile/profile.ts";
 
 export type HostLevels = Pick<Profile["host"], "push" | "pr" | "merge">;
 
+export type Host = { levels: () => HostLevels; reaches: (path: string) => boolean };
+
 export type Decision = { decision: "allow" | "deny"; reason: string; explicit?: true };
 
 const allow = (reason: string): Decision => ({ decision: "allow", reason });
@@ -25,7 +27,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	const text = (key: string): string => (typeof input[key] === "string" ? (input[key] as string) : "");
 
 	if (tool === "Bash") return { subject: text("command"), outbound: false };
-	if (["Read", "Edit", "Write", "NotebookEdit"].includes(tool)) return { subject: text("file_path"), outbound: false };
+	if (["Read", "Edit", "Write", "NotebookEdit"].includes(tool)) return { subject: text("file_path") || text("notebook_path"), outbound: false };
 	if (["Grep", "Glob"].includes(tool)) return { subject: `${text("path")} ${text("pattern")}`.trim(), outbound: false };
 	if (tool === "WebFetch") return { subject: text("url"), outbound: true };
 	if (tool === "WebSearch") return { subject: text("query"), outbound: true };
@@ -75,6 +77,11 @@ const OWN_PR: Record<string, RegExp> = {
 	merge: /^\s*gh\s+pr\s+merge(\s+\d+)?(\s+--(squash|merge|rebase|delete-branch|auto))*\s*$/,
 };
 
+const OWN_PROFILES = "host/repos.json sets what the host may do, so only the person changes it. Read it with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names the file passes only when every part of it is such a read, so run the read on its own.";
+const READS_PROFILES = new RegExp(String.raw`^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)`);
+const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
+const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
+
 const RECURSIVE_RM = command(String.raw`rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`);
 const RM_PROTECTED = command(String.raw`rm\s[^;&|]*\s${PROTECTED}`);
 const RM_ROOTS = command(String.raw`rm\s[^;&|]*\s${ROOTS}`);
@@ -115,14 +122,33 @@ function scan(subject: string): string {
 	return kept.join("\n");
 }
 
-function hostCommands(subject: string): string {
+function hostCommands(subject: string): string[] {
 	const segments: string[] = [];
+	const substitutions: boolean[] = [];
 	let quote = "";
 	let current = "";
+	let redirect = -1;
+	const cut = () => {
+		segments.push(!DELEGATED_SEGMENT.test(current) ? current : redirect < 0 ? "" : current.slice(redirect));
+		current = "";
+		redirect = -1;
+	};
 	for (let i = 0; i < subject.length; i++) {
 		const char = subject[i];
 		if (quote === "'") {
 			if (char === quote) quote = "";
+		} else if (char === "\x60" || (/[$<>]/.test(char) && subject[i + 1] === "(")) {
+			cut();
+			if (char !== "\x60") {
+				substitutions.push(true);
+				i++;
+			}
+			continue;
+		} else if (char === ")" && substitutions.length) {
+			if (substitutions.pop()) {
+				cut();
+				continue;
+			}
 		} else if (char === "\\") {
 			current += char + (subject[i + 1] ?? "");
 			i++;
@@ -130,27 +156,57 @@ function hostCommands(subject: string): string {
 		} else if (quote) {
 			if (char === quote) quote = "";
 		} else if (char === "'" || char === '"') quote = char;
-		else if (char === "#" && /(^|\s)$/.test(current)) {
+		else if (char === "(") substitutions.push(false);
+		else if (char === "#" && (i === 0 || /[\s;&|(]/.test(subject[i - 1]))) {
 			const end = subject.indexOf("\n", i);
 			i = (end < 0 ? subject.length : end) - 1;
 			continue;
 		} else if (";&|\n".includes(char)) {
-			segments.push(current);
-			current = "";
+			cut();
 			continue;
-		}
+		} else if (/[<>]/.test(char) && redirect < 0) redirect = current.length;
 		current += char;
 	}
-	segments.push(current);
+	cut();
 
-	return segments.filter((segment) => !DELEGATED_SEGMENT.test(segment) || /\$\(|\x60/.test(segment)).join("\n");
+	return segments;
+}
+
+function literal(text: string): string {
+	return text
+		.replace(/'[^']*'|\\./g, (quoted) => quoted.replace(/[*?[\]{}$]/g, "\0"))
+		.replace(/"[^"]*"/g, (quoted) => quoted.replace(/[*?[\]{}]/g, "\0"))
+		.replace(/['"\\]/g, "");
+}
+
+function namesProfiles(text: string, host: Host): boolean {
+	const plain = literal(text);
+	const dirs = ["", ...[...plain.matchAll(CD)].map((match) => match[3])];
+	return plain.split(/[\s\x60()=:;<>|&]+/).some((word) => {
+		if (word.toLowerCase().includes("repos.json")) return true;
+
+		const pattern = word.replace(EXPANSION, "*");
+		const dir = pattern.slice(0, pattern.lastIndexOf("/") + 1);
+		const name = pattern.slice(dir.length);
+		const glob = new RegExp(`^${name.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".")}$`, "i");
+		if (!/[*?]/.test(name) || !glob.test("repos.json")) return false;
+
+		return /[*?]/.test(dir) || dirs.some((cd) => /[$*?[{]/.test(cd) || host.reaches(`${cd}${cd ? "/" : ""}${dir}repos.json`));
+	});
+}
+
+function readsProfiles(segment: string, host: Host): boolean {
+	const redirects = [...literal(segment).matchAll(/>\|?\s*([^\s;&|<>]+)/g)];
+	if (redirects.some(([, target]) => namesProfiles(target, host))) return false;
+
+	return !segment.trim() || /^\s*\d*[<>]/.test(segment) || (READS_PROFILES.test(segment) && !/\s--output\b/.test(segment));
 }
 
 function flatten(subject: string): string {
 	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/['"]/g, " ");
 }
 
-export function decide(tool: string, input: Record<string, unknown>, levels: () => HostLevels): Decision {
+export function decide(tool: string, input: Record<string, unknown>, host: Host): Decision {
 	const call = read(tool, input);
 	if ("decision" in call) return call;
 	if (!call.subject) return deny("Guard policy error: tool input has no policy subject.");
@@ -163,6 +219,7 @@ export function decide(tool: string, input: Record<string, unknown>, levels: () 
 		return deny("Secret material does not leave this machine in a URL, a search query or an MCP argument. If it is a false positive, the human sends it.");
 	}
 
+	if (["Edit", "Write", "NotebookEdit"].includes(tool) && [call.subject, ...call.subject.split(/\s+/).filter(Boolean)].some(host.reaches)) return deny(OWN_PROFILES);
 	if (tool !== "Bash") return allow(`Allowed by ${tool} policy.`);
 
 	const flat = flatten(scanned);
@@ -172,15 +229,18 @@ export function decide(tool: string, input: Record<string, unknown>, levels: () 
 		if (hit(rule)) return deny(reason);
 	}
 
-	const own = hostCommands(scanned);
-	if ((HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) && levels().push === "none") {
+	const segments = hostCommands(scanned);
+	if (namesProfiles(scanned, host) && !segments.every((segment) => readsProfiles(segment, host))) return deny(OWN_PROFILES);
+
+	const own = segments.join("\n");
+	if ((HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) && host.levels().push === "none") {
 		return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
 	}
 
 	const pr = PR_WRITE.exec(scanned) ?? PR_WRITE.exec(flat);
 	if (pr) {
 		const action = pr.groups?.action ?? "";
-		if (OWN_PR[action]?.test(subject) && levels()[action === "create" ? "pr" : "merge"] === "auto") return allow("This repository's profile lets the host open and merge its own pull requests.");
+		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return allow("This repository's profile lets the host open and merge its own pull requests.");
 		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto), in a checkout whose only remote is origin and whose profile gives the host auto for it, runs here.`);
 	}
 
