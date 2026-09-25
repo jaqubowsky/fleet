@@ -18,6 +18,7 @@ export type Harness = {
 	herdrIntegration?: string;
 	codex?: { auth: string; kit: string };
 	projectConfig?: string;
+	sbxGuidance?: string;
 	containerSessions?: string;
 	cache: string;
 	deliverAs?: "followUp" | "nextTurn";
@@ -113,6 +114,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		agentArgs: [],
 		resume: "--continue",
 		projectConfig: ".claude",
+		sbxGuidance: "CLAUDE.md",
 		containerSessions: "/home/agent/.claude/projects",
 		cache: "fleet-cache",
 		tokens: {

@@ -115,6 +115,11 @@ export async function up(
 			seedCache(io, input.repo, sandbox);
 			if (io.harness.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
+			if (io.harness.sbxGuidance)
+				io.sbx(
+					["exec", sandbox, "sh", "-c", 'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"', "--", io.harness.sbxGuidance],
+					{ quiet: true },
+				);
 			const integration = io.harness.herdrIntegration;
 			if (integration)
 				io.sbx(

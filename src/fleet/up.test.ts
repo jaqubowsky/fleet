@@ -718,6 +718,18 @@ test("cfleet up starts claude straight through sbx run and copies no herdr integ
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
+test("cfleet up empties the CLAUDE.md sbx writes beside the workspace, and fleet up leaves pi alone", async () => {
+	const claude = fakeIo(base, HARNESSES.claude);
+	const pi = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root" }, claude);
+	await up({ repo, label: "web-1", root: "/root" }, pi);
+
+	const emptied = (io: typeof pi) => io.calls.find((c) => c[0] === "sbx" && c.some((a) => a.includes("truncate -s 0")));
+	assert.equal(emptied(claude)?.at(-1), "CLAUDE.md");
+	assert.equal(emptied(pi), undefined);
+});
+
 test("up says when the image predates the harness it would carry", async () => {
 	const stale = fakeIo({
 		...base,
