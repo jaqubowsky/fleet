@@ -70,6 +70,7 @@ test("the description gives each seat one line per action, with its level and wh
 	assert.match(container, /^- linear `read`: read Linear through `linear-private-readonly`; nothing can be written there$/m);
 	assert.match(container, /^- resources: 4g memory, 4 cpus$/m);
 	assert.match(host, /^- sign `none`: commits stay unsigned; `cfleet land` signs only with --sign$/m);
+	assert.match(host, /^- push `auto`: push with `git push`, never forced; the guard allows it$/m);
 	assert.match(host, /^- merge `auto`: merge an accepted pull request with `gh pr merge`; the guard allows it$/m);
 	assert.match(host, /^- linear `write`: read and write Linear through `linear-private`/m);
 	assert.deepEqual(text.match(/^- \w+/gm), ["- push", "- pr", "- merge", "- linear", "- resources", "- sign", "- push", "- pr", "- merge", "- linear"]);

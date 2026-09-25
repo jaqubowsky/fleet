@@ -1,0 +1,31 @@
+deny	Bash	git push
+deny	Bash	git push origin web-1589
+deny	Bash	git push -u origin web-1589
+deny	Bash	git push --set-upstream origin web-1589
+deny	Bash	\git push
+deny	Bash	cd ~/Work/webapp && git push
+deny	Bash	git -C ~/Work/webapp push
+deny	Bash	bash -c "git push origin main"
+deny	Bash	GIT_SSH_COMMAND=ssh git push origin main
+deny	Bash	git -c user.name=x push
+deny	Bash	pnpm build; git push
+deny	Bash	git add -A && git commit -m "x" && git push origin HEAD
+allow	Bash	sbx exec pi-cv sh -c 'git push origin main'
+pass	Bash	pnpm run db:push
+pass	Bash	npm run push:staging
+pass	Bash	git config --get remote.origin.pushurl
+allow	Bash	git log --grep=push --oneline
+pass	Bash	echo 'nigdy nie rob git push z kontenera'
+pass	Bash	git commit -m "chore: document that we never push from a container"
+pass	Bash	grep -rn "git push" /Users/alice/.pi/rules
+deny	Bash	sbx exec pi-cv \' ; git push ; echo \'
+deny	Bash	sbx exec pi-cv echo $(git push)
+deny	Bash	(git push)
+deny	Bash	echo $(git push)
+deny	Bash	echo `git push`
+deny	Bash	if true; then git push; fi
+deny	Bash	{ git push; }
+deny	Bash	/usr/bin/git push
+deny	Bash	command git push
+deny	Bash	env git push
+deny	Bash	echo main | xargs git push origin

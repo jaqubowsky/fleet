@@ -14,3 +14,14 @@ pass	WebFetch	https://raw.githubusercontent.com/earendil-works/pi/main/packages/
 pass	WebSearch	pi coding agent tool_call extension block
 pass	mcp__context7__query-docs	react useEffectEvent generic components
 pass	NotebookEdit	/Users/alice/Work/report/analysis.ipynb
+deny	Bash	gh pr create -R someone/else --fill
+deny	Bash	gh pr create --repo someone/else --fill
+deny	Bash	gh pr merge 12 --repo=someone/else --squash
+deny	Bash	GH_REPO=someone/else gh pr create --fill
+deny	Bash	cd /tmp/other && gh pr merge 12 --squash
+deny	Bash	gh pr merge 12 "--repo" acme/webapp --squash
+deny	Bash	gh pr merge 12 '-R' acme/webapp
+deny	Bash	gh pr merge 12 -\R acme/webapp
+deny	Bash	gh pr create --re""po acme/webapp --fill
+deny	Bash	gh pr merge 12 -sR acme/webapp
+deny	Bash	gh pr merge https://github.com/acme/webapp/pull/12 --squash

@@ -92,7 +92,7 @@ function says(cli: string): Record<string, Record<string, Record<string, string>
 		},
 		host: {
 			sign: { none: `commits stay unsigned; \`${cli} land\` signs only with --sign`, human: `\`${cli} land\` signs every commit origin lacks, one Touch ID tap each`, auto: `\`${cli} land\` signs every commit origin lacks, with a key that asks nobody` },
-			push: { none: "nothing on the host pushes this repository", human: `the person confirms each push with Touch ID, through \`${cli} land --push\`; the guard refuses a bare \`git push\``, auto: "push with a plain `git push`; the guard allows it" },
+			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${cli} land --push\`; the person confirms it with Touch ID`, auto: "push with `git push`, never forced; the guard allows it" },
 			pr: { none: "the host opens no pull request; the guard refuses `gh pr create`", human: "prepare the pull request and hand its command to the person; the guard refuses `gh pr create`", auto: "open the pull request with `gh pr create`; the guard allows it" },
 			merge: { none: "the host merges nothing; the guard refuses `gh pr merge`", human: "accept or reject the pull request, then hand the merge to the person; the guard refuses `gh pr merge`", auto: "merge an accepted pull request with `gh pr merge`; the guard allows it" },
 		},

@@ -48,11 +48,17 @@ function filePayload(
 	};
 }
 
+function shellCommand(input: Record<string, unknown>): string {
+	const env = Object.entries((input.env ?? {}) as Record<string, string>).map(([key, value]) => `${key}=${JSON.stringify(value)} `).join("");
+	const command = `${env}${String(input.command ?? "")}`;
+	return typeof input.cwd === "string" ? `cd ${JSON.stringify(input.cwd)} && ${command}` : command;
+}
+
 export function translate(toolName: string, input: Record<string, unknown>) {
 	switch (toolName) {
 		case "bash":
 		case "powershell":
-			return { tool_name: "Bash", tool_input: { command: input.command } };
+			return { tool_name: "Bash", tool_input: { command: shellCommand(input) } };
 		case "read":
 		case "ls": {
 			const path = String(input.path ?? "");

@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { answer } from "../../claude/hooks/guard.ts";
+import { PRIVATE_REPO, today } from "../profile/fixture.ts";
+import { checkout, privateRoot } from "./checkouts.ts";
 import { decide, POLICY_TOOLS } from "./policy.ts";
 
 const wrapper = resolve(import.meta.dirname, "../../claude/hooks/guard.sh");
@@ -39,8 +41,19 @@ test("the managed matcher sends the hook every tool the policy reads, and only t
 test("a heredoc body is text unless it feeds an interpreter", () => {
 	const heredoc = (head: string, body: string) => `${head} <<'EOF'\n${body}\nEOF`;
 
-	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }).decision, "allow");
-	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }).decision, "allow");
-	assert.equal(decide("Bash", { command: heredoc("bash", "cat ~/.ssh/id_ed25519") }).decision, "deny");
-	assert.equal(decide("Bash", { command: `cat ~/.ssh/config && ${heredoc("cat > d.md", "x")}` }).decision, "deny");
+	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }, today).decision, "allow");
+	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }, today).decision, "allow");
+	assert.equal(decide("Bash", { command: heredoc("bash", "cat ~/.ssh/id_ed25519") }, today).decision, "deny");
+	assert.equal(decide("Bash", { command: `cat ~/.ssh/config && ${heredoc("cat > d.md", "x")}` }, today).decision, "deny");
+});
+
+test("the claude hook judges a pull request by the profile of the session's working directory", () => {
+	const root = privateRoot();
+	const create = { command: "gh pr create --fill" };
+
+	const own = answer({ tool_name: "Bash", tool_input: create, cwd: checkout(`git@github.com:${PRIVATE_REPO}.git`) }, root);
+	const work = answer({ tool_name: "Bash", tool_input: create, cwd: checkout("git@github.com:acme/webapp.git") }, root);
+
+	assert.equal(own, "");
+	assert.match(work, /"permissionDecision":"deny"/);
 });

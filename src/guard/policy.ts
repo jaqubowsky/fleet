@@ -1,3 +1,7 @@
+import type { Profile } from "../profile/profile.ts";
+
+export type HostLevels = Pick<Profile["host"], "push" | "pr" | "merge">;
+
 export type Decision = { decision: "allow" | "deny"; reason: string; explicit?: true };
 
 const allow = (reason: string): Decision => ({ decision: "allow", reason });
@@ -48,6 +52,8 @@ const PUSH = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*\s+push\b`;
 const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
+const GH_WRITE = "gh writing to the remote is a push by another name. The human opens the PR and runs the release.";
+
 const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`op\s+(read|item|document|vault|whoami|signin|account)\b`), "1Password is the human's. Secrets reach a sandbox as op:// references through sbx, never through the agent's shell."],
 	[command(String.raw`security\s+(find-(generic|internet)-password|export|dump-keychain)`), "The keychain is read by the human only. Ask for the value instead of pulling it out of the store."],
@@ -55,10 +61,19 @@ const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`ssh-keygen\s+-Y\s+sign`), "Signing by hand is not how a commit gets signed here; git does it with the key behind Touch ID."],
 	[command(`${PUSH}[^|;&]*(--force\\b|--force-with-lease\\b|\\s-f\\b|--delete\\b|--mirror\\b|\\s:\\S+)`), "A force, delete or mirror push rewrites what other people already hold. Touch ID authorises the key, not the history, so this one stays the human's own command."],
 	[command(String.raw`(git\s+config[^|;&]*gpgsign\s+(false|no|0)|git[^|;&]*\s-c\s*commit\.gpg[sS]ign=(false|no|0)|git\s+commit[^|;&]*--no-gpg-sign)`), "Every commit on this Mac is signed, and the Touch ID prompt is the evidence a person was here. Turning signing off removes that evidence."],
-	[command(String.raw`gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(create|merge|close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`), "gh writing to the remote is a push by another name. The human opens the PR and runs the release."],
+	[command(String.raw`gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`), GH_WRITE],
 	[command(String.raw`(curl|wget|base64)\b[^|]*\|\s*(sudo\s+)?(ba|z|da|k)?sh\b`), "Piping a download into a shell is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
 	[command(String.raw`(curl|wget)\b[^|]*\|\s*(sudo\s+)?(python3?|node|ruby|perl|php)\s*(-\s*)?($|[;&|)])`), "Piping a download into an interpreter is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
 ];
+
+const HOST_PUSH = new RegExp(String.raw`(^|[;&|({\x60]|&&|\$\(|-c\s*['"]|\b(then|do|else|command|exec|time|env|xargs)\s)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?(\S*/)?${PUSH}`, "m");
+const DELEGATED_SEGMENT = /^\s*sbx\s+(exec|run)(\s|$)/;
+const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
+const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
+const OWN_PR: Record<string, RegExp> = {
+	create: new RegExp(String.raw`^\s*gh\s+pr\s+create(\s+(--fill|--draft|--(title|body|base)${VALUE}))*\s*$`),
+	merge: /^\s*gh\s+pr\s+merge(\s+\d+)?(\s+--(squash|merge|rebase|delete-branch|auto))*\s*$/,
+};
 
 const RECURSIVE_RM = command(String.raw`rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`);
 const RM_PROTECTED = command(String.raw`rm\s[^;&|]*\s${PROTECTED}`);
@@ -100,11 +115,42 @@ function scan(subject: string): string {
 	return kept.join("\n");
 }
 
+function hostCommands(subject: string): string {
+	const segments: string[] = [];
+	let quote = "";
+	let current = "";
+	for (let i = 0; i < subject.length; i++) {
+		const char = subject[i];
+		if (quote === "'") {
+			if (char === quote) quote = "";
+		} else if (char === "\\") {
+			current += char + (subject[i + 1] ?? "");
+			i++;
+			continue;
+		} else if (quote) {
+			if (char === quote) quote = "";
+		} else if (char === "'" || char === '"') quote = char;
+		else if (char === "#" && /(^|\s)$/.test(current)) {
+			const end = subject.indexOf("\n", i);
+			i = (end < 0 ? subject.length : end) - 1;
+			continue;
+		} else if (";&|\n".includes(char)) {
+			segments.push(current);
+			current = "";
+			continue;
+		}
+		current += char;
+	}
+	segments.push(current);
+
+	return segments.filter((segment) => !DELEGATED_SEGMENT.test(segment) || /\$\(|\x60/.test(segment)).join("\n");
+}
+
 function flatten(subject: string): string {
 	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/['"]/g, " ");
 }
 
-export function decide(tool: string, input: Record<string, unknown>): Decision {
+export function decide(tool: string, input: Record<string, unknown>, levels: () => HostLevels): Decision {
 	const call = read(tool, input);
 	if ("decision" in call) return call;
 	if (!call.subject) return deny("Guard policy error: tool input has no policy subject.");
@@ -124,6 +170,18 @@ export function decide(tool: string, input: Record<string, unknown>): Decision {
 
 	for (const [rule, reason] of BASH_RULES) {
 		if (hit(rule)) return deny(reason);
+	}
+
+	const own = hostCommands(scanned);
+	if ((HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) && levels().push === "none") {
+		return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
+	}
+
+	const pr = PR_WRITE.exec(scanned) ?? PR_WRITE.exec(flat);
+	if (pr) {
+		const action = pr.groups?.action ?? "";
+		if (OWN_PR[action]?.test(subject) && levels()[action === "create" ? "pr" : "merge"] === "auto") return allow("This repository's profile lets the host open and merge its own pull requests.");
+		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto), in a checkout whose only remote is origin and whose profile gives the host auto for it, runs here.`);
 	}
 
 	if (hit(RECURSIVE_RM)) {

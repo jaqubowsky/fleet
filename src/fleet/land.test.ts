@@ -143,3 +143,12 @@ test("land reads the profile before it imports anything", () => {
 	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io), /missing \/root\/host\/repos.json/);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
 });
+
+test("land --push refuses where the profile gives the host no push, before it imports anything", () => {
+	const profiles = JSON.parse(REAL_PROFILES);
+	profiles["acme/*"].host.push = "none";
+	const io = fakeIo({ ...landed, "read /root/host/repos.json": JSON.stringify(profiles) });
+
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root", push: true }, io), /host\.push is none/);
+	assert.ok(!io.calls.some((c) => c[0] === "git" && (c[2] === "fetch" || c[2] === "push")));
+});

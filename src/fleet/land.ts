@@ -34,7 +34,9 @@ export function land(input: LandInput, io: Io): void {
 	const current = io.git(["branch", "--show-current"], input.repo);
 	const refusal = landRefusal({ ...checkout, branch }, current, base);
 	if (refusal) throw new Error(refusal);
-	const signs = input.sign || repoProfile(input.root, repoName(io.git(["remote", "get-url", "origin"], input.repo)), io).host.sign !== "none";
+	const { host } = repoProfile(input.root, repoName(io.git(["remote", "get-url", "origin"], input.repo)), io);
+	if (input.push && host.push === "none") throw new Error("this repository's profile gives the host no push (host.push is none in host/repos.json); the branch reaches GitHub another way");
+	const signs = input.sign || host.sign !== "none";
 
 	try {
 		io.git(["fetch", "--quiet", `sandbox-${input.sandbox}`, `${branch}:${branch}`], input.repo);

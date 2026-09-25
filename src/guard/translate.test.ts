@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { PRIVATE_REPO, today, WITH_PRIVATE } from "../profile/fixture.ts";
+import { parseProfiles, profileFor } from "../profile/profile.ts";
 import { decide } from "./policy.ts";
 import { TRUSTED, translate } from "./translate.ts";
 
@@ -7,7 +9,7 @@ const verdict = (tool: string, input: Record<string, unknown>) => {
 	const payload = translate(tool, input);
 	assert.ok(payload, `${tool} has no policy payload`);
 
-	return decide(payload.tool_name, payload.tool_input).decision;
+	return decide(payload.tool_name, payload.tool_input, today).decision;
 };
 
 test("a tool with no translation has no policy, so the caller refuses it", () => {
@@ -35,4 +37,17 @@ test("an mcp tool is judged on every string it carries", () => {
 	assert.equal(verdict("mcp", { title: "see op://Dev/GitHub PAT/credential" }), "deny");
 	assert.equal(verdict("mcp", { body: "ssh key at /Users/me/.ssh/id_ed25519" }), "deny");
 	assert.equal(verdict("mcp__linear", { title: "ticket WEB-1659" }), "allow");
+});
+
+test("an omp bash call that moves its directory or sets its environment is judged as the command it runs", () => {
+	const auto = () => profileFor(parseProfiles(WITH_PRIVATE), PRIVATE_REPO).host;
+	const judge = (input: Record<string, unknown>) => {
+		const payload = translate("bash", input)!;
+		return decide(payload.tool_name, payload.tool_input, auto).decision;
+	};
+
+	assert.equal(judge({ command: "gh pr merge 12 --squash" }), "allow");
+	assert.equal(judge({ command: "gh pr merge 12 --squash", env: { GH_REPO: "acme/webapp" } }), "deny");
+	assert.equal(judge({ command: "gh pr merge 12 --squash", cwd: "/Users/me/Work/webapp" }), "deny");
+	assert.equal(judge({ command: "cat notes.md", cwd: "/Users/me/.ssh" }), "deny");
 });

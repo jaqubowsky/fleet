@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { PRIVATE_REPO } from "../profile/fixture.ts";
+import { checkout, privateRoot } from "./checkouts.ts";
 import guard from "../../extensions/guard.ts";
 import { HARNESSES } from "../harness.ts";
 
 type Verdict = { block: boolean; reason: string } | undefined;
+type Handler = (event: { toolName: string; input?: Record<string, unknown> }, ctx: { cwd: string }) => Verdict;
 
-function handler() {
-	let captured: ((event: { toolName: string; input?: Record<string, unknown> }) => unknown) | undefined;
-	guard(HARNESSES.pi)({ on: (_event, fn) => { captured = fn; } });
+function handler(root?: string): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
+	let captured: Handler | undefined;
+	guard(HARNESSES.pi, root)({ on: (_event, fn) => { captured = fn as Handler; } });
 	assert.ok(captured, "the extension registered no tool_call handler");
 
-	return captured as (event: { toolName: string; input?: Record<string, unknown> }) => Verdict;
+	return (event, ctx = { cwd: process.cwd() }) => captured!(event, ctx);
 }
 
 test("the extension blocks what the policy denies and stays out of the way otherwise", () => {
@@ -35,4 +38,15 @@ test("a denied command comes back blocked with the reason the policy gave", () =
 
 	assert.equal(denied?.block, true);
 	assert.match(denied?.reason ?? "", /push by another name/);
+});
+
+test("the extension judges a pull request by the profile of the directory the agent works in", () => {
+	const guard = handler(privateRoot());
+	const merge = { toolName: "bash", input: { command: "gh pr merge 12 --squash" } };
+
+	const own = guard(merge, { cwd: checkout(`git@github.com:${PRIVATE_REPO}.git`) });
+	const work = guard(merge, { cwd: checkout("git@github.com:acme/webapp.git") });
+
+	assert.equal(own, undefined);
+	assert.equal(work?.block, true);
 });

@@ -1,23 +1,24 @@
 import type { Harness } from "../src/harness.ts";
+import { levelsAt } from "../src/guard/levels.ts";
 import { decide } from "../src/guard/policy.ts";
 import { TRUSTED, translate } from "../src/guard/translate.ts";
 
 type ToolCallEvent = { toolName: string; input?: Record<string, unknown> };
 type GuardApi = {
-	on(event: "tool_call", handler: (event: ToolCallEvent) => unknown): void;
+	on(event: "tool_call", handler: (event: ToolCallEvent, ctx: { cwd: string }) => unknown): void;
 };
 
-export default function guard(h: Harness) {
+export default function guard(h: Harness, root?: string) {
 	const trusted = TRUSTED[h.name] ?? new Set<string>();
 	return (pi: GuardApi) => {
-		pi.on("tool_call", (event) => {
+		pi.on("tool_call", (event, ctx) => {
 			if (trusted.has(event.toolName)) return;
 
 			const payload = translate(event.toolName, event.input ?? {});
 			if (!payload)
 				return { block: true, reason: `Unknown tool policy: ${event.toolName}` };
 
-			const verdict = decide(payload.tool_name, payload.tool_input);
+			const verdict = decide(payload.tool_name, payload.tool_input, levelsAt(ctx.cwd, root));
 			if (verdict.decision === "allow") return;
 
 			return { block: true, reason: verdict.reason };
