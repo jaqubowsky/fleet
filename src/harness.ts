@@ -43,7 +43,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		sbxFlags: ["--skills=off"],
 		env: [],
 		agentSpec: (root) => `${root}/pi/kits/pi`,
-		agentArgs: ["--approve", "--no-autoformat"],
+		agentArgs: ["--approve", "--no-autoformat", "--no-lens-context"],
 		resume: "-c",
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
 		herdrIntegration: "agent/extensions/herdr-agent-state.ts",

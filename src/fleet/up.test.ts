@@ -81,7 +81,7 @@ test("up creates the container, switches the branch, starts the install in the b
 			"pane",
 			"run",
 			"w1:p9",
-			"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat",
+			"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
 		],
 	);
 	assert.ok(!io.calls.some((c) => c[1] === "agent" && c[2] === "prompt"));
@@ -424,7 +424,7 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 			run.includes("FLEET_ARTIFACTS=/home/me/.sandboxes/webapp"),
 	);
 	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
-	assert.deepEqual(run.slice(-7), [
+	assert.deepEqual(run.slice(-8), [
 		repo,
 		"/home/me/.sandboxes/webapp",
 		"/home/me/.pi/cache/webapp",
@@ -432,6 +432,7 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 		"--",
 		"--approve",
 		"--no-autoformat",
+		"--no-lens-context",
 	]);
 	assert.ok(
 		io.calls.some(
@@ -619,7 +620,7 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 	);
 	assert.equal(
 		fresh.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --model openai-codex/gpt-5.6-luna:high",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context --model openai-codex/gpt-5.6-luna:high",
 	);
 
 	const resumed = fakeIo({
@@ -629,7 +630,7 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 	await up({ repo, label: "web-1", root: "/root" }, resumed);
 	assert.equal(
 		resumed.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat -c",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context -c",
 	);
 });
 
@@ -681,7 +682,7 @@ for (const [h, integration, command] of [
 	[
 		HARNESSES.pi,
 		".pi/agent/extensions/herdr-agent-state.ts",
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
 	],
 	[
 		HARNESSES.omp,
