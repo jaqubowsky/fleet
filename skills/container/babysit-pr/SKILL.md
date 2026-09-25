@@ -5,7 +5,7 @@ description: 'Answering an open pull request round after round. Use when the use
 
 # Babysit a pull request
 
-A **round** is one push: wait for the pull request to change, fix everything fixable in one batch, hand back. The container reads and fixes, the host lands, signs and pushes, the user posts what needs posting. Nobody merges unless the user asks.
+A **round** is one push: wait for the pull request to change, fix everything fixable in one batch, hand back. The container reads and fixes. Who pushes each round is `permissions.md` in the task directory: at push `auto` you push it yourself, never forced; otherwise the host lands, signs and pushes. The user posts what needs posting. A container never merges.
 
 ## The token is blind to check runs
 
@@ -20,7 +20,7 @@ gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.
 
 ## The round
 
-1. **Resync.** The host rewrote your commits when it signed them: `git fetch origin && git reset --hard origin/<branch>`. Skip it and your next push stops being a fast-forward. The first round after `gh pr create` has nothing to resync and starts at step 2.
+1. **Resync.** Where the host pushed your last round, it rewrote your commits when it signed them: `git fetch origin && git reset --hard origin/<branch>`. Skip it and your next push stops being a fast-forward. A round you pushed yourself, and the first round after `gh pr create`, have nothing to resync and start at step 2.
 
 2. **Wait for the pull request to change.** Right after a push the jobs are queued and no bot has run, so reading now tells you nothing and settling now ends the loop.
 
@@ -76,7 +76,7 @@ Base: main
 - checks: Quality Checks success, CodeRabbit success
 ```
 
-7. **Commit and hand back.** The number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
+7. **Commit, push at push `auto`, and hand back.** The number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
 
 ## A stale base
 
@@ -94,13 +94,13 @@ The base itself needs refreshing only under a conflict, which is the one thing `
 gh api repos/<owner>/<repo>/rules/branches/<branch> --jq '[.[] | {type, strict: .parameters.strict_required_status_checks_policy}]'
 ```
 
-Merge the base in wherever the rules take a merge commit: append-only history, a fast-forward push, every review already done still holding. `required_linear_history`, or a push rejected with `GH013 ... must not contain merge commits`, leaves only a rebase, which hands every bot the whole diff to read again and turns the host's push into a forced one, so it waits for the user's word, goes once, as late as the merge allows, and carries every other fix of that round with it.
+Merge the base in wherever the rules take a merge commit: append-only history, a fast-forward push, every review already done still holding. `required_linear_history`, or a push rejected with `GH013 ... must not contain merge commits`, leaves only a rebase, which hands every bot the whole diff to read again and turns the next push into a forced one, which stays the user's, so it waits for the user's word, goes once, as late as the merge allows, and carries every other fix of that round with it.
 
 A call refused for want of scope is the token's limit rather than a finding, and a rule no probe shows still speaks through the rejected push: report either and hand it back.
 
 ## What the host does
 
-The host holds the signing key and the route to the remote, and nothing else:
+Where your push is `none` or `human`, the host holds the signing key and the route to the remote, and nothing else:
 
 ```bash
 {{cli}} land --sign --push <sandbox>

@@ -59,8 +59,9 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 
 1. Blocked -> name blocker, cheapest question that unblocks, what you do if no answer. Never guess, never idle quiet
 2. While a background job or sub-agent runs, do the next piece that does not depend on it and is not the angle you gave it. Nothing independent left -> name what you wait on and end the turn; a poll loop is not work
-3. Irreversible or outward-facing (push, deploy, migration, delete, message to person) -> stop, ask. Every time
-4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: push, deploy, migration on real env, delete a branch or a remote, message person, post Linear, change external contract, pick business rule sans evidence
+3. Irreversible or outward-facing (deploy, migration, delete, message to person) -> stop, ask. Every time
+4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: deploy, migration on real env, delete a branch or a remote, message person, post Linear, change external contract, pick business rule sans evidence
+5. Push, pull request and merge -> the level your permissions give, read from where your seat's rules name, never probed: `auto` yours, `human` prepare and ask, `none` not yours. Writes only on your own branch and its pull request
 
 ## Security
 

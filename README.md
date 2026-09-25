@@ -92,7 +92,7 @@ The homes hold only rendered files and runtime state. Edit here and run `./sync.
 
 ## Commands
 
-`fleet` drives pi containers, `ofleet` OMP ones, `cfleet` Claude ones. The verbs are the same on all three and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task.
+`fleet` drives pi containers, `ofleet` OMP ones, `cfleet` Claude ones. The verbs are the same on all three and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository.
 
 A pi or OMP host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `<cli> build`, and `up` warns when the image is older than the repository.
 
@@ -124,9 +124,9 @@ npm run check     # tsc --noEmit
 
 ## Trust model
 
-Every signature and every push comes from this Mac, from the key behind Touch ID. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch.
+Every signature comes from this Mac. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch. Who pushes, opens and merges pull requests is each repository's profile in `host/repos.json`, which agents read and never write: where it gives a container push `auto`, the container pushes its own branch with a token `up` refuses if it sees any other private repository; everywhere else pushes come from this Mac at the host's `push` level: the key behind Touch ID at `human`, the HTTPS credential at `auto`.
 
-`land` fetches the branch through the `sandbox-<name>` remote that sbx registers in the host repo and refuses a branch that no longer descends from the one already here. It signs where the repository's profile gives the host `sign` (`--sign` forces it) and re-signs only the commits origin does not have, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge, deploy and publishing stay with the person too.
+`land` fetches the branch through the `sandbox-<name>` remote that sbx registers in the host repo and refuses a branch that no longer descends from the one already here. It signs where the repository's profile gives the host `sign` (`--sign` forces it) and re-signs only the commits origin does not have, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge stays with the person unless the profile gives the host merge `auto`; deploy and publishing stay with the person.
 
 The guard matches patterns, not shell semantics: `eval` and variable indirection get past it. It stops mistakes and simple malicious code, not someone who has read the rule.
 

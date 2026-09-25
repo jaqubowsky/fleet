@@ -18,6 +18,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary, next step and the Log lines it added |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
+| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each; `--apply` sets the checkout's signing and, where the host pushes on its own, an HTTPS origin, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
@@ -29,6 +30,19 @@ A steer is the order itself, in your voice, in this order: what to do, what is d
 ```text
 Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings back only the organizations deleted with it. Stop at ready-for-host.
 ```
+
+## Coordinating a project
+
+The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user.
+
+1. The plan lives in the project repository under `spec/`, in the shape its `AGENTS.md` sets. A container's task directory is the record of one job, not the plan
+2. The first ticket of a new application is its skeleton with CI, because required checks judge every merge
+3. For a planned ticket the steer is one line: the outcome and a pointer to the ticket
+4. Tickets that share no files or subsystems and wait on no other ticket run in parallel, one container each, as many as the profile's memory per container fits into the host's RAM
+5. Accept by reading `status.md`, `review.md` and the checks, then merge where the profile gives the host merge `auto`, or hand the merge to the user
+6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows; a larger one goes to a container
+7. A tracker (Linear or another) is an optional mirror, configured in the project's `AGENTS.md`, updated on a state change only and mapped by state type; on drift the plan files win
+8. A fresh host session resumes from `spec/` and `{{cli}} ls`
 
 ## Reading a task
 
@@ -45,9 +59,9 @@ Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings ba
 
 A rule or skill change reaches a container through `{{cli}} build` and a new container. A running container keeps the rules it started with.
 
-After `{{cli}} land --sign --push` the branch is on the remote and the container can open its pull request: it holds a token that writes pull requests and nothing else, so `{{cli}} steer <sandbox> "resync and open the PR"` is the step, and the resync comes first because signing rewrote its commits.
+Where the profile gives the container push `none`, `{{cli}} land --sign --push` puts the branch on the remote and the container can then open its pull request: `{{cli}} steer <sandbox> "resync and open the PR"` is the step, and the resync comes first because signing rewrote its commits. Where the container pushes, its branch and pull request reach GitHub without a landing.
 
-The repository inside a container is a private clone, so writes there stay there until `{{cli}} land`. Three host directories are mounted alongside it at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo, holding one task directory per container and `runbook/`); `{{cache}}` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
+The repository inside a container is a private clone, so writes there stay there until `{{cli}} land`, or until the container pushes where its profile gives it push `auto`. Three host directories are mounted alongside it at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo, holding one task directory per container and `runbook/`); `{{cache}}` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
 
 ## Watching
 
