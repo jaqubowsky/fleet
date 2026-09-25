@@ -26,7 +26,6 @@ DETECTION_SOURCE = REPO / "host" / "agent-detection"
 DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
 ATTRIBUTION = {"sessionUrl": False, "commit": "", "pr": ""}
-FLEET_OUTSIDE = ["cfleet up*", "cfleet build*", "cfleet land*"]
 HOOK_MATCHER = "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*"
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
 HOST_LINEAR = """
@@ -102,17 +101,6 @@ def fix_managed(data, profiles=None):
         data["attribution"] = dict(ATTRIBUTION)
         changes.append("attribution aligned with the sbx template")
 
-    for key in ("syncClaudeAiSkills", "syncClaudeAiPlugins"):
-        if data.get(key) is not False:
-            data[key] = False
-            changes.append(f"{key} set to false, so claude.ai account skills and plugins stay off this host")
-
-    excluded = data.setdefault("sandbox", {}).setdefault("excludedCommands", [])
-    for pattern in FLEET_OUTSIDE:
-        if pattern not in excluded:
-            excluded.append(pattern)
-            changes.append(f"sandbox.excludedCommands gains {pattern}: it needs docker, op or the container's git port")
-
     hooks = data.setdefault("hooks", {})
 
     entries = hooks.setdefault("PreToolUse", [])
@@ -179,7 +167,10 @@ def write_root(path, text):
     handle.write(text)
     handle.close()
     backup = f"{path}.bak"
-    subprocess.run(["sudo", "cp", str(path), backup], check=True)
+    if path.exists():
+        subprocess.run(["sudo", "cp", str(path), backup], check=True)
+    else:
+        subprocess.run(["sudo", "mkdir", "-p", str(path.parent)], check=True)
     subprocess.run(["sudo", "cp", handle.name, str(path)], check=True)
     subprocess.run(["sudo", "chown", "root:wheel", str(path)], check=True)
     subprocess.run(["sudo", "chmod", "644", str(path)], check=True)
@@ -212,19 +203,22 @@ def install_link(source, target, apply_changes, executable=True):
     return True
 
 
-def mirror_reference(path, text, apply_changes):
-    print(f"\n=== {path}")
+def desired_managed(profiles=None):
+    data = load(REFERENCE)
+    changes = fix_managed(data, profiles)
 
-    if path.exists() and path.read_text(encoding="utf-8") == text:
-        print("  nothing to change")
+    return dump(data), changes or [f"brought in line with {REFERENCE.relative_to(REPO)}"]
+
+
+def align_managed(apply_changes):
+    before = MANAGED_SETTINGS.read_text(encoding="utf-8") if MANAGED_SETTINGS.exists() else ""
+    after, changes = desired_managed()
+
+    if not report(MANAGED_SETTINGS, before, after, changes):
         return False
 
-    print(f"  - refresh the reference copy from {MANAGED_SETTINGS}")
-
     if apply_changes:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-        print("  written")
+        write_root(MANAGED_SETTINGS, after)
 
     return True
 
@@ -259,11 +253,8 @@ def main():
         install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
         install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),
         *(install_link(rules, DETECTION_TARGET / rules.name, args.apply, executable=False) for rules in sorted(DETECTION_SOURCE.glob("*.toml"))),
-        process(MANAGED_SETTINGS, fix_managed, args.apply, root=True),
+        align_managed(args.apply),
     ]
-
-    if MANAGED_SETTINGS.exists():
-        pending.append(mirror_reference(REFERENCE, MANAGED_SETTINGS.read_text(encoding="utf-8"), args.apply))
 
     print()
     if not any(pending):

@@ -2,7 +2,6 @@
 import importlib.util
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parent.parent / "tools" / "align-settings.py"
@@ -89,30 +88,17 @@ align.fix_managed(data, json.dumps(silent))
 
 check("profiles with no host Linear add no managed server", "managedMcpServers" not in data)
 
-data = managed(align.HOOK_MATCHER)
-align.fix_managed(data)
+text, changes = align.desired_managed(json.dumps(private))
+desired = json.loads(text)
+source = align.load(align.REFERENCE)
+excluded = desired["sandbox"]["excludedCommands"]
 
-check("claude.ai skill and plugin sync are off", data.get("syncClaudeAiSkills") is False and data.get("syncClaudeAiPlugins") is False)
-check("sync already off reports nothing", not [c for c in align.fix_managed(data) if "claude.ai" in c])
+check("the live file is the repo's file plus what the profiles add", {k: v for k, v in desired.items() if k != "managedMcpServers"} == {k: v for k, v in source.items() if k != "managedMcpServers"})
+check("the profiles' host Linear server reaches the live file", desired["managedMcpServers"].get("linear-private") == {"type": "http", "url": "https://mcp.linear.app/mcp"})
+check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
+check("cfleet up, build and land run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*")))
+check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
+check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
 
-data = {**managed(align.HOOK_MATCHER), "sandbox": {"enabled": True, "excludedCommands": ["git push*"]}}
-align.fix_managed(data)
-excluded = data["sandbox"]["excludedCommands"]
-
-check("cfleet up, build and land run outside the host sandbox", all(pattern in excluded for pattern in align.FLEET_OUTSIDE))
-check("earlier excluded commands survive", excluded[0] == "git push*" and data["sandbox"]["enabled"] is True)
-check("excluded cfleet commands report nothing the second time", not [c for c in align.fix_managed(data) if "excludedCommands" in c])
-
-with tempfile.TemporaryDirectory() as tmp:
-    copy = Path(tmp) / "managed-settings.json"
-    copy.write_text('{"stale": true}\n', encoding="utf-8")
-    live = json.dumps(managed(align.HOOK_MATCHER), indent=2) + "\n"
-
-    changed = align.mirror_reference(copy, live, True)
-
-    check("stale reference copy is refreshed", copy.read_text(encoding="utf-8") == live)
-    check("refreshed reference copy is reported", changed)
-    check("current reference copy reports nothing", not align.mirror_reference(copy, live, True))
-
-print(f"align-settings.py: {4 + 6 + 4 + 2 + 3 + 3 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {4 + 6 + 4 + 6 - len(failures)} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
