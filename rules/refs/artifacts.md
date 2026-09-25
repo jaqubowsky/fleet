@@ -19,13 +19,13 @@ logs/          sessions/, status/, usage.json, <skill>-<id>/ evidence    {{harne
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
 
-One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role. `analysis.md` is a snapshot anchored to the analyzed commit and is replaced by a later analysis; accepted shared decisions and scope changes update `spec.md`, while slice-only changes update their ticket. A new review replaces `review.md`, and the one it replaces moves into its `logs/review-<head-sha7>/`; `pr.md` appends one round at a time. Historical and run-specific evidence stays under versioned `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
+One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role. `analysis.md` is a snapshot anchored to the analyzed commit and is replaced by a later analysis; accepted shared decisions and scope changes update `spec.md`, while slice-only changes update their ticket. `review.md` covers only its named range: close findings from that review in its addendum, but a changed head needs a new review to claim coverage. A new review replaces `review.md`, and the one it replaces moves into its `logs/review-<head-sha7>/`; `pr.md` appends one round at a time. Each `browser/<run-id>/report.md` records one browser run, including its cleanup; a new run gets a new directory. Historical and run-specific evidence stays under versioned `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
 
 ## status.md
 
 ```md
 status: new | analyzing | implementing | reviewing | testing | ready-for-host | pr-open | blocked
-attention: none | <one sentence of at most 300 characters naming what a person has to decide or provide>
+attention: none | <one sentence of at most 300 characters naming the decision or input that blocks the work>
 
 ## Summary
 <2-5 sentences, at most 600 characters, for the host: what happened, current state, missing verification or blocker, links to canonical artifacts>
@@ -45,8 +45,8 @@ attention: none | <one sentence of at most 300 characters naming what a person h
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
 | `reviewing` | the review of uncommitted work, or of a range the user named, runs |
 | `testing` | a browser check of the change or of its siblings runs |
-| `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, and no open P0 or P1 finding other than a `host:` one; `attention` names what stayed unverified, uncommitted or left to the host |
-| `pr-open` | a pull request is open and its latest round is answered; `attention` names what only the host or the user can do next |
+| `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, and no open P0 or P1 finding other than a `host:` one; missing verification belongs in Summary, host actions in Next step, and `attention` stays `none` unless a decision blocks delivery |
+| `pr-open` | a pull request is open and its latest round is answered; host actions belong in Next step, and `attention` names only a decision or input blocking delivery |
 
 The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
