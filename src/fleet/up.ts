@@ -356,6 +356,10 @@ function seedEnv(io: Io, repo: string, sandbox: string): void {
 			quiet: true,
 		});
 	}
+	io.sbx(
+		["exec", sandbox, "sh", "-c", 'cd "$1" && shift && sudo chown "$(id -u):$(id -g)" -- "$@"', "--", workspace, ...files],
+		{ quiet: true },
+	);
 
 	io.log(
 		`${sandbox}: copied ${files.length} ignored env file(s) from the host checkout`,

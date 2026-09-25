@@ -446,6 +446,20 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 	);
 });
 
+test("up hands the copied env files to the container user, whoever owned them on the host", async () => {
+	const io = fakeIo({
+		...base,
+		"git ls-files --others --ignored": "apps/api/.env\n.env.docker\n",
+		'sbx exec pi-webapp-web-1 sh -c printf %s "$WORKSPACE_DIR"': "/w",
+	});
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const chown = io.calls.find((c) => c[0] === "sbx" && c.some((a) => a.includes("chown")))!;
+	assert.deepEqual(chown.slice(-3), ["/w", "apps/api/.env", ".env.docker"]);
+	const copies = io.calls.filter((c) => c[0] === "sbx" && c[1] === "cp" && c[2].includes(".env"));
+	assert.ok(io.calls.indexOf(chown) > io.calls.indexOf(copies[copies.length - 1]));
+});
+
 test("up copies the env files the repo ignores, and skips the probe when there are none", async () => {
 	const withEnv = fakeIo({
 		...base,
