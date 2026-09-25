@@ -41,7 +41,9 @@ export function land(input: LandInput, io: Io): void {
 	try {
 		io.git(["fetch", "--quiet", `sandbox-${input.sandbox}`, `${branch}:${branch}`], input.repo);
 	} catch (error) {
-		throw new Error(`${branch} in the container is not a descendant of the one here, so importing it would drop what this repo already holds, signatures included\n${(error as Error).message}\nresync the container with git fetch origin && git reset --hard origin/${branch}, or delete ${branch} here when the container's history is the one you want`);
+		const message = (error as Error).message;
+		if (!/\[rejected\]|non-fast-forward/.test(message)) throw error;
+		throw new Error(`${branch} in the container is not a descendant of the one here, so importing it would drop what this repo already holds, signatures included\n${message}\nresync the container with git fetch origin && git reset --hard origin/${branch}, or delete ${branch} here when the container's history is the one you want`);
 	}
 	const remote = signs || input.push;
 	if (remote && base.startsWith("origin/")) io.git(["fetch", "--quiet", "origin", base.slice("origin/".length)], input.repo);

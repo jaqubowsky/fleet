@@ -128,6 +128,15 @@ test("land refuses a container branch that no longer descends from the landed on
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("--no-pager")));
 });
 
+test("land passes a fetch that never reached the container through as it is", () => {
+	const io = fakeIo({ ...landed, "git fetch --quiet sandbox-pi-a": new Error("fatal: unable to connect to 127.0.0.1: errno=Operation not permitted") });
+
+	assert.throws(
+		() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io),
+		(error: Error) => /unable to connect/.test(error.message) && !/descendant/.test(error.message),
+	);
+});
+
 test("land signs where the profile gives the host sign human, without --sign", () => {
 	const io = fakeIo({ ...landed, "git remote get-url origin": "git@github.com:alice/cv.git", "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
 
