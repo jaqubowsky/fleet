@@ -44,7 +44,14 @@ test("up creates the container, switches the branch, starts the install in the b
 	);
 	assert.equal(run[run.indexOf("--memory") + 1], "8g");
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
-	assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.pi/agent/fleet-events.log" && / up pi-webapp-web-1 session=$/.test(c[2])));
+	assert.ok(
+		io.calls.some(
+			(c) =>
+				c[0] === "append" &&
+				c[1] === "/home/me/.pi/agent/fleet-events.log" &&
+				/ up pi-webapp-web-1 session=$/.test(c[2]),
+		),
+	);
 	const execs = io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec");
 	assert.deepEqual(execs[0], [
 		"sbx",
@@ -100,7 +107,13 @@ test("up waits for the container tty to leave canonical input mode", async () =>
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	assert.equal(probes, 2);
-	assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", "pi-webapp-web-1"]);
+	assert.deepEqual(io.calls.at(-1), [
+		"herdr",
+		"agent",
+		"rename",
+		"w1:p9",
+		"pi-webapp-web-1",
+	]);
 });
 
 test("up warns and continues when the GitHub token cannot be bound", async () => {
@@ -143,7 +156,10 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 			`${repo}/.git/modules/packages/pdf-generator`,
 			`pi-webapp-web-1:${repo}/.git/modules/packages/`,
 		],
-		["/home/me/.pi/agent/extensions/herdr-agent-state.ts", "pi-webapp-web-1:/home/agent/.pi/agent/extensions/herdr-agent-state.ts"],
+		[
+			"/home/me/.pi/agent/extensions/herdr-agent-state.ts",
+			"pi-webapp-web-1:/home/agent/.pi/agent/extensions/herdr-agent-state.ts",
+		],
 	]);
 	const chown = io.calls.find(
 		(c) => c[0] === "sbx" && String(c[5]).startsWith("sudo chown"),
@@ -204,16 +220,47 @@ test("up refuses to adopt a same-named agent that is not pi", async () => {
 });
 
 test("up refuses a name another agent holds before it creates anything", async () => {
-	const held = fakeIo({ ...base, "herdr agent list": { result: { agents: [{ pane_id: "w1:p3", name: "pi-webapp-web-1", agent: "claude", agent_status: "idle" }] } } });
+	const held = fakeIo({
+		...base,
+		"herdr agent list": {
+			result: {
+				agents: [
+					{
+						pane_id: "w1:p3",
+						name: "pi-webapp-web-1",
+						agent: "claude",
+						agent_status: "idle",
+					},
+				],
+			},
+		},
+	});
 	const tab = fakeIo({
 		...base,
-		"herdr tab list": { result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] } },
-		"herdr pane list": { result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "omp" }] } },
+		"herdr tab list": {
+			result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] },
+		},
+		"herdr pane list": {
+			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "omp" }] },
+		},
 	});
-	const created = (io: typeof held) => io.calls.filter((c) => c[0] === "mkdir" || c[0] === "write" || (c[0] === "sbx" && c[1] !== "ls") || (c[0] === "herdr" && ["create", "rename", "run"].includes(c[2])));
+	const created = (io: typeof held) =>
+		io.calls.filter(
+			(c) =>
+				c[0] === "mkdir" ||
+				c[0] === "write" ||
+				(c[0] === "sbx" && c[1] !== "ls") ||
+				(c[0] === "herdr" && ["create", "rename", "run"].includes(c[2])),
+		);
 
-	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, held), /is claude in pane w1:p3, not pi/);
-	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, tab), /already runs omp/);
+	await assert.rejects(
+		up({ repo, label: "web-1", root: "/root" }, held),
+		/is claude in pane w1:p3, not pi/,
+	);
+	await assert.rejects(
+		up({ repo, label: "web-1", root: "/root" }, tab),
+		/already runs omp/,
+	);
 
 	assert.deepEqual(created(held), []);
 	assert.deepEqual(created(tab), []);
@@ -322,7 +369,10 @@ test("up creates the workspace when the repo has none and names its root tab", a
 	assert.ok(
 		io.calls.some(
 			(c) =>
-				c[1] === "tab" && c[2] === "rename" && c[3] === "w2:t1" && c[4] === "pi-cv-x",
+				c[1] === "tab" &&
+				c[2] === "rename" &&
+				c[3] === "w2:t1" &&
+				c[4] === "pi-cv-x",
 		),
 	);
 });
@@ -414,7 +464,10 @@ test("up copies the env files the repo ignores, and skips the probe when there a
 
 	const none = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root" }, none);
-	assert.deepEqual(none.calls.filter((c) => c[0] === "sbx" && c[1] === "cp").map((c) => c[2]), ["/home/me/.pi/agent/extensions/herdr-agent-state.ts"]);
+	assert.deepEqual(
+		none.calls.filter((c) => c[0] === "sbx" && c[1] === "cp").map((c) => c[2]),
+		["/home/me/.pi/agent/extensions/herdr-agent-state.ts"],
+	);
 });
 
 test("env listing takes files at any depth and never a collapsed ignored directory", () => {
@@ -531,13 +584,21 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
 	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
 
-	assert.ok(io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`));
+	assert.ok(
+		io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`),
+	);
 	assert.equal(io.files[`${task}/task.md`], undefined);
-	assert.equal(io.files[`${task}/status.md`], "status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n");
+	assert.equal(
+		io.files[`${task}/status.md`],
+		"status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n",
+	);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 
-	const again = fakeIo({ ...base, [`read ${task}/status.md`]: "status: implementing" });
+	const again = fakeIo({
+		...base,
+		[`read ${task}/status.md`]: "status: implementing",
+	});
 	await up({ repo, label: "web-1", root: "/root" }, again);
 	assert.ok(!again.calls.some((c) => c[0] === "write"));
 });
@@ -545,13 +606,24 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 test("up hands --model to pi and resumes the last session when one is on disk", async () => {
 	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
 	const fresh = fakeIo(base);
-	await up({ repo, label: "web-1", root: "/root", model: "openai-codex/gpt-5.6-luna:high" }, fresh);
+	await up(
+		{
+			repo,
+			label: "web-1",
+			root: "/root",
+			model: "openai-codex/gpt-5.6-luna:high",
+		},
+		fresh,
+	);
 	assert.equal(
 		fresh.calls.find((c) => c[1] === "pane")![4],
 		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --model openai-codex/gpt-5.6-luna:high",
 	);
 
-	const resumed = fakeIo({ ...base, [`list ${task}/logs/sessions`]: ["--Users-me-Work-webapp--"] });
+	const resumed = fakeIo({
+		...base,
+		[`list ${task}/logs/sessions`]: ["--Users-me-Work-webapp--"],
+	});
 	await up({ repo, label: "web-1", root: "/root" }, resumed);
 	assert.equal(
 		resumed.calls.find((c) => c[1] === "pane")![4],
@@ -562,14 +634,27 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 test("up branches off the freshest remote base, detected or given with --base", async () => {
 	const detected = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, detected);
-	const script = detected.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!;
+	const script = detected.calls.find(
+		(c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE,
+	)!;
 	assert.deepEqual(script.slice(6), ["--", "web-1", "main"]);
 	assert.match(BRANCH_FROM_BASE, /git fetch --quiet origin "\$2"/);
-	assert.match(BRANCH_FROM_BASE, /git switch -c "\$1" "\$\(git rev-parse --verify --quiet "origin\/\$2" \|\| echo "\$2"\)"/);
+	assert.match(
+		BRANCH_FROM_BASE,
+		/git switch -c "\$1" "\$\(git rev-parse --verify --quiet "origin\/\$2" \|\| echo "\$2"\)"/,
+	);
 
 	const given = fakeIo(base);
-	await up({ repo, label: "web-1", root: "/root", branch: "web-1", base: "develop" }, given);
-	assert.deepEqual(given.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!.slice(6), ["--", "web-1", "develop"]);
+	await up(
+		{ repo, label: "web-1", root: "/root", branch: "web-1", base: "develop" },
+		given,
+	);
+	assert.deepEqual(
+		given.calls
+			.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!
+			.slice(6),
+		["--", "web-1", "develop"],
+	);
 });
 
 test("a claude container is given colour, a pi container is left as it is", async () => {
@@ -591,15 +676,29 @@ test("a claude container is given colour, a pi container is left as it is", asyn
 });
 
 for (const [h, integration, command] of [
-	[HARNESSES.pi, ".pi/agent/extensions/herdr-agent-state.ts", "HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat"],
-	[HARNESSES.omp, ".omp/agent/extensions/herdr-omp-agent-state.ts", "HERDR_AGENT=omp /root/bin/ofleet relay omp-webapp-web-1 /home/me/.sandboxes/webapp/omp-webapp-web-1 -- --yolo"],
+	[
+		HARNESSES.pi,
+		".pi/agent/extensions/herdr-agent-state.ts",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat",
+	],
+	[
+		HARNESSES.omp,
+		".omp/agent/extensions/herdr-omp-agent-state.ts",
+		"HERDR_AGENT=omp /root/bin/ofleet relay omp-webapp-web-1 /home/me/.sandboxes/webapp/omp-webapp-web-1 -- --yolo",
+	],
 ] as const) {
 	test(`up copies herdr's ${h.name} integration into a new container and starts ${h.name} through the relay`, async () => {
 		const io = fakeIo(base, h);
 
 		await up({ repo, label: "web-1", root: "/root" }, io);
 
-		assert.ok(io.calls.some((c) => c.join(" ") === `sbx cp /home/me/${integration} ${h.prefix}webapp-web-1:/home/agent/${integration}`));
+		assert.ok(
+			io.calls.some(
+				(c) =>
+					c.join(" ") ===
+					`sbx cp /home/me/${integration} ${h.prefix}webapp-web-1:/home/agent/${integration}`,
+			),
+		);
 		assert.equal(io.calls.find((c) => c[1] === "pane")![4], command);
 	});
 }
@@ -609,17 +708,35 @@ test("cfleet up starts claude straight through sbx run and copies no herdr integ
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
-	assert.equal(io.calls.find((c) => c[1] === "pane")![4], "HERDR_AGENT=claude sbx run --name claude-webapp-web-1");
+	assert.equal(
+		io.calls.find((c) => c[1] === "pane")![4],
+		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1",
+	);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
 test("up says when the image predates the harness it would carry", async () => {
-	const stale = fakeIo({ ...base, "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "31e3d51\n" });
-	const fresh = fakeIo({ ...base, "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "f7e7f1a\n" });
+	const stale = fakeIo({
+		...base,
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.pi/cache/image-stamp": "31e3d51\n",
+	});
+	const fresh = fakeIo({
+		...base,
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.pi/cache/image-stamp": "f7e7f1a\n",
+	});
 
 	await up({ repo, label: "web-1", root: "/root" }, stale);
 	await up({ repo, label: "web-1", root: "/root" }, fresh);
 
-	assert.ok(stale.lines.some((line) => /built from 31e3d51, and the harness is now f7e7f1a: run fleet build/.test(line)), stale.lines.join("\n"));
+	assert.ok(
+		stale.lines.some((line) =>
+			/built from 31e3d51, and the harness is now f7e7f1a: run fleet build/.test(
+				line,
+			),
+		),
+		stale.lines.join("\n"),
+	);
 	assert.ok(!fresh.lines.some((line) => /built from/.test(line)));
 });

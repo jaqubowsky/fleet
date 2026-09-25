@@ -97,18 +97,27 @@ for (const harness of Object.values(HARNESSES)) {
 		const io = fakeIo(
 			{
 				[`herdr agent prompt ${agent}`]: new Error("agent_prompt_stalled"),
-				[`herdr agent get ${agent}`]: { result: { agent: { agent_status: "idle" } } },
+				[`herdr agent get ${agent}`]: {
+					result: { agent: { agent_status: "idle" } },
+				},
 				[`herdr agent read ${agent}`]: "different text",
 			},
 			harness,
 		);
 
-		assert.throws(() => steer(agent, "go", io), (error: Error) =>
-			error.message.includes("agent_prompt_stalled: Prompt submission uncertain") &&
-			error.message.includes(`${harness.cli} peek ${agent}`) &&
-			error.message.includes("do not steer again"),
+		assert.throws(
+			() => steer(agent, "go", io),
+			(error: Error) =>
+				error.message.includes(
+					"agent_prompt_stalled: Prompt submission uncertain",
+				) &&
+				error.message.includes(`${harness.cli} peek ${agent}`) &&
+				error.message.includes("do not steer again"),
 		);
-		assert.deepEqual(io.calls.filter((c) => c[0] === "herdr").map((c) => c[2]), ["prompt"]);
+		assert.deepEqual(
+			io.calls.filter((c) => c[0] === "herdr").map((c) => c[2]),
+			["prompt"],
+		);
 		assert.deepEqual(io.lines, []);
 	});
 }

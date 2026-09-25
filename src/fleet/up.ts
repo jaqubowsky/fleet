@@ -7,11 +7,7 @@ import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
 import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
-import {
-	agentFor,
-	sandboxes,
-	type Agent,
-} from "./status.ts";
+import { agentFor, sandboxes, type Agent } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
 export function artifactsDir(repo: string, io: Io): string {
@@ -22,7 +18,15 @@ export function taskDir(repo: string, sandbox: string, io: Io): string {
 	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
-const IMAGE_SOURCES = ["rules", "skills", "agents", "fragments", "extensions", "sbx", "src"];
+const IMAGE_SOURCES = [
+	"rules",
+	"skills",
+	"agents",
+	"fragments",
+	"extensions",
+	"sbx",
+	"src",
+];
 
 export function imageStampPath(io: Io): string {
 	return `${io.home}/${io.harness.home}/${io.harness.cache}/image-stamp`;
@@ -31,17 +35,25 @@ export function imageStampPath(io: Io): string {
 export function harnessStamp(root: string, io: Io): string {
 	const paths = [...IMAGE_SOURCES, io.harness.name];
 	const commit = io.git(["log", "-1", "--format=%h", "--", ...paths], root);
-	return io.git(["status", "--porcelain", "--", ...paths], root) ? `${commit} with uncommitted changes` : commit;
+	return io.git(["status", "--porcelain", "--", ...paths], root)
+		? `${commit} with uncommitted changes`
+		: commit;
 }
 
-const TASK_STATUS = "status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n";
+const TASK_STATUS =
+	"status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n";
 
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);
-	if (io.read(`${dir}/status.md`) === undefined) io.write(`${dir}/status.md`, TASK_STATUS);
+	if (io.read(`${dir}/status.md`) === undefined)
+		io.write(`${dir}/status.md`, TASK_STATUS);
 }
 
-export function agentArgs(h: Harness, model: string | undefined, resume: boolean): string {
+export function agentArgs(
+	h: Harness,
+	model: string | undefined,
+	resume: boolean,
+): string {
 	return `${[...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])].join(" ")}`;
 }
 
@@ -78,7 +90,10 @@ export async function up(
 ): Promise<{ sandbox: string; agent: string; pane: string }> {
 	const built = io.read(imageStampPath(io))?.trim();
 	const current = harnessStamp(input.root, io);
-	if (built !== current) io.log(`${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`);
+	if (built !== current)
+		io.log(
+			`${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`,
+		);
 	const memory = input.memory ?? "8g";
 	const cpus = input.cpus ?? DEFAULT_CPUS;
 	input = {
@@ -98,9 +113,18 @@ export async function up(
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox);
-			if (io.harness.projectConfig) seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
+			if (io.harness.projectConfig)
+				seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
 			const integration = io.harness.herdrIntegration;
-			if (integration) io.sbx(["cp", `${io.home}/${io.harness.home}/${integration}`, `${sandbox}:/home/agent/${io.harness.home}/${integration}`], { quiet: true });
+			if (integration)
+				io.sbx(
+					[
+						"cp",
+						`${io.home}/${io.harness.home}/${integration}`,
+						`${sandbox}:/home/agent/${io.harness.home}/${integration}`,
+					],
+					{ quiet: true },
+				);
 			if (input.branch)
 				io.sbx(
 					[
@@ -158,9 +182,21 @@ export async function up(
 
 	const { pane, running } = openPane(io, basename(input.repo), agent, found);
 	if (!running) {
-		const args = agentArgs(io.harness, input.model, io.list(`${task}/logs/sessions`).length > 0 || (Boolean(existing) && Boolean(io.harness.containerSessions)));
-		const start = io.harness.herdrIntegration ? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}` : `sbx run --name ${sandbox}`;
-		io.herdr(["pane", "run", pane, `HERDR_AGENT=${io.harness.agent} ${start}${args ? ` -- ${args}` : ""}`]);
+		const args = agentArgs(
+			io.harness,
+			input.model,
+			io.list(`${task}/logs/sessions`).length > 0 ||
+				(Boolean(existing) && Boolean(io.harness.containerSessions)),
+		);
+		const start = io.harness.herdrIntegration
+			? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}`
+			: `sbx run --name ${sandbox}`;
+		io.herdr([
+			"pane",
+			"run",
+			pane,
+			`HERDR_AGENT=${io.harness.agent} ${start}${args ? ` -- ${args}` : ""}`,
+		]);
 	}
 	await waitForAgent(io, pane, sandbox);
 	logEvent(io, "up", agent);
@@ -204,7 +240,9 @@ function create(
 		);
 	}
 	const linear = linearServer(origin);
-	const codex = h.codex ? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`)) : undefined;
+	const codex = h.codex
+		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
+		: undefined;
 	io.sbx([
 		"run",
 		"-d",
@@ -226,11 +264,18 @@ function create(
 		`FLEET_CACHE=${cache}`,
 		...h.env.flatMap((entry) => ["-e", entry]),
 
-		...(h.sessionEnv ? ["-e", `${h.sessionEnv}=${taskDir(input.repo, sandbox, io)}/logs/sessions`] : []),
+		...(h.sessionEnv
+			? ["-e", `${h.sessionEnv}=${taskDir(input.repo, sandbox, io)}/logs/sessions`]
+			: []),
 		"--kit",
 		`${input.root}/host/kits/no-ssh-agent`,
 		...(codex && h.codex
-			? ["--kit-arg", `${h.codex.kit}.codex_account=${codex.account}`, "--kit-arg", `${h.codex.kit}.codex_sentinel=${codex.sentinel}`]
+			? [
+					"--kit-arg",
+					`${h.codex.kit}.codex_account=${codex.account}`,
+					"--kit-arg",
+					`${h.codex.kit}.codex_sentinel=${codex.sentinel}`,
+				]
 			: []),
 		...(linear ? ["--static-mcp", linear] : []),
 		h.agentSpec(input.root),
@@ -310,15 +355,52 @@ export function ignoredPaths(listing: string): string[] {
 		.filter(Boolean);
 }
 
-function seedProjectConfig(io: Io, repo: string, sandbox: string, dir: string): void {
-	const paths = ignoredPaths(io.git(["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "--", dir], repo));
+function seedProjectConfig(
+	io: Io,
+	repo: string,
+	sandbox: string,
+	dir: string,
+): void {
+	const paths = ignoredPaths(
+		io.git(
+			[
+				"ls-files",
+				"--others",
+				"--ignored",
+				"--exclude-standard",
+				"--directory",
+				"--",
+				dir,
+			],
+			repo,
+		),
+	);
 	if (!paths.length) return;
-	const workspace = io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], { quiet: true });
+	const workspace = io.sbx(
+		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
+		{ quiet: true },
+	);
 	for (const path of paths) {
-		io.sbx(["exec", sandbox, "sh", "-c", 'mkdir -p "$1"', "--", `${workspace}/${parentDir(path)}`], { quiet: true });
-		io.sbx(["cp", `${repo}/${path}`, `${sandbox}:${workspace}/${parentDir(path)}/`], { quiet: true });
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				'mkdir -p "$1"',
+				"--",
+				`${workspace}/${parentDir(path)}`,
+			],
+			{ quiet: true },
+		);
+		io.sbx(
+			["cp", `${repo}/${path}`, `${sandbox}:${workspace}/${parentDir(path)}/`],
+			{ quiet: true },
+		);
 	}
-	io.log(`${sandbox}: copied ${paths.length} ignored path(s) under ${dir} from the host checkout`);
+	io.log(
+		`${sandbox}: copied ${paths.length} ignored path(s) under ${dir} from the host checkout`,
+	);
 }
 
 export function cacheStore(path: string): string {
@@ -461,7 +543,9 @@ function findPane(io: Io, label: string, tab: string): Found {
 			throw new Error(
 				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${io.harness.agent}; rename it or pick another label`,
 			);
-		io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${named.pane_id}`);
+		io.log(
+			`${tab}: adopting the ${io.harness.agent} already running in pane ${named.pane_id}`,
+		);
 		return { pane: named.pane_id, running: true };
 	}
 	const list = io.herdr<{ result: { workspaces: Workspace[] } }>([
@@ -490,7 +574,9 @@ function findPane(io: Io, label: string, tab: string): Found {
 			`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
 		);
 	if (pane.agent)
-		io.log(`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`);
+		io.log(
+			`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`,
+		);
 	return { pane: pane.pane_id, running: Boolean(pane.agent) };
 }
 
@@ -532,7 +618,11 @@ function openPane(
 	};
 }
 
-async function waitForAgent(io: Io, pane: string, sandbox: string): Promise<void> {
+async function waitForAgent(
+	io: Io,
+	pane: string,
+	sandbox: string,
+): Promise<void> {
 	const started = io.now().getTime();
 	let probeError: unknown;
 	while (io.now().getTime() - started < DETECT_TIMEOUT_MS) {
@@ -543,7 +633,16 @@ async function waitForAgent(io: Io, pane: string, sandbox: string): Promise<void
 			if (KNOWN_STATUS.has(status)) {
 				if (io.harness.agent !== "pi") return;
 				try {
-					const tty = io.sbx(["exec", sandbox, "sh", "-c", 'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a'], { quiet: true });
+					const tty = io.sbx(
+						[
+							"exec",
+							sandbox,
+							"sh",
+							"-c",
+							'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a',
+						],
+						{ quiet: true },
+					);
 					if (tty.includes("-icanon") && tty.includes("-icrnl")) return;
 				} catch (error) {
 					probeError = error;
