@@ -51,6 +51,14 @@ test("the extension judges a pull request by the profile of the directory the ag
 	assert.equal(work?.block, true);
 });
 
+test("the extension refuses a force push where the profile lets the host push on its own", () => {
+	const guard = handler(privateRoot());
+
+	const denied = guard({ toolName: "bash", input: { command: "git push -uf origin main" } }, { cwd: checkout(`git@github.com:${PRIVATE_REPO}.git`) });
+
+	assert.match(denied?.reason ?? "", /force, delete or mirror push/);
+});
+
 test("the extension refuses an edit or a shell write of the host's permissions and lets it read them", () => {
 	const root = privateRoot();
 	const guard = handler(root);

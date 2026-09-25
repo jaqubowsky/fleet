@@ -24,6 +24,8 @@ deny	Bash	(git push)
 deny	Bash	echo $(git push)
 deny	Bash	echo `git push`
 deny	Bash	if true; then git push; fi
+deny	Bash	if git push; then :; fi
+deny	Bash	! git push
 deny	Bash	{ git push; }
 deny	Bash	/usr/bin/git push
 deny	Bash	command git push

@@ -68,7 +68,8 @@ test("the claude hook runs a push or pull request the profile grants at auto wit
 	assert.equal(ask("git push", work), "");
 	assert.equal(ask("npm test && git push", own), "");
 	assert.equal(ask("git -C ../other push", own), "");
-	for (const command of ["git push origin +main", "git push -uf origin main", "git push -d origin main", "git push origin \\:main", 'git push --f""orce origin main', "git push --prune origin main", "git push --del origin main", "git push --receive-pack=true /tmp/bare", "git push https://github.com/acme/webapp main", "git push fork main"]) assert.doesNotMatch(ask(command, own), /"permissionDecision":"allow"/, command);
+	for (const command of ["git push origin +main", "git push -uf origin main", "git push -d origin main", "git push origin \\:main", 'git push --f""orce origin main', "git push --prune origin main", "git push --del origin main"]) assert.match(ask(command, own), /"permissionDecision":"deny"/, command);
+	for (const command of ["git push --receive-pack=true /tmp/bare", "git push https://github.com/acme/webapp main", "git push fork main"]) assert.equal(ask(command, own), "", command);
 });
 
 test("the claude hook refuses an edit or a shell write of the host's permissions and leaves reading them to Claude", () => {

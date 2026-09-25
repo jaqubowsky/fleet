@@ -1,0 +1,56 @@
+# A force, delete or mirror push is the person's own command in every spelling git and the shell accept, whatever the profile.
+deny	Bash	git push -uf origin main
+deny	Bash	git push -fu origin main
+deny	Bash	git push -vf
+deny	Bash	git push -d origin main
+deny	Bash	git push -ud origin feat
+deny	Bash	git push origin \:main
+deny	Bash	git push origin +main
+deny	Bash	git push origin +HEAD:main
+deny	Bash	git push origin '+main'
+deny	Bash	git push --f""orce origin main
+deny	Bash	git push -\f origin main
+deny	Bash	git push --prune origin 'refs/heads/*:refs/heads/*'
+deny	Bash	git push --pru origin
+deny	Bash	git push --del origin main
+deny	Bash	git push --de origin main
+deny	Bash	git push --m
+deny	Bash	git push --mirr
+deny	Bash	git push --for origin main
+deny	Bash	git push --force-w origin main
+deny	Bash	/usr/bin/git push -f
+deny	Bash	command git push -f
+deny	Bash	env git push --force
+deny	Bash	echo $(git push -f)
+deny	Bash	echo main | xargs git push -f origin
+deny	Bash	time git push -f
+deny	Bash	{ git push -f; }
+deny	Bash	(git push -f)
+deny	Bash	git -C /tmp/x push -f
+deny	Bash	bash -c 'git push "--force" origin main'
+deny	Bash	bash -c "git push -\f origin main"
+deny	Bash	bash -c 'git push origin "+main"'
+deny	Bash	git push 2>&1 --force origin main
+deny	Bash	git push >&2 -f
+deny	Bash	git push &>/dev/null -f origin main
+deny	Bash	git push origin $'+main'
+deny	Bash	git push $'-f' origin main
+deny	Bash	if git push -f origin main; then :; fi
+deny	Bash	while git push -f; do :; done
+deny	Bash	! git push -f
+deny	Bash	git -c remote.origin.mirror=true push origin
+deny	Bash	git -c remote.origin.push=+HEAD:refs/heads/main push
+deny	Bash	git config remote.origin.mirror true && git push
+deny	Bash	git config --add remote.origin.push +refs/heads/*:refs/heads/*
+deny	Bash	git commit -m "then git push -f"
+allow	Bash	git push origin main
+allow	Bash	git push -u origin feat/fix-login
+allow	Bash	git push --set-upstream origin feat/d
+allow	Bash	git push --follow-tags
+allow	Bash	git push -o ci.skip origin main
+allow	Bash	git push origin HEAD:refs/heads/feat-x
+allow	Bash	git push --dry-run origin main
+allow	Bash	git push origin main 2>&1 | tail -5
+allow	Bash	git commit -m "never git push -f" && git push
+allow	Bash	git -c color.ui=never push origin main
+allow	Bash	git config --get remote.origin.pushurl

@@ -73,6 +73,16 @@ test("where the host may not push, no spelling of a host push passes, and a cont
 	assert.equal(decide("Bash", { command: "sbx exec pi-cv true #'\ngit push" }, at(NO_PUSH)).decision, "deny");
 });
 
+test("no spelling of a force, delete or mirror push passes, whether the person confirms the push or nobody does", () => {
+	const auto = at(PRIVATE);
+
+	assert.deepEqual(run("cases-force.tsv"), []);
+	assert.deepEqual(run("cases-force.tsv", PRIVATE), []);
+	assert.equal(decide("Bash", { command: "git push origin main \\\n  --force" }, auto).decision, "deny");
+	assert.equal(decide("Bash", { command: "git push -o 'a\nb' --force origin main" }, auto).decision, "deny");
+	assert.equal(decide("Bash", { command: "git push origin main\ntest -d dist && ls dist" }, auto).decision, "allow");
+});
+
 test("the bash rules hold on the whole corpus, adversarial spellings included", () => {
 	assert.deepEqual(run("cases-core.tsv"), []);
 	assert.deepEqual(run("cases-daily.tsv"), []);

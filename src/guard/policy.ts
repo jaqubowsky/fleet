@@ -51,7 +51,10 @@ const CREDENTIAL_STORE = "Credential store is off limits: ~/.ssh, ~/.config/op a
 const START = String.raw`(^|[;&|]|&&|-c\s*['"])\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?`;
 const command = (rule: string): RegExp => new RegExp(START + rule, "m");
 
-const PUSH = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*\s+push\b`;
+const GIT = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*`;
+const GIT_AT = String.raw`(^|[;&|({\x60!]|&&|\$\(|-c\s*['"]|-c\s+|\b(then|do|else|if|elif|while|until|command|exec|time|env|xargs)\s)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?(\S*/)?${GIT}`;
+const PUSH_AT = String.raw`${GIT_AT}\s+push\b`;
+const IN_COMMAND = String.raw`(>&|&>|[^|;&\n])*`;
 const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
@@ -62,14 +65,14 @@ const BASH_RULES: [RegExp, string][] = [
 	[command(String.raw`security\s+(find-(generic|internet)-password|export|dump-keychain)`), "The keychain is read by the human only. Ask for the value instead of pulling it out of the store."],
 	[command(String.raw`git(\s+-\S+)*\s+commit-tree\b`), "commit-tree makes an unsigned commit behind the signing rule. A refused command is a stop, not a puzzle: ask the human."],
 	[command(String.raw`ssh-keygen\s+-Y\s+sign`), "Signing by hand is not how a commit gets signed here; git does it with the key behind Touch ID."],
-	[command(`${PUSH}[^|;&]*(--force\\b|--force-with-lease\\b|\\s-f\\b|--delete\\b|--mirror\\b|\\s:\\S+)`), "A force, delete or mirror push rewrites what other people already hold. Touch ID authorises the key, not the history, so this one stays the human's own command."],
+	[new RegExp(String.raw`${PUSH_AT}${IN_COMMAND}\s((-\w*[fd]\w*|--(for|de|m|pru)[\w-]*)(?![\w-])|[+:]\S)|${GIT_AT}\s+(-c\s*|config\s${IN_COMMAND})remote\.\S+\.(mirror|push)(?![\w-])`, "m"), "A force, delete or mirror push rewrites what other people already hold. Touch ID authorises the key, not the history, so this one stays the human's own command."],
 	[command(String.raw`(git\s+config[^|;&]*gpgsign\s+(false|no|0)|git[^|;&]*\s-c\s*commit\.gpg[sS]ign=(false|no|0)|git\s+commit[^|;&]*--no-gpg-sign)`), "Every commit on this Mac is signed, and the Touch ID prompt is the evidence a person was here. Turning signing off removes that evidence."],
 	[command(String.raw`gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`), GH_WRITE],
 	[command(String.raw`(curl|wget|base64)\b[^|]*\|\s*(sudo\s+)?(ba|z|da|k)?sh\b`), "Piping a download into a shell is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
 	[command(String.raw`(curl|wget)\b[^|]*\|\s*(sudo\s+)?(python3?|node|ruby|perl|php)\s*(-\s*)?($|[;&|)])`), "Piping a download into an interpreter is the path this fleet was hardened against. Fetch, verify a checksum, then run."],
 ];
 
-const HOST_PUSH = new RegExp(String.raw`(^|[;&|({\x60]|&&|\$\(|-c\s*['"]|\b(then|do|else|command|exec|time|env|xargs)\s)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?(\S*/)?${PUSH}`, "m");
+const HOST_PUSH = new RegExp(PUSH_AT, "m");
 const OWN_PUSH = /^\s*git\s+push(\s+(-u|--set-upstream))?(\s+origin(\s+[\w.][\w./-]*(:[\w.][\w./-]*)?)*)?\s*$/;
 const DELEGATED_SEGMENT = /^\s*sbx\s+(exec|run)(\s|$)/;
 const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
@@ -205,7 +208,7 @@ function readsProfiles(segment: string, host: Host): boolean {
 }
 
 function flatten(subject: string): string {
-	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/['"]/g, " ");
+	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/\$'/g, "'").replace(/'[^']*'|"[^"]*"/g, (quoted) => quoted.replace(/\n/g, " ")).replace(/\\\n/g, "").replace(/['"\\]/g, "");
 }
 
 export function decide(tool: string, input: Record<string, unknown>, host: Host): Decision {
