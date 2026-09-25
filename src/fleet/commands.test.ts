@@ -92,60 +92,26 @@ test("steer logs the prompt before sending it", () => {
 });
 
 for (const harness of Object.values(HARNESSES)) {
-	test(`${harness.name} steer submits a prompt left in the idle editor`, () => {
-		const text = "Deliver WEB-1727 end to end.";
+	test(`${harness.name} steer does not resend a stalled prompt`, () => {
 		const agent = `${harness.prefix}webapp-web-1727`;
 		const io = fakeIo(
 			{
-				[`herdr agent prompt ${agent} ${text}`]: new Error("agent_prompt_stalled"),
-				[`herdr agent get ${agent}`]: {
-					result: { agent: { agent_status: "idle" } },
-				},
-				[`herdr agent read ${agent}`]: `──────────────────\n${text}\n──────────────────\nstatus`,
+				[`herdr agent prompt ${agent}`]: new Error("agent_prompt_stalled"),
+				[`herdr agent get ${agent}`]: { result: { agent: { agent_status: "idle" } } },
+				[`herdr agent read ${agent}`]: "different text",
 			},
 			harness,
 		);
 
-		steer(agent, text, io);
-
-		assert.ok(
-			io.calls.some((c) => c.join(" ") === `herdr agent send-keys ${agent} enter`),
+		assert.throws(() => steer(agent, "go", io), (error: Error) =>
+			error.message.includes("agent_prompt_stalled: Prompt submission uncertain") &&
+			error.message.includes(`${harness.cli} peek ${agent}`) &&
+			error.message.includes("do not steer again"),
 		);
-		assert.ok(
-			io.calls.some(
-				(c) =>
-					c.join(" ") === `herdr agent wait ${agent} --until working --timeout 6000`,
-			),
-		);
-		assert.deepEqual(io.lines, [`${agent}: steered`]);
+		assert.deepEqual(io.calls.filter((c) => c[0] === "herdr").map((c) => c[2]), ["prompt"]);
+		assert.deepEqual(io.lines, []);
 	});
 }
-
-test("steer never presses Enter when the prompt is not left in the idle editor", () => {
-	const agent = "pi-webapp-web-1727";
-	const io = fakeIo({
-		[`herdr agent prompt ${agent}`]: new Error("agent_prompt_stalled"),
-		[`herdr agent get ${agent}`]: {
-			result: { agent: { agent_status: "working" } },
-		},
-		[`herdr agent read ${agent}`]: "some other prompt",
-	});
-
-	assert.throws(() => steer(agent, "go", io), /agent_prompt_stalled/);
-	assert.ok(!io.calls.some((c) => c.includes("send-keys")));
-});
-
-test("steer does not press Enter on unrelated text in an idle agent", () => {
-	const agent = "pi-webapp-web-1727";
-	const io = fakeIo({
-		[`herdr agent prompt ${agent}`]: new Error("agent_prompt_stalled"),
-		[`herdr agent get ${agent}`]: { result: { agent: { agent_status: "idle" } } },
-		[`herdr agent read ${agent}`]: "a different prompt",
-	});
-
-	assert.throws(() => steer(agent, "go", io), /agent_prompt_stalled/);
-	assert.ok(!io.calls.some((c) => c.includes("send-keys")));
-});
 
 test("down refuses a dirty container without --force", () => {
 	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t2\tabc" });

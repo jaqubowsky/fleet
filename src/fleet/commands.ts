@@ -110,33 +110,10 @@ export function steer(sandbox: string, text: string, io: Io): void {
 			!error.message.includes("agent_prompt_stalled")
 		)
 			throw error;
-		const state = io.herdr<{ result: { agent: { agent_status: string } } }>([
-			"agent",
-			"get",
-			agent,
-		]).result.agent.agent_status;
-		const bottom = io
-			.herdrText([
-				"agent",
-				"read",
-				agent,
-				"--source",
-				"recent-unwrapped",
-				"--lines",
-				"20",
-			])
-			.split("\n")
-			.slice(-10)
-			.join("\n");
-		if (
-			!(
-				["idle", "done"].includes(state) &&
-				bottom.split("\n").some((line) => line.trim() === text.trim())
-			)
-		)
-			throw error;
-		io.herdr(["agent", "send-keys", agent, "enter"]);
-		io.herdr(["agent", "wait", agent, "--until", "working", "--timeout", "6000"]);
+		throw new Error(
+			`agent_prompt_stalled: Prompt submission uncertain. Inspect ${io.harness.cli} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
+			{ cause: error },
+		);
 	}
 	io.log(`${agent}: steered`);
 }
