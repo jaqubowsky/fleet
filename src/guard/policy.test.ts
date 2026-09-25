@@ -53,6 +53,15 @@ test("the host reads its permissions and writes them by no tool and no shell com
 	assert.equal(decide("Bash", { command: heredoc("python3", "open('host/repos.json', 'w').write('{}')") }, here).decision, "deny");
 });
 
+test("a refusal says whether the command named the permissions file or only a variable or glob that could expand to it", () => {
+	const named = decide("Bash", { command: "sed -i s/none/auto/ host/repos.json" }, here);
+	const expanded = decide("Bash", { command: "cd host && sed -i s/none/auto/ *" }, here);
+
+	assert.equal(expanded.decision, "deny");
+	assert.match(named.reason, /only the person changes it/);
+	assert.match(expanded.reason, /\$variable or glob in this command could expand to host\/repos\.json/);
+});
+
 test("every spelling of the path to the host's permissions reaches the same refusal", () => {
 	const root = privateRoot();
 	const host = hostAt(root, root);

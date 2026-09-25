@@ -83,6 +83,7 @@ const OWN_PR: Record<string, RegExp> = {
 };
 
 const OWN_PROFILES = "host/repos.json sets what the host may do, so only the person changes it. Read it with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names the file passes only when every part of it is such a read, so run the read on its own.";
+const MAY_NAME_PROFILES = "A $variable or glob in this command could expand to host/repos.json, which only the person changes, so the guard counts it as naming that file. Spell the paths out, or run any read of host/repos.json on its own.";
 const READS_PROFILES = new RegExp(String.raw`^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)`);
 const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
@@ -235,7 +236,8 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	}
 
 	const segments = hostCommands(scanned);
-	if (namesProfiles(scanned, host) && !segments.every((segment) => readsProfiles(segment, host))) return deny(OWN_PROFILES);
+	if (namesProfiles(scanned, host) && !segments.every((segment) => readsProfiles(segment, host)))
+		return deny(/repos\.json/i.test(literal(scanned)) ? OWN_PROFILES : MAY_NAME_PROFILES);
 
 	const own = segments.join("\n");
 	if (HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) {
