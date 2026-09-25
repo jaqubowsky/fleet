@@ -157,6 +157,10 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 			if (current()) current().compactions++;
 			continue;
 		}
+		if (entry.type === "message" && entry.message?.role === "user") {
+			skill = DIRECT;
+			continue;
+		}
 		if (entry.type !== "message" || entry.message?.role !== "assistant") continue;
 		const usage = entry.message.usage ?? {};
 		const at = entry.timestamp ?? "";

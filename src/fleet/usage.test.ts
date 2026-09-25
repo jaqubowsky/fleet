@@ -46,6 +46,16 @@ test("usage splits a session into runs at each skill read and each model change"
 	assert.equal(summary.runs[0].reasoning, 403);
 });
 
+test("a new order files its cost as direct until it reads a skill of its own", () => {
+	const later = [
+		session,
+		JSON.stringify({ type: "message", timestamp: "2026-09-21T12:40:00Z", message: { role: "user", content: [{ type: "text", text: "Zrób rebase" }] } }),
+		request("2026-09-21T12:41:00Z", { input: 1000, cacheRead: 40000, cost: 0.01 }, [], "gpt-6-astra"),
+	].join("\n");
+
+	assert.deepEqual(summarize(parseEntries(later)).runs.at(-1)?.skill, "direct");
+});
+
 test("usage totals the session and counts what breaks the cache", () => {
 	const summary = summarize(parseEntries(session));
 
