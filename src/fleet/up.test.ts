@@ -44,7 +44,7 @@ test("up creates the container, switches the branch, starts the install in the b
 			run.includes("--static-mcp") &&
 			!run.some((a) => /memory_mib/.test(a)),
 	);
-	assert.equal(run[run.indexOf("--memory") + 1], "8g");
+	assert.equal(run[run.indexOf("--memory") + 1], "12g");
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "secret"));
 	assert.ok(
 		io.calls.some(
@@ -753,7 +753,7 @@ test("up binds the token, Linear server and resources of the repository's profil
 	const permissions = io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"];
 	assert.equal(secret.at(-1), "op://Dev/GitHub PAT webapp/credential");
 	assert.equal(run[run.indexOf("--static-mcp") + 1], "linear-acme-readonly");
-	assert.deepEqual([run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]], ["8g", "4"]);
+	assert.deepEqual([run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]], ["12g", "4"]);
 	assert.match(permissions, /^# Permissions: acme\/webapp\n/);
 	assert.match(permissions, /^- linear `read`: read Linear through `linear-acme-readonly`/m);
 	assert.ok(io.lines.includes(permissions));
