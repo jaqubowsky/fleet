@@ -126,7 +126,7 @@ npm run check     # tsc --noEmit
 
 Every signature and every push comes from this Mac, from the key behind Touch ID. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch.
 
-`land` fetches the branch through the `sandbox-<name>` remote that sbx registers in the host repo and refuses a branch that no longer descends from the one already here. `--sign` re-signs only the commits origin does not have, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge, deploy and publishing stay with the person too.
+`land` fetches the branch through the `sandbox-<name>` remote that sbx registers in the host repo and refuses a branch that no longer descends from the one already here. It signs where the repository's profile gives the host `sign` (`--sign` forces it) and re-signs only the commits origin does not have, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge, deploy and publishing stay with the person too.
 
 The guard matches patterns, not shell semantics: `eval` and variable indirection get past it. It stops mistakes and simple malicious code, not someone who has read the rule.
 

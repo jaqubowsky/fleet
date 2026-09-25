@@ -26,8 +26,8 @@ const usage = `usage:
   ${cli} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   ${cli} history <sandbox> [--repo <path>]            every status.md version in order: status, attention, summary, next step and the Log lines it added
   ${cli} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
-  ${cli} land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; --sign covers only what origin lacks, --push stays a fast-forward
-  ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; the task directory stays
+  ${cli} land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; signs what origin lacks where the profile has the host sign, or on --sign; --push stays a fast-forward
+  ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
   ${cli} build                                        render the container seat and rebuild ${h.image} from it
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
   ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor
@@ -117,7 +117,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	land(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "sign", "push"]);
-		land({ sandbox: sandboxOf(rest[0]), repo: repoOf(opts), branch: opts.branch as string | undefined, sign: opts.sign === true, push: opts.push === true }, io);
+		land({ sandbox: sandboxOf(rest[0]), repo: repoOf(opts), root, branch: opts.branch as string | undefined, sign: opts.sign === true, push: opts.push === true }, io);
 	},
 	down(args) {
 		const { opts, rest } = flags(args, ["force"]);

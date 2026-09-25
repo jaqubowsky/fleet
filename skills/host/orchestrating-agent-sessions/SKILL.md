@@ -17,7 +17,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary, next step and the Log lines it added |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
-| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; `--sign` covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
+| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
@@ -83,7 +83,7 @@ This is the authority rule for session handoff; it grants no other permission.
 
 ## When it refuses
 
-- `{{cli}} down` refuses a dirty tree, and commits that never reached the host repo. `{{cli}} peek` shows what would go, and `--force` discards either.
+- `{{cli}} down` refuses a dirty tree, and commits that reached neither the host repo nor the container's origin. `{{cli}} peek` shows what would go, and `--force` discards either.
 - `{{cli}} land` refuses a container branch that no longer descends from the one here, which is what a signed landing leaves behind: the container resyncs with `git fetch origin && git reset --hard origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
 - `{{cli}} land --push` refuses anything that is not a fast-forward.
 - `{{cli}} steer` answers `agent_blocked` while a dialog waits in that tab: read the pane, ask the user, answer the dialog, then steer.

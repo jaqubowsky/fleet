@@ -325,7 +325,7 @@ function sessionUsage(
 		(e) => e.type === "message" && e.message?.role === "assistant",
 	)?.timestamp;
 	const commits =
-		repo && first && branch
+		repo && first && branch && hasBranch(branch, repo, io)
 			? io
 					.git(["log", "--format=%h\t%cI", `--since=${first}`, branch], repo)
 					.split("\n")
@@ -338,14 +338,29 @@ function sessionUsage(
 	return summarize(entries, commits);
 }
 
-function landed(head: string, repo: string | undefined, io: Io): boolean {
+function hasBranch(branch: string, repo: string, io: Io): boolean {
+	try {
+		io.git(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], repo);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function landed(sandbox: string, head: string, repo: string | undefined, io: Io): boolean {
 	if (!head || !repo) return true;
 	try {
 		io.git(["cat-file", "-e", `${head}^{commit}`], repo);
 		return true;
 	} catch {
-		return false;
+		return pushed(sandbox, head, io);
 	}
+}
+
+function pushed(sandbox: string, head: string, io: Io): boolean {
+	return io
+		.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && git for-each-ref --contains ${head} --format='%(refname)' refs/remotes`], { quiet: true })
+		.trim() !== "";
 }
 
 function harvest(
@@ -381,7 +396,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 			`${sandbox} has ${checkout.dirty} uncommitted file(s) on ${checkout.branch}; commit them in the container or pass --force to discard`,
 		);
 	}
-	if (!landed(checkout.head, entry.workspaces[0], io) && !opts.force) {
+	if (!landed(sandbox, checkout.head, entry.workspaces[0], io) && !opts.force) {
 		throw new Error(
 			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${io.harness.cli} land first or pass --force to discard`,
 		);

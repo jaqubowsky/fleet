@@ -122,6 +122,8 @@ for (const harness of Object.values(HARNESSES)) {
 	});
 }
 
+const remoteRefs = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && git for-each-ref --contains abc';
+
 test("down refuses a dirty container without --force", () => {
 	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t2\tabc" });
 	assert.throws(() => down("pi-a", {}, io), /2 uncommitted file\(s\) on web-1/);
@@ -133,12 +135,29 @@ test("down refuses a container whose commits never reached the repo", () => {
 		...running,
 		"sbx exec pi-a sh -c": "web-1\t0\tabc",
 		"git cat-file -e abc^{commit}": new Error("missing"),
+		[remoteRefs]: "",
 	});
 	assert.throws(
 		() => down("pi-a", {}, io),
 		/commits on web-1 that never reached \/r; run fleet land first/,
 	);
 	assert.ok(!io.calls.some((c) => c[1] === "rm"));
+});
+
+test("down passes a head the repo lacks once the container pushed it to its own origin", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		"git cat-file -e abc^{commit}": new Error("missing"),
+		[remoteRefs]: "refs/remotes/origin/web-1",
+		"git rev-parse --verify --quiet refs/heads/web-1": new Error("exit 1"),
+		"git log --format=%h\t%cI --since=2026-09-21T12:02:02Z web-1": new Error("fatal: ambiguous argument 'web-1': unknown revision"),
+	});
+
+	down("pi-a", {}, io);
+
+	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-a"]);
 });
 
 test("down sums the task's sessions into usage.json, closes the tab, then removes", () => {

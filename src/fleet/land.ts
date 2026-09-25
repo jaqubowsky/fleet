@@ -1,7 +1,9 @@
+import { repoName } from "../profile/profile.ts";
 import type { Io } from "./io.ts";
+import { repoProfile } from "./permissions.ts";
 import { checkoutProbe, parseCheckout } from "./status.ts";
 
-export type LandInput = { sandbox: string; repo: string; sign?: boolean; push?: boolean; branch?: string };
+export type LandInput = { sandbox: string; repo: string; root: string; sign?: boolean; push?: boolean; branch?: string };
 
 export function baseBranch(repo: string, io: Io): string {
 	for (const candidate of ["origin/HEAD", "origin/main", "origin/master", "main", "master"]) {
@@ -32,13 +34,14 @@ export function land(input: LandInput, io: Io): void {
 	const current = io.git(["branch", "--show-current"], input.repo);
 	const refusal = landRefusal({ ...checkout, branch }, current, base);
 	if (refusal) throw new Error(refusal);
+	const signs = input.sign || repoProfile(input.root, repoName(io.git(["remote", "get-url", "origin"], input.repo)), io).host.sign !== "none";
 
 	try {
 		io.git(["fetch", "--quiet", `sandbox-${input.sandbox}`, `${branch}:${branch}`], input.repo);
 	} catch (error) {
 		throw new Error(`${branch} in the container is not a descendant of the one here, so importing it would drop what this repo already holds, signatures included\n${(error as Error).message}\nresync the container with git fetch origin && git reset --hard origin/${branch}, or delete ${branch} here when the container's history is the one you want`);
 	}
-	const remote = input.sign || input.push;
+	const remote = signs || input.push;
 	if (remote && base.startsWith("origin/")) io.git(["fetch", "--quiet", "origin", base.slice("origin/".length)], input.repo);
 	const pushed = remote ? remoteBranch(input.repo, branch, io) : undefined;
 
@@ -46,7 +49,7 @@ export function land(input: LandInput, io: Io): void {
 	io.log(io.git(["--no-pager", "log", "--format=%h %G? %s", `${base}..${branch}`], input.repo));
 	io.log(io.git(["--no-pager", "diff", "--stat", `${base}...${branch}`], input.repo));
 
-	if (input.sign) sign(input.repo, branch, pushed ? [base, pushed] : [base], io);
+	if (signs) sign(input.repo, branch, pushed ? [base, pushed] : [base], io);
 	else io.log(`unsigned commits stay unsigned; rerun with --sign to sign them (one Touch ID tap per commit)`);
 
 	if (input.push) push(input.repo, branch, io);

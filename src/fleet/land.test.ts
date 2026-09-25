@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
+import { REAL_PROFILES } from "../profile/fixture.ts";
 import { baseBranch, isBase, land, landRefusal } from "./land.ts";
 
 test("refusals: dirty, detached, base branch, checked out locally", () => {
@@ -26,27 +27,28 @@ test("base branch resolves origin/HEAD to the real remote branch", () => {
 });
 
 const probe = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && printf';
+const unsigning = { "read /root/host/repos.json": REAL_PROFILES, "git remote get-url origin": "git@github.com:acme/webapp.git" };
 
-test("land fetches from the sandbox remote and stays unsigned by default", () => {
-	const io = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git --no-pager log": "abc N feat: x" });
-	land({ sandbox: "pi-a", repo: "/r" }, io);
+test("land fetches from the sandbox remote and stays unsigned where the profile gives host.sign none", () => {
+	const io = fakeIo({ ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git --no-pager log": "abc N feat: x" });
+	land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io);
 	assert.deepEqual(io.calls.find((c) => c[0] === "git" && c[2] === "fetch"), ["git", "/r", "fetch", "--quiet", "sandbox-pi-a", "web-1:web-1"]);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("-S")));
 	assert.ok(io.lines.some((l) => /--sign/.test(l)));
 });
 
 test("land refuses before touching the repo", () => {
-	const dirty = fakeIo({ [probe]: "web-1\t3\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" });
-	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, dirty), /3 uncommitted/);
+	const dirty = fakeIo({ ...unsigning, [probe]: "web-1\t3\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, dirty), /3 uncommitted/);
 	assert.ok(!dirty.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
-	const onBase = fakeIo({ [probe]: "main\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "dev" });
-	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, onBase), /main is the base branch/);
+	const onBase = fakeIo({ ...unsigning, [probe]: "main\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "dev" });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, onBase), /main is the base branch/);
 	assert.ok(!onBase.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
 });
 
 test("land --sign amends the first commit and rebases the rest with -S, in a worktree under tmp", () => {
-	const io = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2\nc3", "git rev-parse HEAD": "signed1" });
-	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	const io = fakeIo({ ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2\nc3", "git rev-parse HEAD": "signed1" });
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, io);
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 	const add = gits.indexOf("worktree add --quiet --detach /tmp/fleet-sign-web-1 c1");
 	assert.ok(add >= 0 && gits[add - 1] === "worktree prune" && gits[add - 2].startsWith("worktree remove --force /tmp/fleet-sign-web-1"));
@@ -57,23 +59,23 @@ test("land --sign amends the first commit and rebases the rest with -S, in a wor
 });
 
 test("land --sign with nothing to sign touches no worktree, and a failed rebase aborts it", () => {
-	const empty = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "" });
-	land({ sandbox: "pi-a", repo: "/r", sign: true }, empty);
+	const empty = fakeIo({ ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "" });
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, empty);
 	assert.ok(!empty.calls.some((c) => c[0] === "git" && c[2] === "worktree"));
 
-	const failing = fakeIo({ [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2", "git rev-parse HEAD": "s1", "git -c core.hooksPath=/dev/null rebase": new Error("gpg failed") });
-	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", sign: true }, failing), /gpg failed/);
+	const failing = fakeIo({ ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git rev-list --reverse": "c1\nc2", "git rev-parse HEAD": "s1", "git -c core.hooksPath=/dev/null rebase": new Error("gpg failed") });
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, failing), /gpg failed/);
 	const gits = failing.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 	assert.ok(gits.some((g) => g === "rebase --abort"));
 	assert.ok(!gits.some((g) => g.startsWith("update-ref")));
 	assert.ok(gits.at(-1)!.startsWith("worktree remove"));
 });
 
-const landed = { [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" };
+const landed = { ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main" };
 
 test("land --sign signs only the commits origin does not have yet", () => {
 	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": "tip", "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
-	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, io);
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 
 	assert.ok(gits.includes("fetch --quiet origin web-1"));
@@ -82,7 +84,7 @@ test("land --sign signs only the commits origin does not have yet", () => {
 
 test("land --sign takes the whole branch when origin has never seen it", () => {
 	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
-	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, io);
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 
 	assert.ok(gits.includes("rev-list --reverse web-1 --not origin/main"));
@@ -91,7 +93,7 @@ test("land --sign takes the whole branch when origin has never seen it", () => {
 test("land --sign refreshes the base before it lists or counts the commits to sign", () => {
 	const io = fakeIo({ ...landed, "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
 
-	land({ sandbox: "pi-a", repo: "/r", sign: true }, io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", sign: true }, io);
 
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 	const refresh = gits.indexOf("fetch --quiet origin main");
@@ -102,19 +104,19 @@ test("land --sign refreshes the base before it lists or counts the commits to si
 
 test("land --push never forces, and a rejected push names whose command the force is", () => {
 	const io = fakeIo(landed);
-	land({ sandbox: "pi-a", repo: "/r", push: true }, io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root", push: true }, io);
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 
 	assert.ok(gits.includes("push --quiet -u origin web-1"));
 	assert.ok(!gits.some((g) => /force/.test(g)));
 
 	const rejected = fakeIo({ ...landed, "git push": new Error("! [rejected] web-1 -> web-1 (non-fast-forward)") });
-	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", push: true }, rejected), /non-fast-forward[\s\S]*your own command/);
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root", push: true }, rejected), /non-fast-forward[\s\S]*your own command/);
 });
 
-test("land without --sign or --push never touches the remote", () => {
+test("land without --sign or --push never touches the remote where the profile gives host.sign none", () => {
 	const io = fakeIo(landed);
-	land({ sandbox: "pi-a", repo: "/r" }, io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io);
 
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("origin") && (c.includes("fetch") || c.includes("push"))));
 });
@@ -122,6 +124,22 @@ test("land without --sign or --push never touches the remote", () => {
 test("land refuses a container branch that no longer descends from the landed one", () => {
 	const io = fakeIo({ ...landed, "git fetch --quiet sandbox-pi-a": new Error("! [rejected] web-1 -> web-1 (non-fast-forward)") });
 
-	assert.throws(() => land({ sandbox: "pi-a", repo: "/r" }, io), /signatures included[\s\S]*reset --hard origin\/web-1/);
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io), /signatures included[\s\S]*reset --hard origin\/web-1/);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c.includes("--no-pager")));
+});
+
+test("land signs where the profile gives the host sign human, without --sign", () => {
+	const io = fakeIo({ ...landed, "git remote get-url origin": "git@github.com:alice/cv.git", "git rev-parse --verify --quiet origin/web-1": new Error("unknown revision"), "git rev-list --reverse": "c1", "git rev-parse HEAD": "signed1" });
+
+	land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io);
+
+	assert.ok(io.calls.some((c) => c[0] === "git" && c.includes("-S")));
+	assert.ok(io.lines.includes("1 commit(s) signed on web-1"));
+});
+
+test("land reads the profile before it imports anything", () => {
+	const io = fakeIo({ ...landed, "read /root/host/repos.json": undefined });
+
+	assert.throws(() => land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io), /missing \/root\/host\/repos.json/);
+	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "fetch"));
 });
