@@ -52,9 +52,9 @@ kept = {
     "statusLine": {"type": "command", "command": "node ~/.claude/statusline.mjs"},
     "enabledPlugins": {align.LSP_PLUGIN: True},
 }
-data = {**kept, "model": "opus", "effortLevel": "medium"}
-changes = align.fix_user(data)
 model, effort = align.seat("host")
+data = {**kept, "model": next(name for name in ("opus", "sonnet") if name != model), "effortLevel": next(level for level in ("low", "high") if level != effort)}
+changes = align.fix_user(data)
 
 check("host seat model reaches the user settings", data["model"] == model)
 check("host seat effort reaches the user settings", data["effortLevel"] == effort)
