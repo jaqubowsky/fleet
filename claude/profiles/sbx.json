@@ -73,6 +73,8 @@
     "pr": ""
   },
   "disableClaudeAiConnectors": true,
+  "syncClaudeAiSkills": false,
+  "syncClaudeAiPlugins": false,
   "managedMcpServers": {
     "context7": {
       "type": "http",
