@@ -12,6 +12,7 @@ Writing, changing or reading a test, or reproducing a bug report -> `refs/testin
 6. Chat in the user's language. Everything committed or written to a task directory in English
 7. Work that changes files and runs longer than one step -> restate in three lines: goal, boundaries, done-check. Then start. No approval wait. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user
+9. Explain how things work in everyday language before adding technical detail
 
 ## Coding
 
