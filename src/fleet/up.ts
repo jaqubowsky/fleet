@@ -162,7 +162,7 @@ export async function up(
 		const start = io.harness.herdrIntegration ? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}` : `sbx run --name ${sandbox}`;
 		io.herdr(["pane", "run", pane, `HERDR_AGENT=${io.harness.agent} ${start}${args ? ` -- ${args}` : ""}`]);
 	}
-	await waitForAgent(io, pane);
+	await waitForAgent(io, pane, sandbox);
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
@@ -532,14 +532,23 @@ function openPane(
 	};
 }
 
-async function waitForAgent(io: Io, pane: string): Promise<void> {
+async function waitForAgent(io: Io, pane: string, sandbox: string): Promise<void> {
 	const started = io.now().getTime();
+	let probeError: unknown;
 	while (io.now().getTime() - started < DETECT_TIMEOUT_MS) {
 		try {
 			const status =
 				io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent
 					.agent_status ?? "";
-			if (KNOWN_STATUS.has(status)) return;
+			if (KNOWN_STATUS.has(status)) {
+				if (io.harness.agent !== "pi") return;
+				try {
+					const tty = io.sbx(["exec", sandbox, "sh", "-c", 'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a'], { quiet: true });
+					if (tty.includes("-icanon") && tty.includes("-icrnl")) return;
+				} catch (error) {
+					probeError = error;
+				}
+			}
 		} catch (error) {
 			if (!(error instanceof Error) || !error.message.includes("agent_not_found"))
 				throw error;
@@ -547,6 +556,6 @@ async function waitForAgent(io: Io, pane: string): Promise<void> {
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`${io.harness.agent} did not come up in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane`,
+		`${io.harness.agent} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; tty probe: ${String(probeError)}` : ""}`,
 	);
 }

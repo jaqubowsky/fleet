@@ -18,6 +18,8 @@ const base = {
 	"herdr agent get w1:p9": {
 		result: { agent: { pane_id: "w1:p9", agent_status: "idle" } },
 	},
+	"sbx exec pi-webapp-web-1 sh -c stty": "-icanon -icrnl",
+	"sbx exec pi-cv-x sh -c stty": "-icanon -icrnl",
 };
 
 test("up creates the container, switches the branch, starts the install in the background, opens a tab and sends no prompt", async () => {
@@ -81,6 +83,24 @@ test("up creates the container, switches the branch, starts the install in the b
 		"w1:p9",
 		"pi-webapp-web-1",
 	]);
+});
+
+test("up waits for the container tty to leave canonical input mode", async () => {
+	const io = fakeIo(base);
+	const sbx = io.sbx;
+	let probes = 0;
+	io.sbx = (args, opts) => {
+		if (args[0] === "exec" && args[4]?.startsWith("stty")) {
+			probes++;
+			return probes === 1 ? "icanon icrnl" : "-icanon -icrnl";
+		}
+		return sbx(args, opts);
+	};
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.equal(probes, 2);
+	assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", "pi-webapp-web-1"]);
 });
 
 test("up warns and continues when the GitHub token cannot be bound", async () => {
@@ -319,7 +339,7 @@ test("up accepts a pi that comes up blocked or working, and fails when nothing c
 	});
 	await assert.rejects(
 		up({ repo, label: "web-1", root: "/root" }, io),
-		/did not come up/,
+		/did not become ready/,
 	);
 	const unknown = fakeIo({
 		...base,
@@ -327,7 +347,7 @@ test("up accepts a pi that comes up blocked or working, and fails when nothing c
 	});
 	await assert.rejects(
 		up({ repo, label: "web-1", root: "/root" }, unknown),
-		/did not come up/,
+		/did not become ready/,
 	);
 });
 
