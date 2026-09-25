@@ -8,6 +8,7 @@ import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 const repo = "/Users/me/Work/webapp";
 const base = {
 	"read /root/host/repos.json": REAL_PROFILES,
+	"read /home/me/.config/sbx/credentials.yaml": "bindings:\n  openai:\n    oauth:\n",
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 	"sbx ls --json": { sandboxes: [] },
@@ -742,6 +743,24 @@ test("cfleet up empties the CLAUDE.md sbx writes beside the workspace, and fleet
 	const emptied = (io: typeof pi) => io.calls.find((c) => c[0] === "sbx" && c.some((a) => a.includes("truncate -s 0")));
 	assert.equal(emptied(claude)?.at(-1), "CLAUDE.md");
 	assert.equal(emptied(pi), undefined);
+});
+
+test("up stops before creating anything when no sbx binding lets openai in, unless the model comes from elsewhere", async () => {
+	const unbound = { ...base, "read /home/me/.config/sbx/credentials.yaml": "bindings: {}\n" };
+	const io = fakeIo(unbound);
+	const openrouter = fakeIo(unbound);
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /no sbx binding lets openai in/);
+	await up({ repo, label: "web-1", root: "/root", model: "openrouter/moonshotai/kimi-k2.6:high" }, openrouter);
+
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
+	assert.ok(openrouter.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
+});
+
+test("cfleet up stops when claude in the new container is not logged in", async () => {
+	const io = fakeIo({ ...base, "herdr agent read w1:p9 --source visible": "Not logged in · Run /login" }, HARNESSES.claude);
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /claude is not logged in.*\/login in tab claude-webapp-web-1/);
 });
 
 test("up says when the image predates the harness it would carry", async () => {

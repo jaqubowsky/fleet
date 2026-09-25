@@ -107,6 +107,11 @@ export async function up(
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {
+		const openai = !input.model || input.model.startsWith("openai-codex/");
+		if (io.harness.codex && openai && !/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? ""))
+			throw new Error(
+				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
+			);
 		create(input, sandbox, profile, io);
 		try {
 			if (profile.container.push === "auto") refuseOtherPrivate(io, sandbox, name);
@@ -649,7 +654,13 @@ async function waitForAgent(
 				io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent
 					.agent_status ?? "";
 			if (KNOWN_STATUS.has(status)) {
-				if (io.harness.agent !== "pi") return;
+				if (io.harness.agent !== "pi") {
+					if (io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
+						throw new Error(
+							`${sandbox}: ${io.harness.agent} is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
+						);
+					return;
+				}
 				try {
 					const tty = io.sbx(
 						[
