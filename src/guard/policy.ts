@@ -7,8 +7,9 @@ export type Host = { levels: () => HostLevels; reaches: (path: string) => boolea
 export type Decision = { decision: "allow" | "deny"; reason: string; explicit?: true };
 
 const allow = (reason: string): Decision => ({ decision: "allow", reason });
+const granted = (reason: string): Decision => ({ decision: "allow", reason, explicit: true });
 const PLAIN = /^\s*(git|sbx|herdr)\s[^\n;&|`$()<>]*$/;
-const plain = (subject: string, reason: string): Decision => (PLAIN.test(subject) ? { decision: "allow", reason, explicit: true } : allow(reason));
+const plain = (subject: string, reason: string): Decision => (PLAIN.test(subject) ? granted(reason) : allow(reason));
 const deny = (reason: string): Decision => ({ decision: "deny", reason });
 
 function strings(value: unknown): string[] {
@@ -69,6 +70,7 @@ const BASH_RULES: [RegExp, string][] = [
 ];
 
 const HOST_PUSH = new RegExp(String.raw`(^|[;&|({\x60]|&&|\$\(|-c\s*['"]|\b(then|do|else|command|exec|time|env|xargs)\s)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?(\S*/)?${PUSH}`, "m");
+const OWN_PUSH = /^\s*git\s+push(\s+(-u|--set-upstream))?(\s+origin(\s+[\w.][\w./-]*(:[\w.][\w./-]*)?)*)?\s*$/;
 const DELEGATED_SEGMENT = /^\s*sbx\s+(exec|run)(\s|$)/;
 const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
 const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
@@ -233,14 +235,16 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	if (namesProfiles(scanned, host) && !segments.every((segment) => readsProfiles(segment, host))) return deny(OWN_PROFILES);
 
 	const own = segments.join("\n");
-	if ((HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) && host.levels().push === "none") {
-		return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
+	if (HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) {
+		const push = host.levels().push;
+		if (push === "none") return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
+		if (push === "auto" && OWN_PUSH.test(subject)) return granted("This repository's profile lets the host push.");
 	}
 
 	const pr = PR_WRITE.exec(scanned) ?? PR_WRITE.exec(flat);
 	if (pr) {
 		const action = pr.groups?.action ?? "";
-		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return allow("This repository's profile lets the host open and merge its own pull requests.");
+		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return granted("This repository's profile lets the host open and merge its own pull requests.");
 		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto), in a checkout whose only remote is origin and whose profile gives the host auto for it, runs here.`);
 	}
 

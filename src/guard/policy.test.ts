@@ -129,7 +129,12 @@ test("every harness keeps every harness's credentials off limits", () => {
 	}
 });
 
-test("an explicit allow covers one plain read-only git or orchestration command and nothing chained to it", () => {
+test("an explicit allow covers one plain read-only git or orchestration command, or a push or PR the profile grants at auto, and nothing chained to it", () => {
+	const auto = at(PRIVATE);
+	assert.equal(decide("Bash", { command: "git push -u origin feat/login" }, auto).explicit, true);
+	assert.equal(decide("Bash", { command: "gh pr merge 12 --squash" }, auto).explicit, true);
+	assert.equal(decide("Bash", { command: "git push -uf origin main" }, auto).explicit, undefined);
+	assert.equal(decide("Bash", { command: "git push origin main" }, here).explicit, undefined);
 	assert.equal(decide("Bash", { command: "git status" }, here).explicit, true);
 	assert.equal(decide("Bash", { command: "sbx ls --json" }, here).explicit, true);
 	assert.equal(decide("Bash", { command: "git status\npython3 deploy.py" }, here).explicit, undefined);

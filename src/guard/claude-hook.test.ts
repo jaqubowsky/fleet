@@ -54,8 +54,21 @@ test("the claude hook judges a pull request by the profile of the session's work
 	const own = answer({ tool_name: "Bash", tool_input: create, cwd: checkout(`git@github.com:${PRIVATE_REPO}.git`) }, root);
 	const work = answer({ tool_name: "Bash", tool_input: create, cwd: checkout("git@github.com:acme/webapp.git") }, root);
 
-	assert.equal(own, "");
+	assert.match(own, /"permissionDecision":"allow"/);
 	assert.match(work, /"permissionDecision":"deny"/);
+});
+
+test("the claude hook runs a push or pull request the profile grants at auto without asking, and leaves the rest to Claude", () => {
+	const root = privateRoot();
+	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
+	const work = checkout("git@github.com:acme/webapp.git");
+	const ask = (command: string, cwd: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd }, root);
+
+	for (const command of ["git push", "git push -u origin feat/login", "gh pr create --fill", "gh pr merge 12 --squash"]) assert.match(ask(command, own), /"permissionDecision":"allow"/, command);
+	assert.equal(ask("git push", work), "");
+	assert.equal(ask("npm test && git push", own), "");
+	assert.equal(ask("git -C ../other push", own), "");
+	for (const command of ["git push origin +main", "git push -uf origin main", "git push -d origin main", "git push origin \\:main", 'git push --f""orce origin main', "git push --prune origin main", "git push --del origin main", "git push --receive-pack=true /tmp/bare", "git push https://github.com/acme/webapp main", "git push fork main"]) assert.doesNotMatch(ask(command, own), /"permissionDecision":"allow"/, command);
 });
 
 test("the claude hook refuses an edit or a shell write of the host's permissions and leaves reading them to Claude", () => {
