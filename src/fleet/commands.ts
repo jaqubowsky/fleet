@@ -4,7 +4,7 @@ import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { agentName } from "./name.ts";
-import { artifactsDir, harnessStamp, imageStampPath, taskDir } from "./up.ts";
+import { artifactsDir, harnessStamp, imageStampPath, staleImage, taskDir } from "./up.ts";
 import {
 	addedLines,
 	agentFor,
@@ -89,8 +89,10 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function steer(sandbox: string, text: string, io: Io): void {
+export function steer(sandbox: string, text: string, io: Io, root?: string): void {
 	const agent = agentName(sandbox);
+	const stale = root ? staleImage(root, io) : undefined;
+	if (stale) io.log(`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`);
 	logEvent(io, "steer", agent, text);
 	try {
 		io.herdr([

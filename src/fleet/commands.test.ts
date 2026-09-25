@@ -91,6 +91,18 @@ test("steer logs the prompt before sending it", () => {
 	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
+test("steer says when the image predates the harness, and still steers", () => {
+	const stale = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "31e3d51\n" });
+	const fresh = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "f7e7f1a\n" });
+
+	steer("pi-webapp-web-1", "go", stale, "/root");
+	steer("pi-webapp-web-1", "go", fresh, "/root");
+
+	assert.match(stale.lines[0], /built from 31e3d51, and the harness is now f7e7f1a: run fleet build.*pi-webapp-web-1 keeps its image until it goes down and up again/);
+	assert.ok(stale.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
+	assert.deepEqual(fresh.lines, ["pi-webapp-web-1: steered"]);
+});
+
 for (const harness of Object.values(HARNESSES)) {
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {
 		const agent = `${harness.prefix}webapp-web-1727`;

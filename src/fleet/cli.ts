@@ -97,7 +97,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	steer(args) {
 		const { rest } = flags(args, []);
 		const [sandbox, ...text] = rest;
-		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io);
+		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io, root);
 	},
 	exec(args) {
 		const { rest } = flags(args, []);

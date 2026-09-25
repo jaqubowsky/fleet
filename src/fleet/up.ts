@@ -41,6 +41,13 @@ export function harnessStamp(root: string, io: Io): string {
 		: commit;
 }
 
+export function staleImage(root: string, io: Io): string | undefined {
+	const built = io.read(imageStampPath(io))?.trim();
+	const current = harnessStamp(root, io);
+	if (built === current) return undefined;
+	return `${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`;
+}
+
 const TASK_STATUS =
 	"status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n";
 
@@ -88,12 +95,8 @@ export async function up(
 	input: UpInput,
 	io: Io,
 ): Promise<{ sandbox: string; agent: string; pane: string }> {
-	const built = io.read(imageStampPath(io))?.trim();
-	const current = harnessStamp(input.root, io);
-	if (built !== current)
-		io.log(
-			`${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`,
-		);
+	const stale = staleImage(input.root, io);
+	if (stale) io.log(stale);
 	input = {
 		...input,
 		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
