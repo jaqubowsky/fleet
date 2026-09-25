@@ -101,6 +101,11 @@ def fix_managed(data, profiles=None):
         data["attribution"] = dict(ATTRIBUTION)
         changes.append("attribution aligned with the sbx template")
 
+    for key in ("syncClaudeAiSkills", "syncClaudeAiPlugins"):
+        if data.get(key) is not False:
+            data[key] = False
+            changes.append(f"{key} set to false, so claude.ai account skills and plugins stay off this host")
+
     hooks = data.setdefault("hooks", {})
 
     entries = hooks.setdefault("PreToolUse", [])
