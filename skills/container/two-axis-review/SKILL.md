@@ -49,13 +49,14 @@ Read `review.md`. Report the verdict and the finding count per axis in chat, wit
 - P<0-2> <finding>: host, <why its fix leaves the task>
 - P<0-2> <finding>: user, <the question under attention:>
 - `<gate command>`: exit <n>, <log path>
+- Unreviewed: <each file a fix added outside `changed.txt`, or none>
 ```
 
-Checks after commit or rebase keep their detail in check logs or a new browser run report. `status.md` records one turning point with a pointer to that evidence, not the individual checks. Keep the review's Range pinned to the diff it inspected; a changed diff needs a new review to claim review coverage.
+Checks after commit or rebase keep their detail in check logs or a new browser run report. `status.md` records one turning point with a pointer to that evidence, not the individual checks. The Range stays pinned to the diff the reviewer inspected. A fix that reaches files the reviewer never saw closes here too: the Unreviewed line names them, and the next review covers the next ticket's diff or a range the user names.
 
 ## Done
 
-`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence, its `host:` reason or its question.
+`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence, its `host:` reason or its question, and fills the Unreviewed line.
 
 ## Why two axes in one reviewer
 
