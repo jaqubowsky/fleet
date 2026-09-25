@@ -9,8 +9,8 @@
       "thinking": "high"
     },
     "reviewer": {
-      "model": "openai-codex/gpt-6-astra",
-      "thinking": "high"
+      "model": "openai-codex/gpt-6-sol",
+      "thinking": "xhigh"
     },
     "explorer": {
       "model": "openai-codex/gpt-6-luna",
