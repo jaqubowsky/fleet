@@ -20,6 +20,7 @@ Into `logs/review-<head-sha7>/` in the task directory:
 - `commits.txt`: `git log <base>..<head> --oneline`; none for uncommitted work.
 - `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md). No detector is a line in `clones.txt` saying so.
 - The checks: the logs `implement` step 7 wrote on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
+- A check log past 200 lines, repo-wide output such as a formatter's, gets its cut beside it here: `grep -F -f changed.txt <log> > <log>.changed`, the lines that name a changed file.
 
 ### 3. Name the standards
 
@@ -36,7 +37,7 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-{{file:review-call}} The task text carries, in this order: the range in SHAs; the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist, and when none does, the prompt that set the task, quoted; the path of `logs/review-<head-sha7>/` and each file in it, and each check log from step 2 with its exit code; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+{{file:review-call}} The task text carries, in this order: the range in SHAs; the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist, and when none does, the prompt that set the task, quoted; the path of `logs/review-<head-sha7>/` and each file in it except `pairs.tsv` and a log that has a `.changed` cut, and each check log from step 2 with its exit code, by its cut where it has one; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 
