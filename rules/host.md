@@ -8,7 +8,7 @@
 
 ## Fleet
 
-Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only; `fleet`, `ofleet` and `cfleet` each drive their own harness's containers. Task directory layout: `refs/artifacts.md`, beside this file.
+Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only; `fleet`, `ofleet` and `cfleet` each drive their own harness's containers. Task directory layout: {{refs}}.
 
 1. Project tooling (install, build, test, dev server, browser) and every code change run in a fleet container, unless the user tells you to do them here; reading, searching and answering stay in this session
 2. `{{cli}} steer` on the user's word. {{watch}} A task the user handed you end to end is yours to drive: steer with the order in your own words (Wording a steer in `orchestrating-agent-sessions`), act on each wake, repeat. For session-handoff attention, follow the Session handoff section of `orchestrating-agent-sessions`. Stop for the user on other `blocked` or `attention` states, or on a decision that `analysis.md`, the repo and the task directory leave open; a decision the container has not yet looked for in the code and the tracker goes back to it as a research order first

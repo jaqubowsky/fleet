@@ -5,7 +5,7 @@ description: 'Fleet containers: put one up, steer it, read its task directory, l
 
 # Fleet containers
 
-One container per task: a private clone in an sbx sandbox, {{harness}} waiting in a herdr tab, one task directory under `~/.sandboxes/<repo>/<sandbox>/` that every skill inside writes and this session reads. When this session may steer is in the Fleet section of your rules; the directory's layout is `refs/artifacts.md`.
+One container per task: a private clone in an sbx sandbox, {{harness}} waiting in a herdr tab, one task directory under `~/.sandboxes/<repo>/<sandbox>/` that every skill inside writes and this session reads. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
 
 | Ask | Command | Result to report |
 | --- | --- | --- |

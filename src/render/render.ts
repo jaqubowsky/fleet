@@ -234,14 +234,14 @@ function claude(r: Renderer): void {
 	const rules = r.rules();
 	if (seat === "host") {
 		for (const rule of rules) r.put(`rules/${rule.name}`, rule.body);
-		for (const name of r.refs()) r.put(`rules/refs/${name}`, r.text(`rules/refs/${name}`));
+		for (const name of r.refs()) r.put(`refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agents");
 		r.skills(true, "skills");
 		r.put("CLAUDE.md", r.text("claude/CLAUDE.md"));
 		return;
 	}
 	for (const rule of [...rules, r.sandboxRule()].filter((x) => !HOST_ONLY_RULES.includes(x.name))) r.put(`home/rules/${rule.name}`, rule.body);
-	for (const name of r.refs()) r.put(`home/rules/refs/${name}`, r.text(`rules/refs/${name}`));
+	for (const name of r.refs()) r.put(`home/refs/${name}`, r.text(`rules/refs/${name}`));
 	r.agents("home/agents");
 	r.skills(true, "home/skills");
 	r.put("home/CLAUDE.md", r.text("claude/CLAUDE.md"));
@@ -261,7 +261,7 @@ function claude(r: Renderer): void {
 export const OWNED: Record<HarnessName, string[]> = {
 	pi: ["skills", "agent/refs", "agent/agents", "agent/themes"],
 	omp: ["skills", "agent/refs", "agent/agents", "agent/models.json", "agent/themes"],
-	claude: ["rules", "skills", "agents"],
+	claude: ["rules", "refs", "skills", "agents"],
 };
 
 export function render(input: RenderInput, io: Io): void {

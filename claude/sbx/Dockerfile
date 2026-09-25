@@ -12,6 +12,7 @@ RUN claude update \
 
 COPY --from=claude-home --chown=agent:agent CLAUDE.md /home/agent/.claude/CLAUDE.md
 COPY --from=claude-home --chown=agent:agent rules/    /home/agent/.claude/rules/
+COPY --from=claude-home --chown=agent:agent refs/     /home/agent/.claude/refs/
 COPY --from=claude-home --chown=agent:agent skills/   /home/agent/.claude/skills/
 COPY --from=claude-home --chown=agent:agent agents/   /home/agent/.claude/agents/
 COPY --from=claude-home --chown=agent:agent fleet/    /home/agent/fleet/

@@ -1,6 +1,6 @@
 # Core
 
-Writing, changing or reading a test, or reproducing a bug report -> `refs/testing.md`, beside this file.
+Writing, changing or reading a test, or reproducing a bug report -> {{refs.testing}}.
 
 ## Communication
 
