@@ -1,67 +1,82 @@
 # Pi remote
 
-This directory is a pi host extension; its domain code lives in `src/remote/`. The pi host settings load it from this repository (`pi/profiles/host.json`); run `npm ci` at the repository root, then `/reload` in pi. OMP does not load it: its extension API has no `agent_settled` or `session_info_changed` event. This is a host extension, not a container sidecar.
+Watch and drive every running host pi from a phone. This directory holds the pi extension entry (`index.ts`) and the browser client, and `src/remote/` holds the server, the Sessions hub and the projection. The pi host profile `pi/profiles/host.json` loads it. Containers and OMP do not: OMP's extension API has no `agent_settled` or `session_info_changed` event.
 
-## Use
+## How it fits together
 
-With `"remote": { "autoStart": true }` in the agent's `settings.json`, as the host profile `pi/profiles/host.json` renders it, a pi started in the terminal UI starts remote control by itself: no QR, no notice, and one error notice if it fails. A `/reload`, a session switch, print, JSON or RPC mode, or `autoStart` false leave it to `/remote start`. `remote.port`, 8787 by default, is the Sessions port. A non-boolean `autoStart` or a port outside 1..65535 stops the extension from loading.
-
-While this session's listener is up, the footer ends with a muted `⌁ remote`, or `⌁ remote N` in the accent colour while N phone streams watch this session. It returns after each session switch and disappears on `/remote stop`.
-
-- `/remote start [port]` starts this session's listener on a free loopback port and joins Sessions on the given port, `remote.port` by default. Repeating start preserves the running listener and credential, even with another port argument.
-- `/remote status` reports this session's listener, the Sessions port and whether this pi serves it, and read-only Tailscale Serve discovery for that port. It also hides the credential widget.
-- `/remote link` shows the private control URL of Sessions and its QR in an ephemeral terminal widget. It never appends a session entry. Without Serve, this is a loopback-only link.
-- `/remote link --view` shows the view-only URL and QR instead. A phone holding it sees the whole session and has no composer, no send and no abort; `POST /command` answers 403 for it. It is still a password: it exposes the transcript, the commands run and the files touched.
-- `/remote stop` closes this session's listener and its phone streams, and gives up the Sessions port if this pi held it. The links stay valid; starting again serves the same pair.
-- `/remote revoke` replaces both links, ends every phone stream and refuses the old links with 401. `/remote link` then shows the new one.
-- `/remote help` shows usage and the permission warning.
-
-For Tailscale 1.102.4 on macOS, the one-time command for the default port is:
-
-```sh
-'/Applications/Tailscale.app/Contents/MacOS/Tailscale' serve --bg --https=443 http://127.0.0.1:8787
+```text
+ phone ──https──▶ Tailscale Serve ──▶ 127.0.0.1:8787  Sessions
+                  <mac>.ts.net                        served by whichever pi holds the port
+                                                      /sessions   list of every pi
+                                                      /s/<id>/    forwarded unchanged
+                                                          │
+                                  ┌───────────────────────┼───────────────────────┐
+                                  ▼                       ▼                       ▼
+                             pi listener             pi listener             pi listener
+                             random loopback port, registered in remote/sessions/<id>.json
 ```
 
-The extension only runs `serve status --json`. It never applies the command. It recognizes a root HTTPS proxy to the Sessions port on a `.ts.net` host, with Funnel disabled. Inspect existing Serve configuration before applying the command, since it may replace an existing root handler. Your phone must be on the same tailnet. The control QR and URL grant access to the transcript and the agent's tools; the view pair grants the transcript alone. Treat both as passwords.
+Every started pi listens on its own loopback port and registers it under the agent directory. One Serve entry and one link reach every session. When the pi holding the Sessions port quits, another takes it within a second, and open phones reconnect by themselves. An entry whose process is gone drops off the list.
 
-## Sessions
+## Setup
 
-Every started pi listens on its own random loopback port and registers it in `remote/sessions/<id>.json` under the agent directory, `<id>` being 16 random hex digits for the process. Whichever pi binds the Sessions port serves Sessions for all of them: a page listing each registered session with its name, status, working directory and model, refreshed every 3 seconds while visible. Each row opens `/s/<id>/`, which the serving pi forwards to that session's listener unchanged, streams included, so one Serve entry and one link reach every session. The other pis try the port each second and one takes it within a second of the serving pi quitting; open phones reconnect by themselves. A session page under `/s/` links back to Sessions, and one whose pi has quit says "Session ended" and stops retrying. An entry whose process is gone is dropped from the list and its file deleted.
+1. `npm ci` at the repository root, then `/reload` in pi.
+2. `"remote": { "autoStart": true }` in the agent's `settings.json`, as the host profile renders it, starts remote control at every terminal-UI startup. `/reload`, a session switch, print, JSON or RPC mode, or `autoStart: false` leave it to `/remote start`. `remote.port` sets the Sessions port, 8787 by default. A non-boolean `autoStart` or a port outside 1..65535 stops the extension from loading.
+3. Once, point Tailscale Serve at the Sessions port. Inspect the existing Serve configuration first, because this replaces a root handler:
 
-The composer chooses how a message is delivered. Queue sends it as `followUp`: while Pi is working it waits for the current run to finish, and when Pi is idle it starts a new run. Steer sends it as `steer`, into the run that is going. Queue is the default. The HTTP protocol also supports `prompt` for other clients.
+   ```sh
+   '/Applications/Tailscale.app/Contents/MacOS/Tailscale' serve --bg --https=443 http://127.0.0.1:8787
+   ```
 
-The header shows what the pi context exposes: the model, context use as a percentage, the session cost summed over the branch, the working directory, and whether Pi is holding queued messages. A field the host does not expose is left out rather than shown as zero. New output scrolls into view only when you are already at the bottom; otherwise a Latest button appears and takes you there.
+   The extension only reads `serve status --json` and never applies the command. It recognises a root HTTPS proxy to the Sessions port on a `.ts.net` host with Funnel off. The phone has to be on the same tailnet.
 
-Abort delegates to Pi's current context. In the inspected Pi 0.85.1 terminal implementation, this interrupts the run and restores pending messages to the terminal editor, not the phone. It does not undo completed tool actions or stop the remote server. SDK hosts can bind a different abort handler.
+## Commands
 
-## Lifetime
+| Command | Effect |
+| --- | --- |
+| `/remote start [port]` | start this session's listener and join Sessions on the given port; repeating it keeps the running listener and links |
+| `/remote status` | this session's listener, the Sessions port, whether this pi serves it, Serve discovery |
+| `/remote link` | the control URL and QR in a terminal widget; a loopback-only link without Serve |
+| `/remote link --view` | the view-only URL and QR |
+| `/remote stop` | close this listener and its phone streams; the links stay valid |
+| `/remote revoke` | replace both links, end every phone stream, refuse the old links with 401 |
+| `/remote help` | usage and the permission warning |
 
-The server, socket address and phone streams belong to the terminal process. The credential pair does not: it lives in `remote/credentials.json` under the agent directory (`$PI_CODING_AGENT_DIR`, else `~/.pi/agent`), 0600 in a 0700 directory, created on the first start and read on every authenticated request, so a restart serves the same links. A running remote watches that file each second and ends its phone streams when it changes. `/new`, `/resume`, `/fork`, and `/reload` detach only the old session callbacks and bind the fresh API/context on `session_start`. Late events and shutdown from an old instance cannot affect the new binding. During the gap, commands return 503; commands addressed to an older generation return 409. Process quit and explicit stop close the listener. Reloading preserves the running implementation too. Changes to runtime or projection code require restarting the Pi process; stopping and starting remote control does not replace the process-global instance.
+While the listener is up the footer ends with a muted `⌁ remote`, or `⌁ remote N` in the accent colour while N phones watch this session.
 
-With the page open, a turn that ends raises one notification and a short vibration: Pi going from working to idle, or to waiting on the terminal. Permission is asked by the Notify me button, never on load, and a phone that refuses it keeps everything else. There is no service worker and no push, so a closed page stays silent. The web app manifest lets the page be added to the home screen. A launch from there reuses the stored link only where the phone gives the home-screen app the browser's storage.
+## Links are passwords
 
-The phone copies a valid fragment into `localStorage` for this origin, removes the fragment from the address bar immediately, and uses an Authorization header. Reloads, new tabs and later visits reconnect without rescanning. `/remote revoke` is the way to end a link everywhere; clearing the site's data forgets it on one phone. The browser does not put the credential in cookies or an HTTP URL. Network reconnects and tab wakeups request a fresh snapshot; a wakeup aborts the stream on purpose, and that abort is reported as nothing and costs no visible reconnect, because only a failure the phone did not cause is worth a banner. A link refused for good — an expired credential, or one viewer too many — stops rather than retrying. Commands are never automatically retried, because an interrupted response might already have been accepted.
+The control link grants the transcript and the agent's tools, with this process's permissions. The view link grants the transcript, the commands run and the files touched; the phone hides the composer and `POST /command` answers 403.
 
-## Protocol and bounds
+Both live in `remote/credentials.json` under the agent directory (`$PI_CODING_AGENT_DIR`, else `~/.pi/agent`), mode 0600 in a 0700 directory. They survive a restart. `/remote revoke` is the only way to end them, and it ends them in every running pi within a second. The phone moves the link from the URL fragment into `localStorage`, clears the address bar and sends it as an `Authorization` header. Clearing the site's data forgets it on that one phone.
 
-Public static assets of a session listener: `/`, `/client.js`, `/client.css`, `/markdown.js`, `/connection.js`, `/manifest.webmanifest`, `/icon.svg`, `/vendor/marked.js`, `/vendor/highlight.js`, `/vendor/highlight-dark.css` and `/vendor/highlight-light.css`. The page requests them by relative path, so it works at `/` and under `/s/<id>/`. The two libraries are `marked` 18.0.5 and highlight.js 11.9.0 as `@highlightjs/cdn-assets`, which is the same release packaged as one browser-ready file; both are exact-pinned at the repository root and read from `node_modules` at start, and nothing is fetched from a CDN at runtime. Every other path is authenticated:
+Every listener binds `127.0.0.1` only. Responses are `no-store` with a same-origin CSP, no CORS and no external assets. The client renders markdown as a tree of fixed tags: raw HTML shows as text, links other than http and https are dropped, images become their alt text. Projected text is masked with the guard's secret pattern from `src/guard/policy.ts`, which catches known key shapes and nothing else, so it is not redaction.
 
-- `GET /bootstrap`: version 2 snapshot, generation, session id/name, status, header, transcript and live assistant and tool state. A message is an ordered list of blocks: text, or a tool call carrying its id, name, one-line summary, state, result and, for an edit, a unified diff. User messages also carry a per-generation, increasing projection sequence. The snapshot carries the latest `userSequence` even when its byte budget temporarily hides those messages; the sequence survives transcript eviction while that session stays bound. A tool result never appears as a row of its own; it joins its call by tool-call id inside the turn that ran it.
-- `GET /summary`: the session, its status and header, for Sessions.
-- `GET /events`: native HTTP SSE snapshots, with a complete snapshot on every connection. No historical replay or unbounded event journal. Heartbeats every 15 seconds; updates coalesced to at most 10 per second.
-- `POST /command`: JSON `{ generation, action, text }`. Actions are `prompt`, `steer`, `followUp`, and `abort`. Abort omits text. Successful text commands return the masked, clamped `display` that will appear in transcript blocks so the phone can match without storing a second masking rule. Prompt is rejected while busy; every action is rejected with 403 for the view token. Input is plain text, not remote slash-command dispatch.
+## On the phone
 
-Sessions serves `/`, `/dashboard.js`, `/client.css`, `/connection.js`, `/manifest.webmanifest` and `/icon.svg` publicly, and two routes:
+- Queue, the default, sends a message as `followUp`: it waits for the current run, or starts one when pi is idle. Steer sends it into the running turn.
+- Abort calls pi's own abort. In the terminal UI it stops the run and puts queued messages back into the terminal editor, not on the phone. Finished tool calls stay done.
+- A tool call is a collapsed card: icon, one-line summary, state. Expanded, it shows an edit's diff, then the result.
+- The Notify button asks for permission to notify when a turn ends. There is no service worker and no push, so a closed page stays silent.
+- Terminal approval dialogs stay on the terminal. The phone shows the waiting status but cannot answer them.
+- A sent message shows as "submitted, awaiting transcript" until pi echoes it. A refresh forgets that local state.
 
-- `GET /sessions`, with either token: `{ sessions: [{ id, session, status, header }] }` sorted by name, from each registered session's `/summary` with a 2 second timeout. A session that does not answer is left out.
-- `/s/<id>/<path>`: forwarded to that session's `/<path>` with method, headers and body unchanged; the session listener authenticates it. `/s/<id>` redirects to `/s/<id>/`, and an id with no live entry answers 404 `Session ended`.
+## Limits
 
-Projection excludes raw Pi objects, thinking blocks, image payloads, tool result details other than an edit's patch, usage, auth and model configuration. Tool arguments are projected, reduced to a one-line summary per tool: the command for bash, the path for read, write and edit, the pattern and path for grep and find, the query or URL for the web tools, the agent and task for a sub-agent, and the name with its argument keys for anything else. Every projected string is masked with the guard's own secret pattern, imported from `src/guard/policy.ts`, so an API key or a private key header reads as `[redacted]`. Masking catches those shapes and nothing else; displayed text can still contain a secret the pattern does not know, and projection is not content redaction. Snapshots contain at most 64 messages, 32 blocks per message, 16 live tools and 4096 characters per text field, and the whole snapshot is held under 512 KiB by dropping the oldest messages first: the live assistant turn, the running tools and the frame's own fields are measured and subtracted before the transcript is fitted, so the bound is on the bytes a phone receives, not on the transcript inside them. A long result, diff or message text is cut to its head and tail with the omitted count in between, so the start and the end of a long output both survive.
+| Limit | Value |
+| --- | --- |
+| snapshot | 64 messages, 32 blocks each, 16 live tools, 4096 characters per text field, 512 KiB total; oldest messages drop first, long text keeps its head and tail |
+| command | 16 KiB body, 8192 characters of text |
+| phone streams per session | 8, at most 4 on the view link |
+| connections per port | 32; everything behind Sessions shares the Sessions port's 32 |
+| slow stream | cut once 1 MiB is queued; it resyncs on reconnect |
 
-On the phone a tool call is a card: collapsed it is one line with an icon, the summary and its state, spinning while it runs and marked when it fails; expanding it shows the diff coloured by added and removed lines, then the result. A running call is pinned above the composer until its message arrives, and never shows twice. The fixed composer leaves 24px of clearance below the final transcript item, and Latest tracks the portion of the thread visible above it. While Pi runs, the input has a faint animated outline; reduced-motion settings disable the animation and the status chip and live status still say "running". After a phone command receives HTTP 202, its masked, length-limited text appears as "submitted, awaiting transcript" in this tab until matching user text with a newer projection sequence appears. This handles a long or masked message and repeated text after old messages leave the 64-message window. It does not claim that Pi has processed or delivered the message: the protocol has no command-to-message id or queue contents, so identical text from another input cannot be distinguished, and a refresh forgets local submissions. Abort clears these local submissions because Pi may restore queued text to the terminal. Older text is omitted. Each command is limited to 16 KiB and 8192 text characters; headers to 8 KiB; connections to 32; phone streams to 8, of which at most 4 may hold the view-only link. That reserves stream seats for the control link; it does not reserve sockets, which stay the shared limit of 32. Through Sessions, the Sessions port's own 32 sockets are shared by every session behind it, so phones watching several sessions can fill it before any one session reaches its limits. Slow streams are disconnected after their output queue exceeds 1 MiB and resync on reconnect. Full snapshots trade bandwidth for bounded, lossless state resynchronization within these display limits.
+`/new`, `/resume`, `/fork` and `/reload` rebind the remote to the new session. Commands during the gap get 503, and commands addressed to an older session get 409. `/reload` keeps the running remote implementation, so a change to runtime or projection code needs a pi restart.
 
-Every listener binds only `127.0.0.1`. API requests require one of two random 256-bit bearer tokens, the control token or the view token; the snapshot names which one the phone holds, so the client hides the composer rather than discovering the limit from a rejection. Responses are no-store, with a same-origin CSP, no CORS and no external assets. Assistant and user text is rendered as markdown: `marked` tokenizes it, a pure function turns the tokens into a tree of fixed tags, attributes and text, and the client builds that tree with `createElement` and `textContent`. Raw HTML in the source appears as text, a link is dropped unless it is http or https, and images are reduced to their alt text. For syntax highlighting, the client gives source text to highlight.js through `textContent` and calls `highlightElement`. Tool output is not parsed as markdown. Terminal approval dialogs remain on the terminal; the phone shows a waiting status but cannot answer them.
+## Protocol
 
-## Verification
+A session listener serves its static client files publicly and four authenticated routes: `GET /bootstrap` (full snapshot), `GET /summary` (for Sessions), `GET /events` (SSE, a full snapshot per update, at most 10 per second, heartbeat every 15 s) and `POST /command` (`{ generation, action, text }`, actions `prompt`, `steer`, `followUp`, `abort`). Sessions serves `GET /sessions` and forwards `/s/<id>/<path>` to that session's listener, which authenticates it. The shapes are in `src/remote/runtime.ts`, `src/remote/hub.ts` and `src/remote/projection.ts`.
 
-`node --test src/remote/client.test.ts` verifies a stored credential reconnects later visits without putting it in request URLs. `node --test src/remote/remote.test.ts` proves a link survives a restart, stays readable by its owner alone, and dies in every running remote on revoke. `node --test src/remote/hub.test.ts` runs two remotes on one directory and port over real loopback: Sessions lists both, forwards a session's bootstrap, stream and command, refuses a wrong token, drops a dead process, and moves to the other remote when its holder stops. `node --test src/remote/dashboard.test.ts` renders the list and the refusal. `node --test src/remote/markdown.test.ts` proves the markdown tree against a hostile fixture: a script tag, an `img` with `onerror` and a `javascript:` link leave no attribute that runs. `npm run test:remote` exercises real loopback HTTP with session callbacks as doubles. `npm run test:remote-integration` loads the extension entry point, invokes its commands and lifecycle hooks, and proves fresh factories retain process identity, use the current callbacks, stop/revoke correctly, start by themselves only at a terminal-UI startup with `autoStart`, and keep the footer marker's phone count. These checks require no model credentials. They do not prove physical-phone access, QR scanning, or a particular macOS Tailscale/Pi installation.
+## Tests
+
+`npm run test:remote` runs every `src/remote/` test over real loopback HTTP: credentials, Sessions with two pis, the dashboard, the client and a hostile markdown fixture. `npm run test:remote-integration` loads the extension entry and drives its commands, lifecycle hooks, autostart and footer marker. Neither needs model credentials. Neither proves a real phone, QR scanning or a particular Tailscale install.
