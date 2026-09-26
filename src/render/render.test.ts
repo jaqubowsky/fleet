@@ -209,20 +209,51 @@ test("a skill, rule or agent gone from the sources is gone from the home after t
 	assert.equal(io.files["/home/rules/core.md"], "# Core\nask with AskUserQuestion\n");
 });
 
+function renderSeats(name: keyof typeof HARNESSES, read: (out: string) => void): void {
+	const out = mkdtempSync(join(tmpdir(), `render-${name}-`));
+	try {
+		const io = { ...realIo(out, HARNESSES[name]), log: () => {} };
+		render({ root, harness: HARNESSES[name], seat: "host", out: `${out}/host` }, io);
+		render({ root, harness: HARNESSES[name], seat: "container", out: `${out}/container` }, io);
+		read(out);
+	} finally {
+		rmSync(out, { recursive: true, force: true });
+	}
+}
+
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
-		const out = mkdtempSync(join(tmpdir(), `render-${name}-`));
-		try {
-			const io = { ...realIo(out, HARNESSES[name]), log: () => {} };
-			render({ root, harness: HARNESSES[name], seat: "host", out: `${out}/host` }, io);
-			render({ root, harness: HARNESSES[name], seat: "container", out: `${out}/container` }, io);
+		renderSeats(name, (out) => {
 			const leftovers = (readdirSync(out, { recursive: true }) as string[])
 				.filter((file) => file.endsWith(".md"))
 				.filter((file) => /\{\{[a-z]/.test(readFileSync(join(out, file), "utf8")));
 			assert.deepEqual(leftovers, []);
-		} finally {
-			rmSync(out, { recursive: true, force: true });
-		}
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} gives both seats the CI ref, and the skills that read CI point at it without a copy`, () => {
+		renderSeats(name, (out) => {
+			const rendered = (seat: string, suffix: string) => {
+				const file = (readdirSync(`${out}/${seat}`, { recursive: true }) as string[]).find((path) => path.endsWith(suffix));
+				assert.ok(file, `${seat} has no ${suffix}`);
+				return readFileSync(join(out, seat, file), "utf8");
+			};
+			const pointer = HARNESSES[name].tokens["refs.ci"]!;
+
+			const refs = [rendered("host", "refs/ci.md"), rendered("container", "refs/ci.md")];
+			const skills = [rendered("host", "orchestrating-agent-sessions/SKILL.md"), rendered("container", "babysit-pr/SKILL.md")];
+
+			for (const ref of refs) {
+				assert.ok(ref.includes("gh run list --commit <sha> --json status,conclusion,name"), "ref names the CI read");
+				assert.ok(ref.includes("gh pr view <n> --json headRefOid"), "ref names where the full SHA comes from");
+			}
+			for (const skill of skills) {
+				assert.ok(skill.includes(pointer), "skill points at the CI ref");
+				assert.doesNotMatch(skill, /statusCheckRollup|check runs|gh pr checks|Checks permission|--json headRefOid/);
+			}
+		});
 	});
 }
 

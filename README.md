@@ -69,7 +69,7 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
 | Path | What |
 | --- | --- |
 | `rules/` | global rules; `{{token}}` marks the words that differ per harness |
-| `rules/refs/` | what the rules point to: the task directory contract, testing |
+| `rules/refs/` | what rules and skills point to: the task directory contract, testing, reading CI |
 | `skills/` | `shared/` renders into both seats, `host/` into the host seat, `container/` into the image |
 | `agents/` | read-only sub-agents `explorer`, `researcher`, `reviewer`; each harness adds their frontmatter as `fragments/agent-<name>.md` |
 | `fragments/` | text a harness can replace with its own `<harness>/fragments/<name>.md` |

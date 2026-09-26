@@ -7,14 +7,11 @@ description: 'Answering an open pull request round after round. Use when the use
 
 A **round** is one push: wait for the pull request to change, fix everything fixable in one batch, hand back. The container reads and fixes. Who pushes each round is `permissions.md` in the task directory: at push `auto` you push it yourself, never forced; otherwise the host lands, signs and pushes. The user posts what needs posting. A container never merges.
 
-## The token is blind to check runs
+## Reading CI
 
-The token `{{cli}}` binds into the container carries no checks scope, so every call that reads check runs answers 403: `gh pr checks` fails whole, and `gh api repos/<owner>/<repo>/commits/<sha>/check-runs` says `Resource not accessible by personal access token`. GraphQL `statusCheckRollup` wears the same blindness behind a friendly shape, returning its CheckRun nodes as `null` beside a `FORBIDDEN` error while `state` counts those nulls, so a rollup reading `PENDING` may be nothing but the hole in the token.
-
-Two calls see the whole check picture. The Actions runs are the CI jobs; the commit status is every bot that posts one, CodeRabbit included.
+Read CI as {{refs.ci}} says. Beside the Actions runs, every bot that posts a commit status, CodeRabbit included, shows in the status of the head:
 
 ```bash
-gh api "repos/<owner>/<repo>/actions/runs?head_sha=<head-sha>" --jq '{n: .total_count, runs: [.workflow_runs[] | {name, status, conclusion}]}'
 gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.statuses[] | {context, state}]}'
 ```
 
@@ -26,8 +23,8 @@ gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.
 
 ```bash
 for i in $(seq 1 8); do
-  runs=$(gh api "repos/<owner>/<repo>/actions/runs?head_sha=<head-sha>" --jq '[.workflow_runs[] | select(.status != "completed")] | length')
-  total=$(gh api "repos/<owner>/<repo>/actions/runs?head_sha=<head-sha>" --jq '.total_count')
+  runs=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq '[.[] | select(.status != "completed")] | length')
+  total=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq 'length')
   state=$(gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '.state')
   echo "wait ${i}/8: ${runs} of ${total} runs pending, status ${state}"
   case "$runs" in ''|*[!0-9]*) echo "read failed, stop waiting"; break;; esac
@@ -38,7 +35,7 @@ for i in $(seq 1 8); do
 done
 ```
 
-Each read comes back a number or a named state, or it is a finding that ends the wait and gets reported. An error body compared against `0` never matches, so a loop without these guards sleeps out its whole cap printing JSON at the pane, and a status read that failed silently reads as anything-but-pending, which is how a blind loop calls a queued pull request green. `total` of zero means the jobs have not registered yet, which is pending too.
+Each read comes back a number or a named state, or it is a finding that ends the wait and gets reported. An error body compared against `0` never matches, so a loop without these guards sleeps out its whole cap printing JSON at the pane, and a status read that failed silently reads as anything-but-pending, which is how a blind loop calls a queued pull request green.
 
 The wait blocks on purpose. Sleeping spends no tokens, each minute prints a line so the pane and `{{cli}} peek` show where you are, and the host is woken once, when you settle. Eight minutes is the cap on one tool call, not on waiting: a pull request still pending at the end takes the same command again, up to twenty minutes in all, and a job still hanging then is its own finding.
 
@@ -46,7 +43,7 @@ The wait blocks on purpose. Sleeping spends no tokens, each minute prints a line
 
 ```bash
 gh pr view <number> --repo <owner>/<repo> --json number,state,headRefOid,isDraft,mergeable
-gh api "repos/<owner>/<repo>/actions/runs?head_sha=<head-sha>" --jq '.workflow_runs[] | {name, status, conclusion, html_url}'
+gh run list --repo <owner>/<repo> --commit <head-sha> --json name,status,conclusion,url
 gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '.statuses[] | {context, state, target_url}'
 gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{id isResolved path line comments(first:10){nodes{body createdAt author{login}}}}}}}}' -F pr=<number> -f owner=<owner> -f repo=<repo>
 gh pr view <number> --repo <owner>/<repo> --json comments --jq '.comments[] | {author: .author.login, createdAt, body}'
@@ -115,7 +112,7 @@ Posting the rejections is the user's call, because the host reaches GitHub throu
 
 ## Done
 
-Done is the state of the work, not of the merge button. A repo that requires an approving review holds `mergeStateStatus` at `BLOCKED` however clean the branch is, and `mergeable` reports conflicts and nothing else, so neither answers whether work is left. Which checks the branch protection requires sits behind the same blindness, so treat every Actions run and every commit status on the head as required.
+Done is the state of the work, not of the merge button. A repo that requires an approving review holds `mergeStateStatus` at `BLOCKED` however clean the branch is, and `mergeable` reports conflicts and nothing else, so neither answers whether work is left. Which checks the branch protection requires, the token cannot read either, so treat every Actions run and every commit status on the head as required.
 
 On the current head commit, all three:
 
