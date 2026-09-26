@@ -279,6 +279,18 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
+test("the claude host watches the containers its own pane put up or steered last", () => {
+	renderSeats("claude", (out) => {
+		const rules = (readdirSync(`${out}/host`, { recursive: true }) as string[])
+			.filter((file) => file.endsWith(".md"))
+			.map((file) => readFileSync(join(out, "host", file), "utf8"))
+			.join("\n");
+
+		assert.match(rules, /With no names it follows the containers whose latest `cfleet up` or `cfleet steer` came from this herdr pane/);
+		assert.doesNotMatch(rules, /watches every `claude-` container/);
+	});
+});
+
 test("a profile that gives the host Linear adds its server to pi and omp mcp.json, beside the servers already there", () => {
 	const profiles = {
 		"read /root/host/repos.json": WITH_PRIVATE,

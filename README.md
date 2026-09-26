@@ -101,7 +101,7 @@ A pi or OMP host picks up a new render after `/reload`. A Claude host reads its 
 | Concern | pi | OMP | Claude Code | Why |
 | --- | --- | --- | --- | --- |
 | Waking the host | `extensions/fleet-monitor.ts` runs `src/fleet/watch.ts` in process and triggers a turn per wake | same extension, `deliverAs: nextTurn` | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
-| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | same, by `OMP_SESSION_ID` | every container, or the ones `cfleet watch` names | same as above |
+| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | same, by `OMP_SESSION_ID` | the ones this herdr pane put up or steered last; more by name on `cfleet watch` | same as above |
 | Agent state in herdr | `fleet relay` in the pane reports as `fleet:pi` | `ofleet relay`, `fleet:omp` | herdr reads Claude's screen | herdr's Claude integration reports only the session |
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |

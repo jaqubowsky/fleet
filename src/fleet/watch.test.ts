@@ -4,7 +4,7 @@ import net from "node:net";
 import { test, type TestContext } from "node:test";
 import { HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
-import { fleetAgents, wakeLines, watch } from "./watch.ts";
+import { fleetAgents, paneScope, wakeLines, watch } from "./watch.ts";
 
 const agents = [
 	{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
@@ -405,4 +405,40 @@ test("a refresh that keeps failing the same way logs it once", (t: TestContext) 
 		io.lines.filter((line) => line.includes("refresh lock")).length,
 		1,
 	);
+});
+
+test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
+	const io = fakeIo({}, HARNESSES.claude);
+	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = [
+		"2026-09-16T10:00:00.000Z w1:host up claude-mine session=",
+		"2026-09-16T10:01:00.000Z w2:other up claude-theirs session=",
+		"2026-09-16T10:02:00.000Z w2:other up claude-named session=",
+	].join("\n");
+
+	assert.deepEqual(paneScope(io, [])(), ["claude-mine"]);
+	assert.deepEqual(paneScope(io, ["claude-named"])(), ["claude-named", "claude-mine"]);
+});
+
+test("a container steered from another pane leaves the watch without a wake", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	const log = "/home/me/.claude/fleet-cache/fleet-events.log";
+	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up claude-worker session=";
+	const wakes: string[] = [];
+	watch(paneScope(io, []), io, (text) => wakes.push(text));
+
+	io.files[log] += '\n2026-09-16T10:01:00.000Z w2:other steer claude-worker session= "go"';
+	intervals.get(30_000)?.();
+
+	assert.deepEqual(wakes, []);
+});
+
+test("CLI watch outside a herdr pane follows only the containers it names", () => {
+	const io = Object.assign(fakeIo({}, HARNESSES.claude), { pane: "-" });
+	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] =
+		"2026-09-16T10:00:00.000Z - up claude-shell session=";
+
+	assert.deepEqual(paneScope(io, [])(), []);
+	assert.deepEqual(paneScope(io, ["claude-named"])(), ["claude-named"]);
 });

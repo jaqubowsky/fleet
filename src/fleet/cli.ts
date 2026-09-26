@@ -8,7 +8,7 @@ import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { relay } from "./relay.ts";
 import { up } from "./up.ts";
-import { watch } from "./watch.ts";
+import { paneScope, watch } from "./watch.ts";
 
 const home = homedir();
 const root = process.env.FLEET_ROOT ?? resolve(import.meta.dirname, "../..");
@@ -30,7 +30,7 @@ const usage = `usage:
   ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
   ${cli} build                                        render the container seat and rebuild ${h.image} from it
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
-  ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container settles; hold it with Monitor
+  ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container this pane put up or steered last, or one named, settles; hold it with Monitor
   ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi or omp tab: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
@@ -142,7 +142,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	async watch(args) {
 		const { rest } = flags(args, []);
-		watch(() => (rest.length ? rest : undefined), io);
+		watch(paneScope(io, rest), io);
 		await new Promise(() => {});
 	},
 };

@@ -86,3 +86,29 @@ test("a container taken down is closed until it comes up again", () => {
 	assert.equal(steered.get("worker-a"), "2026-09-16T10:01:00.000Z");
 	assert.deepEqual(eventAgents(log, { sessionId: "s" }), ["worker-b"]);
 });
+
+test("a pane owns a container while its latest up or steer came from that pane", () => {
+	const log = [
+		"2026-09-16T10:00:00.000Z w1:host up worker-a session=",
+		"2026-09-16T10:01:00.000Z w2:other up worker-b session=",
+		"2026-09-16T10:02:00.000Z w1:host up worker-c session=",
+		'2026-09-16T10:03:00.000Z w2:other steer worker-c session= "go"',
+		"2026-09-16T10:04:00.000Z w1:host up worker-d session=",
+		"2026-09-16T10:05:00.000Z w2:other down worker-d session=",
+	].join("\n");
+
+	assert.deepEqual(eventAgents(log, { pane: "w1:host" }), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, { pane: "w2:other" }), ["worker-b", "worker-c"]);
+});
+
+test("a Pi session keeps a container it put up after another session steers it, until it is taken down", () => {
+	const log = [
+		"2026-09-16T10:00:00.000Z w1:host up worker-a session=session-a",
+		'2026-09-16T10:01:00.000Z w2:other steer worker-a session=session-b "go"',
+		"2026-09-16T10:02:00.000Z w1:host up worker-b session=session-a",
+		"2026-09-16T10:03:00.000Z w2:other down worker-b session=session-b",
+	].join("\n");
+
+	assert.deepEqual(eventAgents(log, { sessionId: "session-a" }), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, { sessionId: "session-b" }), ["worker-a"]);
+});

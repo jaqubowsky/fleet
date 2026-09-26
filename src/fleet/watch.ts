@@ -1,6 +1,6 @@
 import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
-import { eventsLog, lifecycle } from "./events.ts";
+import { eventAgents, eventsLog, lifecycle } from "./events.ts";
 import type { Io } from "./io.ts";
 import {
 	RING_MS,
@@ -47,6 +47,16 @@ export function fleetAgents(
 			fleet.has(a.name ?? "") &&
 			(!wanted || names.has(a.name ?? "") || names.has(a.pane_id)),
 	);
+}
+
+export function paneScope(io: Io, named: string[]): () => string[] {
+	const events = `${io.home}/${eventsLog(io.harness)}`;
+	return () => [
+		...named,
+		...eventAgents(io.read(events) ?? "", {
+			pane: io.pane === "-" ? undefined : io.pane,
+		}),
+	];
 }
 
 export function wakeLines(
@@ -229,10 +239,11 @@ export function watch(
 		if (stopped) return;
 		const wanted = scope();
 		if (wanted?.length === 0 && !tracked.size) return;
+		let listed: Agent[];
 		let agents: Agent[];
 		let rows: Sandbox[];
 		try {
-			const listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"])
+			listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"])
 				.result.agents;
 			rows = sandboxes(io);
 			agents = fleetAgents(listed, rows, wanted);
@@ -253,7 +264,8 @@ export function watch(
 		for (const pane of [...tracked.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
 			const gone = tracked.get(pane);
-			if (gone) emit(gone.name, `${gone.status} -> gone`);
+			if (gone && !listed.some((a) => a.pane_id === pane))
+				emit(gone.name, `${gone.status} -> gone`);
 			tracked.delete(pane);
 		}
 		for (const a of fresh)
