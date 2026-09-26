@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import type { Harness } from "../harness.ts";
 
 export type Io = {
-	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number }): string;
+	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number; input?: string }): string;
 	herdr<T = unknown>(args: string[]): T;
 	herdrText(args: string[]): string;
 	git(args: string[], cwd: string): string;
@@ -26,12 +26,13 @@ export type Io = {
 	tmp: string;
 	pane: string;
 	sessionId?: string;
+	env(name: string): string | undefined;
 };
 
-function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string; timeoutMs?: number } = {}): string {
+function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string; timeoutMs?: number; input?: string } = {}): string {
 	const result = spawnSync(cmd, args, {
 		cwd: opts.cwd,
-		input: "",
+		input: opts.input ?? "",
 		encoding: "utf8",
 		stdio: ["pipe", opts.stream ? "inherit" : "pipe", opts.quiet ? "pipe" : "inherit"],
 		timeout: opts.timeoutMs,
@@ -105,5 +106,6 @@ export function realIo(home: string, harness: Harness): Io {
 		tmp: process.env.TMPDIR ?? "/tmp",
 		pane: process.env.HERDR_PANE_ID ?? "-",
 		sessionId: harness.sessionIdEnv ? process.env[harness.sessionIdEnv] : undefined,
+		env: (name) => process.env[name] || undefined,
 	};
 }

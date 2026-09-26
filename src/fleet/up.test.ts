@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
 import { BRANCH_FROM_BASE, cacheStore, envFiles, up } from "./up.ts";
-import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
+import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
 const base = {
@@ -825,6 +825,29 @@ const pushing = {
 	"herdr workspace list": { result: { workspaces: [{ workspace_id: "w1", label: "private-app" }] } },
 };
 const privateRepos = "sbx exec claude-private-app-x gh api /user/repos";
+const fromSession = JSON.stringify({
+	...JSON.parse(REAL_PROFILES),
+	[PRIVATE_REPO]: { ...PRIVATE_PROFILE, container: { ...PRIVATE_PROFILE.container, token: "env:GH_TOKEN" } },
+});
+
+test("where the profile takes the container token from the session, up hands it to sbx on stdin and asks 1Password nothing", async () => {
+	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession, [privateRepos]: "alice/private-app", "env GH_TOKEN": "github_pat_session" }, HARNESSES.claude);
+
+	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
+
+	const sbx = io.calls.filter((c) => c[0] === "sbx");
+	const secret = sbx.findIndex((c) => c[1] === "secret");
+	assert.deepEqual(sbx[secret], ["sbx", "secret", "set", "github", "--sandbox", "claude-private-app-x"]);
+	assert.equal(io.sbxOpts[secret]?.input, "github_pat_session");
+	assert.ok(!io.calls.some((c) => c.includes("--ref")));
+});
+
+test("where the profile takes the container token from the session and the session has none, up stops before creating anything", async () => {
+	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession }, HARNESSES.claude);
+
+	await assert.rejects(up({ repo: "/r/private-app", label: "x", root: "/root" }, io), /alice\/private-app takes its container token from GH_TOKEN, and this session has none: start claude with GH_TOKEN set/);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && (c[1] === "run" || c[1] === "secret")));
+});
 
 test("where the container may push, up keeps a token that sees this private repository alone", async () => {
 	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app" }, HARNESSES.claude);

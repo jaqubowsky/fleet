@@ -4,9 +4,9 @@ import type { Io } from "./io.ts";
 
 type Call = [string, ...string[]];
 
-export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness = HARNESSES.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] } {
+export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness = HARNESSES.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] } {
 	const calls: Call[] = [];
-	const sbxOpts: ({ quiet?: boolean; stream?: boolean } | undefined)[] = [];
+	const sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] = [];
 	const lines: string[] = [];
 	const files: Record<string, string> = {};
 	const answer = (key: string): unknown => {
@@ -29,6 +29,7 @@ export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness =
 		harness,
 		tmp: "/tmp",
 		pane: "w1:host",
+		env: (name) => answer(`env ${name}`) as string | undefined,
 		sbxOpts,
 		sbx: (args, opts) => {
 			calls.push(["sbx", ...args]);

@@ -110,6 +110,11 @@ export async function up(
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {
+		const variable = sessionToken(profile);
+		if (variable && !io.env(variable))
+			throw new Error(
+				`${name} takes its container token from ${variable}, and this session has none: start ${io.harness.agent} with ${variable} set, as inventory.md (GitHub tokens) shows`,
+			);
 		const openai = !input.model || input.model.startsWith("openai-codex/");
 		if (io.harness.codex && openai && !/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? ""))
 			throw new Error(
@@ -224,6 +229,10 @@ export async function up(
 	return { sandbox, agent, pane };
 }
 
+function sessionToken(profile: Profile): string | undefined {
+	return profile.container.token.startsWith("env:") ? profile.container.token.slice("env:".length) : undefined;
+}
+
 function refuseOtherPrivate(io: Io, sandbox: string, name: string): void {
 	const seen = io
 		.sbx(["exec", sandbox, "gh", "api", "/user/repos", "--paginate", "--jq", ".[] | select(.private) | .full_name"], { quiet: true })
@@ -243,22 +252,13 @@ function create(input: UpInput, sandbox: string, profile: Profile, io: Io): void
 	const knowledgeBase = `${io.home}/my-knowledge-base`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
+	const variable = sessionToken(profile);
 	try {
-		io.sbx(
-			[
-				"secret",
-				"set",
-				"github",
-				"--sandbox",
-				sandbox,
-				"--ref",
-				profile.container.token,
-			],
-			{ quiet: true },
-		);
+		if (variable) io.sbx(["secret", "set", "github", "--sandbox", sandbox], { quiet: true, input: io.env(variable) });
+		else io.sbx(["secret", "set", "github", "--sandbox", sandbox, "--ref", profile.container.token], { quiet: true });
 	} catch (error) {
 		io.log(
-			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`sbx secret set github --sandbox ${sandbox} --ref '${profile.container.token}'\``,
+			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${variable ? `printenv ${variable} | sbx secret set github --sandbox ${sandbox}` : `sbx secret set github --sandbox ${sandbox} --ref '${profile.container.token}'`}\``,
 		);
 	}
 	const linear = profile.container.linear === "none" ? undefined : profile.container.linearServer;
