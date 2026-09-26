@@ -57,6 +57,12 @@ function apply(checkout: string, name: string, profile: Profile, io: Io): string
 			io.git(["config", "--local", "--add", helper, GH_TOKEN_HELPER], checkout);
 			changes.push(`${helper} ${helping} -> ${GH_TOKEN_HELPER}`);
 		}
+		const autoSetup = "branch.autoSetupMerge";
+		const tracking = local(autoSetup);
+		if (tracking !== "false") {
+			io.git(["config", "--local", autoSetup, "false"], checkout);
+			changes.push(`${autoSetup} ${tracking} -> false`);
+		}
 		const pushes = io.git(["remote", "get-url", "--push", "origin"], checkout);
 		if (pushes !== https)
 			throw new Error(`origin pushes to ${pushes}, not ${https}: a pushInsteadOf outside this checkout rewrites it, so host.push auto cannot hold here`);

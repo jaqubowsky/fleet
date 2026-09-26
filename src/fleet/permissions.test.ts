@@ -21,12 +21,14 @@ test("profile prints a checkout's permissions, and the same for its owner/name",
 const HTTPS = "https://github.com/alice/private-app.git";
 const PIN = `url.${HTTPS}.insteadOf`;
 const HELPER = "credential.https://github.com.helper";
+const TRACKING = "branch.autoSetupMerge";
 
-test("profile --apply signs by the profile and moves origin to HTTPS where the host pushes on its own, printing each change", () => {
+test("profile --apply signs by the profile, moves origin to HTTPS and stops branch tracking where the host pushes on its own, printing each change", () => {
 	const io = checkout("git@github.com:alice/private-app.git", WITH_PRIVATE, {
 		"git config --local --get commit.gpgsign": "true",
 		[`git config --local --get ${PIN}`]: new Error("exit 1"),
 		[`git config --local --get ${HELPER}`]: new Error("exit 1"),
+		[`git config --local --get ${TRACKING}`]: new Error("exit 1"),
 		"git remote get-url --push origin": HTTPS,
 	});
 
@@ -35,7 +37,9 @@ test("profile --apply signs by the profile and moves origin to HTTPS where the h
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 	assert.ok(gits.includes("config --local commit.gpgsign false"));
 	assert.ok(gits.includes(`remote set-url origin ${HTTPS}`));
+	assert.ok(gits.includes(`config --local ${TRACKING} false`));
 	assert.match(text, /\ncommit\.gpgsign true -> false\norigin git@github\.com:alice\/private-app\.git -> https:\/\/github\.com\/alice\/private-app\.git\n/);
+	assert.match(text, /\nbranch\.autoSetupMerge unset -> false$/);
 });
 
 test("profile --apply keeps a host push on HTTPS against the person's own url rewrites, with the session's GH_TOKEN as its only credential", () => {
@@ -43,6 +47,7 @@ test("profile --apply keeps a host push on HTTPS against the person's own url re
 		"git config --local --get commit.gpgsign": "false",
 		[`git config --local --get ${PIN}`]: new Error("exit 1"),
 		[`git config --local --get ${HELPER}`]: "osxkeychain",
+		[`git config --local --get ${TRACKING}`]: "false",
 		"git remote get-url --push origin": HTTPS,
 	});
 
@@ -68,6 +73,7 @@ test("profile --apply on a checkout already set for host pushes changes nothing"
 		"git config --local --get commit.gpgsign": "false",
 		[`git config --local --get ${PIN}`]: HTTPS,
 		[`git config --local --get ${HELPER}`]: "!gh auth git-credential",
+		[`git config --local --get ${TRACKING}`]: "false",
 		"git remote get-url --push origin": HTTPS,
 	});
 

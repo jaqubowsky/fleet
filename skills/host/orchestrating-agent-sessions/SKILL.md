@@ -18,7 +18,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary, next step and the Log lines it added |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
-| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each; `--apply` sets the checkout's signing and, where the host pushes on its own, an HTTPS origin, and prints each change |
+| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each; `--apply` sets the checkout's signing and, where the host pushes on its own, an HTTPS origin and no branch tracking, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
@@ -40,7 +40,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 3. For a planned ticket the steer is one line: the outcome and a pointer to the ticket
 4. Tickets that share no files or subsystems and wait on no other ticket run in parallel, one container each, as many as the profile's memory per container fits into the host's RAM
 5. Accept by reading `status.md`, `review.md` and CI as {{refs.ci}} says, then merge where the profile gives the host merge `auto`, or hand the merge to the user. The merge is `gh pr merge <n> --squash --match-head-commit <head sha>`, run bare in the checkout, with the full 40-character SHA that pins the merge to the head whose checks you read. The guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
-6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows; a larger one goes to a container
+6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows, pushed with `git push origin <branch>` and no `-u`, because the claude host cannot write tracking into `.git/config`; a larger one goes to a container
 7. A tracker (Linear or another) is an optional mirror, configured in the project's `AGENTS.md`, updated on a state change only and mapped by state type; on drift the plan files win
 8. A fresh host session resumes from `spec/` and `{{cli}} ls`
 
