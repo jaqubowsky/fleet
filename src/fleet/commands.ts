@@ -1,4 +1,5 @@
 import type { Io } from "./io.ts";
+import { COMPLETE } from "../../extensions/session-handoff.ts";
 import { ACTIVITY, HISTORY, versions } from "../../extensions/status-history.ts";
 import { activityOf, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
@@ -105,6 +106,8 @@ export function steer(sandbox: string, text: string, io: Io, root?: string): voi
 	const stale = root ? staleImage(root, io) : undefined;
 	if (stale) io.log(`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`);
 	logEvent(io, "steer", agent, text);
+	const handoff = text === io.harness.tokens["handoff.command"] ? statusOf(sandbox, io) : undefined;
+	const before = handoff?.();
 	try {
 		io.herdr([
 			"agent",
@@ -123,12 +126,18 @@ export function steer(sandbox: string, text: string, io: Io, root?: string): voi
 			!error.message.includes("agent_prompt_stalled")
 		)
 			throw error;
-		throw new Error(
-			`agent_prompt_stalled: Prompt submission uncertain. Inspect ${io.harness.cli} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
-			{ cause: error },
-		);
+		if (!handoff || before === COMPLETE || handoff() !== COMPLETE)
+			throw new Error(
+				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${io.harness.cli} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
+				{ cause: error },
+			);
 	}
 	io.log(`${agent}: steered`);
+}
+
+function statusOf(sandbox: string, io: Io): (() => string | undefined) | undefined {
+	const repo = sandboxes(io).find((s) => s.name === sandbox)?.workspaces[0];
+	return repo ? () => fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention : undefined;
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;

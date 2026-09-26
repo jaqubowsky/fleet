@@ -64,11 +64,13 @@ export function paneScope(io: Io, named: string[]): () => string[] {
 }
 
 export function wakeLines(
-	name: string,
+	agent: string,
+	sandbox: string,
 	change: string,
 	details: string,
 ): string {
-	return `[fleet] ${name}: ${change}\n\n${details}`;
+	const what = sandbox === agent ? change : `${sandbox} ${change}`;
+	return `[fleet] ${agent}: ${what}\n\n${details}`;
 }
 
 export function wakeName(text: string): string | undefined {
@@ -150,7 +152,7 @@ export function watch(
 		)
 			return;
 		woken.set(name, { status, at: io.now().toISOString() });
-		onWake(wakeLines(name, change, details(name, status)));
+		onWake(wakeLines(name, dirs.get(name)?.sandbox ?? name, change, details(name, status)));
 	};
 
 	const settle = (pane: string, from: string | undefined) => {

@@ -73,7 +73,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			name: "fleet_watch",
 			label: "Fleet watch",
 			description:
-				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <name>: <change> line carrying a bounded projection of status.md (status, attention, summary, next step, the Log lines added since its previous wake) and recent commits; that turn is where you act on it. Pass the sandbox name from ${h.cli} ls; empty string = every container.`,
+				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone) or working 20 minutes without settling wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, summary, next step, the Log lines added since its previous wake) and recent commits; that turn is where you act on it. Pass the sandbox name from ${h.cli} ls; empty string = every container.`,
 			promptSnippet: "watch containers; a settling one wakes this session with a [fleet] line",
 			parameters: {
 				type: "object",

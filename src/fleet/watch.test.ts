@@ -4,7 +4,8 @@ import net from "node:net";
 import { test, type TestContext } from "node:test";
 import { HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
-import { fleetAgents, paneScope, wakeLines, watch } from "./watch.ts";
+import { agentName } from "./name.ts";
+import { fleetAgents, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
 
 const agents = [
 	{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
@@ -99,11 +100,18 @@ test("a long sandbox name picks the agent herdr named after it", () => {
 	);
 });
 
-test("a wake names the agent and its change before the status.md projection", () => {
-	assert.equal(
-		wakeLines("webapp-a", "working -> idle", "status: ready-for-host"),
-		"[fleet] webapp-a: working -> idle\n\nstatus: ready-for-host",
+test("a wake names the agent, then the full sandbox and its change, before the status.md projection", () => {
+	const text = wakeLines(
+		"claude-household-budget-35d0485",
+		"claude-household-budget-t01-skeleton",
+		"working -> idle",
+		"status: ready-for-host",
 	);
+	assert.equal(
+		text,
+		"[fleet] claude-household-budget-35d0485: claude-household-budget-t01-skeleton working -> idle\n\nstatus: ready-for-host",
+	);
+	assert.equal(wakeName(text), "claude-household-budget-35d0485");
 });
 
 test("CLI watch reconciles status and reconnects after a closed stream", (t: TestContext) => {
@@ -164,6 +172,23 @@ test("a transient idle between active turns does not wake the host", (t: TestCon
 	t.mock.timers.tick(1100);
 
 	assert.deepEqual(wakes, []);
+});
+
+test("a watch wake names the full sandbox beside herdr's shortened agent", (t: TestContext) => {
+	const sandbox = "claude-household-budget-t01-skeleton";
+	const agent = agentName(sandbox);
+	const { io, status } = herdr(t, [{ name: agent, pane_id: "t01:pane", agent_status: "working" }]);
+	const sbx = io.sbx;
+	io.sbx = (args, opts) =>
+		args[0] === "ls" ? JSON.stringify({ sandboxes: [{ name: sandbox, workspaces: ["/w/household-budget"] }] }) : sbx(args, opts);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("t01:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 1);
+	assert.ok(wakes[0].startsWith(`[fleet] ${agent}: ${sandbox} working -> idle\n`), wakes[0]);
 });
 
 test("different containers wake independently while an identical transition stays deduplicated", (t: TestContext) => {

@@ -13,6 +13,7 @@ import {
 	steer,
 } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
+import { agentName } from "./name.ts";
 import { HARNESSES } from "../harness.ts";
 
 const running = {
@@ -104,6 +105,32 @@ test("steer says when the image predates the harness, and still steers", () => {
 });
 
 for (const harness of Object.values(HARNESSES)) {
+	test(`${harness.name} steer takes a stalled handoff command as steered once status.md turns to handoff complete`, () => {
+		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
+		const agent = agentName(sandbox);
+		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
+		const command = harness.tokens["handoff.command"];
+		const steerAfter = (from: string, to: string) => {
+			const io = fakeIo(
+				{ "sbx ls --json": { sandboxes: [{ name: sandbox, status: "running", workspaces: ["/w/household-budget"] }] } },
+				harness,
+			);
+			io.files[path] = `status: implementing\nattention: ${from}\n`;
+			io.herdr = () => {
+				io.files[path] = `status: implementing\nattention: ${to}\n`;
+				throw new Error("agent_prompt_stalled");
+			};
+			steer(sandbox, command, io);
+			return io.lines;
+		};
+		const suggested = `session handoff suggested; approve with ${command}`;
+		const complete = "session handoff complete; fresh session idle";
+
+		assert.deepEqual(steerAfter(suggested, complete), [`${agent}: steered`]);
+		assert.throws(() => steerAfter(suggested, suggested), /agent_prompt_stalled: Prompt submission uncertain/);
+		assert.throws(() => steerAfter(complete, complete), /agent_prompt_stalled: Prompt submission uncertain/);
+	});
+
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {
 		const agent = `${harness.prefix}webapp-web-1727`;
 		const io = fakeIo(
