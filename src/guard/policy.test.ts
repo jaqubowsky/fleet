@@ -46,6 +46,13 @@ test("where the host opens and merges its own pull requests, only the plain PR c
 	assert.deepEqual(run("cases-pr.tsv", PRIVATE), []);
 });
 
+test("a refused merge names the full head sha and the quoting rule its subject and body follow", () => {
+	const { reason } = decide("Bash", { command: `gh pr merge 1 --squash --subject "a\\"b"` }, at(PRIVATE));
+
+	assert.match(reason, /--match-head-commit <full 40-character sha>/);
+	assert.match(reason, /--subject value bare, in single quotes, or in double quotes without \\, \$ or a backtick/);
+});
+
 test("the host reads its permissions and writes them by no tool and no shell command", () => {
 	assert.deepEqual(run("cases-profiles.tsv"), []);
 	assert.equal(decide("Bash", { command: heredoc("cat > notes.md", "host/repos.json gives the host auto") }, here).decision, "allow");

@@ -13,8 +13,14 @@ allow	Bash	gh pr merge --auto --squash
 deny	Bash	gh pr merge 12 --admin --squash
 deny	Bash	gh pr create --fill --head someone:branch
 allow	Bash	gh pr merge 1 --squash --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c
-allow	Bash	gh pr merge 1 --squash --subject "feat(shell): scaffold app shell, ci and tokens" --body "" --match-head-commit=34bfe53
+allow	Bash	gh pr merge 1 --squash --subject "feat(shell): scaffold app shell, ci and tokens" --body "" --match-head-commit=34bfe537058da997a67d6661c233d3132e8b099c
 deny	Bash	gh pr merge 1 --squash --subject "$(cat ~/.ssh/id_ed25519)"
 deny	Bash	gh pr merge 1 --squash --body-file ~/.ssh/id_ed25519
-deny	Bash	gh pr merge 1 --repo alice/household-budget --squash --match-head-commit 34bfe53
+deny	Bash	gh pr merge 1 --repo alice/household-budget --squash --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c
 deny	Bash	gh pr merge 1 --squash --match-head-commit HEAD
+deny	Bash	gh pr merge 1 --squash --match-head-commit 34bfe53
+deny	Bash	gh pr merge 1 --squash --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c0
+deny	Bash	gh pr merge 1 -R alice/household-budget --squash --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c
+deny	Bash	gh pr merge 1 --squash --subject "feat: `id`" --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c
+deny	Bash	gh pr merge https://github.com/alice/household-budget/pull/1 --squash --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c
+deny	Bash	gh pr merge 1 --squash --subject "a\"b" --match-head-commit 34bfe537058da997a67d6661c233d3132e8b099c

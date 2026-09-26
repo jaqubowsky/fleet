@@ -79,7 +79,7 @@ const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
 const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
 const OWN_PR: Record<string, RegExp> = {
 	create: new RegExp(String.raw`^\s*gh\s+pr\s+create(\s+(--fill|--draft|--(title|body|base)${VALUE}))*\s*$`),
-	merge: new RegExp(String.raw`^\s*gh\s+pr\s+merge(\s+\d+)?(\s+(--(squash|merge|rebase|delete-branch|auto)|--(subject|body)${VALUE}|--match-head-commit(\s+|=)[0-9a-f]{7,40}))*\s*$`),
+	merge: new RegExp(String.raw`^\s*gh\s+pr\s+merge(\s+\d+)?(\s+(--(squash|merge|rebase|delete-branch|auto)|--(subject|body)${VALUE}|--match-head-commit(\s+|=)[0-9a-f]{40}))*\s*$`),
 };
 
 const OWN_PROFILES = "host/repos.json sets what the host may do, so only the person changes it. Read it with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names the file passes only when every part of it is such a read, so run the read on its own.";
@@ -250,7 +250,7 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	if (pr) {
 		const action = pr.groups?.action ?? "";
 		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return granted("This repository's profile lets the host open and merge its own pull requests.");
-		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <sha>), in a checkout whose only GitHub remote is origin and whose profile gives the host auto for it, runs here.`);
+		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <full 40-character sha>), each --title, --body, --base or --subject value bare, in single quotes, or in double quotes without \\, $ or a backtick, in a checkout whose only GitHub remote is origin and whose profile gives the host auto for it, runs here.`);
 	}
 
 	if (hit(RECURSIVE_RM)) {
