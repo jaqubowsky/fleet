@@ -97,8 +97,9 @@ check("the live file is the repo's file plus what the profiles add", {k: v for k
 check("the profiles' host Linear server reaches the live file", desired["managedMcpServers"].get("linear-private") == {"type": "http", "url": "https://mcp.linear.app/mcp"})
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
 check("cfleet up, build and land run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*")))
+check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
 check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
 check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
 
-print(f"align-settings.py: {4 + 6 + 4 + 6 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {4 + 6 + 4 + 7 - len(failures)} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
