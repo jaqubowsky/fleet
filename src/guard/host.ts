@@ -32,8 +32,11 @@ export function hostAt(cwd: string, root = ROOT): Host {
 		const config = remotes(cwd);
 		const origin = config.find(([key]) => key === "remote.origin.url")?.[1] ?? "";
 		const granted = profileFor(parseProfiles(readFileSync(profiles, "utf8")), repoName(origin)).host;
-		const ghTargetsOrigin = config.every(([key]) => key.startsWith("remote.origin.") && key !== "remote.origin.gh-resolved");
-		return ghTargetsOrigin ? granted : { ...granted, pr: "none" as const, merge: "none" as const };
+		const ghElsewhere = ([key, value]: string[]) => {
+			const [, remote, field] = /^remote\.(.+)\.([^.]+)$/.exec(key) ?? [];
+			return field === "gh-resolved" || (remote !== "origin" && (field === "url" || field === "pushurl") && repoName(value) !== "");
+		};
+		return config.some(ghElsewhere) ? { ...granted, pr: "none" as const, merge: "none" as const } : granted;
 	};
 	const reaches = (path: string) => {
 		const rest = relative(real(resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, homedir()))).toLowerCase(), real(profiles).toLowerCase());

@@ -250,7 +250,7 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	if (pr) {
 		const action = pr.groups?.action ?? "";
 		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return granted("This repository's profile lets the host open and merge its own pull requests.");
-		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <sha>), in a checkout whose only remote is origin and whose profile gives the host auto for it, runs here.`);
+		return deny(`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <sha>), in a checkout whose only GitHub remote is origin and whose profile gives the host auto for it, runs here.`);
 	}
 
 	if (hit(RECURSIVE_RM)) {
