@@ -39,7 +39,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 2. The first ticket of a new application is its skeleton with CI, because required checks judge every merge
 3. For a planned ticket the steer is one line: the outcome and a pointer to the ticket
 4. Tickets that share no files or subsystems and wait on no other ticket run in parallel, one container each, as many as the profile's memory per container fits into the host's RAM
-5. Accept by reading `status.md`, `review.md` and the checks, then merge where the profile gives the host merge `auto`, or hand the merge to the user
+5. Accept by reading `status.md`, `review.md` and the checks, then merge where the profile gives the host merge `auto`, or hand the merge to the user. The merge is `gh pr merge <n> --squash --match-head-commit <head sha>`, run bare in the checkout: the guard grants that form and no other, and the SHA pins the merge to the head whose checks you read
 6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows; a larger one goes to a container
 7. A tracker (Linear or another) is an optional mirror, configured in the project's `AGENTS.md`, updated on a state change only and mapped by state type; on drift the plan files win
 8. A fresh host session resumes from `spec/` and `{{cli}} ls`
