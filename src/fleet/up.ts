@@ -294,6 +294,8 @@ function create(input: UpInput, sandbox: string, profile: Profile, io: Io): void
 		`FLEET_ARTIFACTS=${artifacts}`,
 		"-e",
 		`FLEET_CACHE=${cache}`,
+		"-e",
+		`npm_config_cache=${cache}/npm`,
 		...h.env.flatMap((entry) => ["-e", entry]),
 
 		...(h.sessionEnv

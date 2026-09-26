@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
-import { SWITCH_TO_BRANCH, cacheStore, envFiles, up } from "./up.ts";
+import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
@@ -622,6 +622,17 @@ test("a seeded submodule is registered in the clone, not left as untracked work"
 	);
 });
 
+for (const harness of Object.values(HARNESSES)) {
+	test(`the ${harness.agent} container keeps its npm cache in the repository's shared cache`, async () => {
+		const io = fakeIo(base, harness);
+		await up({ repo, label: "web-1", root: "/root" }, io);
+		const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+
+		assert.ok(run.includes(`npm_config_cache=${cacheDir(repo, io)}/npm`));
+		assert.ok(run.includes(cacheDir(repo, io)));
+	});
+}
+
 test("the build cache is linked by the fleet, not by whoever reads the rules", async () => {
 	const io = fakeIo({
 		...base,
@@ -642,11 +653,7 @@ test("the build cache is linked by the fleet, not by whoever reads the rules", a
 	);
 	assert.ok(
 		!run.some((a) => String(a).startsWith("YARN_CACHE_FOLDER")),
-		"the package manager cache was put on the shared mount",
-	);
-	assert.ok(
-		!run.some((a) => String(a).startsWith("npm_config_cache")),
-		"the package manager cache was put on the shared mount",
+		"the yarn cache was put on the shared mount",
 	);
 	assert.equal(io.files["/home/me/.pi/cache/webapp/paths"], ".turbo/cache\n");
 	const link = io.calls.find(
