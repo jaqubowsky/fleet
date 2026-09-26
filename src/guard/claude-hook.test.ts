@@ -89,3 +89,18 @@ test("the claude hook refuses a privileged command that is not bare on one line,
 	assert.match(ask("gh pr create --title 'a | b' --body 'c; d'"), /"permissionDecision":"allow"/);
 	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "gh run list --commit abc", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
 });
+
+test("the claude hook refuses every sandbox exclusion that is not bare, and names each one", () => {
+	const root = privateRoot();
+	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
+	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
+	const excluded: string[] = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../claude/managed-settings.json"), "utf8")).sandbox.excludedCommands;
+
+	const refusal = ask("true && git push");
+	for (const pattern of excluded) {
+		const command = pattern.replace(/\*$/, "");
+		assert.match(ask(`${command}\n`), /bare, on one line/, command);
+		assert.ok(refusal.includes(command), command);
+	}
+	assert.match(ask('git add -A && git commit -m "fix"'), /bare, on one line/);
+});
