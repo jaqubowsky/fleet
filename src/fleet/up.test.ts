@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
-import { BRANCH_FROM_BASE, cacheStore, envFiles, up } from "./up.ts";
+import { SWITCH_TO_BRANCH, cacheStore, envFiles, up } from "./up.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
@@ -62,7 +66,7 @@ test("up creates the container, switches the branch, starts the install in the b
 		"pi-webapp-web-1",
 		"sh",
 		"-c",
-		BRANCH_FROM_BASE,
+		SWITCH_TO_BRANCH,
 		"--",
 		"web-1",
 		"main",
@@ -653,14 +657,9 @@ test("up branches off the freshest remote base, detected or given with --base", 
 	const detected = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, detected);
 	const script = detected.calls.find(
-		(c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE,
+		(c) => c[0] === "sbx" && c[1] === "exec" && c[5] === SWITCH_TO_BRANCH,
 	)!;
 	assert.deepEqual(script.slice(6), ["--", "web-1", "main"]);
-	assert.match(BRANCH_FROM_BASE, /git fetch --quiet origin "\$2"/);
-	assert.match(
-		BRANCH_FROM_BASE,
-		/git switch -c "\$1" "\$\(git rev-parse --verify --quiet "origin\/\$2" \|\| echo "\$2"\)"/,
-	);
 
 	const given = fakeIo(base);
 	await up(
@@ -669,10 +668,101 @@ test("up branches off the freshest remote base, detected or given with --base", 
 	);
 	assert.deepEqual(
 		given.calls
-			.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === BRANCH_FROM_BASE)!
+			.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === SWITCH_TO_BRANCH)!
 			.slice(6),
 		["--", "web-1", "develop"],
 	);
+});
+
+function originWithClone(t: TestContext): { origin: string; seed: string; workspace: string; git: (dir: string, ...args: string[]) => string } {
+	const root = mkdtempSync(join(tmpdir(), "up-branch-"));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	const git = (dir: string, ...args: string[]) =>
+		execFileSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" }).trim();
+	const origin = join(root, "origin.git");
+	const seed = join(root, "seed");
+	const workspace = join(root, "workspace");
+	execFileSync("git", ["init", "--quiet", "--bare", "-b", "main", origin]);
+	execFileSync("git", ["clone", "--quiet", origin, seed], { stdio: "ignore" });
+	git(seed, "commit", "--quiet", "--allow-empty", "-m", "base");
+	git(seed, "push", "--quiet", "origin", "main");
+	execFileSync("git", ["clone", "--quiet", origin, workspace], { stdio: "ignore" });
+	return { origin, seed, workspace, git };
+}
+
+const branchScript = (workspace: string, branch: string) =>
+	execFileSync("sh", ["-c", SWITCH_TO_BRANCH, "--", branch, "main"], {
+		env: { ...process.env, WORKSPACE_DIR: workspace },
+		encoding: "utf8",
+	}).trim();
+
+const pushTicket = (seed: string, git: (dir: string, ...args: string[]) => string) => {
+	git(seed, "switch", "--quiet", "-c", "ticket/04");
+	git(seed, "commit", "--quiet", "--allow-empty", "-m", "ticket work");
+	git(seed, "push", "--quiet", "origin", "ticket/04");
+};
+
+test("up --branch picks up a branch that exists only on origin and says so", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+	pushTicket(seed, git);
+
+	const out = branchScript(workspace, "ticket/04");
+
+	assert.equal(git(workspace, "rev-parse", "HEAD"), git(seed, "rev-parse", "HEAD"));
+	assert.match(out, /^ticket\/04 continues the existing branch origin\/ticket\/04$/m);
+});
+
+test("up --branch takes origin's branch over a stale local one", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+	git(workspace, "branch", "ticket/04");
+	pushTicket(seed, git);
+
+	branchScript(workspace, "ticket/04");
+
+	assert.equal(git(workspace, "rev-parse", "HEAD"), git(seed, "rev-parse", "HEAD"));
+});
+
+test("up --branch keeps a branch only the clone holds", (t) => {
+	const { workspace, git } = originWithClone(t);
+	git(workspace, "switch", "--quiet", "-c", "local-work");
+	git(workspace, "commit", "--quiet", "--allow-empty", "-m", "unpushed");
+	const unpushed = git(workspace, "rev-parse", "HEAD");
+	git(workspace, "switch", "--quiet", "main");
+
+	const out = branchScript(workspace, "local-work");
+
+	assert.equal(git(workspace, "rev-parse", "HEAD"), unpushed);
+	assert.match(out, /^local-work continues the local branch local-work$/m);
+});
+
+test("up --branch starts a branch origin lacks from origin's base and says so", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+
+	const out = branchScript(workspace, "ticket/05");
+
+	assert.equal(git(workspace, "rev-parse", "HEAD"), git(seed, "rev-parse", "main"));
+	assert.equal(git(workspace, "branch", "--show-current"), "ticket/05");
+	assert.match(out, /^ticket\/05 is new from origin\/main$/m);
+});
+
+test("up --branch says so when origin could not be asked for the branch", (t) => {
+	const { origin, workspace } = originWithClone(t);
+	rmSync(origin, { recursive: true, force: true });
+
+	const out = branchScript(workspace, "ticket/05");
+
+	assert.match(out, /^fetch of ticket\/05 failed, so a branch origin holds starts from the base$/m);
+});
+
+test("up logs which start the branch took", async () => {
+	const io = fakeIo({
+		...base,
+		[`sbx exec pi-webapp-web-1 sh -c ${SWITCH_TO_BRANCH}`]: "web-1 continues the existing branch origin/web-1",
+	});
+
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
+
+	assert.ok(io.lines.includes("pi-webapp-web-1: web-1 continues the existing branch origin/web-1"));
 });
 
 test("a claude container is given colour, a pi container is left as it is", async () => {

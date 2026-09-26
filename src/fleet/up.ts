@@ -65,8 +65,12 @@ export function agentArgs(
 	return `${[...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])].join(" ")}`;
 }
 
-export const BRANCH_FROM_BASE =
-	'cd "$WORKSPACE_DIR" && (git fetch --quiet origin "$2" || echo "fleet: fetch of $2 failed, branching from the local base") && (git switch "$1" 2>/dev/null || git switch -c "$1" "$(git rev-parse --verify --quiet "origin/$2" || echo "$2")")';
+export const SWITCH_TO_BRANCH = `cd "$WORKSPACE_DIR" || exit 1
+git fetch --quiet origin "$2" || echo "fetch of $2 failed, branching from the local base"
+git fetch --quiet origin "$1" 2>/dev/null || { git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; [ $? -eq 2 ] || echo "fetch of $1 failed, so a branch origin holds starts from the base"; }
+if git rev-parse --verify --quiet "origin/$1" >/dev/null; then git switch --quiet -C "$1" "origin/$1" && echo "$1 continues the existing branch origin/$1"
+elif git switch --quiet "$1" 2>/dev/null; then echo "$1 continues the local branch $1"
+else start="origin/$2"; git rev-parse --verify --quiet "$start" >/dev/null || start="$2"; git switch --quiet -c "$1" "$start" && echo "$1 is new from $start"; fi`;
 
 export type UpInput = {
 	repo: string;
@@ -144,19 +148,20 @@ export async function up(
 					{ quiet: true },
 				);
 			if (input.branch)
-				io.sbx(
+				for (const line of io.sbx(
 					[
 						"exec",
 						sandbox,
 						"sh",
 						"-c",
-						BRANCH_FROM_BASE,
+						SWITCH_TO_BRANCH,
 						"--",
 						input.branch,
 						input.base ?? baseBranch(input.repo, io).replace(/^origin\//, ""),
 					],
 					{ quiet: true },
-				);
+				).split("\n").filter(Boolean))
+					io.log(`${sandbox}: ${line}`);
 		} catch (error) {
 			io.sbx(["rm", "-f", sandbox], { quiet: true });
 			throw new Error(
