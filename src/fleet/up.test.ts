@@ -10,6 +10,7 @@ import { SWITCH_TO_BRANCH, cacheStore, envFiles, up } from "./up.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
+const containerLocks = 'sbx exec pi-webapp-web-1 sh -c cd "$WORKSPACE_DIR" && git ls-files';
 const base = {
 	"read /root/host/repos.json": REAL_PROFILES,
 	"read /home/me/.config/sbx/credentials.yaml": "bindings:\n  openai:\n    oauth:\n",
@@ -32,7 +33,7 @@ const base = {
 test("up creates the container, switches the branch, starts the install in the background, opens a tab and sends no prompt", async () => {
 	const io = fakeIo({
 		...base,
-		"git ls-files -- :(glob)**/yarn.lock": "yarn.lock",
+		[containerLocks]: "yarn.lock",
 	});
 	const out = await up(
 		{ repo, label: "web-1", root: "/root", branch: "web-1" },
@@ -72,10 +73,10 @@ test("up creates the container, switches the branch, starts the install in the b
 		"main",
 	]);
 	assert.match(
-		execs[1][5],
+		execs[2][5],
 		/^setsid nohup bash -c "\$1" >\/tmp\/fleet-install\.log/,
 	);
-	assert.match(execs[1][7], /yarn install --frozen-lockfile/);
+	assert.match(execs[2][7], /yarn install --frozen-lockfile/);
 	assert.ok(
 		io.lines.some((l) => /1 lockfile\(s\) install in the background/.test(l)),
 	);
@@ -151,7 +152,7 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 		...base,
 		"git submodule status": " 1495ab0 packages/pdf-generator (v1)\n",
 		"sbx exec pi-webapp-web-1 sh -c printf": repo,
-		"git ls-files -- :(glob)**/yarn.lock": "yarn.lock",
+		[containerLocks]: "yarn.lock",
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	const cps = io.calls
@@ -517,6 +518,41 @@ test("a repository without a lockfile starts no install and says so", async () =
 	assert.ok(io.lines.some((l) => /no lockfile/.test(l)));
 });
 
+test("the install follows the lockfiles of the container's tree, not the host checkout's", async () => {
+	const io = fakeIo({
+		...base,
+		"git ls-files -- :(glob)**/yarn.lock": "",
+		[containerLocks]: "yarn.lock",
+	});
+	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
+
+	const switched = io.calls.findIndex((c) => c[5] === SWITCH_TO_BRANCH);
+	const listed = io.calls.findIndex((c) => c[0] === "sbx" && String(c[5]).includes("git ls-files"));
+	assert.ok(switched >= 0 && listed > switched, "lockfiles listed before the branch switch");
+	assert.ok(io.calls.some((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install")));
+});
+
+test("a lockfile only the host checkout holds starts no install", async () => {
+	const io = fakeIo({
+		...base,
+		"git ls-files -- :(glob)**/yarn.lock": "yarn.lock",
+		[containerLocks]: "",
+	});
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install")));
+	assert.ok(io.lines.some((l) => /no lockfile/.test(l)));
+});
+
+test("a lockfile listing that fails in the container removes it", async () => {
+	const io = fakeIo({ ...base, [containerLocks]: new Error("exec failed") });
+	await assert.rejects(
+		up({ repo, label: "web-1", root: "/root" }, io),
+		/setup failed and the container was removed[\s\S]*exec failed/,
+	);
+	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-webapp-web-1"]);
+});
+
 test("a seeded submodule is registered so the clone sees it as a submodule", async () => {
 	const io = fakeIo({
 		...base,
@@ -541,7 +577,7 @@ test("a seeded submodule is registered in the clone, not left as untracked work"
 		...base,
 		"git submodule status": " 1495ab0 packages/pdf-generator (v1)\n",
 		"sbx exec pi-webapp-web-1 sh -c printf": repo,
-		"git ls-files -- :(glob)**/yarn.lock": "yarn.lock",
+		[containerLocks]: "yarn.lock",
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	const execs = io.calls

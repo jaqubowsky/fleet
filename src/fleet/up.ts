@@ -125,6 +125,7 @@ export async function up(
 				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
 			);
 		create(input, sandbox, profile, io);
+		let locks: number;
 		try {
 			if (profile.container.push === "auto") refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
@@ -162,6 +163,22 @@ export async function up(
 					{ quiet: true },
 				).split("\n").filter(Boolean))
 					io.log(`${sandbox}: ${line}`);
+			locks = lockfiles(
+				io.sbx(
+					[
+						"exec",
+						sandbox,
+						"sh",
+						"-c",
+						'cd "$WORKSPACE_DIR" && git ls-files -- "$@"',
+						"--",
+						":(glob)**/yarn.lock",
+						":(glob)**/pnpm-lock.yaml",
+						":(glob)**/package-lock.json",
+					],
+					{ quiet: true },
+				),
+			);
 		} catch (error) {
 			io.sbx(["rm", "-f", sandbox], { quiet: true });
 			throw new Error(
@@ -172,18 +189,6 @@ export async function up(
 		const allowed = describe(name, { ...profile, resources }, io.harness.cli);
 		io.write(`${task}/permissions.md`, allowed);
 		io.log(allowed);
-		const locks = lockfiles(
-			io.git(
-				[
-					"ls-files",
-					"--",
-					":(glob)**/yarn.lock",
-					":(glob)**/pnpm-lock.yaml",
-					":(glob)**/package-lock.json",
-				],
-				input.repo,
-			),
-		);
 		if (locks) {
 			io.sbx(
 				[
