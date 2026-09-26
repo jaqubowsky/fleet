@@ -16,8 +16,7 @@ export type Row = {
 	agent: string;
 	branch: string;
 	dirty: number;
-	age?: string;
-	cost?: string;
+	activity?: string;
 };
 
 export function fleetSandboxes(
@@ -122,7 +121,7 @@ export function formatRows(rows: Row[]): string {
 	return rows
 		.map(
 			(r) =>
-				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.age ? `  ${r.age}` : ""}${r.cost ? `  ${r.cost}` : ""}`,
+				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.activity ? `  ${r.activity}` : ""}`,
 		)
 		.join("\n");
 }

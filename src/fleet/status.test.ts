@@ -234,7 +234,7 @@ test("a wake bounds every status field and commit list", () => {
 	assert.doesNotMatch(result, /summary:|secret log detail|5 c|last:|review:/);
 });
 
-test("rows carry the elapsed time and cost when the sessions give them", () => {
+test("rows carry the activity projection when the container has one", () => {
 	const out = formatRows([
 		{
 			sandbox: "pi-a",
@@ -242,15 +242,14 @@ test("rows carry the elapsed time and cost when the sessions give them", () => {
 			agent: "working",
 			branch: "web-1",
 			dirty: 0,
-			age: "1h 05m",
-			cost: "$0.42",
+			activity: "up 1h 05m, $0.42",
 		},
 		{ sandbox: "pi-b", status: "stopped", agent: "gone", branch: "?", dirty: 0 },
 	]);
 
 	assert.equal(
 		out,
-		"pi-a  running  working  web-1  1h 05m  $0.42\npi-b  stopped  gone     ?",
+		"pi-a  running  working  web-1  up 1h 05m, $0.42\npi-b  stopped  gone     ?",
 	);
 });
 

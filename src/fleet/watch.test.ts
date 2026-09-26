@@ -389,6 +389,42 @@ test("a working container whose status.md says it stopped on an error wakes the 
 	);
 });
 
+test("a working container whose tool calls keep failing wakes the host once per streak, with its activity", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	const wakes: string[] = [];
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
+	const log = "/home/me/.sandboxes/webapp/claude-worker/logs/activity.jsonl";
+	const failures = (from: number, count: number) =>
+		Array.from({ length: count }, (_, i) =>
+			JSON.stringify({ at: `2026-09-16T09:${String(from + i).padStart(2, "0")}:00Z`, tool: "Bash", ok: false, agent: "main" }),
+		).join("\n");
+
+	io.files[log] = failures(50, 4);
+	intervals.get(60_000)?.();
+	io.files[log] = failures(50, 5);
+	intervals.get(60_000)?.();
+	io.files[log] = failures(50, 6);
+	intervals.get(60_000)?.();
+	const firstStreak = wakes.length;
+	io.files[log] = [
+		failures(50, 6),
+		JSON.stringify({ at: "2026-09-16T09:56:00Z", tool: "Bash", ok: true, agent: "main" }),
+		failures(57, 5),
+	].join("\n");
+	intervals.get(60_000)?.();
+
+	assert.equal(firstStreak, 1);
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: working, 5 tool calls failed in a row\n\n/);
+	assert.match(wakes[0], /\n\nactivity: up 10m, silent 6m, 5 tool calls, last Bash, 5 failed in a row$/);
+});
+
 test("a refresh that keeps failing the same way logs it once", (t: TestContext) => {
 	const { io } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },

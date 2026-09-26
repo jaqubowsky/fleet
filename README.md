@@ -50,7 +50,7 @@ At runtime the host and a container share one task directory and talk through he
                        status.md  analysis.md  review.md  logs/
 ```
 
-A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, and again when it works long without settling.
+A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, and again when it works long without settling or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `cfleet ls` project.
 
 ```text
  up ─▶ steer ─▶ analyze-task ─▶ to-tickets ─▶ per ticket: implement + tdd,
@@ -108,6 +108,7 @@ A pi or OMP host picks up a new render after `/reload`. A Claude host reads its 
 | Error handoff | `agent_end` with `stopReason: error` | same | `StopFailure` hook | each agent's own error event |
 | Status history into `logs/status/` | `tool_execution_end` | same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
 | Transcripts in `logs/sessions/` | written as they happen | same | copied out by `cfleet down` | Claude Code has no session directory setting |
+| Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | same | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `cfleet down` |
 | Cost in `logs/usage.json` | the session's own cost records | same | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |
 | Statusline | `extensions/statusline.ts` with `src/statusline/` | native segments in `omp/profiles/settings.json` | `claude/statusline.mjs` with `src/statusline/` | OMP draws its own footer; Claude Code runs a command |
 | Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `inventory.md` |

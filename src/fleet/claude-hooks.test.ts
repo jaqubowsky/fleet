@@ -88,6 +88,20 @@ test("each tool call keeps a changed status.md as a version, and a session start
 	assert.deepEqual(kept(), ["status: analyzing\nattention: none\n"]);
 });
 
+test("a finished and a failed tool call each append one activity line, a sub-agent's under its own id", (t) => {
+	const { task, hook } = container(t, "status: new\nattention: none\n");
+
+	hook("post-tool-use", JSON.stringify({ tool_name: "Bash" }));
+	hook("post-tool-use-failure", JSON.stringify({ tool_name: "Read", agent_id: "a1" }));
+
+	const lines = readFileSync(join(task, "logs/activity.jsonl"), "utf8").trimEnd().split("\n").map((line) => JSON.parse(line));
+	assert.deepEqual(lines.map(({ at, ...rest }) => rest), [
+		{ tool: "Bash", ok: true, agent: "main" },
+		{ tool: "Read", ok: false, agent: "a1" },
+	]);
+	assert.ok(lines.every((line) => !Number.isNaN(Date.parse(line.at))));
+});
+
 test("the end of a turn keeps a status.md change that no tool call reported", (t) => {
 	const { task, hook, kept } = container(t, "status: analyzing\nattention: none\n");
 

@@ -1,8 +1,12 @@
 import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
+import { ACTIVITY } from "../../extensions/status-history.ts";
+import { activityOf } from "./activity.ts";
+import { activityNow } from "./commands.ts";
 import { eventAgents, eventsLog, lifecycle } from "./events.ts";
 import type { Io } from "./io.ts";
 import {
+	FAILED_IN_A_ROW,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
@@ -87,6 +91,7 @@ export function watch(
 	const logShown = new Map<string, string[]>();
 	const woken = new Map<string, Woken>();
 	const deaths = new Map<string, string>();
+	const streaks = new Map<string, string>();
 	const dirs = new Map<string, { dir: string; sandbox: string }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
@@ -116,9 +121,15 @@ export function watch(
 		} catch (error) {
 			io.log(`[fleet] watch: commits: ${String(error)}`);
 		}
+		let activity = "";
+		try {
+			activity = activityNow(where.sandbox, where.dir, io);
+		} catch (error) {
+			io.log(`[fleet] watch: activity: ${String(error)}`);
+		}
 		const text = wake(status, commits, logShown.get(name));
 		logShown.set(name, logLines(status));
-		return text;
+		return activity ? `${text}\n\nactivity: ${activity}` : text;
 	};
 
 	const emit = (name: string, change: string, settled = false) => {
@@ -283,7 +294,19 @@ export function watch(
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();
 	};
 
+	const noticeFailures = () => {
+		for (const t of tracked.values()) {
+			const where = dirs.get(t.name);
+			if (t.status !== "working" || !where) continue;
+			const activity = activityOf(io.read(`${where.dir}/${ACTIVITY}`));
+			if (!activity?.streakFrom || activity.streak < FAILED_IN_A_ROW || streaks.get(t.name) === activity.streakFrom) continue;
+			streaks.set(t.name, activity.streakFrom);
+			emit(t.name, `working, ${activity.streak} tool calls failed in a row`);
+		}
+	};
+
 	const ring = () => {
+		noticeFailures();
 		const now = Date.now();
 		const entries = [...tracked].map(([pane, t]) => ({
 			pane,

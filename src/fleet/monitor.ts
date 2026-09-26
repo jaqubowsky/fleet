@@ -5,6 +5,7 @@ import type { Sandbox } from "./status.ts";
 export const SETTLE_MS = 1000;
 export const STALL_MS = 20 * 60_000;
 export const RING_MS = 15 * 60_000;
+export const FAILED_IN_A_ROW = 5;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
 

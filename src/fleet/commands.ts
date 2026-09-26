@@ -1,5 +1,6 @@
 import type { Io } from "./io.ts";
-import { HISTORY, versions } from "../../extensions/status-history.ts";
+import { ACTIVITY, HISTORY, versions } from "../../extensions/status-history.ts";
+import { activityOf, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
@@ -9,7 +10,6 @@ import {
 	addedLines,
 	agentFor,
 	checkoutProbe,
-	elapsed,
 	fieldsOf,
 	formatRows,
 	logLines,
@@ -36,26 +36,37 @@ export function resolveSandbox(name: string, io: Io): string {
 	);
 }
 
+const CONTAINER_USAGE = "/home/agent/fleet/src/fleet/usage.ts";
+
+export function activityNow(sandbox: string, task: string, io: Io): string {
+	return projection(activityOf(io.read(`${task}/${ACTIVITY}`)), costSoFar(sandbox, task, io), io.now());
+}
+
+function costSoFar(sandbox: string, task: string, io: Io): number | undefined {
+	if (!io.harness.containerSessions) return sessionUsage(task, io)?.totals.cost;
+	try {
+		const printed = io.sbx(["exec", sandbox, "node", CONTAINER_USAGE, io.harness.containerSessions], { quiet: true });
+		return printed ? Number(printed) : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
-		const checkout =
-			s.status === "running"
-				? parseCheckout(
-						io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }),
-					)
-				: { branch: "?", dirty: 0, head: "" };
+		const running = s.status === "running";
+		const checkout = running
+			? parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }))
+			: { branch: "?", dirty: 0, head: "" };
 		const repo = s.workspaces[0];
-		const usage = repo ? sessionUsage(taskDir(repo, s.name, io), io) : undefined;
-		const started = usage?.runs[0]?.started_at;
 		return {
 			sandbox: s.name,
 			status: s.status,
 			agent: agentFor(live, agentName(s.name))?.agent_status ?? "gone",
 			branch: checkout.branch,
 			dirty: checkout.dirty,
-			age: started ? elapsed(new Date(started), io.now()) : undefined,
-			cost: usage ? `$${usage.totals.cost.toFixed(2)}` : undefined,
+			activity: repo && (running || !io.harness.containerSessions) ? activityNow(s.name, taskDir(repo, s.name, io), io) : undefined,
 		};
 	});
 	return formatRows(rows);

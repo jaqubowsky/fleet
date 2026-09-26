@@ -517,12 +517,59 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 		"git log": new Error(
 			"git log --format=%h\t%cI --since=2026-09-16T09:30:00Z web-1 failed (128)\nfatal: ambiguous argument 'web-1': unknown revision or path not in the working tree.",
 		),
+		[`read ${task}/logs/activity.jsonl`]: [
+			JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "read", ok: true, agent: "main" }),
+			JSON.stringify({ at: "2026-09-16T09:52:00Z", tool: "bash", ok: false, agent: "main" }),
+		].join("\n"),
 	});
 
 	const table = ls(io);
 
-	assert.equal(table, "pi-a  running  gone     web-1  30m  $0.42");
+	assert.equal(table, "pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42");
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
+});
+
+test("ls reads a claude container's cost from its live transcripts, before down copies them out", () => {
+	const io = fakeIo(
+		{
+			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
+			"herdr agent list": { result: { agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }] } },
+			"sbx exec claude-a sh -c": "web-1\t0\tabc",
+			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects": "1.5",
+			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
+		},
+		HARNESSES.claude,
+	);
+
+	assert.equal(ls(io), "claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50");
+});
+
+test("ls still prices a stopped pi container from the sessions it wrote", () => {
+	const io = fakeIo({
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "stopped", workspaces: ["/r"] }] },
+		"herdr agent list": { result: { agents: [] } },
+		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
+		[`stat ${task}/logs/sessions/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
+		[`read ${task}/logs/sessions/s1.jsonl`]: request("2026-09-16T09:30:00Z", 0),
+	});
+
+	assert.equal(ls(io), "pi-a  stopped  gone     ?  $0.01");
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "exec"));
+});
+
+test("ls keeps a claude container's activity when its image cannot price the transcripts", () => {
+	const io = fakeIo(
+		{
+			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
+			"herdr agent list": { result: { agents: [] } },
+			"sbx exec claude-a sh -c": "web-1\t0\tabc",
+			"sbx exec claude-a node": new Error("sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'"),
+			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
+		},
+		HARNESSES.claude,
+	);
+
+	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit");
 });
 
 test("history lists every status.md version in local time with what changed in it and the log lines it added", (t) => {

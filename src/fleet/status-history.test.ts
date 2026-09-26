@@ -62,12 +62,29 @@ test("pi and omp keep a version after every tool, whichever tool wrote the file"
 	statusHistory(pi);
 
 	writeFileSync(join(dir, "status.md"), "status: analyzing\nattention: none\n");
-	handlers.get("tool_execution_end")?.();
-	handlers.get("tool_execution_end")?.();
+	handlers.get("tool_execution_end")?.({ toolName: "write", isError: false });
+	handlers.get("tool_execution_end")?.({ toolName: "write", isError: false });
 
 	const kept = readdirSync(join(dir, "logs/status"));
 	assert.equal(kept.length, 1);
 	assert.equal(readFileSync(join(dir, "logs/status", kept[0]), "utf8"), "status: analyzing\nattention: none\n");
+});
+
+test("pi and omp append one activity line per finished tool: time, tool, ok, agent", (t) => {
+	const dir = task(t, "status: new\nattention: none\n");
+	env(t, { FLEET_ARTIFACTS: dirname(dir), SANDBOX_NAME: basename(dir) });
+	const { handlers, pi } = runtime();
+	statusHistory(pi);
+
+	handlers.get("tool_execution_end")?.({ toolName: "bash", isError: false });
+	handlers.get("tool_execution_end")?.({ toolName: "edit", isError: true });
+
+	const lines = readFileSync(join(dir, "logs/activity.jsonl"), "utf8").trimEnd().split("\n").map((line) => JSON.parse(line));
+	assert.deepEqual(lines.map(({ at, ...rest }) => rest), [
+		{ tool: "bash", ok: true, agent: "main" },
+		{ tool: "edit", ok: false, agent: "main" },
+	]);
+	assert.ok(lines.every((line) => !Number.isNaN(Date.parse(line.at))));
 });
 
 test("an agent that dies on an API error leaves its blocked status as a version", (t) => {

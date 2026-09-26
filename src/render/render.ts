@@ -252,6 +252,7 @@ function claude(r: Renderer): void {
 		["claude/statusline.mjs", "home/fleet/claude/statusline.mjs"],
 		["src/statusline/statusline.ts", "home/fleet/src/statusline/statusline.ts"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
+		["src/fleet/usage.ts", "home/fleet/src/fleet/usage.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
 		["extensions/status-history.ts", "home/fleet/extensions/status-history.ts"],
 		["extensions/session-handoff.ts", "home/fleet/extensions/session-handoff.ts"],

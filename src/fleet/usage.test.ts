@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { oneLine, parseEntries, summarize } from "./usage.ts";
 
@@ -97,4 +101,19 @@ test("usage survives an empty or broken transcript", () => {
 	assert.deepEqual(summarize(parseEntries("")).runs, []);
 	assert.deepEqual(summarize(parseEntries("{not json\n")).runs, []);
 	assert.equal(summarize(parseEntries("")).cache_hit_ratio, 0);
+});
+
+test("run in a claude container, the script prices every transcript under the projects directory, each file on its own like down", (t) => {
+	const dir = mkdtempSync(join(tmpdir(), "usage-"));
+	t.after(() => rmSync(dir, { recursive: true, force: true }));
+	const turn = JSON.stringify({ type: "assistant", message: { id: "m1", model: "claude-opus-5-5", usage: { input_tokens: 1_000_000 } } });
+	mkdirSync(join(dir, "p/s1/subagents"), { recursive: true });
+	mkdirSync(join(dir, "p/s1/subagent-artifacts"), { recursive: true });
+	writeFileSync(join(dir, "p/s1.jsonl"), `${turn}\n${turn}\n`);
+	writeFileSync(join(dir, "p/s1/subagents/a1.jsonl"), `${turn}\n`);
+	writeFileSync(join(dir, "p/s1/subagent-artifacts/x.jsonl"), `${turn}\n`);
+
+	const printed = execFileSync(process.execPath, [join(import.meta.dirname, "usage.ts"), dir], { encoding: "utf8" });
+
+	assert.equal(printed, "8.0000");
 });
