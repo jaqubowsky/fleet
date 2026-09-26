@@ -18,15 +18,60 @@ test("profile prints a checkout's permissions, and the same for its owner/name",
 	assert.throws(() => permissions({ root: "/root", repo: "nowhere" }, checkout("")), /neither a checkout nor owner\/name/);
 });
 
+const HTTPS = "https://github.com/alice/private-app.git";
+const PIN = `url.${HTTPS}.insteadOf`;
+const HELPER = "credential.https://github.com.helper";
+
 test("profile --apply signs by the profile and moves origin to HTTPS where the host pushes on its own, printing each change", () => {
-	const io = checkout("git@github.com:alice/private-app.git", WITH_PRIVATE, { "git config --local --get commit.gpgsign": "true" });
+	const io = checkout("git@github.com:alice/private-app.git", WITH_PRIVATE, {
+		"git config --local --get commit.gpgsign": "true",
+		[`git config --local --get ${PIN}`]: new Error("exit 1"),
+		[`git config --local --get ${HELPER}`]: new Error("exit 1"),
+		"git remote get-url --push origin": HTTPS,
+	});
 
 	const text = permissions({ root: "/root", repo: "/r", apply: true }, io);
 
 	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2).join(" "));
 	assert.ok(gits.includes("config --local commit.gpgsign false"));
-	assert.ok(gits.includes("remote set-url origin https://github.com/alice/private-app.git"));
-	assert.match(text, /\ncommit\.gpgsign true -> false\norigin git@github\.com:alice\/private-app\.git -> https:\/\/github\.com\/alice\/private-app\.git$/);
+	assert.ok(gits.includes(`remote set-url origin ${HTTPS}`));
+	assert.match(text, /\ncommit\.gpgsign true -> false\norigin git@github\.com:alice\/private-app\.git -> https:\/\/github\.com\/alice\/private-app\.git\n/);
+});
+
+test("profile --apply keeps a host push on HTTPS against the person's own url rewrites, with the session's GH_TOKEN as its only credential", () => {
+	const io = checkout("git@github.com-personal:alice/private-app.git", WITH_PRIVATE, {
+		"git config --local --get commit.gpgsign": "false",
+		[`git config --local --get ${PIN}`]: new Error("exit 1"),
+		[`git config --local --get ${HELPER}`]: "osxkeychain",
+		"git remote get-url --push origin": HTTPS,
+	});
+
+	const text = permissions({ root: "/root", repo: "/r", apply: true }, io);
+
+	const gits = io.calls.filter((c) => c[0] === "git").map((c) => c.slice(2));
+	assert.deepEqual(gits.filter((args) => args.includes(PIN) && !args.includes("--get")), [["config", "--local", "--replace-all", PIN, HTTPS]]);
+	assert.deepEqual(gits.filter((args) => args.includes(HELPER) && !args.includes("--get")), [
+		["config", "--local", "--replace-all", HELPER, ""],
+		["config", "--local", "--add", HELPER, "!gh auth git-credential"],
+	]);
+	assert.match(text, new RegExp(`\\n${PIN.replaceAll(".", "\\.")} unset -> ${HTTPS.replaceAll(".", "\\.")}\\n${HELPER.replaceAll(".", "\\.")} osxkeychain -> !gh auth git-credential$`));
+});
+
+test("profile --apply fails where origin still pushes somewhere other than HTTPS", () => {
+	const io = checkout("git@github.com:alice/private-app.git", WITH_PRIVATE, { "git remote get-url --push origin": "git@github.com-personal:alice/private-app.git" });
+
+	assert.throws(() => permissions({ root: "/root", repo: "/r", apply: true }, io), /origin pushes to git@github\.com-alice:alice\/private-app\.git, not https:\/\/github\.com\/alice\/private-app\.git/);
+});
+
+test("profile --apply on a checkout already set for host pushes changes nothing", () => {
+	const io = checkout(HTTPS, WITH_PRIVATE, {
+		"git config --local --get commit.gpgsign": "false",
+		[`git config --local --get ${PIN}`]: HTTPS,
+		[`git config --local --get ${HELPER}`]: "!gh auth git-credential",
+		"git remote get-url --push origin": HTTPS,
+	});
+
+	assert.match(permissions({ root: "/root", repo: "/r", apply: true }, io), /\nnothing changed$/);
 });
 
 test("profile --apply turns signing on where it was unset, leaves origin where the host push needs a person, and needs a checkout", () => {

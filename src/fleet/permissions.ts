@@ -20,13 +20,19 @@ export function permissions(input: PermissionsInput, io: Io): string {
 	return `${text}\n${apply(checkout, name, profile, io).join("\n")}`;
 }
 
+const GH_TOKEN_HELPER = "!gh auth git-credential";
+
 function apply(checkout: string, name: string, profile: Profile, io: Io): string[] {
 	const changes: string[] = [];
+	const local = (key: string): string => {
+		try {
+			return io.git(["config", "--local", "--get", key], checkout);
+		} catch {
+			return "unset";
+		}
+	};
 	const sign = profile.host.sign === "none" ? "false" : "true";
-	let signing = "unset";
-	try {
-		signing = io.git(["config", "--local", "--get", "commit.gpgsign"], checkout);
-	} catch {}
+	const signing = local("commit.gpgsign");
 	if (signing !== sign) {
 		io.git(["config", "--local", "commit.gpgsign", sign], checkout);
 		changes.push(`commit.gpgsign ${signing} -> ${sign}`);
@@ -38,6 +44,22 @@ function apply(checkout: string, name: string, profile: Profile, io: Io): string
 			io.git(["remote", "set-url", "origin", https], checkout);
 			changes.push(`origin ${origin} -> ${https}`);
 		}
+		const pin = `url.${https}.insteadOf`;
+		const pinned = local(pin);
+		if (pinned !== https) {
+			io.git(["config", "--local", "--replace-all", pin, https], checkout);
+			changes.push(`${pin} ${pinned} -> ${https}`);
+		}
+		const helper = "credential.https://github.com.helper";
+		const helping = local(helper);
+		if (helping !== GH_TOKEN_HELPER) {
+			io.git(["config", "--local", "--replace-all", helper, ""], checkout);
+			io.git(["config", "--local", "--add", helper, GH_TOKEN_HELPER], checkout);
+			changes.push(`${helper} ${helping} -> ${GH_TOKEN_HELPER}`);
+		}
+		const pushes = io.git(["remote", "get-url", "--push", "origin"], checkout);
+		if (pushes !== https)
+			throw new Error(`origin pushes to ${pushes}, not ${https}: a pushInsteadOf outside this checkout rewrites it, so host.push auto cannot hold here`);
 	}
 	return changes.length ? changes : ["nothing changed"];
 }
