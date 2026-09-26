@@ -44,7 +44,7 @@
       "push": "auto",
       "pr": "auto",
       "linear": "none",
-      "token": "op://Dev/GitHub PAT household-budget/credential"
+      "token": "env:GH_TOKEN"
     },
     "resources": { "memory": "8g", "cpus": "4" }
   },
