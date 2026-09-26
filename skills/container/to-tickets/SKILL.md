@@ -21,7 +21,7 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 4. **Confirm the split.** Outside a task directory, show the numbered list (title, blocked by, what it delivers) and ask about granularity and edges until the user approves. In a task directory the split was the last item of the pipeline's one question in `analysis.md`; quote there what accepted it, the answer or an order to deliver end to end. An answer accepts the split it names and nothing more, so a split it never named, or one that changed after the question went out, goes back as the one question under `status: blocked`; an order to deliver end to end accepts the split as cut. A change to the split is a change to `analysis.md` first.
 
-5. **Write the tickets**, `<NN>-<slug>.md` numbered from `01` in dependency order, so the numbering is the implementation order and "Blocked by" names real files. `Status: ready-for-agent` unless the user named another. The spec stays as written; the tickets are the only other files this skill writes.
+5. **Write the tickets**, `<NN>-<slug>.md` numbered from `01` in dependency order, so the numbering is the implementation order and "Blocked by" names real files. Each follows the project's `spec/ticket.md`, or {{refs.ticket}} where the project has none. `Status: ready-for-agent` unless the user named another. The spec stays as written; the tickets are the only other files this skill writes.
 
 Then `implement` works the frontier, one ticket at a time: any ticket whose blockers are all done. In a task directory the written tickets are a natural break: suggest a session handoff first, as the container rule says.
 
@@ -57,29 +57,4 @@ One line each.
 
 </spec-template>
 
-<ticket-template>
-
-# <NN>: <Ticket title>
-
-Status: ready-for-agent
-Blocked by: <NN>-<slug>.md, or "None, can start immediately"
-
-## Parent
-
-`../spec.md` in a task directory, `.issues/<feature-slug>/spec.md` otherwise. Read it first: it carries the sources and decisions shared by the feature.
-
-## Sources
-
-Only what this slice needs beyond the spec: the issue, ADR or review comment that constrains it, the code it copies from. Omit when the spec covers everything.
-
-## What to build
-
-The end-to-end behaviour this ticket makes work, from the user's side, never a layer-by-layer list.
-
-## Acceptance criteria
-
-- [ ] <criterion a command or a person can check>
-
-</ticket-template>
-
-File paths and code snippets in ticket bodies go stale; a path under Sources is an anchor, dated, with the symbol name to re-locate it. A prototype snippet that encodes a decision is the exception, trimmed to the decision.
+File paths and code snippets in ticket bodies go stale; a path under Scope is an anchor, dated, with the symbol name to re-locate it. A prototype snippet that encodes a decision is the exception, trimmed to the decision.

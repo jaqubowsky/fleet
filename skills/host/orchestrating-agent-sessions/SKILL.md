@@ -35,14 +35,14 @@ Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings ba
 
 The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user.
 
-1. The plan lives in the project repository under `spec/`, in the shape its `AGENTS.md` sets. A container's task directory is the record of one job, not the plan
+1. The plan lives in the project repository under `spec/`: `vision.md`, the person's, where you propose a change and ask before writing it; `board.md`, yours to keep, with Now, Next and Landed and never a permission level; one ticket per file in the shape of the project's `spec/ticket.md`, or {{refs.ticket}} where the project has none. `{{cli}} init <repo>` lays these and a project `AGENTS.md` out, leaving every file already there. A container's task directory is the record of one job, not the plan
 2. The first ticket of a new application is its skeleton with CI, because required checks judge every merge
 3. For a planned ticket the steer is one line: the outcome and a pointer to the ticket
 4. Tickets that share no files or subsystems and wait on no other ticket run in parallel, one container each, as many as the profile's memory per container fits into the host's RAM, and within a wave the ticket the most open tickets wait on goes up first
 5. Accept by reading `status.md`, `review.md` and CI as {{refs.ci}} says, then merge where the profile gives the host merge `auto`, or hand the merge to the user. The merge is `gh pr merge <n> --squash --match-head-commit <head sha>`, run bare in the checkout, with the full 40-character SHA that pins the merge to the head whose checks you read. The guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
 6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows, pushed with `git push origin <branch>` and no `-u`, because the claude host cannot write tracking into `.git/config`; a larger one goes to a container
 7. A tracker (Linear or another) is an optional mirror, configured in the project's `AGENTS.md`, updated on a state change only and mapped by state type; on drift the plan files win
-8. A fresh host session resumes from `spec/` and `{{cli}} ls`
+8. A fresh host session resumes from `spec/board.md` and `{{cli}} ls`
 
 ## Reading a task
 

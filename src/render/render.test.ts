@@ -221,6 +221,12 @@ function renderSeats(name: keyof typeof HARNESSES, read: (out: string) => void):
 	}
 }
 
+function rendered(out: string, seat: string, suffix: string): string {
+	const file = (readdirSync(`${out}/${seat}`, { recursive: true }) as string[]).find((path) => path.endsWith(suffix));
+	assert.ok(file, `${seat} has no ${suffix}`);
+	return readFileSync(join(out, seat, file), "utf8");
+}
+
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
 		renderSeats(name, (out) => {
@@ -235,15 +241,10 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} gives both seats the CI ref, and the skills that read CI point at it without a copy`, () => {
 		renderSeats(name, (out) => {
-			const rendered = (seat: string, suffix: string) => {
-				const file = (readdirSync(`${out}/${seat}`, { recursive: true }) as string[]).find((path) => path.endsWith(suffix));
-				assert.ok(file, `${seat} has no ${suffix}`);
-				return readFileSync(join(out, seat, file), "utf8");
-			};
 			const pointer = HARNESSES[name].tokens["refs.ci"]!;
 
-			const refs = [rendered("host", "refs/ci.md"), rendered("container", "refs/ci.md")];
-			const skills = [rendered("host", "orchestrating-agent-sessions/SKILL.md"), rendered("container", "babysit-pr/SKILL.md")];
+			const refs = [rendered(out, "host", "refs/ci.md"), rendered(out, "container", "refs/ci.md")];
+			const skills = [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "babysit-pr/SKILL.md")];
 
 			for (const ref of refs) {
 				assert.ok(ref.includes("gh run list --commit <sha> --json status,conclusion,name"), "ref names the CI read");
@@ -258,6 +259,21 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 }
 
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} gives both seats the one ticket template, and to-tickets and the host point at it without a copy`, () => {
+		renderSeats(name, (out) => {
+			const pointer = HARNESSES[name].tokens["refs.ticket"]!;
+
+			for (const seat of ["host", "container"]) assert.equal(rendered(out, seat, "refs/ticket.md"), readFileSync(join(root, "templates/project/spec/ticket.md"), "utf8"));
+			for (const skill of [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "to-tickets/SKILL.md")]) {
+				assert.ok(skill.includes(pointer), "skill points at the ticket template");
+				assert.ok(skill.includes("`spec/ticket.md`"), "skill names the project's own template first");
+				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);
+			}
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} tells the host which ticket of a wave goes up first, and both seats that one ordered ticket ends at ready-for-host`, () => {
 		renderSeats(name, (out) => {
 			const breakTables = (seat: string) =>
@@ -265,9 +281,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 					.filter((file) => file.endsWith(".md"))
 					.map((file) => readFileSync(join(out, seat, file), "utf8"))
 					.filter((text) => text.includes("| Natural break |"));
-			const host = (readdirSync(`${out}/host`, { recursive: true }) as string[]).find((path) => path.endsWith("orchestrating-agent-sessions/SKILL.md"))!;
-
-			assert.match(readFileSync(join(out, "host", host), "utf8"), /within a wave the ticket the most open tickets wait on goes up first/);
+			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /within a wave the ticket the most open tickets wait on goes up first/);
 			for (const seat of ["host", "container"]) {
 				const tables = breakTables(seat);
 				assert.notEqual(tables.length, 0, `${seat} has no natural-break table`);

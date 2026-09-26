@@ -28,6 +28,7 @@ export type Harness = {
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const TESTING_BESIDE_AGENTS = "`refs/testing.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
+const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const PI_WATCH = "Steer returns at once and puts the container under watch; the `[fleet]` wake is where the outcome lands.";
 const watchOwner = (agent: string, cli: string, env: string) => `Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch.`;
 const CONTINUE = "Continue the previous task: read current durable artifacts and follow Next step in status.md.";
@@ -59,6 +60,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			refs: REFS_BESIDE_AGENTS,
 			"refs.testing": TESTING_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
+			"refs.ticket": TICKET_BESIDE_AGENTS,
 			watch: PI_WATCH,
 			"review.saver": "the runtime",
 			"steer.result": "steered; pi takes it after its current tool call, and the container is under watch from now on",
@@ -95,6 +97,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			refs: REFS_BESIDE_AGENTS,
 			"refs.testing": TESTING_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
+			"refs.ticket": TICKET_BESIDE_AGENTS,
 			watch: PI_WATCH,
 			"review.saver": "the runtime",
 			"steer.result": "steered; omp takes it after its current tool call, and the container is under watch from now on",
@@ -129,6 +132,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			refs: "`~/.claude/refs/artifacts.md`",
 			"refs.testing": "`~/.claude/refs/testing.md`",
 			"refs.ci": "`~/.claude/refs/ci.md`",
+			"refs.ticket": "`~/.claude/refs/ticket.md`",
 			watch: "Steer returns at once; the `[fleet]` wake is where the outcome lands, and it reaches you only through `cfleet watch` held with `Monitor` at `timeout_ms: 1800000`: start it before the first steer, one per session, and re-arm it at its expiry notice.",
 			"review.saver": "the calling session",
 			"steer.result": "steered; claude takes it as its next message, and `cfleet watch` reports how it settles",

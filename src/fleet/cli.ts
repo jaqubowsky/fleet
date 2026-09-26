@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { harness } from "../harness.ts";
 import { render } from "../render/render.ts";
 import { artifacts, build, copy, down, exec, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
+import { init } from "./init.ts";
 import { realIo } from "./io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
@@ -18,6 +19,7 @@ const cli = h.cli;
 
 const usage = `usage:
   ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, bind what its profile allows, lay out the task directory with permissions.md, start pi in a herdr tab, send nothing
+  ${cli} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md, spec/board.md, spec/ticket.md; a file already there stays as it is
   ${cli} profile [<repo>] [--apply]                   what host/repos.json lets each seat do in <repo>, a checkout (default here) or owner/name; --apply sets the checkout's commit.gpgsign and, where the host pushes on its own, an HTTPS origin
   ${cli} ls                                           containers with herdr status, branch and dirty count
   ${cli} peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
@@ -81,6 +83,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async up(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "base", "model", "memory", "cpus"]);
 		await up({ repo: repoOf(opts), label: need(rest[0], "label"), branch: opts.branch as string | undefined, base: opts.base as string | undefined, model: opts.model as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
+	},
+	init(args) {
+		const { rest } = flags(args, []);
+		init({ root, repo: resolve(need(rest[0], "repo")) }, io);
 	},
 	profile(args) {
 		const { opts, rest } = flags(args, ["apply"]);

@@ -69,7 +69,8 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
 | Path | What |
 | --- | --- |
 | `rules/` | global rules; `{{token}}` marks the words that differ per harness |
-| `rules/refs/` | what rules and skills point to: the task directory contract, testing, reading CI |
+| `rules/refs/` | what rules and skills point to: the task directory contract, testing, reading CI, the ticket template |
+| `templates/project/` | the seed `init` lays into a new project; its `spec/ticket.md` links to `rules/refs/ticket.md` |
 | `skills/` | `shared/` renders into both seats, `host/` into the host seat, `container/` into the image |
 | `agents/` | read-only sub-agents `explorer`, `researcher`, `reviewer`; each harness adds their frontmatter as `fragments/agent-<name>.md` |
 | `fragments/` | text a harness can replace with its own `<harness>/fragments/<name>.md` |
@@ -92,7 +93,7 @@ The homes hold only rendered files and runtime state. Edit here and run `./sync.
 
 ## Commands
 
-`fleet` drives pi containers, `ofleet` OMP ones, `cfleet` Claude ones. The verbs are the same on all three and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository.
+`fleet` drives pi containers, `ofleet` OMP ones, `cfleet` Claude ones. The verbs are the same on all three and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md`, `spec/vision.md`, `spec/board.md` and the ticket template `spec/ticket.md`, from `templates/project/`, and never overwrites a file that exists.
 
 A pi or OMP host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `<cli> build`, and `up` warns when the image is older than the repository.
 
