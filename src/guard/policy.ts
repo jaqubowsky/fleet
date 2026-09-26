@@ -178,6 +178,10 @@ function hostCommands(subject: string): string[] {
 	return segments;
 }
 
+export function commandsOf(subject: string): string[] {
+	return hostCommands(scan(subject));
+}
+
 function literal(text: string): string {
 	return text
 		.replace(/'[^']*'|\\./g, (quoted) => quoted.replace(/[*?[\]{}$]/g, "\0"))

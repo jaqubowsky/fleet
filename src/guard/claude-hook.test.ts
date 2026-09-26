@@ -66,7 +66,6 @@ test("the claude hook runs a push or pull request the profile grants at auto wit
 
 	for (const command of ["git push", "git push -u origin feat/login", "gh pr create --fill", "gh pr merge 12 --squash"]) assert.match(ask(command, own), /"permissionDecision":"allow"/, command);
 	assert.equal(ask("git push", work), "");
-	assert.equal(ask("npm test && git push", own), "");
 	assert.equal(ask("git -C ../other push", own), "");
 	for (const command of ["git push origin +main", "git push -uf origin main", "git push -d origin main", "git push origin \\:main", 'git push --f""orce origin main', "git push --prune origin main", "git push --del origin main"]) assert.match(ask(command, own), /"permissionDecision":"deny"/, command);
 	for (const command of ["git push --receive-pack=true /tmp/bare", "git push https://github.com/acme/webapp main", "git push fork main"]) assert.equal(ask(command, own), "", command);
@@ -79,4 +78,14 @@ test("the claude hook refuses an edit or a shell write of the host's permissions
 	assert.match(ask("Edit", { file_path: "host/repos.json" }), /"permissionDecision":"deny"/);
 	assert.match(ask("Bash", { command: "echo '{}' | tee host/repos.json" }), /"permissionDecision":"deny"/);
 	assert.equal(ask("Read", { file_path: "host/repos.json" }), "");
+});
+
+test("the claude hook refuses a privileged command that is not bare on one line, so the sandbox exclusion matches it", () => {
+	const root = privateRoot();
+	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
+	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
+
+	for (const command of ["gh pr view 12 | head", "gh pr checks 12 > checks.txt", "npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "gh pr list 2>&1", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
+	assert.match(ask("gh pr create --title 'a | b' --body 'c; d'"), /"permissionDecision":"allow"/);
+	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
 });
