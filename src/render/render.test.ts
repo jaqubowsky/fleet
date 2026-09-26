@@ -372,3 +372,12 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 		});
 	});
 }
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} updates a pull request body through the REST API and reads colours from computed styles`, () => {
+		renderSeats(name, (out) => {
+			assert.ok(rendered(out, "container", "babysit-pr/SKILL.md").includes("gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>"));
+			assert.match(rendered(out, "container", "check-feature/SKILL.md"), /`getComputedStyle`/);
+		});
+	});
+}

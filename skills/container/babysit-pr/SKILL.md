@@ -73,7 +73,7 @@ Base: main
 - checks: Quality Checks success, CodeRabbit success
 ```
 
-7. **Commit, push where `permissions.md` gives you the push, and hand back.** The number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
+7. **Commit, push where `permissions.md` gives you the push, and hand back.** The number and URL head `pr.md`. A body that has to change goes through `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`, because `gh pr edit` queries the retired Projects (classic) field and fails. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
 
 ## A stale base
 
