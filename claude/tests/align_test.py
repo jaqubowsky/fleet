@@ -96,7 +96,7 @@ excluded = desired["sandbox"]["excludedCommands"]
 check("the live file is the repo's file plus what the profiles add", {k: v for k, v in desired.items() if k != "managedMcpServers"} == {k: v for k, v in source.items() if k != "managedMcpServers"})
 check("the profiles' host Linear server reaches the live file", desired["managedMcpServers"].get("linear-private") == {"type": "http", "url": "https://mcp.linear.app/mcp"})
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
-check("cfleet up, build and land run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*")))
+check("cfleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*", "cfleet down*")))
 check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
 check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
 check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
