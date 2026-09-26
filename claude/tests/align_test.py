@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import fnmatch
 import importlib.util
 import json
 import sys
@@ -11,10 +12,13 @@ align = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(align)
 
 failures = []
+passed = 0
 
 
 def check(name, condition):
+    global passed
     if condition:
+        passed += 1
         return
     failures.append(name)
     print(f"FAIL  align  {name}")
@@ -98,9 +102,11 @@ check("the profiles' host Linear server reaches the live file", desired["managed
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
 check("cfleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*", "cfleet down*")))
 check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
+check("gh lists runs and pull requests and reads a run outside the host sandbox", all(pattern in excluded for pattern in ("gh run list*", "gh run view*", "gh pr list*")))
+check("gh api stays inside the host sandbox, since -f, -F and --input make it a write", not [pattern for pattern in excluded if fnmatch.fnmatch("gh api repos/o/r -f a=b", pattern)])
 check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
 check("gh opens and merges pull requests without the auto-mode classifier", all(rule in desired["permissions"]["allow"] for rule in ("Bash(gh pr create *)", "Bash(gh pr merge *)")))
 check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
 
-print(f"align-settings.py: {4 + 6 + 4 + 8 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {passed} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)

@@ -85,7 +85,7 @@ test("the claude hook refuses a privileged command that is not bare on one line,
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
 
-	for (const command of ["gh pr view 12 | head", "gh pr checks 12 > checks.txt", "npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "gh pr list 2>&1", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
+	for (const command of ["gh pr view 12 | head", "gh pr checks 12 > checks.txt", "npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "gh pr list 2>&1", "gh run view 7 --log-failed | tail", "gh run list --commit abc > runs.txt", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
 	assert.match(ask("gh pr create --title 'a | b' --body 'c; d'"), /"permissionDecision":"allow"/);
-	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
+	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "gh run list --commit abc", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
 });

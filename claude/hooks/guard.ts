@@ -5,9 +5,9 @@ import { commandsOf, type Decision, decide, POLICY_TOOLS } from "../../src/guard
 type HookInput = { tool_name?: string; tool_input?: Record<string, unknown>; cwd?: string };
 
 const POLICY = new RegExp(`^(${POLICY_TOOLS.join("|")})$`);
-const PRIVILEGED = /^[\s(]*(cfleet\s+(up|build|land|down)|git\s+push|gh\s+pr\s+(create|merge|view|checks|list))(?![\w-])/;
+const PRIVILEGED = /^[\s(]*(cfleet\s+(up|build|land|down)|git\s+push|gh\s+(pr\s+(create|merge|view|checks|list)|run\s+(list|view)))(?![\w-])/;
 const QUOTED = /'[^']*'|"(\\.|[^"\\])*"/g;
-const NOT_BARE = "The sandbox exclusion matches a privileged command (cfleet up, build, land or down, git push, gh pr create, merge, view, checks or list) only when it is the whole command, so this one would run inside the sandbox and fail. Run it bare, on one line: no pipe, redirect, &&, ;, parenthesis or newline around it, no newline inside its arguments, and any other step as its own call.";
+const NOT_BARE = "The sandbox exclusion matches a privileged command (cfleet up, build, land or down, git push, gh pr create, merge, view, checks or list, gh run list or view) only when it is the whole command, so this one would run inside the sandbox and fail. Run it bare, on one line: no pipe, redirect, &&, ;, parenthesis or newline around it, no newline inside its arguments, and any other step as its own call.";
 
 function privilegedNotBare(command: string): boolean {
 	return commandsOf(command).some((segment) => PRIVILEGED.test(segment)) && /[|;&<>()\n]/.test(command.replace(QUOTED, (quoted) => (quoted.includes("\n") ? "\n" : "")));
