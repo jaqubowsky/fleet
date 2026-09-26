@@ -6,7 +6,7 @@
     },
     "sbx": {
       "model": "anthropic/claude-opus-5-5[1m]",
-      "thinking": "high"
+      "thinking": "medium"
     },
     "reviewer": {
       "model": "anthropic/claude-opus-5-5",
@@ -14,11 +14,11 @@
     },
     "explorer": {
       "model": "anthropic/claude-sonnet-5",
-      "thinking": "high"
+      "thinking": "medium"
     },
     "researcher": {
       "model": "anthropic/claude-sonnet-5",
-      "thinking": "high"
+      "thinking": "medium"
     }
   }
 }
