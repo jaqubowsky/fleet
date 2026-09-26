@@ -17,6 +17,6 @@ Containers are the user's workbench. Commands: skill `orchestrating-agent-sessio
 
 ## Git on this Mac
 
-- Push, `gh pr create` and `gh pr merge` as `{{cli}} profile <repo>` says for the host seat: `auto` on your own; `human` for a push is started by you and confirmed with Touch ID, for a pull request or a merge its command goes to the user; `none` never. Fetch and any other remote command only on the user's word
+- Push, `gh pr create` and `gh pr merge` as `{{cli}} profile <repo>` says for the host seat. Fetch and any other remote command only on the user's word
 - Every signature costs the user one Touch ID tap: say what you are about to sign
 - SSH auth failure or `banner exchange` = missed Touch ID prompt, not a broken remote. Say so, retry. Never switch to https or change auth config, except through `{{cli}} profile --apply` on the user's word

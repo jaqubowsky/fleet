@@ -293,6 +293,21 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} seats branch on no permission level; the profile's description holds each level's sentence`, () => {
+		renderSeats(name, (out) => {
+			const branches = (readdirSync(out, { recursive: true }) as string[])
+				.filter((file) => file.endsWith(".md"))
+				.flatMap((file) => readFileSync(join(out, file), "utf8").split("\n").map((line) => `${file}: ${line}`))
+				.filter((line) => /`(auto|human|none|read|write)`/.test(line) && /\b(push|pr|pull request|merge|sign|linear)\b/i.test(line))
+				.filter((line) => !line.includes("the level your permissions give"));
+			assert.deepEqual(branches, []);
+			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /order the plan so the checks that judge a merge exist before the first change they judge, and the widest parallel wave starts as early as possible/i);
+			assert.doesNotMatch(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /skeleton with CI/);
+		});
+	});
+}
+
 test("the claude host watches the containers its own pane put up or steered last", () => {
 	renderSeats("claude", (out) => {
 		const rules = (readdirSync(`${out}/host`, { recursive: true }) as string[])

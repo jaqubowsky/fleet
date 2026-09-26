@@ -66,15 +66,38 @@ test("the description gives each seat one line per action, with its level and wh
 	const [container, host] = text.split("## Host");
 
 	assert.match(text, /^# Permissions: alice\/private-app\n/);
-	assert.match(container, /^- push `auto`: push your own branch to origin, never forced$/m);
+	assert.match(container, /^- push `auto`: push your own branch to origin, never forced/m);
 	assert.match(container, /^- merge `none`: containers never merge$/m);
 	assert.match(container, /^- linear `read`: read Linear through `linear-private-readonly`; nothing can be written there$/m);
 	assert.match(container, /^- resources: 4g memory, 4 cpus$/m);
 	assert.match(host, /^- sign `none`: commits stay unsigned; `cfleet land` signs only with --sign$/m);
-	assert.match(host, /^- push `auto`: push with `git push`, never forced; the guard allows it$/m);
+	assert.match(host, /^- push `auto`: push with `git push`, never forced; the guard allows it/m);
 	assert.match(host, /^- merge `auto`: merge an accepted pull request with `gh pr merge`; the guard allows it$/m);
 	assert.match(host, /^- linear `write`: read and write Linear through `linear-private`/m);
-	assert.deepEqual(text.match(/^- \w+/gm), ["- push", "- pr", "- merge", "- linear", "- resources", "- sign", "- push", "- pr", "- merge", "- linear"]);
+	assert.deepEqual(text.match(/^- \w+/gm), ["- push", "- pr", "- merge", "- linear", "- resources", "- sign", "- push", "- pr", "- merge", "- linear", "- land"]);
+});
+
+test("the description carries each sentence a seat would otherwise choose by level", () => {
+	const seats = (container: Record<string, string>, host: Record<string, string> = {}) => {
+		const profiles = parseProfiles(JSON.stringify({ "*": { ...star, host: { ...star.host, ...host }, container: { ...star.container, ...container } } }));
+		const [inside, outside] = describe("acme/app", profileFor(profiles, "acme/app"), "cfleet").split("## Host");
+		return { inside, outside };
+	};
+	const [ownInside, ownHost] = describe(PRIVATE_REPO, profileFor(parseProfiles(WITH_PRIVATE), PRIVATE_REPO), "cfleet").split("## Host");
+
+	const none = seats({});
+	const human = seats({ push: "human" });
+	const hostless = seats({}, { push: "none" });
+
+	assert.match(none.inside, /^- push `none`: no credential here pushes; the host lands, signs and pushes the branch, and a steer tells you once it is on GitHub$/m);
+	assert.match(human.inside, /^- push `human`: prepare the branch and ask for the push under `attention:`; the person pushes it, and a steer tells you once it is on GitHub$/m);
+	assert.match(ownInside, /^- push `auto`: push your own branch to origin, never forced, before `ready-for-host` and at the end of each pull request round$/m);
+	assert.match(ownInside, /^- linear `read`: read Linear through `linear-private-readonly`; nothing can be written there$/m);
+	assert.match(ownHost, /^- linear `write`: read and write Linear through `linear-private`; write only what you were told to, and say what you posted$/m);
+	assert.match(ownHost, /^- push `auto`: push with `git push`, never forced; the guard allows it, and `cfleet profile --apply` keeps the origin on HTTPS with no branch tracking$/m);
+	for (const { outside } of [none, human]) assert.match(outside, /^- land: `cfleet land --sign --push <sandbox>` puts the container's branch on GitHub, then `cfleet steer <sandbox> "resync and open the PR"`; the resync comes first because signing rewrote its commits$/m);
+	assert.match(hostless.outside, /^- land: `cfleet land --sign <sandbox>` brings the container's branch here and the person pushes it from their own shell, then `cfleet steer <sandbox> "resync and open the PR"`; the resync comes first because signing rewrote its commits$/m);
+	assert.match(ownHost, /^- land: the container pushes its own branch and opens its pull request; no landing takes them to GitHub$/m);
 });
 
 test("a host Linear level picks the server's endpoint: write the full one, read the read-only one", () => {

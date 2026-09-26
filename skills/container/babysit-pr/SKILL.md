@@ -5,7 +5,7 @@ description: 'Answering an open pull request round after round. Use when the use
 
 # Babysit a pull request
 
-A **round** is one push: wait for the pull request to change, fix everything fixable in one batch, hand back. The container reads and fixes. Who pushes each round is `permissions.md` in the task directory: at push `auto` you push it yourself, never forced; otherwise the host lands, signs and pushes. The user posts what needs posting. A container never merges.
+A **round** is one push: wait for the pull request to change, fix everything fixable in one batch, hand back. The container reads and fixes. Who pushes each round is the push line of `permissions.md` in the task directory. The user posts what needs posting. A container never merges.
 
 ## Reading CI
 
@@ -73,7 +73,7 @@ Base: main
 - checks: Quality Checks success, CodeRabbit success
 ```
 
-7. **Commit, push at push `auto`, and hand back.** The number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
+7. **Commit, push where `permissions.md` gives you the push, and hand back.** The number and URL head `pr.md`. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
 
 ## A stale base
 
@@ -97,7 +97,7 @@ A call refused for want of scope is the token's limit rather than a finding, and
 
 ## What the host does
 
-Where your push is `none` or `human`, the host holds the signing key and the route to the remote, and nothing else:
+The host holds the signing key and the route to the remote, and nothing else:
 
 ```bash
 {{cli}} land --sign --push <sandbox>

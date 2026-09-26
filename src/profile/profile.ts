@@ -90,19 +90,29 @@ export function hostLinearServers(profiles: Profiles): Record<string, string> {
 }
 
 const linear = (entry: Host | Container): string =>
-	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : "; write only what you were told to"}`;
+	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : "; write only what you were told to, and say what you posted"}`;
 
 function says(cli: string): Record<string, Record<string, Record<string, string>>> {
+	const resync = `then \`${cli} steer <sandbox> "resync and open the PR"\`; the resync comes first because signing rewrote its commits`;
 	return {
 		container: {
-			push: { none: `no credential here pushes; the branch reaches GitHub when the host lands it`, human: "prepare the branch and ask for the push under `attention:`; the person runs it", auto: "push your own branch to origin, never forced" },
+			push: {
+				none: "no credential here pushes; the host lands, signs and pushes the branch, and a steer tells you once it is on GitHub",
+				human: "prepare the branch and ask for the push under `attention:`; the person pushes it, and a steer tells you once it is on GitHub",
+				auto: "push your own branch to origin, never forced, before `ready-for-host` and at the end of each pull request round",
+			},
 			pr: { none: "no credential here opens a pull request", human: "draft the pull request and ask under `attention:`; the person opens it", auto: "open and update the pull request of your own branch once the branch is on GitHub" },
 		},
 		host: {
 			sign: { none: `commits stay unsigned; \`${cli} land\` signs only with --sign`, human: `\`${cli} land\` signs every commit origin lacks, one Touch ID tap each`, auto: `\`${cli} land\` signs every commit origin lacks, with a key that asks nobody` },
-			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${cli} land --push\`; the person confirms it with Touch ID`, auto: "push with `git push`, never forced; the guard allows it" },
+			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${cli} land --push\`; the person confirms it with Touch ID`, auto: `push with \`git push\`, never forced; the guard allows it, and \`${cli} profile --apply\` keeps the origin on HTTPS with no branch tracking` },
 			pr: { none: "the host opens no pull request; the guard refuses `gh pr create`", human: "prepare the pull request and hand its command to the person; the guard refuses `gh pr create`", auto: "open the pull request with `gh pr create`; the guard allows it" },
 			merge: { none: "the host merges nothing; the guard refuses `gh pr merge`", human: "accept or reject the pull request, then hand the merge to the person; the guard refuses `gh pr merge`", auto: "merge an accepted pull request with `gh pr merge`; the guard allows it" },
+			land: {
+				host: `\`${cli} land --sign --push <sandbox>\` puts the container's branch on GitHub, ${resync}`,
+				person: `\`${cli} land --sign <sandbox>\` brings the container's branch here and the person pushes it from their own shell, ${resync}`,
+				auto: "the container pushes its own branch and opens its pull request; no landing takes them to GitHub",
+			},
 		},
 	};
 }
@@ -131,6 +141,7 @@ export function describe(repo: string, profile: Profile, cli: string): string {
 		line("pr", host.pr, say.host.pr[host.pr]),
 		line("merge", host.merge, say.host.merge[host.merge]),
 		line("linear", host.linear, linear(host)),
+		`- land: ${say.host.land[container.push === "auto" ? "auto" : host.push === "none" ? "person" : "host"]}`,
 		"",
 	].join("\n");
 }
