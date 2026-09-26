@@ -26,7 +26,7 @@ A fresh session reads only `status.md`, the task files and git, so each unit of 
 
 {{file:natural-breaks}}
 
-Between natural breaks, work on, even after a context reminder. A ticket runs from its claim to its commit in one session: the reviewer sub-agent already reviews with fresh context, and the fixes need the context that wrote the code.
+Between natural breaks, work on, even after a context reminder. A ticket runs from its claim to its commit in one session: a review, when one runs, brings its own fresh context, and the fixes need the context that wrote the code.
 
 To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
 
@@ -35,5 +35,5 @@ To suggest it, write `status.md` for the session handoff event in `refs/artifact
 1. Commit unsigned on the task branch. What else reaches GitHub from here is set by `permissions.md` in the task directory, one line per action with its level: push and open a pull request only for your own branch and at that level, never force, never merge. Before `ready-for-host`, and as long as the branch has never been pushed, `git fetch origin && git rebase origin/<base>` so the host lands a branch that applies to today's base; a fetch that cannot authenticate leaves the rebase to the host, with the base the branch sits on in `attention:`, and no credential is asked for. A pushed branch follows the stale-base rules of skill `babysit-pr` instead, because a rebase there is a force push. Where the host signs, signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
 2. Push and open the pull request as the push and pr lines of `permissions.md` say. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
 3. Linear as the linear line of `permissions.md` says
-4. The task ends in `status.md` at `ready-for-host` or `blocked`, as the status table in `refs/artifacts.md` defines them; the gate results live in `review.md` under Checks read, each the command you ran, its exit code and the log under `logs/` it points at. Nothing there is committed, so keep code and secrets out
+4. The task ends in `status.md` at `ready-for-host` or `blocked`, as the status table in `refs/artifacts.md` defines them; the gate results live in `review.md` under Checks read, or for a ticket without a review in its Log line, each the command you ran, its exit code and the log under `logs/` it points at. Nothing there is committed, so keep code and secrets out
 5. Finish with a clean checkout: committed, or the uncommitted files named in `attention:` with the reason

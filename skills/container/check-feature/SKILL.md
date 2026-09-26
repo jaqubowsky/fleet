@@ -22,4 +22,4 @@ One question: does this change do what was asked, on the real screens of the run
 
 ## After it
 
-`check-regressions` runs when a review of the task names a shared seam (a component, hook, query or endpoint the diff changed and other screens use) or the user asks. `record-walkthrough` runs on the user's word, once this audit passed.
+`check-regressions` runs when the task's diff changes a shared seam (a component, hook, query or endpoint the diff changed and other screens use) or the user asks. `record-walkthrough` runs on the user's word, once this audit passed.

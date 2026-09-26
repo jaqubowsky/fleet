@@ -29,6 +29,7 @@ RUN cp -r /usr/local/share/npm-global/lib/node_modules/@playwright/cli/skills/pl
 COPY --chown=agent:agent agent-config.yml /home/agent/.omp/agent/config.yml
 COPY --chown=agent:agent extensions/ /home/agent/sbx/extensions/
 COPY --chmod=0755 container/base-worktree.sh /usr/local/bin/base-worktree
+COPY --chmod=0755 container/ticket-check.sh /usr/local/bin/ticket-check
 COPY --chmod=0755 container/omp-entrypoint /usr/local/bin/omp-entrypoint
 
 COPY --from=omp-home --chown=agent:agent .gitconfig /home/agent/.gitconfig

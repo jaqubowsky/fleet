@@ -164,6 +164,7 @@ class Renderer {
 		this.extra([
 			["sbx/container/.dockerignore", "context/.dockerignore"],
 			["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
+			["sbx/container/ticket-check.sh", "context/container/ticket-check.sh"],
 		]);
 	}
 

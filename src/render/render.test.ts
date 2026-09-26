@@ -355,3 +355,20 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 	assert.equal(omp.files["/home/agent/mcp.json"], undefined);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3"]);
 });
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} seats review by blast radius, and the image carries the ticket check the gate runs`, () => {
+		renderSeats(name, (out) => {
+			const promises = (readdirSync(out, { recursive: true }) as string[])
+				.filter((file) => file.endsWith(".md"))
+				.flatMap((file) => readFileSync(join(out, file), "utf8").split("\n").map((line) => `${file}: ${line}`))
+				.filter((line) => /(?<!at most )one review per ticket|one review and one commit|review of its uncommitted diff before its one commit|the reviewed work|and its review before the commit|when a review of the task names a shared seam|reviewer sub-agent already reviews/i.test(line));
+			assert.deepEqual(promises, []);
+			assert.match(rendered(out, "container", "implement/SKILL.md"), /blast radius/);
+			assert.match(rendered(out, "container", "implement/SKILL.md"), /`ticket-check <ticket file>`/);
+			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /Log line on the review decision/);
+			assert.match(rendered(out, "container", "context/Dockerfile"), /container\/ticket-check\.sh\s+\/usr\/local\/bin\/ticket-check/);
+			assert.ok(rendered(out, "container", "context/container/ticket-check.sh").includes("not done"));
+		});
+	});
+}

@@ -53,8 +53,8 @@ At runtime the host and a container share one task directory and talk through he
 A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, and again when it works long without settling or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `cfleet ls` project.
 
 ```text
- up ─▶ steer ─▶ analyze-task ─▶ to-tickets ─▶ per ticket: implement + tdd,
- new            analyzing                     two-axis-review, one commit
+ up ─▶ steer ─▶ analyze-task ─▶ to-tickets ─▶ per ticket: implement + tdd, gate,
+ new            analyzing                     review by blast radius, one commit
                                               implementing, reviewing
                                                           │
  down ◀── land ◀── ready-for-host ◀── check-feature ◀─────┘
@@ -81,7 +81,7 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
 | `src/remote/` | the pi phone remote, see `extensions/pi-remote/README.md` |
 | `src/statusline/` | the status line pi and Claude draw: folder, branch, model, context bar toward the 250k handoff, usage limits |
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, status history, state relay, statusline, phone remote |
-| `sbx/` | `build.sh`, the container rule `sandbox.md`, `base-worktree` and `toolchain.Dockerfile`, which every `<harness>/sbx/Dockerfile` pulls in at `{{toolchain}}` |
+| `sbx/` | `build.sh`, the container rule `sandbox.md`, `base-worktree`, `ticket-check` and `toolchain.Dockerfile`, which every `<harness>/sbx/Dockerfile` pulls in at `{{toolchain}}` |
 | `host/` | herdr config and pi screen rules, the no-ssh-agent kit, the guard corpus and test runner |
 | `pi/`, `omp/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: one CLI, one harness each |

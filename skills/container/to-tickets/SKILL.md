@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: 'Turn an analysis, a plan or the current conversation into spec.md and tickets, one review and one commit each: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants a spec, implementation tickets, or work broken down.'
+description: 'Turn an analysis, a plan or the current conversation into spec.md and tickets, one commit each: issues/ in the task directory, or .issues/<feature-slug>/ outside fleet. Use when the user wants a spec, implementation tickets, or work broken down.'
 ---
 
 # To tickets
@@ -15,7 +15,7 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 2. **Write `spec.md`** from the template below. `Status: ready-for-agent` at the top. A product decision (who may do what, what the user sees, parity with old behaviour) enters `Decisions` only with the source or the answer that settled it. One nothing settled stops the run here, before any ticket, as the one question in `analysis.md`, in the shape `analyze-task` gives it, under `status: blocked`.
 
-3. **Cut the slices.** Each ticket is one review and one commit, so cut as few as the work allows: a complete path through every layer the feature touches (schema, API, UI, tests), demoable on its own, holding every slice that shares a seam with it (the same module, router or test file). Delete and restore on one router and one test file are one ticket. A new ticket starts where the work reaches a seam the earlier ones never touch, or where one part has to land green before the next can start. Give each ticket its blocking edges: the tickets that must be done before it starts.
+3. **Cut the slices.** Each ticket is one commit and at most one review, so cut as few as the work allows: a complete path through every layer the feature touches (schema, API, UI, tests), demoable on its own, holding every slice that shares a seam with it (the same module, router or test file). Delete and restore on one router and one test file are one ticket. A new ticket starts where the work reaches a seam the earlier ones never touch, or where one part has to land green before the next can start. Give each ticket its blocking edges: the tickets that must be done before it starts.
 
    A wide refactor (rename a column, retype a shared symbol) breaks thousands of call sites at once, so no slice lands green: sequence it as expand, migrate in batches sized by blast radius, contract. Each batch is a ticket blocked by the expand; the contract is blocked by every batch.
 

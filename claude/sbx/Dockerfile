@@ -23,6 +23,7 @@ RUN playwright-cli install --skills -g \
 COPY --from=claude-home --chown=agent:agent plugins/  /home/agent/.claude/plugins/
 
 COPY --chmod=0755 container/base-worktree.sh /usr/local/bin/base-worktree
+COPY --chmod=0755 container/ticket-check.sh /usr/local/bin/ticket-check
 
 COPY settings.json    /etc/claude-code/managed-settings.json
 

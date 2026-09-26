@@ -39,7 +39,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 2. Order the plan so the checks that judge a merge exist before the first change they judge, and the widest parallel wave starts as early as possible; the ordering particular to one project lives in its `spec/`
 3. For a planned ticket the steer is one line: the outcome and a pointer to the ticket
 4. Tickets that share no files or subsystems and wait on no other ticket run in parallel, one container each, as many as the profile's memory per container fits into the host's RAM, and within a wave the ticket the most open tickets wait on goes up first
-5. Accept by reading `status.md`, `review.md` and CI as {{refs.ci}} says, then merge as the host's merge line of `{{cli}} profile <repo>` says. The merge is `gh pr merge <n> --squash --match-head-commit <head sha>`, run bare in the checkout, with the full 40-character SHA that pins the merge to the head whose checks you read. The guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
+5. Accept by reading `status.md`, `review.md` and CI as {{refs.ci}} says; a ticket without a review is accepted from its Log line on the review decision, its gate logs and CI, and a diff you judge wider than that line says gets a review ordered in a steer, and the merge waits for its `review.md`. Merge as the host's merge line of `{{cli}} profile <repo>` says. The merge is `gh pr merge <n> --squash --match-head-commit <head sha>`, run bare in the checkout, with the full 40-character SHA that pins the merge to the head whose checks you read. The guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
 6. A small plan edit the host makes itself, on a branch and its pull request where its profile allows, pushed with `git push origin <branch>` and no `-u`, because the claude host cannot write tracking into `.git/config`; a larger one goes to a container
 7. A tracker (Linear or another) is an optional mirror, configured in the project's `AGENTS.md`, updated on a state change only and mapped by state type; on drift the plan files win
 8. A fresh host session resumes from `spec/board.md` and `{{cli}} ls`
@@ -52,7 +52,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 | what happened, in order | `## Log` in `status.md`; every version of the file with `{{cli}} history` |
 | which commits | `{{cli}} ls` for the branch and its dirty count, `git log <base>..<branch>` after `{{cli}} land` |
 | what did the analysis find | `analysis.md` |
-| what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered |
+| what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
 | what is happening on the PR | `pr.md` |
 | what is it doing this minute, before `status.md` moved | `{{cli}} peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
