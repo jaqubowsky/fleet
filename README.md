@@ -59,6 +59,7 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
                                                           │
  down ◀── land ◀── ready-for-host ◀── check-feature ◀─────┘
  logs/usage.json,  --sign, --push     testing
+ memory.json
  task dir stays
 
  blocked at any step: attention: names what the person has to decide

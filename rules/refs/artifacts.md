@@ -15,7 +15,7 @@ issues/        NN-<slug>.md, one ticket per commit                  to-tickets; 
 review.md      verdict line, findings, checks read, shared seams   two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
 browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
-logs/          sessions/, status/, activity.jsonl, usage.json, <skill>-<id>/ evidence    {{harness}}, {{cli}} down, any skill
+logs/          sessions/, status/, activity.jsonl, usage.json, memory.json, <skill>-<id>/ evidence    {{harness}}, {{cli}} down, any skill
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.

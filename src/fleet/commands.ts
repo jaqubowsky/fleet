@@ -407,6 +407,25 @@ function harvest(
 	}
 }
 
+const GUEST_MEMORY_PEAK = "/sys/fs/cgroup/docker/memory.peak";
+
+function recordPeakMemory(sandbox: string, task: string, io: Io): void {
+	let printed: string;
+	try {
+		printed = io.sbx(["exec", sandbox, "cat", GUEST_MEMORY_PEAK], { quiet: true }).trim();
+	} catch (error) {
+		io.log(`${sandbox}: no memory peak recorded: ${(error as Error).message.split("\n").slice(1).join(" ")}`);
+		return;
+	}
+	const peakBytes = Number(printed);
+	if (!printed || !Number.isInteger(peakBytes)) {
+		io.log(`${sandbox}: no memory peak recorded: ${GUEST_MEMORY_PEAK} printed ${printed}`);
+		return;
+	}
+	io.write(`${task}/logs/memory.json`, `${JSON.stringify({ peakBytes })}\n`);
+	io.log(`${sandbox}: memory peak ${(peakBytes / 2 ** 30).toFixed(1)} GiB -> ${task}/logs/memory.json`);
+}
+
 export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const entry = sandboxes(io).find((s) => s.name === sandbox);
 	if (!entry) throw new Error(`no fleet container named ${sandbox}`);
@@ -437,6 +456,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 			`${sandbox}: no session in ${task}/logs/sessions (${io.harness.agent} never ran)`,
 		);
 	}
+	recordPeakMemory(sandbox, task, io);
 	if (repo && io.list(artifactsDir(repo, io)).length)
 		io.log(
 			`${sandbox}: artifacts stay in ${task}, read them with ${io.harness.cli} artifacts --repo ${repo}`,
