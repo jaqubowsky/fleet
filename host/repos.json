@@ -32,6 +32,22 @@
     },
     "resources": { "memory": "8g", "cpus": "4" }
   },
+  "alice/household-budget": {
+    "host": {
+      "sign": "none",
+      "push": "auto",
+      "pr": "auto",
+      "merge": "auto",
+      "linear": "none"
+    },
+    "container": {
+      "push": "auto",
+      "pr": "auto",
+      "linear": "none",
+      "token": "op://Dev/GitHub PAT household-budget/credential"
+    },
+    "resources": { "memory": "8g", "cpus": "4" }
+  },
   "bob/*": {
     "host": {
       "sign": "human",
