@@ -99,7 +99,8 @@ check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkill
 check("cfleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*", "cfleet down*")))
 check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
 check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
+check("gh opens and merges pull requests without the auto-mode classifier", all(rule in desired["permissions"]["allow"] for rule in ("Bash(gh pr create *)", "Bash(gh pr merge *)")))
 check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
 
-print(f"align-settings.py: {4 + 6 + 4 + 7 - len(failures)} passed, {len(failures)} failed")
+print(f"align-settings.py: {4 + 6 + 4 + 8 - len(failures)} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
