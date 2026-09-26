@@ -257,6 +257,28 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} tells the host which ticket of a wave goes up first, and both seats that one ordered ticket ends at ready-for-host`, () => {
+		renderSeats(name, (out) => {
+			const breakTables = (seat: string) =>
+				(readdirSync(`${out}/${seat}`, { recursive: true }) as string[])
+					.filter((file) => file.endsWith(".md"))
+					.map((file) => readFileSync(join(out, seat, file), "utf8"))
+					.filter((text) => text.includes("| Natural break |"));
+			const host = (readdirSync(`${out}/host`, { recursive: true }) as string[]).find((path) => path.endsWith("orchestrating-agent-sessions/SKILL.md"))!;
+
+			assert.match(readFileSync(join(out, "host", host), "utf8"), /within a wave the ticket the most open tickets wait on goes up first/);
+			for (const seat of ["host", "container"]) {
+				const tables = breakTables(seat);
+				assert.notEqual(tables.length, 0, `${seat} has no natural-break table`);
+				for (const table of tables) {
+					assert.ok(table.includes("| the one ticket the order named is committed | `ready-for-host`, with no session for a next ticket |"), `${seat} table lacks the one-ticket break`);
+				}
+			}
+		});
+	});
+}
+
 test("a profile that gives the host Linear adds its server to pi and omp mcp.json, beside the servers already there", () => {
 	const profiles = {
 		"read /root/host/repos.json": WITH_PRIVATE,
