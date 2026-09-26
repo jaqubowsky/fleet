@@ -667,27 +667,18 @@ async function waitForAgent(
 				io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent
 					.agent_status ?? "";
 			if (KNOWN_STATUS.has(status)) {
-				if (io.harness.agent !== "pi") {
-					if (io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
+				let runs = false;
+				try {
+					runs = agentRuns(io, sandbox);
+				} catch (error) {
+					probeError = error;
+				}
+				if (runs) {
+					if (io.harness.agent !== "pi" && io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
 						throw new Error(
 							`${sandbox}: ${io.harness.agent} is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
 						);
 					return;
-				}
-				try {
-					const tty = io.sbx(
-						[
-							"exec",
-							sandbox,
-							"sh",
-							"-c",
-							'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a',
-						],
-						{ quiet: true },
-					);
-					if (tty.includes("-icanon") && tty.includes("-icrnl")) return;
-				} catch (error) {
-					probeError = error;
 				}
 			}
 		} catch (error) {
@@ -697,6 +688,15 @@ async function waitForAgent(
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`${io.harness.agent} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; tty probe: ${String(probeError)}` : ""}`,
+		`${io.harness.agent} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
 	);
+}
+
+function agentRuns(io: Io, sandbox: string): boolean {
+	if (io.harness.agent !== "pi") {
+		io.sbx(["exec", sandbox, "pgrep", "-x", io.harness.agent], { quiet: true });
+		return true;
+	}
+	const tty = io.sbx(["exec", sandbox, "sh", "-c", 'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a'], { quiet: true });
+	return tty.includes("-icanon") && tty.includes("-icrnl");
 }

@@ -124,6 +124,34 @@ test("up waits for the container tty to leave canonical input mode", async () =>
 	]);
 });
 
+for (const harness of [HARNESSES.claude, HARNESSES.omp]) {
+	test(`up waits for the ${harness.agent} process even when herdr already reports a status`, async () => {
+		const io = fakeIo(base, harness);
+		const sbx = io.sbx;
+		let probes = 0;
+		io.sbx = (args, opts) => {
+			if (args[0] === "exec" && args[2] === "pgrep") {
+				probes++;
+				assert.deepEqual(args.slice(2), ["pgrep", "-x", harness.agent]);
+				if (probes === 1) throw new Error("exit status 1");
+				return "42";
+			}
+			return sbx(args, opts);
+		};
+
+		await up({ repo, label: "web-1", root: "/root" }, io);
+
+		assert.equal(probes, 2);
+		assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", `${harness.agent}-webapp-web-1`]);
+	});
+
+	test(`up fails with the probe's error when the ${harness.agent} process never starts`, async () => {
+		const io = fakeIo({ ...base, [`sbx exec ${harness.agent}-webapp-web-1 pgrep`]: new Error("pgrep exit status 1") }, harness);
+
+		await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /did not become ready.*process probe: Error: pgrep exit status 1/);
+	});
+}
+
 test("up warns and continues when the GitHub token cannot be bound", async () => {
 	const io = fakeIo({
 		...base,
