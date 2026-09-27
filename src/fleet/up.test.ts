@@ -1040,3 +1040,16 @@ test("where the container may push, up removes the container whose token sees an
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "claude-private-app-x"]);
 	assert.equal(io.files["/home/me/.sandboxes/private-app/claude-private-app-x/permissions.md"], undefined);
 });
+
+test("up writes the repository's overlay into the task directory as project.md, and none, not even an earlier one, when it has none", async () => {
+	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+	const overlay = "# acme/webapp\n\n## Merge method\n\n--squash\n";
+	const io = fakeIo({ ...base, "read /root/host/projects/acme/webapp.md": overlay });
+	await up({ repo, label: "web-1", root: "/root" }, io);
+	assert.equal(io.files[`${task}/project.md`], overlay);
+
+	const none = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root" }, none);
+	assert.ok(!none.calls.some((c) => c[0] === "write" && c[1] === `${task}/project.md`));
+	assert.ok(none.calls.some((c) => c[0] === "remove" && c[1] === `${task}/project.md`));
+});

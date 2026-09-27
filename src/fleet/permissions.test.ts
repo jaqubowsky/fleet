@@ -4,6 +4,7 @@ import { HARNESSES } from "../harness.ts";
 import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { fakeIo } from "./fake-io.ts";
 import { permissions } from "./permissions.ts";
+import { describe, parseProfiles, profileFor } from "../profile/profile.ts";
 
 const checkout = (origin: string, profiles = REAL_PROFILES, more: Record<string, unknown> = {}) =>
 	fakeIo({ "read /root/host/repos.json": profiles, "stat /r": { size: 0, mtime: new Date(0), dir: true }, "git remote get-url origin": origin, ...more }, HARNESSES.claude);
@@ -90,4 +91,19 @@ test("profile --apply turns signing on where it was unset, leaves origin where t
 	const aligned = checkout("git@github.com:alice/cv.git", REAL_PROFILES, { "git config --local --get commit.gpgsign": "true" });
 	assert.match(permissions({ root: "/root", repo: "/r", apply: true }, aligned), /\nnothing changed$/);
 	assert.throws(() => permissions({ root: "/root", repo: "alice/cv", apply: true }, checkout("")), /--apply sets a checkout/);
+});
+
+test("profile prints the repository's overlay under the levels, and says where it would live when there is none", () => {
+	const overlay = "# acme/webapp\n\n## Merge method\n\n--squash\n";
+	const levels = describe("acme/webapp", profileFor(parseProfiles(REAL_PROFILES), "acme/webapp"), "cfleet");
+	const read = { "read /root/host/projects/acme/webapp.md": overlay };
+
+	assert.equal(
+		permissions({ root: "/root", repo: "acme/webapp" }, checkout("", REAL_PROFILES, read)),
+		`${levels}\nOverlay host/projects/acme/webapp.md, which containers read as project.md:\n\n${overlay}`,
+	);
+	assert.equal(
+		permissions({ root: "/root", repo: "acme/webapp" }, checkout("")),
+		`${levels}\nNo overlay: host/projects/acme/webapp.md does not exist`,
+	);
 });

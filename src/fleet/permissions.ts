@@ -7,6 +7,21 @@ export function repoProfile(root: string, name: string, io: Io): Profile {
 	return profileFor(parseProfiles(text), name);
 }
 
+export function overlayPath(name: string): string {
+	return `host/projects/${name}.md`;
+}
+
+export function projectOverlay(root: string, name: string, io: Io): string | undefined {
+	return io.read(`${root}/${overlayPath(name)}`);
+}
+
+function overlaySection(root: string, name: string, io: Io): string {
+	const overlay = projectOverlay(root, name, io);
+	return overlay === undefined
+		? `No overlay: ${overlayPath(name)} does not exist`
+		: `Overlay ${overlayPath(name)}, which containers read as project.md:\n\n${overlay}`;
+}
+
 export type PermissionsInput = { root: string; repo: string; apply?: boolean };
 
 export function permissions(input: PermissionsInput, io: Io): string {
@@ -14,7 +29,7 @@ export function permissions(input: PermissionsInput, io: Io): string {
 	if (!checkout && !/^[^/\s]+\/[^/\s]+$/.test(input.repo)) throw new Error(`${input.repo} is neither a checkout nor owner/name`);
 	const name = checkout ? repoName(io.git(["remote", "get-url", "origin"], checkout)) : input.repo;
 	const profile = repoProfile(input.root, name, io);
-	const text = describe(name, profile, io.harness.cli);
+	const text = `${describe(name, profile, io.harness.cli)}\n${overlaySection(input.root, name, io)}`;
 	if (!input.apply) return text;
 	if (!checkout) throw new Error(`--apply sets a checkout; give its path, not ${input.repo}`);
 	return `${text}\n${apply(checkout, name, profile, io).join("\n")}`;

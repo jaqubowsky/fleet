@@ -84,6 +84,7 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, status history, state relay, statusline, phone remote |
 | `sbx/` | `build.sh`, the container rule `sandbox.md`, `base-worktree`, `ticket-check` and `toolchain.Dockerfile`, which every `<harness>/sbx/Dockerfile` pulls in at `{{toolchain}}` |
 | `host/` | herdr config and pi screen rules, the no-ssh-agent kit, the guard corpus and test runner |
+| `host/projects/` | per-repository overlays `<owner>/<repo>.md`, which `up` writes into the task directory as `project.md`; `template.md` holds the headings |
 | `pi/`, `omp/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: one CLI, one harness each |
 | `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it |

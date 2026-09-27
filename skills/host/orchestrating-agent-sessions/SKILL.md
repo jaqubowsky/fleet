@@ -18,7 +18,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary, next step and the Log lines it added |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
-| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
+| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
 {{models.row}}
@@ -33,7 +33,7 @@ Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings ba
 
 ## Coordinating a project
 
-The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user.
+The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user. Read the overlay it prints before planning: where work comes from, the merge method, where decisions live.
 
 1. The plan lives in the project repository under `spec/`: `vision.md`, the person's, where you propose a change and ask before writing it; `board.md`, yours to keep, with Now, Next and Landed and never a permission level; one ticket per file in the shape of the project's `spec/ticket.md`, or {{refs.ticket}} where the project has none. `{{cli}} init <repo>` lays these and a project `AGENTS.md` out, leaving every file already there. A container's task directory is the record of one job, not the plan
 2. Order the plan so the checks that judge a merge exist before the first change they judge, and the widest parallel wave starts as early as possible; the ordering particular to one project lives in its `spec/`

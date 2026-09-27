@@ -7,7 +7,7 @@ import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
 import { baseBranch } from "./land.ts";
 import { agentName, sandboxName } from "./name.ts";
-import { repoProfile } from "./permissions.ts";
+import { projectOverlay, repoProfile } from "./permissions.ts";
 import { agentFor, sandboxes, type Agent } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
@@ -189,6 +189,9 @@ export async function up(
 		const allowed = describe(name, { ...profile, resources }, io.harness.cli);
 		io.write(`${task}/permissions.md`, allowed);
 		io.log(allowed);
+		const overlay = projectOverlay(input.root, name, io);
+		if (overlay === undefined) io.remove(`${task}/project.md`);
+		else io.write(`${task}/project.md`, overlay);
 		if (locks) {
 			io.sbx(
 				[
