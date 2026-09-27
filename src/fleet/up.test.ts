@@ -1053,3 +1053,30 @@ test("up writes the repository's overlay into the task directory as project.md, 
 	assert.ok(!none.calls.some((c) => c[0] === "write" && c[1] === `${task}/project.md`));
 	assert.ok(none.calls.some((c) => c[0] === "remove" && c[1] === `${task}/project.md`));
 });
+
+test("up runs the overlay's Setup sh block after the install, and the plain install when the overlay has none", async () => {
+	const setupOverlay = "# acme/webapp\n\n## Setup\n\nPlaywright needs its browsers.\n\n```sh\nnpx playwright install chromium\n```\n\n## Merge method\n\n--squash\n";
+	const installOf = async (files: Record<string, unknown>) => {
+		const io = fakeIo({ ...files, [containerLocks]: "yarn.lock" });
+		await up({ repo, label: "web-1", root: "/root" }, io);
+		return String(io.calls.find((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install"))![7]);
+	};
+	const plain = await installOf(base);
+
+	const script = await installOf({ ...base, "read /root/host/projects/acme/webapp.md": setupOverlay });
+	const install = script.indexOf("yarn install");
+	const setup = script.indexOf("npx playwright install chromium");
+	assert.ok(install !== -1 && setup > install, "the setup command does not follow the install");
+	assert.ok(setup < script.indexOf("deps: ready"), "the setup command runs after ready is reported");
+	assert.doesNotMatch(script, /Playwright needs|--squash/);
+
+	assert.equal(await installOf({ ...base, "read /root/host/projects/acme/webapp.md": "# acme/webapp\n\n## Setup\n\n## Merge method\n\n--squash\n" }), plain);
+});
+
+test("an overlay Setup block runs even where no lockfile installs", async () => {
+	const io = fakeIo({ ...base, "read /root/host/projects/acme/webapp.md": "## Setup\n\n```sh\nlefthook install\n```\n" });
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const install = io.calls.find((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install"));
+	assert.match(String(install?.[7]), /lefthook install/);
+});

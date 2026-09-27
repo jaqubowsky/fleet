@@ -1,30 +1,44 @@
 export const INSTALL_LOG = "/tmp/fleet-install.log";
 
-export const installScript = [
-	"set -eu",
-	'cd "$WORKSPACE_DIR"',
-	"if [ -f .nvmrc ] || [ -f .node-version ] || node -e \"process.exit(require('./package.json').engines?.node ? 0 : 1)\" 2>/dev/null; then",
-	'  eval "$(fnm env --shell bash)"',
-	"  fnm use --install-if-missing >/dev/null",
-	"fi",
-	'limit=""; command -v timeout >/dev/null && limit="timeout 1200"',
-	"find . -maxdepth 6 -type f \\( -name yarn.lock -o -name pnpm-lock.yaml -o -name package-lock.json \\) \\",
-	"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | sort | while read -r lock; do",
-	'  root="$(dirname "$lock")"',
-	'  [ -f "$root/package.json" ] || continue',
-	'  echo "deps: $root"',
-	'  log="${TMPDIR:-/tmp}/deps-$(echo "$root" | tr \'/.\' \'__\').log"',
-	'  ( cd "$root" && case "$(basename "$lock")" in',
-	"      pnpm-lock.yaml) npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile ;;",
-	"      package-lock.json) npm_config_ignore_scripts=false $limit npm ci ;;",
-	"      yarn.lock) if grep -q '^__metadata:' yarn.lock; then YARN_ENABLE_SCRIPTS=true $limit yarn install --immutable; else npm_config_ignore_scripts=false $limit yarn install --frozen-lockfile; fi ;;",
-	'    esac ) >"$log" 2>&1 || { status=$?; tail -30 "$log"; if [ "$status" = 124 ]; then echo "deps: stalled past 20 minutes in $root"; else echo "deps: failed in $root with exit $status"; fi; exit 1; }',
-	"done",
-	"for script in prisma:generate generate codegen; do",
-	`  node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" 2>/dev/null || continue`,
-	'  echo "deps: $script"',
-	'  npm run "$script" >/tmp/deps-generate.log 2>&1 || tail -20 /tmp/deps-generate.log',
-	"  break",
-	"done",
-	'echo "deps: ready on node $(node --version) at $(command -v node)"',
-].join("\n");
+export function setupCommand(overlay?: string): string | undefined {
+	const section = overlay?.split(/^## /m).find((part) => part.startsWith("Setup\n"));
+	return section?.match(/^```sh\n([\s\S]*?)^```/m)?.[1].trim() || undefined;
+}
+
+export function installScript(setup?: string): string {
+	return [
+		"set -eu",
+		'cd "$WORKSPACE_DIR"',
+		"if [ -f .nvmrc ] || [ -f .node-version ] || node -e \"process.exit(require('./package.json').engines?.node ? 0 : 1)\" 2>/dev/null; then",
+		'  eval "$(fnm env --shell bash)"',
+		"  fnm use --install-if-missing >/dev/null",
+		"fi",
+		'limit=""; command -v timeout >/dev/null && limit="timeout 1200"',
+		"find . -maxdepth 6 -type f \\( -name yarn.lock -o -name pnpm-lock.yaml -o -name package-lock.json \\) \\",
+		"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | sort | while read -r lock; do",
+		'  root="$(dirname "$lock")"',
+		'  [ -f "$root/package.json" ] || continue',
+		'  echo "deps: $root"',
+		'  log="${TMPDIR:-/tmp}/deps-$(echo "$root" | tr \'/.\' \'__\').log"',
+		'  ( cd "$root" && case "$(basename "$lock")" in',
+		"      pnpm-lock.yaml) npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile ;;",
+		"      package-lock.json) npm_config_ignore_scripts=false $limit npm ci ;;",
+		"      yarn.lock) if grep -q '^__metadata:' yarn.lock; then YARN_ENABLE_SCRIPTS=true $limit yarn install --immutable; else npm_config_ignore_scripts=false $limit yarn install --frozen-lockfile; fi ;;",
+		'    esac ) >"$log" 2>&1 || { status=$?; tail -30 "$log"; if [ "$status" = 124 ]; then echo "deps: stalled past 20 minutes in $root"; else echo "deps: failed in $root with exit $status"; fi; exit 1; }',
+		"done",
+		"for script in prisma:generate generate codegen; do",
+		`  node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" 2>/dev/null || continue`,
+		'  echo "deps: $script"',
+		'  npm run "$script" >/tmp/deps-generate.log 2>&1 || tail -20 /tmp/deps-generate.log',
+		"  break",
+		"done",
+		...(setup
+			? [
+					'echo "deps: setup"',
+					`setup=$(cat <<'FLEET_SETUP'\n${setup}\nFLEET_SETUP\n)`,
+					'bash -ec "$setup" || { echo "deps: failed in setup with exit $?"; exit 1; }',
+				]
+			: []),
+		'echo "deps: ready on node $(node --version) at $(command -v node)"',
+	].join("\n");
+}

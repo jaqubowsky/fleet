@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { codexArgs } from "./codex.ts";
-import { INSTALL_LOG, installScript } from "./deps.ts";
+import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { describe, repoName, type Profile } from "../profile/profile.ts";
 import type { Harness } from "../harness.ts";
@@ -192,7 +192,8 @@ export async function up(
 		const overlay = projectOverlay(input.root, name, io);
 		if (overlay === undefined) io.remove(`${task}/project.md`);
 		else io.write(`${task}/project.md`, overlay);
-		if (locks) {
+		const setup = setupCommand(overlay);
+		if (locks || setup) {
 			io.sbx(
 				[
 					"exec",
@@ -201,7 +202,7 @@ export async function up(
 					"-c",
 					`setsid nohup bash -c "$1" >${INSTALL_LOG} 2>&1 </dev/null &`,
 					"--",
-					installScript,
+					installScript(setup),
 				],
 				{ quiet: true },
 			);

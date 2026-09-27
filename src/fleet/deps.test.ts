@@ -3,26 +3,26 @@ import { test } from "node:test";
 import { installScript } from "./deps.ts";
 
 test("install script picks the frozen install per lockfile and invents no env of its own", () => {
-	assert.match(installScript, /pnpm install --frozen-lockfile/);
-	assert.match(installScript, /npm ci/);
-	assert.match(installScript, /yarn install --immutable/);
-	assert.match(installScript, /yarn install --frozen-lockfile/);
-	assert.doesNotMatch(installScript, /\\\$/);
-	assert.doesNotMatch(installScript, /\.example/);
+	assert.match(installScript(), /pnpm install --frozen-lockfile/);
+	assert.match(installScript(), /npm ci/);
+	assert.match(installScript(), /yarn install --immutable/);
+	assert.match(installScript(), /yarn install --frozen-lockfile/);
+	assert.doesNotMatch(installScript(), /\\\$/);
+	assert.doesNotMatch(installScript(), /\.example/);
 });
 
 test("install script runs a declared generator before it reports ready", () => {
-	const generate = installScript.indexOf("prisma:generate");
-	const ready = installScript.indexOf("deps: ready");
+	const generate = installScript().indexOf("prisma:generate");
+	const ready = installScript().indexOf("deps: ready");
 
 	assert.ok(generate !== -1, "the script runs no code generation");
 	assert.ok(generate < ready, "code generation runs after the script reports ready");
-	assert.match(installScript, /npm run/);
-	assert.match(installScript, /codegen/);
+	assert.match(installScript(), /npm run/);
+	assert.match(installScript(), /codegen/);
 });
 
 
-async function run(files: Record<string, string>, tools: Record<string, string> = {}) {
+async function run(files: Record<string, string>, tools: Record<string, string> = {}, setup?: string) {
 	const { mkdtempSync, writeFileSync, mkdirSync, readFileSync, chmodSync } =
 		await import("node:fs");
 	const { tmpdir } = await import("node:os");
@@ -45,7 +45,7 @@ async function run(files: Record<string, string>, tools: Record<string, string> 
 		writeFileSync(join(workspace, name), body);
 	let log: string;
 	try {
-		log = execFileSync("bash", ["-c", installScript], {
+		log = execFileSync("bash", ["-c", installScript(setup)], {
 			env: {
 				...process.env,
 				WORKSPACE_DIR: workspace,
@@ -88,5 +88,25 @@ test("an install that fails names its root and exit instead of leaving the log m
 
 	assert.match(log, /registry down/);
 	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in \. with exit 3$/);
+	assert.doesNotMatch(log, /deps: ready/);
+});
+
+test("a setup command runs after the install and logs before ready", async () => {
+	const { log } = await run({}, {}, "echo browsers installed");
+
+	assert.match(log, /deps: setup\nbrowsers installed\ndeps: ready/);
+});
+
+test("a failing setup command ends the log as a failed install", async () => {
+	const { log } = await run({}, {}, "echo no browsers\nexit 4");
+
+	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in setup with exit 4$/);
+	assert.doesNotMatch(log, /deps: ready/);
+});
+
+test("a setup line that fails before the last one still ends the log as a failed install", async () => {
+	const { log } = await run({}, {}, "false\necho ok");
+
+	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in setup with exit 1$/);
 	assert.doesNotMatch(log, /deps: ready/);
 });
