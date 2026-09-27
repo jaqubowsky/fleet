@@ -20,5 +20,5 @@ Question: the text the user appended after this skill
 
 Done when every claim in the answer carries the page it came from and that
 page's `raw/` source, or the answer says plainly that the wiki holds nothing
-on the topic. A page that contradicts the codebase is reported with both,
-and the codebase wins.
+on the topic. A page that contradicts the codebase or a primary source is
+reported with both, and they win.

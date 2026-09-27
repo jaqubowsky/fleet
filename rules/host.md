@@ -2,9 +2,8 @@
 
 ## Second brain
 
-1. Second-brain topic -> read `/Users/alice/my-knowledge-base/wiki/index.md`, then only the pages whose index entries match the task; cite them
-2. Wiki = recorded position, not authority. Primary source or codebase contradicts a page -> they win, say so, cite both
-3. Read-only from outside that repo. Capture via skill `brain-dump` or `transcript`. Synthesis into pages via `{{skill.ingest}}` inside the repo
+1. Second-brain topic -> skill `brain`. The wiki is a recorded position, not authority
+2. Read-only from outside that repo. Capture via skill `brain-dump` or `transcript`. Synthesis into pages via `{{skill.ingest}}` inside the repo
 
 ## Fleet
 
