@@ -8,6 +8,4 @@ Three sub-agents exist, all read-only: `explorer`, one pass with one angle over 
 
 # Asking
 
-1. `{{tool.ask}}` only when the reading is unclear and the answers lead to materially different work. Never to confirm a plan, never for what the repo or a command can answer.
-2. One dialog, up to four questions, each with the option you recommend first and one real downside per option
-3. Print mode has no dialog: state the assumption and continue
+Ask only when the reading is unclear and the answers lead to materially different work, never to confirm a plan, never for what the repo or a command can answer. Where the question goes is your seat's rule.

@@ -465,7 +465,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.doesNotMatch(skill, /The wait blocks on purpose/);
 			assert.match(skill, /the settled state as a `## Log` line in `status.md`/);
 			const core = rendered(out, "container", name === "claude" ? "rules/core.md" : "AGENTS.md");
-			assert.match(core, /a poll loop is not work, except a bounded wait on an external system/);
+			assert.match(core, /A poll loop is not work\. A bounded wait on an external system, such as CI, is work: run it the way its skill says/);
 		});
 	});
 }
