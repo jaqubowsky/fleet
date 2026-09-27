@@ -48,11 +48,11 @@ export const SECRET_MATERIAL = /(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{
 const DELEGATED = /(^|[;&|]|&&)\s*sbx\s+(exec|run|cp)(\s|$)/;
 const CREDENTIAL_STORE = "Credential store is off limits: ~/.ssh, ~/.config/op and ~/Library/Keychains are read by the human only.";
 
-const START = String.raw`(^|[;&|]|&&|-c\s*['"])\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?`;
+const START = String.raw`^(\|\s*)?`;
 const command = (rule: string): RegExp => new RegExp(START + rule, "m");
 
 const GIT = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*`;
-const GIT_AT = String.raw`(^|[;&|({\x60!]|&&|\$\(|-c\s*['"]|-c\s+|\b(then|do|else|if|elif|while|until|command|exec|time|env|xargs)\s)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(sudo\s+)?\\?(\S*/)?${GIT}`;
+const GIT_AT = String.raw`${START}(\S*/)?${GIT}`;
 const PUSH_AT = String.raw`${GIT_AT}\s+push\b`;
 const IN_COMMAND = String.raw`(>&|&>|[^|;&\n])*`;
 const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
@@ -96,6 +96,9 @@ const SSH = command(String.raw`ssh(\s|$)`);
 const SSH_LOCAL = command(String.raw`ssh\s+-(V|G|Q)\b`);
 const READ_ONLY_GIT = /(^|[;&|]|&&)\s*git\s+(status|log|diff|show|fetch|ls-remote|ls-files|branch|rev-parse|remote|blame|describe|shortlog)\b/;
 
+const KEYWORD = /^(then|do|else|if|elif|while|until|!|\{|[A-Za-z_][A-Za-z0-9_]*=.*)$/s;
+const WRAPPER = /^(sudo|command|exec|time|env|xargs)$/;
+const SHELL = /^(\S*\/)?(ba|z|da|k)?sh$/;
 const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
 
 function scan(subject: string): string {
@@ -128,16 +131,20 @@ function scan(subject: string): string {
 	return kept.join("\n");
 }
 
-function hostCommands(subject: string): string[] {
-	const segments: string[] = [];
+type Segment = { text: string; piped: boolean };
+
+function segmentsOf(subject: string, withDelegated: boolean): Segment[] {
+	const segments: Segment[] = [];
 	const substitutions: boolean[] = [];
 	let quote = "";
 	let current = "";
 	let redirect = -1;
-	const cut = () => {
-		segments.push(!DELEGATED_SEGMENT.test(current) ? current : redirect < 0 ? "" : current.slice(redirect));
+	let piped = false;
+	const cut = (pipe = false) => {
+		segments.push({ text: withDelegated || !DELEGATED_SEGMENT.test(current) ? current : redirect < 0 ? "" : current.slice(redirect), piped });
 		current = "";
 		redirect = -1;
+		piped = pipe;
 	};
 	for (let i = 0; i < subject.length; i++) {
 		const char = subject[i];
@@ -167,8 +174,8 @@ function hostCommands(subject: string): string[] {
 			const end = subject.indexOf("\n", i);
 			i = (end < 0 ? subject.length : end) - 1;
 			continue;
-		} else if (";&|\n".includes(char)) {
-			cut();
+		} else if (";&|\n".includes(char) && !(char === "&" && (/[<>]/.test(subject[i - 1]) || subject[i + 1] === ">"))) {
+			cut(char === "|" && subject[i - 1] !== "|" && subject[i + 1] !== "|");
 			continue;
 		} else if (/[<>]/.test(char) && redirect < 0) redirect = current.length;
 		current += char;
@@ -178,8 +185,70 @@ function hostCommands(subject: string): string[] {
 	return segments;
 }
 
+function hostCommands(subject: string): string[] {
+	return segmentsOf(subject, false).map(({ text }) => text);
+}
+
 export function commandsOf(subject: string): string[] {
 	return hostCommands(scan(subject));
+}
+
+function words(text: string): string[] {
+	const found: string[] = [];
+	let word: string | undefined;
+	let quote = "";
+	const add = (chars: string) => {
+		word = (word ?? "") + chars;
+	};
+	for (let i = 0; i < text.length; i++) {
+		const char = text[i];
+		if (quote === "'") {
+			if (char === quote) quote = "";
+			else add(char);
+		} else if (char === "\\") {
+			if (text[i + 1] !== "\n") add(text[i + 1] ?? "");
+			i++;
+		} else if (quote) {
+			if (char === quote) quote = "";
+			else add(char);
+		} else if (char === "'" || char === '"') {
+			add("");
+			quote = char;
+		} else if (char === "$" && text[i + 1] === "'") continue;
+		else if (/[\s()]/.test(char)) {
+			if (word !== undefined) found.push(word);
+			word = undefined;
+		} else add(char);
+	}
+	if (word !== undefined) found.push(word);
+
+	return found;
+}
+
+function programs(subject: string, withDelegated: boolean): string[] {
+	return segmentsOf(scan(subject), withDelegated).flatMap(({ text, piped }) => {
+		let argv = words(text);
+		for (;;) {
+			if (KEYWORD.test(argv[0] ?? "")) argv = argv.slice(1);
+			else if (WRAPPER.test(argv[0] ?? "")) {
+				argv = argv.slice(1);
+				while (argv[0]?.startsWith("-")) argv = argv.slice(1);
+			} else if (withDelegated && argv[0] === "sbx" && /^(exec|run|cp)$/.test(argv[1] ?? "")) argv = argv.slice(3);
+			else break;
+		}
+
+		const line = `${piped ? "| " : ""}${argv.map((word) => word.replace(/[;&|\n]/g, " ")).join(" ")}`;
+		const script = argv[0] === "herdr" ? argv.slice(2).join(" ") : argv[0] === "eval" ? argv.slice(1).join(" ") : SHELL.test(argv[0] ?? "") ? shellScript(argv) : "";
+
+		return script ? [line, ...programs(script, withDelegated)] : [line];
+	});
+}
+
+function shellScript(argv: string[]): string {
+	const options = argv.slice(1).findIndex((word) => !word.startsWith("-") || word === "--");
+	const flags = options < 0 ? argv.slice(1) : argv.slice(1, options + 1);
+
+	return flags.some((flag) => /^-[A-Za-z]*c/.test(flag)) && options >= 0 ? argv[options + 1] : "";
 }
 
 function literal(text: string): string {
@@ -212,10 +281,6 @@ function readsProfiles(segment: string, host: Host): boolean {
 	return !segment.trim() || /^\s*\d*[<>]/.test(segment) || (READS_PROFILES.test(segment) && !/\s--output\b/.test(segment));
 }
 
-function flatten(subject: string): string {
-	return subject.replace(/(sbx\s+(exec|run|cp)\s+\S+|herdr\s+[a-z-]+)/g, ";").replace(/\$'/g, "'").replace(/'[^']*'|"[^"]*"/g, (quoted) => quoted.replace(/\n/g, " ")).replace(/\\\n/g, "").replace(/['"\\]/g, "");
-}
-
 export function decide(tool: string, input: Record<string, unknown>, host: Host): Decision {
 	const call = read(tool, input);
 	if ("decision" in call) return call;
@@ -232,8 +297,8 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	if (["Edit", "Write", "NotebookEdit"].includes(tool) && [call.subject, ...call.subject.split(/\s+/).filter(Boolean)].some(host.reaches)) return deny(OWN_PROFILES);
 	if (tool !== "Bash") return allow(`Allowed by ${tool} policy.`);
 
-	const flat = flatten(scanned);
-	const hit = (rule: RegExp): boolean => rule.test(scanned) || rule.test(flat);
+	const run = programs(subject, true).join("\n");
+	const hit = (rule: RegExp): boolean => rule.test(run);
 
 	for (const [rule, reason] of BASH_RULES) {
 		if (hit(rule)) return deny(reason);
@@ -243,14 +308,13 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 	if (namesProfiles(scanned, host) && !segments.every((segment) => readsProfiles(segment, host)))
 		return deny(/repos\.json/i.test(literal(scanned)) ? OWN_PROFILES : MAY_NAME_PROFILES);
 
-	const own = segments.join("\n");
-	if (HOST_PUSH.test(own) || HOST_PUSH.test(flatten(own))) {
+	if (HOST_PUSH.test(programs(subject, false).join("\n"))) {
 		const push = host.levels().push;
 		if (push === "none") return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
 		if (push === "auto" && OWN_PUSH.test(subject)) return granted("This repository's profile lets the host push.");
 	}
 
-	const pr = PR_WRITE.exec(scanned) ?? PR_WRITE.exec(flat);
+	const pr = PR_WRITE.exec(run);
 	if (pr) {
 		const action = pr.groups?.action ?? "";
 		if (OWN_PR[action]?.test(subject) && host.levels()[action === "create" ? "pr" : "merge"] === "auto") return granted("This repository's profile lets the host open and merge its own pull requests.");

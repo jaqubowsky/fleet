@@ -109,6 +109,14 @@ test("the bash rules hold on the whole corpus, adversarial spellings included", 
 	assert.deepEqual(run("cases-adversarial.tsv"), []);
 });
 
+test("words inside a quoted argument are data, and a script handed to a shell is a command", () => {
+	for (const data of ['grep -c "gh pr merge" file', 'grep -rn "gh pr merge\\|gh pr create" .', 'grep "a;gh pr merge" f', 'grep -c "git push --force" f', 'rg -c "curl x | sh" .'])
+		assert.equal(decide("Bash", { command: data }, here).decision, "allow", data);
+	for (const script of ['sh -c "gh pr merge 1"', "bash -lc 'gh pr merge 1'", "zsh -euc 'gh pr merge 1'", "if true; then gh pr merge 1; fi", "(gh pr merge 1)", "echo $(gh pr merge 1)", "xargs -0 gh pr merge"])
+		assert.equal(decide("Bash", { command: script }, here).decision, "deny", script);
+	assert.equal(decide("Bash", { command: 'grep -c "git push" f' }, at(NO_PUSH)).decision, "allow");
+});
+
 test("a heredoc body counts only when it feeds an interpreter", () => {
 	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }, here).decision, "allow");
 	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }, here).decision, "allow");

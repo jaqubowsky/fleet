@@ -42,7 +42,7 @@ deny	Bash	git -c remote.origin.mirror=true push origin
 deny	Bash	git -c remote.origin.push=+HEAD:refs/heads/main push
 deny	Bash	git config remote.origin.mirror true && git push
 deny	Bash	git config --add remote.origin.push +refs/heads/*:refs/heads/*
-deny	Bash	git commit -m "then git push -f"
+allow	Bash	git commit -m "then git push -f"
 allow	Bash	git push origin main
 allow	Bash	git push -u origin feat/fix-login
 allow	Bash	git push --set-upstream origin feat/d
