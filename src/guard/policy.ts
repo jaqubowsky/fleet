@@ -1,4 +1,5 @@
 import type { Profile } from "../profile/profile.ts";
+import { hostCommands, programs, scan } from "./argv.ts";
 
 export type HostLevels = Pick<Profile["host"], "push" | "pr" | "merge">;
 
@@ -74,7 +75,6 @@ const BASH_RULES: [RegExp, string][] = [
 
 const HOST_PUSH = new RegExp(PUSH_AT, "m");
 const OWN_PUSH = /^\s*git\s+push(\s+(-u|--set-upstream))?(\s+origin(\s+[\w.][\w./-]*(:[\w.][\w./-]*)?)*)?\s*$/;
-const DELEGATED_SEGMENT = /^\s*sbx\s+(exec|run)(\s|$)/;
 const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
 const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
 const OWN_PR: Record<string, RegExp> = {
@@ -95,161 +95,6 @@ const ORCHESTRATION = /(^|[;&|]|&&)\s*(sbx|herdr)(\s|$)/;
 const SSH = command(String.raw`ssh(\s|$)`);
 const SSH_LOCAL = command(String.raw`ssh\s+-(V|G|Q)\b`);
 const READ_ONLY_GIT = /(^|[;&|]|&&)\s*git\s+(status|log|diff|show|fetch|ls-remote|ls-files|branch|rev-parse|remote|blame|describe|shortlog)\b/;
-
-const KEYWORD = /^(then|do|else|if|elif|while|until|!|\{|[A-Za-z_][A-Za-z0-9_]*=.*)$/s;
-const WRAPPER = /^(sudo|command|exec|time|env|xargs)$/;
-const SHELL = /^(\S*\/)?(ba|z|da|k)?sh$/;
-const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
-
-function scan(subject: string): string {
-	const kept: string[] = [];
-	let delim = "";
-	let keep = false;
-
-	for (const line of subject.split("\n")) {
-		if (delim) {
-			if (line.trim() === delim) delim = "";
-			else if (keep) kept.push(line);
-			continue;
-		}
-
-		kept.push(line);
-		const at = line.indexOf("<<");
-		if (at < 0) continue;
-
-		const rest = line.slice(at + 2).replace(/^-/, "");
-		const quote = rest[0];
-		if (quote !== "'" && quote !== '"') continue;
-
-		const end = rest.indexOf(quote, 1);
-		if (end < 2) continue;
-
-		delim = rest.slice(1, end);
-		keep = INTERPRETER.test(line);
-	}
-
-	return kept.join("\n");
-}
-
-type Segment = { text: string; piped: boolean };
-
-function segmentsOf(subject: string, withDelegated: boolean): Segment[] {
-	const segments: Segment[] = [];
-	const substitutions: boolean[] = [];
-	let quote = "";
-	let current = "";
-	let redirect = -1;
-	let piped = false;
-	const cut = (pipe = false) => {
-		segments.push({ text: withDelegated || !DELEGATED_SEGMENT.test(current) ? current : redirect < 0 ? "" : current.slice(redirect), piped });
-		current = "";
-		redirect = -1;
-		piped = pipe;
-	};
-	for (let i = 0; i < subject.length; i++) {
-		const char = subject[i];
-		if (quote === "'") {
-			if (char === quote) quote = "";
-		} else if (char === "\x60" || (/[$<>]/.test(char) && subject[i + 1] === "(")) {
-			cut();
-			if (char !== "\x60") {
-				substitutions.push(true);
-				i++;
-			}
-			continue;
-		} else if (char === ")" && substitutions.length) {
-			if (substitutions.pop()) {
-				cut();
-				continue;
-			}
-		} else if (char === "\\") {
-			current += char + (subject[i + 1] ?? "");
-			i++;
-			continue;
-		} else if (quote) {
-			if (char === quote) quote = "";
-		} else if (char === "'" || char === '"') quote = char;
-		else if (char === "(") substitutions.push(false);
-		else if (char === "#" && (i === 0 || /[\s;&|(]/.test(subject[i - 1]))) {
-			const end = subject.indexOf("\n", i);
-			i = (end < 0 ? subject.length : end) - 1;
-			continue;
-		} else if (";&|\n".includes(char) && !(char === "&" && (/[<>]/.test(subject[i - 1]) || subject[i + 1] === ">"))) {
-			cut(char === "|" && subject[i - 1] !== "|" && subject[i + 1] !== "|");
-			continue;
-		} else if (/[<>]/.test(char) && redirect < 0) redirect = current.length;
-		current += char;
-	}
-	cut();
-
-	return segments;
-}
-
-function hostCommands(subject: string): string[] {
-	return segmentsOf(subject, false).map(({ text }) => text);
-}
-
-export function commandsOf(subject: string): string[] {
-	return hostCommands(scan(subject));
-}
-
-function words(text: string): string[] {
-	const found: string[] = [];
-	let word: string | undefined;
-	let quote = "";
-	const add = (chars: string) => {
-		word = (word ?? "") + chars;
-	};
-	for (let i = 0; i < text.length; i++) {
-		const char = text[i];
-		if (quote === "'") {
-			if (char === quote) quote = "";
-			else add(char);
-		} else if (char === "\\") {
-			if (text[i + 1] !== "\n") add(text[i + 1] ?? "");
-			i++;
-		} else if (quote) {
-			if (char === quote) quote = "";
-			else add(char);
-		} else if (char === "'" || char === '"') {
-			add("");
-			quote = char;
-		} else if (char === "$" && text[i + 1] === "'") continue;
-		else if (/[\s()]/.test(char)) {
-			if (word !== undefined) found.push(word);
-			word = undefined;
-		} else add(char);
-	}
-	if (word !== undefined) found.push(word);
-
-	return found;
-}
-
-function programs(subject: string, withDelegated: boolean): string[] {
-	return segmentsOf(scan(subject), withDelegated).flatMap(({ text, piped }) => {
-		let argv = words(text);
-		for (;;) {
-			if (KEYWORD.test(argv[0] ?? "")) argv = argv.slice(1);
-			else if (WRAPPER.test(argv[0] ?? "")) {
-				argv = argv.slice(1);
-				while (argv[0]?.startsWith("-")) argv = argv.slice(1);
-			} else if (withDelegated && argv[0] === "sbx" && /^(exec|run|cp)$/.test(argv[1] ?? "")) argv = argv.slice(3);
-			else break;
-		}
-
-		const line = `${piped ? "| " : ""}${argv.map((word) => word.replace(/[;&|\n]/g, " ")).join(" ")}`;
-		const script = argv[0] === "herdr" ? argv.slice(2).join(" ") : argv[0] === "eval" ? argv.slice(1).join(" ") : SHELL.test(argv[0] ?? "") ? shellScript(argv) : "";
-
-		return script ? [line, ...programs(script, withDelegated)] : [line];
-	});
-}
-
-function shellScript(argv: string[]): string {
-	const options = argv.slice(1).findIndex((word) => !word.startsWith("-") || word === "--");
-	const flags = options < 0 ? argv.slice(1) : argv.slice(1, options + 1);
-
-	return flags.some((flag) => /^-[A-Za-z]*c/.test(flag)) && options >= 0 ? argv[options + 1] : "";
-}
 
 function literal(text: string): string {
 	return text

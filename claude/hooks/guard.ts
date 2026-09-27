@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { hostAt } from "../../src/guard/host.ts";
-import { commandsOf, type Decision, decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
+import { commandsOf } from "../../src/guard/argv.ts";
+import { type Decision, decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
 
 type HookInput = { tool_name?: string; tool_input?: Record<string, unknown>; cwd?: string };
 

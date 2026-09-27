@@ -101,7 +101,7 @@ function says(cli: string): Record<string, Record<string, Record<string, string>
 			push: {
 				none: "no credential here pushes; the host lands, signs and pushes the branch, and a steer tells you once it is on GitHub",
 				human: "prepare the branch and ask for the push under `attention:`; the person pushes it, and a steer tells you once it is on GitHub",
-				auto: "push your own branch to origin, never forced, before `ready-for-host` and at the end of each pull request round",
+				auto: "push your own branch to origin, never forced and never the default branch, before `ready-for-host` and at the end of each pull request round",
 			},
 			pr: { none: "no credential here opens a pull request", human: "draft the pull request and ask under `attention:`; the person opens it", auto: "open and update the pull request of your own branch once the branch is on GitHub" },
 		},

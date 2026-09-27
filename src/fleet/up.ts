@@ -5,8 +5,8 @@ import { logEvent } from "./events.ts";
 import { describe, repoName, type Profile } from "../profile/profile.ts";
 import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
-import { baseBranch } from "./land.ts";
-import { agentName, sandboxName } from "./name.ts";
+import { baseBranch, isBase } from "./land.ts";
+import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import { agentFor, sandboxes, type Agent } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
@@ -70,7 +70,7 @@ git fetch --quiet origin "$2" || echo "fetch of $2 failed, branching from the lo
 git fetch --quiet origin "$1" 2>/dev/null || { git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; [ $? -eq 2 ] || echo "fetch of $1 failed, so a branch origin holds starts from the base"; }
 if git rev-parse --verify --quiet "origin/$1" >/dev/null; then git switch --quiet -C "$1" "origin/$1" && echo "$1 continues the existing branch origin/$1"
 elif git switch --quiet "$1" 2>/dev/null; then echo "$1 continues the local branch $1"
-else start="origin/$2"; git rev-parse --verify --quiet "$start" >/dev/null || start="$2"; git switch --quiet -c "$1" "$start" && echo "$1 is new from $start"; fi`;
+else start="origin/$2"; git rev-parse --verify --quiet "$start" >/dev/null || start="$2"; git switch --quiet --no-track -c "$1" "$start" && echo "$1 is new from $start"; fi`;
 
 export type UpInput = {
 	repo: string;
@@ -124,6 +124,10 @@ export async function up(
 			throw new Error(
 				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
 			);
+		const branch = input.branch ?? slug(input.label);
+		const base = input.base ?? baseBranch(input.repo, io).replace(/^origin\//, "");
+		if (isBase(base, branch))
+			throw new Error(`${branch} is the default branch, and a container never works on it: give the task its own label, or --branch <name>`);
 		create(input, sandbox, profile, io);
 		let locks: number;
 		try {
@@ -148,21 +152,20 @@ export async function up(
 					],
 					{ quiet: true },
 				);
-			if (input.branch)
-				for (const line of io.sbx(
-					[
-						"exec",
-						sandbox,
-						"sh",
-						"-c",
-						SWITCH_TO_BRANCH,
-						"--",
-						input.branch,
-						input.base ?? baseBranch(input.repo, io).replace(/^origin\//, ""),
-					],
-					{ quiet: true },
-				).split("\n").filter(Boolean))
-					io.log(`${sandbox}: ${line}`);
+			for (const line of io.sbx(
+				[
+					"exec",
+					sandbox,
+					"sh",
+					"-c",
+					SWITCH_TO_BRANCH,
+					"--",
+					branch,
+					base,
+				],
+				{ quiet: true },
+			).split("\n").filter(Boolean))
+				io.log(`${sandbox}: ${line}`);
 			locks = lockfiles(
 				io.sbx(
 					[

@@ -104,6 +104,28 @@ test("every container carries status history beside each module that imports it,
 	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && path.endsWith("status-history.ts")), []);
 });
 
+test("every container carries the default-branch push guard with the modules it imports, and no host does", () => {
+	const guard: Record<string, unknown> = {};
+	for (const file of ["extensions/container-guard.ts", "src/guard/container.ts", "src/guard/argv.ts", "src/guard/translate.ts"]) {
+		guard[`read /root/${file}`] = `${file}\n`;
+		guard[`stat /root/${file}`] = { size: 1, mtime: new Date(0), dir: false };
+	}
+	const pi = fakeIo(sources(guard));
+	const omp = fakeIo(sources({ ...guard, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
+	const claude = fakeIo(sources(guard), HARNESSES.claude);
+
+	for (const io of [pi, omp, claude]) {
+		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+	}
+
+	for (const io of [pi, omp])
+		for (const file of ["extensions/container-guard.ts", "src/guard/container.ts", "src/guard/argv.ts", "src/guard/translate.ts"])
+			assert.equal(io.files[`/stage/home/agent/${file}`], `${file}\n`, `${io.harness.name} ${file}`);
+	for (const file of ["src/guard/container.ts", "src/guard/argv.ts"]) assert.equal(claude.files[`/stage/home/fleet/${file}`], `${file}\n`, file);
+	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && /container-guard|guard\/container/.test(path)), []);
+});
+
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 

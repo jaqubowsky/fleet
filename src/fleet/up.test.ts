@@ -215,19 +215,28 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 	);
 });
 
-test("up without --branch never switches branches, and resolves the repo to its top level", async () => {
+test("up names the branch after the label as a ref git takes, and refuses the default branch before any container exists", async () => {
+	const named = fakeIo(base);
+	await up({ repo, label: "FLO 1", root: "/root" }, named);
+	const switched = named.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === SWITCH_TO_BRANCH);
+	assert.equal(switched?.[7], "web-1");
+
+	for (const input of [{ label: "main" }, { label: "web-1", branch: "main" }]) {
+		const io = fakeIo(base);
+		await assert.rejects(up({ repo, root: "/root", ...input }, io), /main is the default branch/);
+		assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"), JSON.stringify(input));
+	}
+});
+
+test("up without --branch switches to a branch named from the label, and resolves the repo to its top level", async () => {
 	const io = fakeIo({ ...base, "git rev-parse --show-toplevel": repo });
 	const out = await up(
 		{ repo: `${repo}/apps/web`, label: "web-1", root: "/root" },
 		io,
 	);
 	assert.equal(out.sandbox, "pi-webapp-web-1");
-	assert.ok(
-		!io.calls.some(
-			(c) =>
-				c[0] === "sbx" && c[1] === "exec" && String(c[5]).includes("git switch"),
-		),
-	);
+	const switched = io.calls.find((c) => c[0] === "sbx" && c[1] === "exec" && c[5] === SWITCH_TO_BRANCH);
+	assert.equal(switched?.[7], "web-1");
 	assert.ok(
 		io.calls.some((c) => c[0] === "sbx" && c[1] === "run" && c.includes(repo)),
 	);
@@ -813,6 +822,7 @@ test("up --branch starts a branch origin lacks from origin's base and says so", 
 
 	assert.equal(git(workspace, "rev-parse", "HEAD"), git(seed, "rev-parse", "main"));
 	assert.equal(git(workspace, "branch", "--show-current"), "ticket/05");
+	assert.equal(git(workspace, "config", "--default", "none", "--get", "branch.ticket/05.merge"), "none");
 	assert.match(out, /^ticket\/05 is new from origin\/main$/m);
 });
 

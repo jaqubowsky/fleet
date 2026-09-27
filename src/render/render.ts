@@ -232,6 +232,10 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
 		["extensions/status-history.ts", "context/extensions/status-history.ts"],
+		["extensions/container-guard.ts", "home/agent/extensions/container-guard.ts"],
+		["src/guard/container.ts", "home/agent/src/guard/container.ts"],
+		["src/guard/argv.ts", "home/agent/src/guard/argv.ts"],
+		["src/guard/translate.ts", "home/agent/src/guard/translate.ts"],
 		...containerFiles,
 	]);
 }
@@ -259,6 +263,8 @@ function claude(r: Renderer): void {
 		["claude/statusline.mjs", "home/fleet/claude/statusline.mjs"],
 		["src/statusline/statusline.ts", "home/fleet/src/statusline/statusline.ts"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
+		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
+		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
 		["src/fleet/usage.ts", "home/fleet/src/fleet/usage.ts"],
 		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
 		["extensions/status-history.ts", "home/fleet/extensions/status-history.ts"],

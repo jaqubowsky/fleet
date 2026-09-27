@@ -95,7 +95,7 @@ test("the description carries each sentence a seat would otherwise choose by lev
 
 	assert.match(none.inside, /^- push `none`: no credential here pushes; the host lands, signs and pushes the branch, and a steer tells you once it is on GitHub$/m);
 	assert.match(human.inside, /^- push `human`: prepare the branch and ask for the push under `attention:`; the person pushes it, and a steer tells you once it is on GitHub$/m);
-	assert.match(ownInside, /^- push `auto`: push your own branch to origin, never forced, before `ready-for-host` and at the end of each pull request round$/m);
+	assert.match(ownInside, /^- push `auto`: push your own branch to origin, never forced and never the default branch, before `ready-for-host` and at the end of each pull request round$/m);
 	assert.match(ownInside, /^- linear `read`: read Linear through `linear-private-readonly`; nothing can be written there$/m);
 	assert.match(ownHost, /^- linear `write`: read and write Linear through `linear-private`; move states, file not-started issues and post the acceptance comment by judgment, and say what you posted$/m);
 	assert.match(ownHost, /^- push `auto`: push with `git push`, never forced; the guard allows it, and `cfleet profile --apply` keeps the origin on HTTPS with no branch tracking$/m);

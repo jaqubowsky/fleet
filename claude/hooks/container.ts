@@ -7,7 +7,7 @@ import { COMPLETE, contextNote, pointer, reminderLevel, suggested, withAttention
 import { record, snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
-type HookInput = { tool_name?: string; transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string };
+type HookInput = { tool_name?: string; tool_input?: { command?: string }; cwd?: string; transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string };
 
 const SUGGESTED = `attention: ${suggested("/clear")}`;
 const THRESHOLD = Number(process.env.FLEET_HANDOFF_TOKENS ?? 250000);
@@ -60,18 +60,34 @@ function remind(transcript: string): void {
 	process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: contextNote(level) } }));
 }
 
-if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && process.env.SANDBOX_NAME) {
-	const task = join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME);
-	const file = join(task, "status.md");
-	const event = process.argv[2] ?? "";
+async function refusal(stdin: string): Promise<string | undefined> {
 	try {
-		const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
-		if (event === "post-tool-use" || event === "post-tool-use-failure") record(task, { tool: input.tool_name ?? "?", ok: event === "post-tool-use", agent: input.agent_id });
-		if (event === "post-tool-use" && input.transcript_path && !input.agent_id) remind(input.transcript_path);
-		const updated = next(event, readFileSync(file, "utf8"), input);
-		if (updated !== undefined) writeFileSync(file, updated);
-		if (updated !== undefined || event !== "session-start") snapshot(task);
-		if (updated !== undefined && event === "session-start")
-			process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: pointer(task) } }));
-	} catch {}
+		const input = JSON.parse(stdin) as HookInput;
+		const { pushRefusal } = await import("../../src/guard/container.ts");
+		return input.tool_name === "Bash" ? pushRefusal(input.tool_input?.command ?? "", input.cwd ?? process.cwd()) : undefined;
+	} catch (error) {
+		return `The container guard failed, so this call does not run: ${(error as Error).message}`;
+	}
+}
+
+function track(task: string, event: string, input: HookInput): void {
+	const file = join(task, "status.md");
+	if (event === "post-tool-use" || event === "post-tool-use-failure") record(task, { tool: input.tool_name ?? "?", ok: event === "post-tool-use", agent: input.agent_id });
+	if (event === "post-tool-use" && input.transcript_path && !input.agent_id) remind(input.transcript_path);
+	const updated = next(event, readFileSync(file, "utf8"), input);
+	if (updated !== undefined) writeFileSync(file, updated);
+	if (updated !== undefined || event !== "session-start") snapshot(task);
+	if (updated !== undefined && event === "session-start")
+		process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: pointer(task) } }));
+}
+
+if (import.meta.filename === process.argv[1] && process.env.FLEET_ARTIFACTS && process.env.SANDBOX_NAME) {
+	const event = process.argv[2] ?? "";
+	if (event === "pre-tool-use") {
+		const reason = await refusal(readFileSync(0, "utf8"));
+		if (reason) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }));
+	} else
+		try {
+			track(join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME), event, JSON.parse(readFileSync(0, "utf8")) as HookInput);
+		} catch {}
 }
