@@ -8,6 +8,7 @@ export const RING_MS = 15 * 60_000;
 export const FAILED_IN_A_ROW = 5;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
+const FINISHED = new Set(["ready-for-host", "blocked"]);
 
 
 export function shouldWake(prev: string | undefined, next: string): boolean {
@@ -26,6 +27,10 @@ export function stalled(
 	return entries
 		.filter((e) => e.status === "working" && now - e.since >= stallMs && now - e.rang >= ringMs)
 		.map((e) => e.pane);
+}
+
+export function idleStalled(agent: string, status: string | undefined, silentMs: number): boolean {
+	return TERMINAL.has(agent) && !FINISHED.has(status ?? "") && silentMs >= STALL_MS;
 }
 
 export function transition(

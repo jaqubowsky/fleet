@@ -13,6 +13,7 @@ import {
 	steer,
 } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
+import { checkoutProbe, commitsProbe } from "./status.ts";
 import { agentName } from "./name.ts";
 import { HARNESSES } from "../harness.ts";
 
@@ -172,7 +173,7 @@ test("down refuses a dirty container without --force", () => {
 test("down refuses a container whose commits never reached the repo", () => {
 	const io = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"git cat-file -e abc^{commit}": new Error("missing"),
 		[remoteRefs]: "",
 	});
@@ -187,7 +188,7 @@ test("down passes a head the repo lacks once the container pushed it to its own 
 	const io = fakeIo({
 		...running,
 		...sessions,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"git cat-file -e abc^{commit}": new Error("missing"),
 		[remoteRefs]: "refs/remotes/origin/web-1",
 		"git rev-parse --verify --quiet refs/heads/web-1": new Error("exit 1"),
@@ -203,7 +204,7 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 	const io = fakeIo({
 		...running,
 		...sessions,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"herdr agent list": {
 			result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "pi-a" }] },
 		},
@@ -233,7 +234,7 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 });
 
 test("down says so when pi never wrote a session", () => {
-	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc" });
+	const io = fakeIo({ ...running, [`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc" });
 	down("pi-a", {}, io);
 	assert.ok(
 		io.lines.some((l) => /pi-a: no session in .*pi-a\/logs\/sessions/.test(l)),
@@ -245,7 +246,7 @@ test("down says so when pi never wrote a session", () => {
 test("down records the guest's peak memory beside usage.json before removing", () => {
 	const io = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat /sys/fs/cgroup/docker/memory.peak": "4241653760\n",
 	});
 
@@ -260,7 +261,7 @@ test("down records the guest's peak memory beside usage.json before removing", (
 test("down goes on without memory.peak and says so", () => {
 	const io = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat": new Error("sbx exec failed (1)\ncat: /sys/fs/cgroup/docker/memory.peak: No such file or directory"),
 	});
 
@@ -274,7 +275,7 @@ test("down goes on without memory.peak and says so", () => {
 test("down records no peak when the guest prints something other than a number", () => {
 	const io = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat": "max\n",
 	});
 
@@ -287,7 +288,7 @@ test("down records no peak when the guest prints something other than a number",
 test("down treats a failed secret cleanup after removal as a warning, and a failed removal as an error", () => {
 	const gone = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx rm -f pi-a": new Error(
 			"sbx rm failed (1)\nscoped secret cleanup failed: Keychain Error",
 		),
@@ -305,7 +306,7 @@ test("down treats a failed secret cleanup after removal as a warning, and a fail
 
 	const stuck = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx rm -f pi-a": new Error("sbx rm failed (1)\ncontainer busy"),
 	});
 	assert.throws(() => down("pi-a", {}, stuck), /container busy/);
@@ -336,7 +337,7 @@ test("ls joins sbx, herdr and git state", () => {
 				{ name: "pi-cv-x", status: "stopped", workspaces: [] },
 			],
 		},
-		"sbx exec pi-webapp-web-1 sh -c": "web-1\t1\tabc",
+		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
 		"herdr agent list": {
 			result: {
 				agents: [
@@ -347,8 +348,40 @@ test("ls joins sbx, herdr and git state", () => {
 	});
 	assert.equal(
 		ls(io),
-		"pi-webapp-web-1  running  working  web-1  1 uncommitted\npi-cv-x           stopped  gone     ?",
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x           stopped  gone     ?",
 	);
+});
+
+test("ls shows a running container's commits and PR, and an idle one past the threshold without a finish as stalled", () => {
+	const io = fakeIo({
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
+		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
+		"gh pr view task --json number,state,statusCheckRollup": { number: 12, state: "OPEN", statusCheckRollup: [{ __typename: "CheckRun", name: "test", status: "COMPLETED", conclusion: "SUCCESS" }] },
+		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
+		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "bash", ok: true, agent: "main" }),
+	});
+
+	assert.equal(
+		ls(io),
+		"pi-a  running  idle     task  stalled  up 30m, silent 30m, 1 tool call, last bash\n  commits 2 since origin/main, 2 pushed, 0 unpushed, 1 file +4 -1, latest abc1234 add two; pr #12 open, CI passed",
+	);
+	assert.ok(io.calls.some((c) => c.join(" ") === "gh /r pr view task --json number,state,statusCheckRollup"));
+});
+
+test("ls leaves an idle container unmarked while its PR's CI runs", () => {
+	const io = fakeIo({
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
+		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t1\t0\t 1 file changed, 1 insertion(+)\tabc1234 add one",
+		"gh pr view task --json number,state,statusCheckRollup": { number: 12, state: "OPEN", statusCheckRollup: [{ __typename: "CheckRun", name: "test", status: "QUEUED", conclusion: "" }] },
+		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
+		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "bash", ok: true, agent: "main" }),
+	});
+
+	assert.doesNotMatch(ls(io), /stalled/);
 });
 
 test("peek shows git state and the pane tail, or says the agent is gone", () => {
@@ -381,7 +414,7 @@ test("down probes a stopped container too, so its refusals still apply", () => {
 });
 
 test("down passes a container whose head is already in the repo", () => {
-	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t0\tabc" });
+	const io = fakeIo({ ...running, [`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc" });
 	down("pi-a", {}, io);
 	assert.deepEqual(
 		io.calls.find((c) => c[0] === "git"),
@@ -572,7 +605,7 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 		});
 	const io = fakeIo({
 		...running,
-		"sbx exec pi-a sh -c": "web-1\t0\tabc",
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`stat ${task}/logs/sessions/s1.jsonl`]: {
 			size: 10,
@@ -594,7 +627,7 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 
 	const table = ls(io);
 
-	assert.equal(table, "pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42");
+	assert.equal(table, "pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
 });
 
@@ -603,14 +636,14 @@ test("ls reads a claude container's cost from its live transcripts, before down 
 		{
 			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
 			"herdr agent list": { result: { agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }] } },
-			"sbx exec claude-a sh -c": "web-1\t0\tabc",
+			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects": "1.5",
 			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
 		},
 		HARNESSES.claude,
 	);
 
-	assert.equal(ls(io), "claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50");
+	assert.equal(ls(io), "claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
 });
 
 test("ls still prices a stopped pi container from the sessions it wrote", () => {
@@ -631,14 +664,14 @@ test("ls keeps a claude container's activity when its image cannot price the tra
 		{
 			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
 			"herdr agent list": { result: { agents: [] } },
-			"sbx exec claude-a sh -c": "web-1\t0\tabc",
+			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			"sbx exec claude-a node": new Error("sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'"),
 			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
 		},
 		HARNESSES.claude,
 	);
 
-	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit");
+	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
 });
 
 test("history lists every status.md version in local time with what changed in it and the log lines it added", (t) => {

@@ -50,6 +50,10 @@ export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness =
 			calls.push(["git", cwd, ...args]);
 			return text(`git ${args.join(" ")}`);
 		},
+		gh: (args, cwd) => {
+			calls.push(["gh", cwd, ...args]);
+			return text(`gh ${args.join(" ")}`);
+		},
 		read: (path) => files[path] ?? (answer(`read ${path}`) as string | undefined),
 		write: (path, body) => {
 			calls.push(["write", path]);

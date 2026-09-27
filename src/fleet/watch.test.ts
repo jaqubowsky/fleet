@@ -5,6 +5,7 @@ import { test, type TestContext } from "node:test";
 import { HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
+import { commitsProbe } from "./status.ts";
 import { fleetAgents, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
 
 const agents = [
@@ -502,4 +503,129 @@ test("CLI watch outside a herdr pane follows only the containers it names", () =
 
 	assert.deepEqual(paneScope(io, [])(), []);
 	assert.deepEqual(paneScope(io, ["claude-named"])(), ["claude-named"]);
+});
+
+const PR_VIEW = "pr view task --json number,state,statusCheckRollup";
+
+function onBranch(io: ReturnType<typeof fakeIo>, checks: unknown[]) {
+	const sbx = io.sbx;
+	io.sbx = (args, opts) =>
+		args.join(" ") === `exec claude-worker sh -c ${commitsProbe}`
+			? "task\torigin/main\t2\t1\t 2 files changed, 5 insertions(+)\tabc1234 add two"
+			: sbx(args, opts);
+	io.gh = (args, cwd) => {
+		io.calls.push(["gh", cwd, ...args]);
+		return JSON.stringify({ number: 12, state: "OPEN", statusCheckRollup: checks });
+	};
+}
+
+test("a turn that ends with a PR open and CI running wakes nobody; the settle after CI ends wakes with the facts", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: ready-for-host\nattention: none\n";
+	onBranch(io, [
+		{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" },
+		{ __typename: "StatusContext", context: "lint", state: "SUCCESS" },
+	]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	const whileRunning = wakes.length;
+	onBranch(io, [
+		{ __typename: "CheckRun", name: "test", status: "COMPLETED", conclusion: "FAILURE" },
+		{ __typename: "StatusContext", context: "lint", state: "SUCCESS" },
+	]);
+	status("worker:pane", "working");
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(whileRunning, 0);
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /\n\ncommits: 2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest abc1234 add two\n\npr: #12 open, CI failed: test/);
+	assert.ok(io.calls.some((call) => call.join(" ") === `gh /w/webapp ${PR_VIEW}`));
+});
+
+test("a branch with no pull request says so in its wake", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	onBranch(io, []);
+	io.gh = () => {
+		throw new Error('gh pr view task failed (1)\nno pull requests found for branch "task"');
+	};
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.match(wakes[0], /\n\npr: none$|\n\npr: none\n/);
+});
+
+test("an idle container past the threshold without ready-for-host or blocked wakes once as stalled", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
+		{ name: "claude-done", pane_id: "done:pane", agent_status: "idle" },
+	]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: implementing\nattention: none\n";
+	io.files["/home/me/.sandboxes/webapp/claude-done/status.md"] = "status: ready-for-host\nattention: none\n";
+	const start = Date.now();
+	const clock = t.mock.method(Date, "now", () => start);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	clock.mock.mockImplementation(() => start + 19 * 60_000);
+	intervals.get(60_000)?.();
+	const early = wakes.length;
+	clock.mock.mockImplementation(() => start + 21 * 60_000);
+	intervals.get(60_000)?.();
+	clock.mock.mockImplementation(() => start + 60 * 60_000);
+	intervals.get(60_000)?.();
+
+	assert.equal(early, 0);
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: idle 21m at implementing, stalled\n\nstatus: implementing/);
+});
+
+test("a blocked container wakes the host even while its PR's CI runs", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: blocked\nattention: CI hangs past the wait\n";
+	onBranch(io, [{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" }]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /pr: #12 open, CI running, 0 of 1 checks done/);
+});
+
+test("a settle with status.md unchanged but new branch facts wakes the host again", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: implementing\nattention: none\n";
+	onBranch(io, []);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	const sbx = io.sbx;
+	io.sbx = (args, opts) =>
+		args.join(" ") === `exec claude-worker sh -c ${commitsProbe}`
+			? "task\torigin/main\t3\t2\t 3 files changed, 9 insertions(+)\tdef5678 add three"
+			: sbx(args, opts);
+	status("worker:pane", "working");
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[1], /commits: 3 since origin\/main/);
 });

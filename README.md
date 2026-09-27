@@ -50,7 +50,7 @@ At runtime the host and a container share one task directory and talk through he
                        status.md  analysis.md  review.md  logs/
 ```
 
-A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, and again when it works long without settling or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `cfleet ls` project.
+A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, except while its pull request's CI runs and it is not `blocked`, and again when it works long without settling, sits idle long short of `ready-for-host` or `blocked`, or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `cfleet ls` project.
 
 ```text
  up ─▶ steer ─▶ analyze-task ─▶ to-tickets ─▶ per ticket: implement + tdd, gate,

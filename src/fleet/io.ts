@@ -8,6 +8,7 @@ export type Io = {
 	herdr<T = unknown>(args: string[]): T;
 	herdrText(args: string[]): string;
 	git(args: string[], cwd: string): string;
+	gh(args: string[], cwd: string): string;
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
 	copy(from: string, to: string): void;
@@ -60,6 +61,7 @@ export function realIo(home: string, harness: Harness): Io {
 		},
 		herdrText: (args) => shell("herdr", args, { quiet: true }),
 		git: (args, cwd) => shell("git", args, { cwd, quiet: true }),
+		gh: (args, cwd) => shell("gh", args, { cwd, quiet: true, timeoutMs: 30_000 }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),
 		copy: (from, to) => {

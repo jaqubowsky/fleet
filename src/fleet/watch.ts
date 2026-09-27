@@ -7,6 +7,7 @@ import { eventAgents, eventsLog, lifecycle } from "./events.ts";
 import type { Io } from "./io.ts";
 import {
 	FAILED_IN_A_ROW,
+	idleStalled,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
@@ -19,7 +20,7 @@ import {
 import { agentName } from "./name.ts";
 import {
 	type Agent,
-	commitsProbe,
+	branchFacts,
 	fieldsOf,
 	logLines,
 	type Sandbox,
@@ -36,7 +37,7 @@ type Frame = {
 	data?: { pane_id?: string; agent_status?: string };
 };
 type Tracked = { name: string; status: string; since: number; rang: number };
-type Woken = { status: string | undefined; at: string };
+type Woken = { status: string | undefined; facts: string; at: string };
 
 export function fleetAgents(
 	agents: Agent[],
@@ -94,7 +95,7 @@ export function watch(
 	const woken = new Map<string, Woken>();
 	const deaths = new Map<string, string>();
 	const streaks = new Map<string, string>();
-	const dirs = new Map<string, { dir: string; sandbox: string }>();
+	const dirs = new Map<string, { dir: string; sandbox: string; repo: string }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
@@ -102,8 +103,8 @@ export function watch(
 
 	const locate = (name: string, rows: Sandbox[]) => {
 		const dir = taskDirOf(io.home, rows, name);
-		const sandbox = rows.find((s) => agentName(s.name) === name)?.name;
-		if (dir && sandbox) dirs.set(name, { dir, sandbox });
+		const row = rows.find((s) => agentName(s.name) === name);
+		if (dir && row) dirs.set(name, { dir, sandbox: row.name, repo: row.workspaces[0] });
 		return dirs.get(name);
 	};
 
@@ -112,29 +113,27 @@ export function watch(
 		return where ? io.read(`${where.dir}/status.md`) : undefined;
 	};
 
-	const details = (name: string, status: string | undefined): string => {
+	const factsOf = (name: string): { text: string; running: boolean } => {
 		const where = dirs.get(name);
-		if (!where) return wake(undefined, "");
-		let commits = "";
-		try {
-			commits = io.sbx(["exec", where.sandbox, "sh", "-c", commitsProbe], {
-				quiet: true,
-			});
-		} catch (error) {
-			io.log(`[fleet] watch: commits: ${String(error)}`);
-		}
+		if (!where) return { text: "commits: not counted\n\npr: not read", running: false };
+		const facts = branchFacts(io, where.sandbox, where.repo);
+		return { text: `commits: ${facts.commits}\n\npr: ${facts.pr}`, running: facts.running };
+	};
+
+	const details = (name: string, status: string | undefined, facts: string): string => {
+		const where = dirs.get(name);
 		let activity = "";
 		try {
-			activity = activityNow(where.sandbox, where.dir, io);
+			activity = where ? activityNow(where.sandbox, where.dir, io) : "";
 		} catch (error) {
 			io.log(`[fleet] watch: activity: ${String(error)}`);
 		}
-		const text = wake(status, commits, logShown.get(name));
+		const text = wake(status, facts, logShown.get(name));
 		logShown.set(name, logLines(status));
 		return activity ? `${text}\n\nactivity: ${activity}` : text;
 	};
 
-	const emit = (name: string, change: string, settled = false) => {
+	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean } = {}) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name)) return;
 		try {
@@ -143,16 +142,19 @@ export function watch(
 			io.log(`[fleet] watch: locate: ${String(error)}`);
 		}
 		const status = statusOf(name);
+		const facts = factsOf(name);
+		if (when.unlessCi && facts.running && fieldsOf(status).status !== "blocked") return;
 		const last = woken.get(name);
 		if (
-			settled &&
+			when.settled &&
 			last &&
 			last.status === status &&
+			last.facts === facts.text &&
 			(steered.get(name) ?? "") <= last.at
 		)
 			return;
-		woken.set(name, { status, at: io.now().toISOString() });
-		onWake(wakeLines(name, dirs.get(name)?.sandbox ?? name, change, details(name, status)));
+		woken.set(name, { status, facts: facts.text, at: io.now().toISOString() });
+		onWake(wakeLines(name, dirs.get(name)?.sandbox ?? name, change, details(name, status, facts.text)));
 	};
 
 	const settle = (pane: string, from: string | undefined) => {
@@ -164,7 +166,7 @@ export function watch(
 			const current = tracked.get(pane);
 			if (!current || !TERMINAL.has(current.status)) return;
 			const change = transition(start, current.status);
-			if (change) emit(current.name, change, true);
+			if (change) emit(current.name, change, { settled: true, unlessCi: true });
 		}, SETTLE_MS);
 		settling.set(pane, { timer, from: start });
 	};
@@ -183,12 +185,8 @@ export function watch(
 		const change = transition(previous, next);
 		if (!change) return;
 		const wakeable = shouldWake(previous, next);
-		tracked.set(pane, {
-			...entry,
-			status: next,
-			since: Date.now(),
-			rang: Date.now(),
-		});
+		const now = Date.now();
+		tracked.set(pane, { ...entry, status: next, since: now, rang: now });
 		if (TERMINAL.has(next)) {
 			if (wakeable || settling.has(pane)) settle(pane, previous);
 			return;
@@ -281,12 +279,13 @@ export function watch(
 				emit(gone.name, `${gone.status} -> gone`);
 			tracked.delete(pane);
 		}
+		const now = Date.now();
 		for (const a of fresh)
 			tracked.set(a.pane_id, {
 				name: a.name ?? a.pane_id,
 				status: a.agent_status ?? "unknown",
-				since: Date.now(),
-				rang: Date.now(),
+				since: now,
+				rang: now,
 			});
 		noticeDeaths(rows);
 		if (fresh.length)
@@ -307,9 +306,29 @@ export function watch(
 		}
 	};
 
+	const noticeIdle = (now: number) => {
+		const quiet = [...tracked].filter(([, t]) => t.rang <= t.since && idleStalled(t.status, undefined, now - t.since));
+		if (!quiet.length) return;
+		let rows: Sandbox[];
+		try {
+			rows = sandboxes(io);
+		} catch (error) {
+			io.log(`[fleet] watch: locate: ${String(error)}`);
+			return;
+		}
+		for (const [pane, t] of quiet) {
+			if (!locate(t.name, rows)) continue;
+			const status = fieldsOf(statusOf(t.name)).status;
+			tracked.set(pane, { ...t, rang: now });
+			if (!idleStalled(t.status, status, now - t.since)) continue;
+			emit(t.name, `${t.status} ${Math.round((now - t.since) / 60_000)}m at ${status ?? "no status"}, stalled`, { unlessCi: true });
+		}
+	};
+
 	const ring = () => {
 		noticeFailures();
 		const now = Date.now();
+		noticeIdle(now);
 		const entries = [...tracked].map(([pane, t]) => ({
 			pane,
 			status: t.status,

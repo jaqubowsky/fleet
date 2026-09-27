@@ -5,11 +5,13 @@ import { activityOf, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
+import { idleStalled } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, harnessStamp, imageStampPath, staleImage, taskDir } from "./up.ts";
 import {
 	addedLines,
 	agentFor,
+	branchFacts,
 	checkoutProbe,
 	fieldsOf,
 	formatRows,
@@ -61,13 +63,19 @@ export function ls(io: Io): string {
 			? parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }))
 			: { branch: "?", dirty: 0, head: "" };
 		const repo = s.workspaces[0];
+		const agent = agentFor(live, agentName(s.name))?.agent_status ?? "gone";
+		const task = repo ? taskDir(repo, s.name, io) : undefined;
+		const last = task ? activityOf(io.read(`${task}/${ACTIVITY}`))?.last : undefined;
+		const facts = running && repo ? branchFacts(io, s.name, repo) : undefined;
 		return {
 			sandbox: s.name,
 			status: s.status,
-			agent: agentFor(live, agentName(s.name))?.agent_status ?? "gone",
+			agent,
 			branch: checkout.branch,
 			dirty: checkout.dirty,
-			activity: repo && (running || !io.harness.containerSessions) ? activityNow(s.name, taskDir(repo, s.name, io), io) : undefined,
+			stalled: !facts?.running && !!last && idleStalled(agent, fieldsOf(io.read(`${task}/status.md`)).status, io.now().getTime() - new Date(last).getTime()),
+			activity: task && (running || !io.harness.containerSessions) ? activityNow(s.name, task, io) : undefined,
+			facts: facts && `commits ${facts.commits}; pr ${facts.pr}`,
 		};
 	});
 	return formatRows(rows);

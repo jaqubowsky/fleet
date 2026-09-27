@@ -16,7 +16,9 @@ export type Row = {
 	agent: string;
 	branch: string;
 	dirty: number;
+	stalled?: boolean;
 	activity?: string;
+	facts?: string;
 };
 
 export function fleetSandboxes(
@@ -121,17 +123,77 @@ export function formatRows(rows: Row[]): string {
 	return rows
 		.map(
 			(r) =>
-				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.activity ? `  ${r.activity}` : ""}`,
+				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.stalled ? "  stalled" : ""}${r.activity ? `  ${r.activity}` : ""}${r.facts ? `\n  ${r.facts}` : ""}`,
 		)
 		.join("\n");
 }
 
-export const commitsProbe =
-	'cd "$WORKSPACE_DIR" && base="$(git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}" 2>/dev/null)" || exit 0; git log --oneline "$base"..HEAD 2>/dev/null | head -1';
+export const commitsProbe = [
+	'cd "$WORKSPACE_DIR" || exit 0',
+	'branch="$(git branch --show-current)"',
+	'base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null)" || { printf "%s" "$branch"; exit 0; }',
+	'from="$(git merge-base "$base" HEAD)" || { printf "%s\\t%s" "$branch" "$base"; exit 0; }',
+	'pushed="refs/remotes/origin/$branch"',
+	'git rev-parse -q --verify "$pushed" >/dev/null || pushed="$from"',
+	'printf "%s\\t%s\\t%s\\t%s\\t%s\\t%s" "$branch" "$base" "$(git rev-list --count "$from"..HEAD)" "$(git rev-list --count "$pushed"..HEAD)" "$(git diff --shortstat "$from" HEAD)" "$(git log -1 --format="%h %s" "$from"..HEAD)"',
+].join("\n");
+
+export function commitFacts(probed: string): { branch?: string; line: string } {
+	const [branch, base, total, unpushed, shortstat = "", latest = ""] = probed.trim().split("\t");
+	if (!base) return { branch: branch || undefined, line: "not counted: this clone has no origin/HEAD" };
+	if (total === undefined) return { branch, line: `not counted: no merge base with ${base}` };
+	if (total === "0") return { branch, line: `none since ${base}` };
+	const count = (word: string) => shortstat.match(new RegExp(`(\\d+) ${word}`))?.[1] ?? "0";
+	const files = count("files? changed");
+	return {
+		branch,
+		line: `${total} since ${base}, ${Number(total) - Number(unpushed)} pushed, ${unpushed} unpushed, ${files} file${files === "1" ? "" : "s"} +${count("insertions?")} -${count("deletions?")}, latest ${bounded(latest, 80)}`,
+	};
+}
+
+type Check = { name?: string; context?: string; status?: string; conclusion?: string; state?: string };
+
+const FAILED = new Set(["FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"]);
+
+export function prFacts(json: string): { line: string; running: boolean } {
+	const pr: { number: number; state: string; statusCheckRollup?: Check[] } = JSON.parse(json);
+	const state = pr.state.toLowerCase();
+	const checks = pr.statusCheckRollup ?? [];
+	const pending = checks.filter((c) => (c.status ? c.status !== "COMPLETED" : c.state === "PENDING" || c.state === "EXPECTED"));
+	const failed = checks.filter((c) => FAILED.has(c.conclusion || c.state || "")).map((c) => c.name ?? c.context);
+	const ci = !checks.length
+		? "no CI checks"
+		: pending.length
+			? `CI running, ${checks.length - pending.length} of ${checks.length} checks done`
+			: failed.length
+				? `CI failed: ${bounded(failed.join(", "), 120)}`
+				: "CI passed";
+	return { line: `#${pr.number} ${state}, ${ci}`, running: state === "open" && pending.length > 0 };
+}
+
+export function branchFacts(io: Io, sandbox: string, repo: string): { commits: string; pr: string; running: boolean } {
+	let commits: { branch?: string; line: string } = { line: "not counted" };
+	try {
+		commits = commitFacts(io.sbx(["exec", sandbox, "sh", "-c", commitsProbe], { quiet: true }));
+	} catch (error) {
+		commits.line = `not counted: ${bounded(String(error), 120)}`;
+	}
+	let pr = { line: "not read: no branch", running: false };
+	if (commits.branch && !/^\w[\w./-]*$/.test(commits.branch)) pr.line = `not read: branch ${bounded(commits.branch, 80)} is not a plain branch name`;
+	else if (commits.branch) {
+		try {
+			pr = prFacts(io.gh(["pr", "view", commits.branch, "--json", "number,state,statusCheckRollup"], repo));
+		} catch (error) {
+			const message = String(error);
+			pr.line = /no pull requests found/.test(message) ? "none" : `not read: ${bounded(message.split("\n").at(-1) ?? message, 120)}`;
+		}
+	}
+	return { commits: commits.line, pr: pr.line, running: pr.running };
+}
 
 export function wake(
 	statusMd: string | undefined,
-	commits: string,
+	facts: string,
 	shown?: string[],
 ): string {
 	const fields = fieldsOf(statusMd);
@@ -139,7 +201,6 @@ export function wake(
 	const log = count
 		? `\n\nlog: ${count} ${shown ? "new " : ""}${count === 1 ? "entry" : "entries"} in status.md`
 		: "";
-	const commit = commits.split("\n").find((line) => line.trim());
 	return (
 		[
 			`status: ${bounded(fields.status ?? (statusMd === undefined ? "no status.md" : "not recorded"), 80)}`,
@@ -147,8 +208,7 @@ export function wake(
 				? [`attention: ${bounded(fields.attention, 180)}`]
 				: []),
 			`next step: ${bounded(fields.next ?? "not recorded", 180)}`,
-		].join("\n\n") +
-		`${log}\n\ncommits: ${commit ? bounded(commit, 120) : "none"}`
+		].join("\n\n") + `${log}\n\n${facts}`
 	);
 }
 
