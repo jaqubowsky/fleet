@@ -14,6 +14,7 @@ const DIVERGENCES: Divergence[] = [
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here|A watched container working on without settling|- A <cli> wake is a follow-up turn|- A container stopped by a model or network error|- A settling agent whose)/, reason: "claude has no extension that can start a turn, so its watching is a held `cfleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| approve \|/, reason: "claude's `/clear` takes no text, so the continue is a second steer" },
 	{ where: /^skills\/container\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/, reason: "each harness calls the reviewer and waits for it its own way" },
+	{ where: /^skills\/container\/babysit-pr\/SKILL\.md: (Run it as one `Bash` call|<agent> has no background shell)/, reason: "claude waits on CI in a background shell that wakes it, pi and omp have none and poll one read per tool call" },
 	{ where: /^claude\/CLAUDE\.md: \(absent\)/, reason: "claude reads CLAUDE.md, which points at rules/; pi and omp read AGENTS.md" },
 ];
 

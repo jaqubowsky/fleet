@@ -22,22 +22,23 @@ gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.
 2. **Wait for the pull request to change.** Right after a push the jobs are queued and no bot has run, so reading now tells you nothing and settling now ends the loop.
 
 ```bash
-for i in $(seq 1 8); do
+reads=20
+for i in $(seq 1 "$reads"); do
+  sleep 60
   runs=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq '[.[] | select(.status != "completed")] | length')
   total=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq 'length')
   state=$(gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '.state')
-  echo "wait ${i}/8: ${runs} of ${total} runs pending, status ${state}"
+  echo "read ${i}/${reads}: ${runs} of ${total} runs pending, status ${state}"
   case "$runs" in ''|*[!0-9]*) echo "read failed, stop waiting"; break;; esac
   case "$total" in ''|*[!0-9]*) echo "read failed, stop waiting"; break;; esac
   case "$state" in success|pending|failure|error) ;; *) echo "read failed, stop waiting"; break;; esac
   [ "$runs" = 0 ] && [ "$total" != 0 ] && [ "$state" != pending ] && break
-  sleep 60
 done
 ```
 
 Each read comes back a number or a named state, or it is a finding that ends the wait and gets reported. An error body compared against `0` never matches, so a loop without these guards sleeps out its whole cap printing JSON at the pane, and a status read that failed silently reads as anything-but-pending, which is how a blind loop calls a queued pull request green.
 
-The wait blocks on purpose. Sleeping spends no tokens, each minute prints a line so the pane and `{{cli}} peek` show where you are, and the host is woken once, when you settle. Eight minutes is the cap on one tool call, not on waiting: a pull request still pending at the end takes the same command again, up to twenty minutes in all, and a job still hanging then is its own finding.
+{{ci.wait}} Twenty reads, a minute apart, is the whole wait; a job still hanging then is its own finding. The wait ends by writing the settled state as a `## Log` line in `status.md`: the runs and the commit status it read, or the finding that ended it.
 
 3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Name the repository in every call: inside a container `origin` points at the host checkout, so gh cannot infer it.
 

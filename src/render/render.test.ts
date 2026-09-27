@@ -427,6 +427,20 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 }
 
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} babysit-pr waits on CI without holding the session`, () => {
+		renderSeats(name, (out) => {
+			const skill = rendered(out, "container", "babysit-pr/SKILL.md");
+			if (name === "claude") assert.match(skill, /`run_in_background: true`/);
+			else assert.match(skill, /one read per tool call.*up to twenty calls/);
+			assert.doesNotMatch(skill, /The wait blocks on purpose/);
+			assert.match(skill, /the settled state as a `## Log` line in `status.md`/);
+			const core = rendered(out, "container", name === "claude" ? "rules/core.md" : "AGENTS.md");
+			assert.match(core, /a poll loop is not work, except a bounded wait on an external system/);
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} updates a pull request body through the REST API and reads colours from computed styles`, () => {
 		renderSeats(name, (out) => {
 			assert.ok(rendered(out, "container", "babysit-pr/SKILL.md").includes("gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>"));
