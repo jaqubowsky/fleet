@@ -21,14 +21,14 @@ function scratch(t: TestContext): { repo: string; io: ReturnType<typeof realIo>;
 	return { repo, io: { ...realIo(repo, HARNESSES.claude), log: (line: string) => lines.push(line) }, lines };
 }
 
-test("the seed holds the project AGENTS.md, vision, board and the one ticket template", () => {
-	assert.deepEqual(seedFiles, ["AGENTS.md", "spec/board.md", "spec/ticket.md", "spec/vision.md"]);
-	assert.equal(readFileSync(join(seed, "spec/ticket.md"), "utf8"), readFileSync(join(root, "rules/refs/ticket.md"), "utf8"));
-});
-
-test("init on an empty repository lays out every seed file", (t) => {
+test("init on an empty repository lays out the product seed and nothing else", (t) => {
 	const { repo, io, lines } = scratch(t);
 	init({ root, repo }, io);
+	const laid = readdirSync(repo, { withFileTypes: true, recursive: true })
+		.filter((entry) => !entry.isDirectory())
+		.map((entry) => relative(repo, join(entry.parentPath, entry.name)))
+		.sort();
+	assert.deepEqual(laid, ["AGENTS.md", "spec/vision.md"]);
 	for (const file of seedFiles) {
 		assert.equal(readFileSync(join(repo, file), "utf8"), readFileSync(join(seed, file), "utf8"), file);
 		assert.ok(lines.some((line) => line.includes(`laid out ${file}`)), `no line for ${file}`);
@@ -39,12 +39,16 @@ test("init on a populated repository leaves every existing file byte for byte", 
 	const { repo, io, lines } = scratch(t);
 	mkdirSync(join(repo, "spec"));
 	writeFileSync(join(repo, "AGENTS.md"), "# Ours\n");
-	writeFileSync(join(repo, "spec/board.md"), "## Now\n- 07\n");
+	writeFileSync(join(repo, "spec/vision.md"), "# Ours too\n");
 	init({ root, repo }, io);
 	assert.equal(readFileSync(join(repo, "AGENTS.md"), "utf8"), "# Ours\n");
-	assert.equal(readFileSync(join(repo, "spec/board.md"), "utf8"), "## Now\n- 07\n");
-	assert.equal(readFileSync(join(repo, "spec/vision.md"), "utf8"), readFileSync(join(seed, "spec/vision.md"), "utf8"));
-	assert.ok(lines.includes("left AGENTS.md"));
-	assert.ok(lines.includes("left spec/board.md"));
-	assert.ok(lines.includes("laid out spec/ticket.md"));
+	assert.equal(readFileSync(join(repo, "spec/vision.md"), "utf8"), "# Ours too\n");
+	assert.deepEqual(lines, ["left AGENTS.md", "left spec/vision.md"]);
+});
+
+test("the seed AGENTS.md sends work to the tracker the project overlay names", () => {
+	const agents = readFileSync(join(seed, "AGENTS.md"), "utf8");
+	assert.match(agents, /tracker/);
+	assert.match(agents, /`project\.md`/);
+	assert.doesNotMatch(agents, /spec\/board\.md|spec\/tickets|spec\/ticket\.md/);
 });

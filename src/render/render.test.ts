@@ -263,7 +263,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 		renderSeats(name, (out) => {
 			const pointer = HARNESSES[name].tokens["refs.ticket"]!;
 
-			for (const seat of ["host", "container"]) assert.equal(rendered(out, seat, "refs/ticket.md"), readFileSync(join(root, "templates/project/spec/ticket.md"), "utf8"));
+			for (const seat of ["host", "container"]) assert.equal(rendered(out, seat, "refs/ticket.md"), readFileSync(join(root, "rules/refs/ticket.md"), "utf8"));
 			for (const skill of [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "to-tickets/SKILL.md")]) {
 				assert.ok(skill.includes(pointer), "skill points at the ticket template");
 				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);

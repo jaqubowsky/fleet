@@ -1,1 +1,0 @@
-../../../rules/refs/ticket.md

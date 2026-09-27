@@ -14,12 +14,7 @@
 
 <Where tests live, which runner, what a test here verifies, and how to run one file.>
 
-## Tickets
-
-A ticket is a file in `spec/tickets/`, in the shape of `spec/ticket.md`. It is claimed by setting `Status: claimed` before any work, and closed once its work is committed: every acceptance criterion ticked beside its evidence, `Status: done`.
-
 ## Work
 
-<Where work comes from: a tracker team, or `spec/board.md`.>
-<Who plans it: the tracker issue is the plan, or the host plans in `spec/`.>
+Work lives in the tracker the project overlay names under Work source, which a container reads as `project.md` in its task directory. One tracker issue is one ticket, and its description is the plan.
 <What done means: a pull request for the person to merge, or a merge by the host, as the repository's profile allows.>

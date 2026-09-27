@@ -15,3 +15,13 @@ test("an option the command does not take is refused instead of ignored", () => 
 	assert.throws(() => flags(["--help"], []), /unknown option --help/);
 	assert.throws(() => flags(["--repo", "/r"], ["lines"]), /unknown option --repo/);
 });
+
+test("the usage names the two files init lays out", () => {
+	assert.throws(() => flags(["--nope"], []), (error: Error) => {
+		const line = error.message.split("\n").find((row) => row.includes(" init <repo>"));
+		assert.ok(line, "usage has an init line");
+		assert.match(line, /AGENTS\.md, spec\/vision\.md;/);
+		assert.doesNotMatch(line, /board|ticket/);
+		return true;
+	});
+});
