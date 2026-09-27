@@ -8,7 +8,8 @@ usage: sync.sh [--apply]
 
 Brings ~/.pi, ~/.omp and ~/.claude in line with this repository: installs its
 dependencies, links the CLIs, renders each harness's host seat (a file gone
-from here disappears there), aligns Claude's settings, hooks and the herdr
+from here disappears there), prints where the three renders differ and
+whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
 config, rebuilds a container image whose rendered seat changed, and removes
 what nothing uses: leftovers of the old per-harness setup, npm packages pi no
 longer lists, task directories of removed containers that never started,
@@ -116,6 +117,15 @@ while read -r name cli home image owned <&3; do
 		act "$ROOT/bin/$cli" render
 	fi
 done 3<<<"$HARNESS_ROWS"
+
+echo "== parity of the pi, omp and claude renders"
+node --input-type=module -e '
+	const root = process.argv[1];
+	const { HARNESSES } = await import(`${root}/src/harness.ts`);
+	const { realIo } = await import(`${root}/src/fleet/io.ts`);
+	const { parity, parityReport } = await import(`${root}/src/render/parity.ts`);
+	for (const line of parityReport(parity(root, realIo(root, HARNESSES.pi)))) console.log(`    ${line}`);
+' "$ROOT"
 
 echo "== claude settings, hooks and herdr config"
 aligned="$(python3 "$ROOT/claude/tools/align-settings.py")"

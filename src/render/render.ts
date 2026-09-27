@@ -69,7 +69,7 @@ export function seatTokens(io: Io, root: string, harness: Harness): Record<strin
 	return tokens;
 }
 
-export type RenderInput = { root: string; harness: Harness; seat: Seat; out: string };
+export type RenderInput = { root: string; harness: Harness; seat: Seat; out: string; placeholders?: string[]; seen?: Map<string, string> };
 
 class Renderer {
 	readonly input: RenderInput;
@@ -96,12 +96,18 @@ class Renderer {
 	text(path: string): string {
 		const { root, harness } = this.input;
 		const body = this.source(path);
-		const tokens = { ...harness.tokens, cli: harness.cli, harness: harness.name, cache: `~/${harness.home}/${harness.cache}/<repo>`, ...this.seats, root };
+		const tokens: Record<string, string> = { ...harness.tokens, cli: harness.cli, harness: harness.name, cache: `~/${harness.home}/${harness.cache}/<repo>`, ...this.seats, root };
+		for (const key of this.input.placeholders ?? []) tokens[key] = `<${key}>`;
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
-			return where === undefined ? undefined : renderText(this.io.read(where) ?? "", tokens, () => undefined, where);
+			if (where === undefined) return undefined;
+			const text = renderText(this.io.read(where) ?? "", tokens, () => undefined, where);
+			this.input.seen?.set(where.slice(root.length + 1), text);
+			return text;
 		};
-		return renderText(body, tokens, fragment, path);
+		const text = renderText(body, tokens, fragment, path);
+		this.input.seen?.set(path, text);
+		return text;
 	}
 
 	put(path: string, body: string): void {
