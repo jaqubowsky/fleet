@@ -266,9 +266,9 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			for (const seat of ["host", "container"]) assert.equal(rendered(out, seat, "refs/ticket.md"), readFileSync(join(root, "templates/project/spec/ticket.md"), "utf8"));
 			for (const skill of [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "to-tickets/SKILL.md")]) {
 				assert.ok(skill.includes(pointer), "skill points at the ticket template");
-				assert.ok(skill.includes("`spec/ticket.md`"), "skill names the project's own template first");
 				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);
 			}
+			assert.ok(rendered(out, "container", "to-tickets/SKILL.md").includes("`spec/ticket.md`"), "to-tickets names the project's own template first");
 		});
 	});
 }
@@ -436,6 +436,36 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /the settled state as a `## Log` line in `status.md`/);
 			const core = rendered(out, "container", name === "claude" ? "rules/core.md" : "AGENTS.md");
 			assert.match(core, /a poll loop is not work, except a bounded wait on an external system/);
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} host accepts on evidence it looked at, merges the overlay's way and keeps the plan in the tracker`, () => {
+		renderSeats(name, (out) => {
+			const skill = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
+			assert.doesNotMatch(skill, /--squash|spec\/|\b(Backlog|Todo|In Progress|In Review|Done|Canceled)\b/);
+			assert.match(skill, /read their names from the tracker's workflow for that team/);
+			assert.match(skill, /Whether a change earns an independent review is yours, by risk class/);
+			assert.match(skill, /Before a wave starts, settle once what its tickets will share/);
+			assert.match(skill, /check which running ticket owns that area/);
+			assert.match(skill, /resident memory measured per container/);
+			assert.match(skill, /becomes a not-started issue with the tracker's own priority and the project's own labels/);
+			assert.match(skill, /the full 40-character SHA read in the same turn/);
+			assert.match(skill, /reaches the user in your next reply/);
+			assert.match(skill, /`slug \(who, date\): …`/);
+			assert.match(skill, /The host checkout stays on the default branch/);
+			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
+			assert.match(skill, /`acceptance\.md`.*Fits, Gaps and Seen/);
+			assert.match(skill, /one fix round and one recheck/);
+			assert.match(skill, /reconcile the tracker with the facts/);
+			assert.match(skill, /`ticket\.md`/);
+			assert.match(skill, /--merge --match-head-commit/);
+			const rules = rendered(out, "host", name === "claude" ? "rules/host.md" : "AGENTS.md");
+			assert.match(rules, /moves past a merge that changed a lockfile, run the project's install there yourself, before anything else runs from it/);
+			const refs = rendered(out, "host", "refs/artifacts.md");
+			assert.match(refs, /^acceptance\.md /m);
+			assert.match(refs, /^ticket\.md /m);
 		});
 	});
 }

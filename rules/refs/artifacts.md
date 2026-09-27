@@ -10,12 +10,14 @@ Each file has one role and one author. The commit, the branch and the dirty stat
 status.md      current user-facing state: status, attention, summary, next step, log    every skill, throughout its run
 permissions.md what each seat may do in this repository: one line per action and level    {{cli}} up
 project.md     how this project does what the rules require, when host/projects/<owner>/<repo>.md exists    {{cli}} up
+ticket.md      the tracker issue this task delivers, copied at start; Status and ticks are the container's    the host; implement
 analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
 spec.md        what will be built and why                          to-tickets
 issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
 review.md      verdict line, findings, checks read, shared seams   two-axis-review
 pr.md          pull request rounds: threads answered, verdicts      babysit-pr
 browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
+acceptance.md  the host's acceptance: Fits, Gaps, Seen    the host
 logs/          sessions/, status/, activity.jsonl, usage.json, memory.json, <skill>-<id>/ evidence    {{harness}}, {{cli}} down, any skill
 ```
 
