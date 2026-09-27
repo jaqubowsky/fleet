@@ -134,12 +134,16 @@ export function steer(sandbox: string, text: string, io: Io, root?: string): voi
 			!error.message.includes("agent_prompt_stalled")
 		)
 			throw error;
-		if (!handoff || before === COMPLETE || handoff() !== COMPLETE)
+		if (!handoff)
 			throw new Error(
 				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${io.harness.cli} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
 				{ cause: error },
 			);
 	}
+	if (handoff && (before === COMPLETE || handoff() !== COMPLETE))
+		throw new Error(
+			`${text} sent, and status.md shows no context reset. Inspect ${io.harness.cli} peek ${sandbox}; do not steer again until you know whether the session was cleared.`,
+		);
 	io.log(`${agent}: steered`);
 }
 

@@ -128,8 +128,32 @@ for (const harness of Object.values(HARNESSES)) {
 		const complete = "session handoff complete; fresh session idle";
 
 		assert.deepEqual(steerAfter(suggested, complete), [`${agent}: steered`]);
-		assert.throws(() => steerAfter(suggested, suggested), /agent_prompt_stalled: Prompt submission uncertain/);
-		assert.throws(() => steerAfter(complete, complete), /agent_prompt_stalled: Prompt submission uncertain/);
+		assert.throws(() => steerAfter(suggested, suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
+		assert.throws(() => steerAfter(complete, complete), new RegExp(`${command} sent, and status.md shows no context reset`));
+	});
+
+	test(`${harness.name} steer takes the handoff command as steered on the context reset, not on working`, () => {
+		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
+		const agent = agentName(sandbox);
+		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
+		const command = harness.tokens["handoff.command"];
+		const suggested = `session handoff suggested; approve with ${command}`;
+		const steerReaching = (to: string) => {
+			const io = fakeIo(
+				{ "sbx ls --json": { sandboxes: [{ name: sandbox, status: "running", workspaces: ["/w/household-budget"] }] } },
+				harness,
+			);
+			io.files[path] = `status: implementing\nattention: ${suggested}\n`;
+			io.herdr = (() => {
+				io.files[path] = `status: implementing\nattention: ${to}\n`;
+				return {};
+			}) as typeof io.herdr;
+			steer(sandbox, command, io);
+			return io.lines;
+		};
+
+		assert.deepEqual(steerReaching("session handoff complete; fresh session idle"), [`${agent}: steered`]);
+		assert.throws(() => steerReaching(suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
 	});
 
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {

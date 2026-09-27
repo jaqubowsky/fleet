@@ -253,6 +253,16 @@ test("an empty scope asks herdr and sbx nothing", (t: TestContext) => {
 	assert.deepEqual(io.calls, []);
 });
 
+test("a watch with nothing to follow says how to follow a container this pane did not start", (t: TestContext) => {
+	const { io } = herdr(t, []);
+
+	watch(() => [], io);
+
+	assert.deepEqual(io.lines, [
+		"[fleet] watching nothing yet; cfleet up adds containers within 30s, and cfleet watch <sandbox> follows one this pane did not start",
+	]);
+});
+
 test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
 	const { io, intervals, sockets } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },

@@ -18,7 +18,7 @@ const io = realIo(home, h);
 const cli = h.cli;
 
 const usage = `usage:
-  ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, on a branch named after <label> without --branch and never the default branch, bind what its profile allows, lay out the task directory with permissions.md and, when host/projects holds an overlay, project.md, start pi in a herdr tab, send nothing
+  ${cli} up <label> [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, on a branch named after <label> without --branch and never the default branch, bind what its profile allows, lay out the task directory with permissions.md and, when host/projects holds an overlay, project.md, start the seat's agent in a herdr tab, send nothing
   ${cli} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
   ${cli} profile [<repo>] [--apply]                   what host/repos.json lets each seat do in <repo>, a checkout (default here) or owner/name, then its host/projects overlay; --apply sets the checkout's commit.gpgsign and, where the host pushes on its own, an HTTPS origin
   ${cli} ls                                           containers with herdr status, branch and dirty count

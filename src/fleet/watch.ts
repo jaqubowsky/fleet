@@ -349,7 +349,7 @@ export function watch(
 	refresh();
 	if (!tracked.size)
 		io.log(
-			`[fleet] watching nothing yet; ${io.harness.cli} up adds containers within ${REFRESH_MS / 1000}s`,
+			`[fleet] watching nothing yet; ${io.harness.cli} up adds containers within ${REFRESH_MS / 1000}s, and ${io.harness.cli} watch <sandbox> follows one this pane did not start`,
 		);
 	const timers = [
 		setInterval(refresh, REFRESH_MS),
