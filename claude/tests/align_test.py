@@ -70,7 +70,7 @@ profiles = json.loads(align.PROFILES.read_text(encoding="utf-8"))
 private = {
     **profiles,
     "alice/private-app": {
-        "host": {"sign": "none", "push": "auto", "pr": "auto", "merge": "auto", "linear": "write", "linearServer": "linear-private"},
+        "host": {"sign": "none", "push": "auto", "pr": "auto", "merge": "auto", "down": "human", "linear": "write", "linearServer": "linear-private"},
         "container": {"push": "auto", "pr": "auto", "linear": "read", "linearServer": "linear-private-readonly", "token": "op://Dev/GitHub PAT private-app/credential"},
         "resources": {"memory": "4g", "cpus": "4"},
     },

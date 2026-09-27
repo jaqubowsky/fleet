@@ -5,6 +5,7 @@
       "push": "human",
       "pr": "none",
       "merge": "none",
+      "down": "human",
       "linear": "none"
     },
     "container": {
@@ -22,6 +23,7 @@
       "push": "human",
       "pr": "none",
       "merge": "none",
+      "down": "human",
       "linear": "none"
     },
     "container": {
@@ -38,6 +40,7 @@
       "push": "auto",
       "pr": "auto",
       "merge": "auto",
+      "down": "human",
       "linear": "none"
     },
     "container": {
@@ -54,6 +57,7 @@
       "push": "human",
       "pr": "none",
       "merge": "none",
+      "down": "human",
       "linear": "none"
     },
     "container": {
@@ -70,6 +74,7 @@
       "push": "human",
       "pr": "none",
       "merge": "none",
+      "down": "human",
       "linear": "none"
     },
     "container": {

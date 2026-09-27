@@ -1,6 +1,6 @@
 type Level = "none" | "human" | "auto";
 type LinearLevel = "none" | "read" | "write";
-type Host = { sign: Level; push: Level; pr: Level; merge: Level; linear: LinearLevel; linearServer?: string };
+type Host = { sign: Level; push: Level; pr: Level; merge: Level; down: Level; linear: LinearLevel; linearServer?: string };
 type Container = { push: Level; pr: Level; linear: LinearLevel; linearServer?: string; token: string };
 type Resources = { memory: string; cpus: string };
 export type Profile = { match: string; host: Host; container: Container; resources: Resources };
@@ -59,7 +59,7 @@ export function parseProfiles(source: string): Profiles {
 		const entry = object(value, where);
 		exactly(entry, ["host", "container", "resources"], where);
 		if (object(entry.container, `${where}.container`).merge !== undefined) throw new Error(`${where}.container.merge: containers never merge`);
-		const host = seat(entry.host, ["sign", "push", "pr", "merge"], [], `${where}.host`) as Host;
+		const host = seat(entry.host, ["sign", "push", "pr", "merge", "down"], [], `${where}.host`) as Host;
 		const container = seat(entry.container, ["push", "pr"], ["token"], `${where}.container`) as Container;
 		const resources = object(entry.resources, `${where}.resources`);
 		exactly(resources, ["memory", "cpus"], `${where}.resources`);
@@ -89,8 +89,10 @@ export function hostLinearServers(profiles: Profiles): Record<string, string> {
 	return servers;
 }
 
-const linear = (entry: Host | Container): string =>
-	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : "; write only what you were told to, and say what you posted"}`;
+const WRITES = { container: "write only what you were told to", host: "move states, file not-started issues and post the acceptance comment by judgment" };
+
+const linear = (entry: Host | Container, seat: keyof typeof WRITES): string =>
+	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : `; ${WRITES[seat]}, and say what you posted`}`;
 
 function says(cli: string): Record<string, Record<string, Record<string, string>>> {
 	const resync = `then \`${cli} steer <sandbox> "resync and open the PR"\`; the resync comes first because signing rewrote its commits`;
@@ -108,6 +110,7 @@ function says(cli: string): Record<string, Record<string, Record<string, string>
 			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${cli} land --push\`; the person confirms it with Touch ID`, auto: `push with \`git push\`, never forced; the guard allows it, and \`${cli} profile --apply\` keeps the origin on HTTPS with no branch tracking` },
 			pr: { none: "the host opens no pull request; the guard refuses `gh pr create`", human: "prepare the pull request and hand its command to the person; the guard refuses `gh pr create`", auto: "open the pull request with `gh pr create`; the guard allows it" },
 			merge: { none: "the host merges nothing; the guard refuses `gh pr merge`", human: "accept or reject the pull request, then hand the merge to the person; the guard refuses `gh pr merge`", auto: "merge an accepted pull request with `gh pr merge`; the guard allows it" },
+			down: { none: `the host takes no container down; the person runs \`${cli} down\`, and nothing refuses it, so this line is the rule`, human: `\`${cli} down <sandbox>\` on the person's word, every time; the task directory stays, and nothing refuses it, so this line is the rule`, auto: `\`${cli} down <sandbox>\` once its pull request is merged; the task directory stays` },
 			land: {
 				host: `\`${cli} land --sign --push <sandbox>\` puts the container's branch on GitHub, ${resync}`,
 				person: `\`${cli} land --sign <sandbox>\` brings the container's branch here and the person pushes it from their own shell, ${resync}`,
@@ -131,7 +134,7 @@ export function describe(repo: string, profile: Profile, cli: string): string {
 		line("push", container.push, say.container.push[container.push]),
 		line("pr", container.pr, say.container.pr[container.pr]),
 		line("merge", "none", "containers never merge"),
-		line("linear", container.linear, linear(container)),
+		line("linear", container.linear, linear(container, "container")),
 		`- resources: ${resources.memory} memory, ${resources.cpus} cpus`,
 		"",
 		"## Host",
@@ -140,7 +143,8 @@ export function describe(repo: string, profile: Profile, cli: string): string {
 		line("push", host.push, say.host.push[host.push]),
 		line("pr", host.pr, say.host.pr[host.pr]),
 		line("merge", host.merge, say.host.merge[host.merge]),
-		line("linear", host.linear, linear(host)),
+		line("down", host.down, say.host.down[host.down]),
+		line("linear", host.linear, linear(host, "host")),
 		`- land: ${say.host.land[container.push === "auto" ? "auto" : host.push === "none" ? "person" : "host"]}`,
 		"",
 	].join("\n");
