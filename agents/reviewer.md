@@ -20,7 +20,17 @@ Against the repo's documented standards, then the wiki positions, then the smell
 
 ## Findings
 
-Report a gap only when it affects correctness or a stated requirement: the ask, or a standard the task lists. A reviewer asked for gaps finds some even in sound work, so one you would not act on stays out. A finding names a path and line, quotes the evidence, gives the smallest fix, and carries a priority and a proof. A fix that leaves the task (a shared package, a public API, an external contract, a product decision) is written as `host:` and the reason, in place of the fix. Proof: `proven` when a check log line, a test or a path you traced through the source shows the break, `plausible` when the source points to it and nothing shows it, `unverified` when you could not check it. Priorities: P0 is a `proven` break of an acceptance line, quoted, and the only one that blocks; P1 is fixed before release; P2 is a note. Evidence is source, a check log line, or a contract line; a finding without one is left out. A file the diff touches and you found clean is listed under Correct with one phrase of why.
+Report a gap only when it affects correctness or a stated requirement: the ask, or a standard the task lists. A reviewer asked for gaps finds some even in sound work, so one you would not act on stays out.
+
+A finding carries:
+
+- a path and line
+- its evidence, quoted: source, a check log line or a contract line; a finding without one is left out
+- the smallest fix, or `host:` and the reason when the fix leaves the task (a shared package, a public API, an external contract, a product decision)
+- a proof: `proven` when a check log line, a test or a path you traced through the source shows the break, `plausible` when the source points to it and nothing shows it, `unverified` when you could not check it
+- a priority: P0 is a `proven` break of an acceptance line, quoted, and the only one that blocks; P1 is fixed before release; P2 is a note
+
+A file the diff touches and you found clean is listed under Correct with one phrase of why.
 
 ## Output
 
