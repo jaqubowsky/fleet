@@ -342,6 +342,14 @@ test("the claude host watches the containers its own pane put up or steered last
 	});
 });
 
+test("the claude container turns the feedback survey off, so no survey sits in the input a steer types into", () => {
+	renderSeats("claude", (out) => {
+		const settings = JSON.parse(readFileSync(`${out}/container/context/settings.json`, "utf8"));
+
+		assert.equal(settings.env.CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY, "1");
+	});
+});
+
 test("a profile that gives the host Linear adds its server to pi and omp mcp.json, beside the servers already there", () => {
 	const profiles = {
 		"read /root/host/repos.json": WITH_PRIVATE,
@@ -484,7 +492,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /`ticket\.md`/);
 			assert.match(skill, /--merge --match-head-commit/);
 			const rules = rendered(out, "host", name === "claude" ? "rules/host.md" : "AGENTS.md");
-			assert.match(rules, /moves past a merge that changed a lockfile, run the project's install there yourself, before anything else runs from it/);
+			assert.match(rules, /moves past a merge that changed a lockfile, run the project's frozen install there yourself, which leaves the lockfile as merged, before anything else runs from it/);
 			const refs = rendered(out, "host", "refs/artifacts.md");
 			assert.match(refs, /^acceptance\.md /m);
 			assert.match(refs, /^ticket\.md /m);
