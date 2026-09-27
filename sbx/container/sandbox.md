@@ -18,7 +18,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Task directory
 
-1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: layout, the pipeline and the status contract are in {{refs}}. Read that file and `status.md` before your first command
+1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file and `status.md` before your first command
 2. `project.md`, when present, says how this project does what the rules require: read it too
 3. `runbook/` at the root of `$FLEET_ARTIFACTS` may hold how this app starts and how its screens drive. The root is shared by every container on this repository and read by the person
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md`, `~/.omp/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
@@ -33,6 +33,19 @@ You run in an isolated container. Someone outside watches this session and gives
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 8. A question for the host goes into `attention:` under `status: blocked`, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
+
+## The run
+
+A ticket, a bug report or a feature runs in this order, every output in the task directory:
+
+1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled
+2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first
+3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
+4. Before each commit, the review decision is a Log line in `status.md`, run or skipped with the reason. A run is `two-axis-review`, at most one per ticket: `review.md`, evidence in `logs/review-<head-sha7>/`
+5. Work that changes what a user sees is verified once, after the run's last commit, over the `Seen:` criteria or the short run's accepted behaviour: the way `project.md` names, else the check the change calls for
+6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`
+
+The short run skips step 2, for one accepted behaviour, one seam and one commit; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 
 ## Session handoff
 
