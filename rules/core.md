@@ -9,7 +9,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating; plausibility and memory are not evidence
 4. Verdict, not a pro/con list: what it optimizes for, a number behind it, one real downside. clean/robust/scalable carry no weight
 5. Prose style is skill `unslop`, applied to every reply. Sentence case headings
-6. Chat in the user's language. Everything committed or written to a task directory in English
+6. Chat in the user's language. Everything committed or written to a file in English
 7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user
 9. Explain how things work in everyday language before adding technical detail
@@ -41,7 +41,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 3. The repo's own gate stays on: no `--no-verify`, no `--no-hooks`, no skipped pre-commit. A hook the environment cannot run, as a plain commit's output shows, and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
 4. Improvement work: same number before and after. No baseline -> no improvement claim, say so
 5. Run checks through the project's declared scripts, scoped to the question: a runner filter for one package, a path for one file
-6. A claim about what a user sees is unproven until its frames were opened. Verify it before hand-off, whatever the run shape, the way `project.md` names when present
+6. A claim about what a user sees is unproven until its frames were opened. Verify it before hand-off, whatever the run shape, the way the project names when it names one
 
 ## Git
 
