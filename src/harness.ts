@@ -31,7 +31,9 @@ const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const pollCi = (agent: string) => `${agent} has no background shell, so change it to \`reads=1\`: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
 const PI_WATCH = "Steer returns at once and puts the container under watch; the `[fleet]` wake is where the outcome lands.";
-const watchOwner = (agent: string, cli: string, env: string) => `Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch.`;
+const watchSource = (agent: string, cli: string, env: string) =>
+	`Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
+const RELOAD_MODELS = "after `/reload`";
 const CONTINUE = "Continue the previous task: read current durable artifacts and follow Next step in status.md.";
 const continueInOneSteer = (cli: string) => `For an end-to-end task, approve and continue in one steer: \`${cli} steer <sandbox> "/session-handoff ${CONTINUE}"\`.`;
 
@@ -63,12 +65,11 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
 			watch: PI_WATCH,
-			"review.saver": "the runtime",
 			"steer.result": "steered; pi takes it after its current tool call, and the container is under watch from now on",
-			"watch.owner": watchOwner("Pi", "fleet", "PI_SESSION_ID"),
+			"watch.source": watchSource("Pi", "fleet", "PI_SESSION_ID"),
+			"reload.models": RELOAD_MODELS,
 			"delegation.parallel": "\"Parallel\" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
-			"models.row": "| switch models for new containers | `fleet render` after editing `pi/profiles/models.json` in the harness repo, or `--model` on one `fleet up` | files rewritten; host sees it after `/reload`, containers after `fleet build` |",
 			"handoff.command": "/session-handoff",
 			"handoff.continue": continueInOneSteer("fleet"),
 			"ci.wait": pollCi("pi"),
@@ -101,12 +102,11 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
 			watch: PI_WATCH,
-			"review.saver": "the runtime",
 			"steer.result": "steered; omp takes it after its current tool call, and the container is under watch from now on",
-			"watch.owner": watchOwner("OMP", "ofleet", "OMP_SESSION_ID"),
+			"watch.source": watchSource("OMP", "ofleet", "OMP_SESSION_ID"),
+			"reload.models": RELOAD_MODELS,
 			"delegation.parallel": "\"Parallel\" = one `task` batch holding several independent `explorer` or `researcher` items, started together, results collected before any synthesis",
 			"model.flag": "<provider/id:thinking>",
-			"models.row": "| switch models for new containers | `ofleet render` after editing `omp/profiles/models.json` in the harness repo, or `--model` on one `ofleet up` | files rewritten; host sees it after `/reload`, containers after `ofleet build` |",
 			"handoff.command": "/session-handoff",
 			"handoff.continue": continueInOneSteer("ofleet"),
 			"ci.wait": pollCi("omp"),
@@ -137,11 +137,11 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
 			watch: "Steer returns at once; the `[fleet]` wake is where the outcome lands, and it reaches you only through `cfleet watch` held with `Monitor` at `timeout_ms: 1800000`: start it before the first steer, one per session, and re-arm it at its expiry notice.",
-			"review.saver": "the calling session",
 			"steer.result": "steered; claude takes it as its next message, and `cfleet watch` reports how it settles",
+			"watch.source": "Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `cfleet watch`, held with `Monitor` at `timeout_ms: 1800000`, its maximum. Start it before the first steer and keep one per session; its expiry notice, and a notice that it stopped with an earlier session, is the re-arm, before anything else. With no names it follows the containers whose latest `cfleet up` or `cfleet steer` came from this herdr pane, drops one at its `cfleet down`, and picks up new ones within 30 seconds; names add those sandboxes beside them, whoever put them up. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it.",
+			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel": "\"Parallel\" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis",
 			"model.flag": "<opus|sonnet|model id>",
-			"models.row": "| switch models for new containers | `cfleet render` then `cfleet build` after editing `claude/profiles/models.json` in the harness repo, or `--model` on one `cfleet up` | the image carries it; the host takes it from `align-settings.py --apply` |",
 			"handoff.command": "/clear",
 			"ci.wait": "Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
 			"handoff.continue": `For an end-to-end task, follow the approval with a second steer: \`cfleet steer <sandbox> "${CONTINUE}"\`; \`/clear\` takes no text.`,

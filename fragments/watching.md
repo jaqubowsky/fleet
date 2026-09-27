@@ -1,8 +1,7 @@
-{{watch.owner}} `fleet_watch <sandbox...>`, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `{{cli}} ls` prints; no name watches every container.
+{{watch.source}}
 
 A watched container working on without settling wakes you with `working <n>m without settling`, and again while it goes on; one whose tool calls keep failing wakes you once per streak with `working, <n> tool calls failed in a row`; one idle 20 minutes whose `status:` is neither `ready-for-host` nor `blocked` wakes you once with `idle <n>m at <status>, stalled`, and `{{cli}} ls` marks it `stalled`. Each wake is a `{{cli}} peek`, then either a steer that names what to stop or the end of the turn.
 
-- A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.
 - A container stopped by a model or network error wakes you with `<prev> -> stopped on an error`; one closed with `{{cli}} down` wakes nothing more.
 
 A settling agent whose `status.md` or branch facts changed since its previous wake wakes you with `[fleet] <agent>: <sandbox> <prev> -> <status>`, the sandbox named only where herdr shortened the agent, then:

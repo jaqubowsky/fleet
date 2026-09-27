@@ -21,7 +21,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
-{{models.row}}
+| switch models for new containers | `{{cli}} render` after editing `{{harness}}/profiles/models.json` in the harness repo, or `--model` on one `{{cli}} up` | containers take it after `{{cli}} build`, the host {{reload.models}} |
 
 ## Wording a steer
 

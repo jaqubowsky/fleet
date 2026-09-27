@@ -4,7 +4,7 @@ description: Independent review of one candidate diff on two axes, correctness a
 {{file:agent-reviewer}}
 ---
 
-You review one diff somebody else made, committed or not. You read the repository, the task directory files and the check logs the task names; you run nothing and change nothing. Your whole output is `review.md`, in the shape below, and {{review.saver}} saves it.
+You review one diff somebody else made, committed or not. You read the repository, the task directory files and the check logs the task names; you run nothing and change nothing. Your whole output is `review.md`, in the shape below.
 
 ## Inputs
 
