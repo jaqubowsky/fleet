@@ -85,7 +85,7 @@ test("the claude hook refuses a privileged command that is not bare on one line,
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
 
-	for (const command of ["gh pr view 12 | head", "gh pr checks 12 > checks.txt", "npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "gh pr list 2>&1", "gh run view 7 --log-failed | tail", "gh run list --commit abc > runs.txt", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
+	for (const command of ["npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "git fetch origin && git log origin/main", "gh run view 7 --log-failed | tail", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
 	assert.match(ask("gh pr create --title 'a | b' --body 'c; d'"), /"permissionDecision":"allow"/);
 	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "gh run list --commit abc", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
 });
@@ -95,12 +95,22 @@ test("the claude hook refuses every sandbox exclusion that is not bare, and name
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
 	const excluded: string[] = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../claude/managed-settings.json"), "utf8")).sandbox.excludedCommands;
+	const reads = ["gh pr view", "gh pr checks", "gh pr list", "gh run list"];
 
 	const refusal = ask("true && git push");
-	for (const pattern of excluded) {
-		const command = pattern.replace(/\*$/, "");
+	for (const command of excluded.map((pattern) => pattern.replace(/\*$/, "")).filter((command) => !reads.includes(command))) {
 		assert.match(ask(`${command}\n`), /bare, on one line/, command);
 		assert.ok(refusal.includes(command), command);
 	}
+	for (const command of reads) assert.equal(ask(`${command} | head`), "", command);
 	assert.match(ask('git add -A && git commit -m "fix"'), /bare, on one line/);
+});
+
+test("the claude hook lets a GitHub read run in any shell form, since the sandbox reaches GitHub, and keeps writes bare", () => {
+	const root = privateRoot();
+	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
+	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
+
+	for (const command of ["gh pr view 12 | head", "gh pr diff 12 | grep -c '^+'", "gh pr checks 12 > checks.txt", "gh pr list 2>&1", "gh run list --commit abc > runs.txt", "for n in 12 13; do gh pr view $n --json title; done"]) assert.equal(ask(command), "", command);
+	for (const command of ["gh pr merge 12 --merge | cat", "gh pr view 12 && gh pr merge 12 --merge", "for n in 12 13; do gh pr merge $n --merge; done", "if true; then gh pr create --fill; fi", "echo 12 | xargs gh pr merge", "/opt/homebrew/bin/gh pr create --fill", "env gh pr merge 12 --merge", "command gh pr merge 12"]) assert.match(ask(command), /"permissionDecision":"deny"/, command);
 });

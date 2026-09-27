@@ -6,12 +6,16 @@ type HookInput = { tool_name?: string; tool_input?: Record<string, unknown>; cwd
 
 const POLICY = new RegExp(`^(${POLICY_TOOLS.join("|")})$`);
 const EXCLUDED: string[] = JSON.parse(readFileSync(new URL("../managed-settings.json", import.meta.url), "utf8")).sandbox.excludedCommands.map((pattern: string) => pattern.replace(/\*$/, ""));
-const PRIVILEGED = new RegExp(`^[\\s(]*(${EXCLUDED.map((command) => command.split(" ").join("\\s+")).join("|")})(?![\\w-])`);
+const SANDBOXED_READ = /^gh (pr (view|checks|list)|run list)$/;
+const BARE_ONLY = EXCLUDED.filter((command) => !SANDBOXED_READ.test(command));
+const BARE_ONLY_NAMES = BARE_ONLY.map((command) => command.split(" ").join("\\s+")).join("|");
+const PRIVILEGED = new RegExp(`(^|[^\\w-])(${BARE_ONLY_NAMES})(?![\\w-])`);
+const BARE = new RegExp(`^\\s*(${BARE_ONLY_NAMES})(?![\\w-])[^|;&<>()\\n]*$`);
 const QUOTED = /'[^']*'|"(\\.|[^"\\])*"/g;
-const NOT_BARE = `The sandbox exclusion matches a privileged command (${EXCLUDED.join(", ")}) only when it is the whole command, so this one would run inside the sandbox and fail. Run it bare, on one line: no pipe, redirect, &&, ;, parenthesis or newline around it, no newline inside its arguments, and any other step as its own call.`;
+const NOT_BARE = `The sandbox exclusion matches a privileged command (${BARE_ONLY.join(", ")}) only when it is the whole command, so this one would run inside the sandbox and fail. Run it bare, on one line: its own name first, with no path, env or command before it, no pipe, redirect, &&, ;, parenthesis or newline around it, no newline inside its arguments, and any other step as its own call.`;
 
 function privilegedNotBare(command: string): boolean {
-	return commandsOf(command).some((segment) => PRIVILEGED.test(segment)) && /[|;&<>()\n]/.test(command.replace(QUOTED, (quoted) => (quoted.includes("\n") ? "\n" : "")));
+	return commandsOf(command).some((segment) => PRIVILEGED.test(segment.replace(QUOTED, ""))) && !BARE.test(command.replace(QUOTED, (quoted) => (quoted.includes("\n") ? "\n" : "")));
 }
 
 export function answer(input: HookInput, root?: string): string {
