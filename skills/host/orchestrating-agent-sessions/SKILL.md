@@ -25,10 +25,14 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 
 ## Wording a steer
 
-A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself. How the work runs (reviews, commits, session handoffs) is the container's rules' to decide, and a decision already sits in `spec.md` once the container has it, so after a handoff the stock continue is the whole steer; on a run without `spec.md`, the continue carries the `Decided:` lines again. Keep a steer to a few sentences: a long one reaches the container as pasted content, which it may read as data rather than an order.
+A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. Keep it to a few sentences: a long one reaches the container as pasted content, which it may read as data rather than an order.
+
+- A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself
+- How the work runs (reviews, commits, session handoffs) is the container's rules' to decide
+- After a handoff the stock continue is the whole steer, since a decision already sits in `spec.md` once the container has it. On a run without `spec.md`, the continue carries the `Decided:` lines again
 
 ```text
-Deliver WEB-1716 and WEB-1718 end to end. Decided: restoring an agency brings back only the organizations deleted with it. Stop at ready-for-host.
+Deliver issues 12 and 14 end to end. Decided: restoring a project brings back only the files deleted with it. Stop at ready-for-host.
 ```
 
 ## Coordinating a project
@@ -38,12 +42,19 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 1. The plan is the tracker the overlay names: one issue per ticket, its description in the shape of {{refs.ticket}}, its workflow states the board, a real dependency the tracker's blocking relation. Speak of states as not started, in progress, in review, done and dropped, and read their names from the tracker's workflow for that team. Plan edits are tracker edits, never a branch or a pull request. The vision stays in the repository, the person's: propose a change and ask before writing it. `{{cli}} init <repo>` lays out the vision and a project `AGENTS.md`, leaving every file already there. A container's task directory is the record of one job, not the plan
 2. Only the host moves states, by judgment, as its linear line of `{{cli}} profile <repo>` allows; containers read. Before selecting, starting, accepting, merging or dropping work, reconcile the tracker with the facts, `{{cli}} ls` and the pull requests; on drift the facts win. Where the host cannot read or write there, take the issue text from the user, and name each state move, each new issue and the acceptance comment in your hand-off to the user
 3. A ticket is one change you can accept in one sitting. Blocked by records only a real dependency; how many run at once is scheduling. Order the plan so the checks that judge a merge exist before the first change they judge, and the widest parallel wave starts as early as possible
-4. Tickets whose Scope names disjoint seams (the project's area labels, where it has them) and that wait on no other ticket run in parallel, one container each, as many as the resident memory measured per container, the profile's memory until one is measured, fits into the host's free memory, and within a wave the ticket the most open tickets wait on goes up first. Before a wave starts, settle once what its tickets will share (a behaviour, a token, a file several of them touch) and name it in each steer. Before widening a running ticket's scope, check which running ticket owns that area
+4. Tickets whose Scope names disjoint seams (the project's area labels, where it has them) and that wait on no other ticket run in parallel, one container each:
+   - as many as fit into the host's free memory, at the resident memory measured per container, or the profile's memory until one is measured
+   - within a wave the ticket the most open tickets wait on goes up first
+
+   Before a wave starts, settle once what its tickets will share (a behaviour, a token, a file several of them touch) and name it in each steer. Before widening a running ticket's scope, check which running ticket owns that area
 5. After `{{cli}} up`, write the issue's description into the task directory as `ticket.md`; the steer is one line, the outcome and that path. The container sets `Status:` and ticks criteria there
 6. Whether a change earns an independent review is yours, by risk class: a change a user sees, stored data, a shared seam, security, CI or the build. A ticket in one of these that the container did not review, as its Log line on the review decision says, gets a review ordered in a steer, and the merge waits for its `review.md`
 7. Accept on evidence you looked at yourself, at a depth proportional to what the change can break: the diff, the gate logs, CI as {{refs.ci}} says, and for a change a user sees the proof `project.md` names. `status.md` and `review.md` say where to look, not that it holds. Before the merge, or before handing the pull request to the user where the host does not merge, write `acceptance.md` in the task directory with Fits, Gaps and Seen: what meets the ticket and the vision, what does not, what you opened yourself. Then post it as a comment on the issue and move its state
 8. Only a proven broken acceptance criterion blocks: one fix round and one recheck per ticket, then the merge or your decision. Every other finding becomes a not-started issue with the tracker's own priority and the project's own labels, and a cleanup ticket per wave drains the urgent ones. The ceiling is for agent reviews; a person's review has none
-9. Merge as the host's merge line of `{{cli}} profile <repo>` says, with the method the overlay names, a merge commit when it names none: `gh pr merge <n> --merge --match-head-commit <head sha>`, run bare in the checkout, the overlay's method flag in place of `--merge`, with the full 40-character SHA read in the same turn as {{refs.ci}} says, never one from memory. The guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
+9. Merge as the host's merge line of `{{cli}} profile <repo>` says, with the method the overlay names, a merge commit when it names none:
+   - `gh pr merge <n> --merge --match-head-commit <head sha>`, run bare in the checkout, the overlay's method flag in place of `--merge`
+   - `<head sha>` is the full 40-character SHA read in the same turn as {{refs.ci}} says, never one from memory
+   - the guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
 10. A decision that changes what the user sees reaches the user in your next reply. Standing decisions go where the overlay says, each as `slug (who, date): …`; a ticket's own decisions go into its issue
 11. The host checkout stays on the default branch: it is also the user's window. A fresh host session resumes from the tracker and `{{cli}} ls`
 

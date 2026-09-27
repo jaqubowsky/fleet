@@ -40,7 +40,7 @@ Each read comes back a number or a named state, or it is a finding that ends the
 
 {{ci.wait}} Twenty reads, a minute apart, is the whole wait; a job still hanging then is its own finding. The wait ends by writing the settled state as a `## Log` line in `status.md`: the runs and the commit status it read, or the finding that ended it.
 
-3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Name the repository in every call: inside a container `origin` points at the host checkout, so gh cannot infer it.
+3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Name the repository in every call, as {{refs.ci}} says.
 
 ```bash
 gh pr view <number> --repo <owner>/<repo> --json number,state,headRefOid,isDraft,mergeable
@@ -92,7 +92,13 @@ The base itself needs refreshing only under a conflict, which is the one thing `
 gh api repos/<owner>/<repo>/rules/branches/<branch> --jq '[.[] | {type, strict: .parameters.strict_required_status_checks_policy}]'
 ```
 
-Merge the base in wherever the rules take a merge commit: append-only history, a fast-forward push, every review already done still holding. `required_linear_history`, or a push rejected with `GH013 ... must not contain merge commits`, leaves only a rebase, which hands every bot the whole diff to read again and turns the next push into a forced one, which stays the user's, so it waits for the user's word, goes once, as late as the merge allows, and carries every other fix of that round with it.
+Merge the base in wherever the rules take a merge commit: append-only history, a fast-forward push, every review already done still holding.
+
+`required_linear_history`, or a push rejected with `GH013 ... must not contain merge commits`, leaves only a rebase. A rebase hands every bot the whole diff to read again and turns the next push into a forced one, which stays the user's. So the rebase:
+
+- waits for the user's word
+- goes once, as late as the merge allows
+- carries every other fix of that round with it
 
 A call refused for want of scope is the token's limit rather than a finding, and a rule no probe shows still speaks through the rejected push: report either and hand it back.
 
@@ -117,10 +123,14 @@ Done is the state of the work, not of the merge button. A repo that requires an 
 
 On the current head commit, all three:
 
-- every Actions run completed with `conclusion` `success`, `skipped` or `neutral`, and the combined commit status `success`,
+- every Actions run green as {{refs.ci}} defines it, and the combined commit status `success`,
 - every fresh finding fixed, or rejected in writing in `pr.md`,
 - the branch level with its base, where one of the three cases above called for it.
 
 Green checks alone are not done: one unanswered finding keeps the round open. Report the pull request ready and stop.
 
-Three other ways out. A bot on its third pass over the same pattern gets a written rejection, except on security, authorization, billing, data integrity or migrations, which are fixed anyway. A pull request another one made obsolete ends the watch, is reported, and is closed only on the user's word. Anything turning on a product decision stops and asks.
+Three other ways out:
+
+- A bot on its third pass over the same pattern gets a written rejection. On security, authorization, billing, data integrity or migrations the finding is fixed anyway
+- A pull request another one made obsolete ends the watch, is reported, and is closed only on the user's word
+- Anything turning on a product decision stops and asks

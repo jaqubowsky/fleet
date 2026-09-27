@@ -10,7 +10,10 @@ Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: d
 
 ### 1. Pin the diff
 
-For uncommitted work, from `implement` or named by the user: `git add -A -N` so new files show, then `git diff HEAD --stat` is non-empty before anything else runs, and the range is `<HEAD-sha>..working tree`. Otherwise the fixed point is what the user named: a commit, a branch, `main`, `HEAD~3`. Missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs. Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other.
+- Uncommitted work, from `implement` or named by the user: `git add -A -N` so new files show, then `git diff HEAD --stat` is non-empty before anything else runs. The range is `<HEAD-sha>..working tree`.
+- Otherwise the fixed point is what the user named: a commit, a branch, `main`, `HEAD~3`; missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs.
+
+Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other.
 
 ### 2. Gather the evidence
 
@@ -37,11 +40,27 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-{{file:review-call}} The task text carries, in this order: the range in SHAs; the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist, and when none does, the prompt that set the task, quoted; the path of `logs/review-<head-sha7>/` and each file in it except `pairs.tsv` and a log that has a `.changed` cut, and each check log from step 2 with its exit code, by its cut where it has one; the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`; then `clones.txt` itself, the file's content inside one fenced block, so the reviewer reads the pairs. Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+{{file:review-call}} The task text carries, in this order:
+
+1. the range in SHAs
+2. the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist; when none does, the prompt that set the task, quoted
+3. the path of `logs/review-<head-sha7>/` and each file in it except `pairs.tsv` and a log that has a `.changed` cut
+4. each check log from step 2 with its exit code, by its cut where it has one
+5. the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`
+6. `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
+
+Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 
-Read `review.md`. Report its `PASS` or `FAIL` line and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Fix each finding that carries a smallest fix and close it with its evidence: a test that fails without the fix, or a log path and line. A `plausible` or `unverified` finding whose break no test or trace reproduces closes as not reproduced, unbuilt. Leave each `host:` finding unbuilt: its fix leaves the task. A product decision, whether the reviewer wrote it as `host:` or as a smallest fix, is a question for the user under `attention:`, not a fix. An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
+Read `review.md`. Report its `PASS` or `FAIL` line and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Close each finding:
+
+- one that carries a smallest fix: fix it and close it with its evidence, a test that fails without the fix or a log path and line
+- a `plausible` or `unverified` one whose break no test or trace reproduces: not reproduced, unbuilt
+- a `host:` one: unbuilt, its fix leaves the task
+- a product decision, whether the reviewer wrote it as `host:` or as a smallest fix: a question for the user under `attention:`, not a fix
+
+An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
 
 ```md
 ## Closed after review
