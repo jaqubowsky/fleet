@@ -267,22 +267,28 @@ test("down says so when pi never wrote a session", () => {
 	assert.ok(io.calls.some((c) => c[1] === "rm"));
 });
 
-test("down records the guest's peak memory beside usage.json before removing", () => {
+test("down records the guest's peak, anon memory and high and oom counts beside usage.json before removing", () => {
 	const io = fakeIo({
 		...running,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"sbx exec pi-a cat /sys/fs/cgroup/docker/memory.peak": "4241653760\n",
+		"sbx exec pi-a cat /sys/fs/cgroup/docker/memory.peak /sys/fs/cgroup/docker/memory.stat /sys/fs/cgroup/docker/memory.events":
+			"4241653760\nanon 3170893824\nfile 812646400\nanon_thp 0\nlow 0\nhigh 17\nmax 3\noom 1\noom_kill 1\noom_group_kill 0\n",
 	});
 
 	down("pi-a", {}, io);
 
-	assert.deepEqual(JSON.parse(io.files[`${task}/logs/memory.json`]), { peakBytes: 4241653760 });
+	assert.deepEqual(JSON.parse(io.files[`${task}/logs/memory.json`]), {
+		peakBytes: 4241653760,
+		anonBytes: 3170893824,
+		high: 17,
+		oom: 1,
+	});
 	assert.ok(io.lines.includes(`pi-a: memory peak 4.0 GiB -> ${task}/logs/memory.json`), io.lines.join("\n"));
 	const order = io.calls.map((c) => c.join(" "));
 	assert.ok(order.indexOf(`write ${task}/logs/memory.json`) < order.indexOf("sbx rm -f pi-a"));
 });
 
-test("down goes on without memory.peak and says so", () => {
+test("down goes on without the guest's memory files and says so", () => {
 	const io = fakeIo({
 		...running,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
@@ -292,11 +298,11 @@ test("down goes on without memory.peak and says so", () => {
 	down("pi-a", {}, io);
 
 	assert.equal(io.files[`${task}/logs/memory.json`], undefined);
-	assert.ok(io.lines.some((l) => /^pi-a: no memory peak recorded: cat: .*memory\.peak: No such file/.test(l)), io.lines.join("\n"));
+	assert.ok(io.lines.some((l) => /^pi-a: no memory recorded: cat: .*memory\.peak: No such file/.test(l)), io.lines.join("\n"));
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-a"]);
 });
 
-test("down records no peak when the guest prints something other than a number", () => {
+test("down records no memory when the guest prints something other than numbers", () => {
 	const io = fakeIo({
 		...running,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
@@ -306,7 +312,7 @@ test("down records no peak when the guest prints something other than a number",
 	down("pi-a", {}, io);
 
 	assert.equal(io.files[`${task}/logs/memory.json`], undefined);
-	assert.ok(io.lines.includes("pi-a: no memory peak recorded: /sys/fs/cgroup/docker/memory.peak printed max"), io.lines.join("\n"));
+	assert.ok(io.lines.includes("pi-a: no memory recorded: peakBytes, anonBytes, high, oom unreadable in /sys/fs/cgroup/docker"), io.lines.join("\n"));
 });
 
 test("down treats a failed secret cleanup after removal as a warning, and a failed removal as an error", () => {
