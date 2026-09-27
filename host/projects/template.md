@@ -4,8 +4,6 @@
 
 ## User-visible proof
 
-## Gates
-
 ## Setup
 
 ## Merge method
