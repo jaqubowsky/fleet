@@ -492,7 +492,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /`ticket\.md`/);
 			assert.match(skill, /--merge --match-head-commit/);
 			const rules = rendered(out, "host", name === "claude" ? "rules/host.md" : "AGENTS.md");
-			assert.match(rules, /moves past a merge that changed a lockfile, run the project's frozen install there yourself, which leaves the lockfile as merged, before anything else runs from it/);
+			assert.match(rules, /moves past a merge that changed a lockfile, tell the user to run the project's install before running anything from this checkout, naming the command; you do not run it/);
 			const refs = rendered(out, "host", "refs/artifacts.md");
 			assert.match(refs, /^acceptance\.md /m);
 			assert.match(refs, /^ticket\.md /m);
