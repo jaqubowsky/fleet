@@ -393,6 +393,25 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 }
 
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} container checkpoints, asks through attention, names host items and cuts small tickets`, () => {
+		renderSeats(name, (out) => {
+			const implement = rendered(out, "container", "implement/SKILL.md");
+			assert.match(implement, /Commit the first coherent vertical piece before widening/);
+			assert.match(implement, /In a short run, or on an order naming this one ticket, the rest stays in this ticket/);
+			assert.match(implement, /name the acceptance line most likely to be false and make the check that would catch it the first red of step 5/);
+			const rules = (readdirSync(`${out}/container`, { recursive: true }) as string[])
+				.filter((file) => /(^|\/)(AGENTS|CLAUDE)\.md$|\/rules\/[^/]+\.md$/.test(file))
+				.map((file) => readFileSync(join(out, "container", file), "utf8"))
+				.join("\n");
+			assert.match(rules, /A question for the host goes into `attention:` under `status: blocked`, and the turn ends there\. Never a `\w+` dialog here/);
+			assert.equal(rendered(out, "container", "refs/artifacts.md").match(/every host action (is )?named in Next step, never counted, and in Summary once Next step is full/g)?.length, 2);
+			assert.match(rendered(out, "container", "to-tickets/SKILL.md"), /cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer/);
+			assert.match(rendered(out, "container", "refs/ticket.md"), /past 500 it is two tickets/);
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} updates a pull request body through the REST API and reads colours from computed styles`, () => {
 		renderSeats(name, (out) => {
 			assert.ok(rendered(out, "container", "babysit-pr/SKILL.md").includes("gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>"));

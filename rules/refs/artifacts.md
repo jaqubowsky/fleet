@@ -47,8 +47,8 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
 | `reviewing` | the review of uncommitted work, or of a range the user named, runs |
 | `testing` | the verification of what a user sees runs, over the change or its siblings |
-| `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, every line `ticket-check` prints over `issues/` named in Summary as missing verification, and no open P0 or P1 finding other than a `host:` one; missing verification belongs in Summary, host actions in Next step, and `attention` stays `none` unless a decision blocks delivery |
-| `pr-open` | a pull request is open and its latest round is answered; host actions belong in Next step, and `attention` names only a decision or input blocking delivery |
+| `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, every line `ticket-check` prints over `issues/` named in Summary as missing verification, and no open P0 or P1 finding other than a `host:` one; missing verification belongs in Summary, every host action named in Next step, never counted, and in Summary once Next step is full, and `attention` stays `none` unless a decision blocks delivery |
+| `pr-open` | a pull request is open and its latest round is answered; every host action is named in Next step, never counted, and in Summary once Next step is full, and `attention` names only a decision or input blocking delivery |
 
 The host reads this file and nothing else to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 

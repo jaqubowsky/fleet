@@ -28,4 +28,4 @@ One line each: what a reader might expect here and another ticket, or nobody, de
 
 Optional: a decision this slice made, a prototype snippet trimmed to that decision.
 
-A ticket stays near 300 words. It holds the plan, never progress: state lives in `Status:`, the run in the task's `status.md` and in git.
+A ticket stays near 300 words; past 500 it is two tickets. It holds the plan, never progress: state lives in `Status:`, the run in the task's `status.md` and in git.

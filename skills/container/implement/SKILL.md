@@ -25,7 +25,9 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
    The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 7 runs, so name it now, not later.
 
-5. **Build at the pre-agreed seams.** Read skill `tdd` before the first test and run its loop: one seam, one red, one implementation.
+   Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
+
+5. **Build at the pre-agreed seams.** Read skill `tdd` before the first test and run its loop: one seam, one red, one implementation. Commit the first coherent vertical piece before widening: a ticket that still holds a second behaviour once the first works end to end was cut too wide, so the first takes steps 7-10 as this ticket, and the rest, with its acceptance lines, becomes the next ticket under `issues/`, blocked by it, with the split in `analysis.md` changed as `to-tickets` step 4 says. In a short run, or on an order naming this one ticket, the rest stays in this ticket.
 
 6. Run typechecking regularly and single test files regularly. The full suite belongs to step 7, not here.
 
