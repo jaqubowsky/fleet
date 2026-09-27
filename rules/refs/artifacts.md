@@ -23,7 +23,15 @@ logs/          sessions/, status/, activity.jsonl, usage.json, memory.json, <ski
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
 
-One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role. `analysis.md` is a snapshot anchored to the analyzed commit and is replaced by a later analysis; accepted shared decisions and scope changes update `spec.md`, while slice-only changes update their ticket. `review.md` covers only its named range: close findings from that review in its addendum. A new review replaces `review.md`, and the one it replaces moves into its `logs/review-<head-sha7>/`; `pr.md` appends one round at a time. Each `browser/<run-id>/report.md` records one browser run, including its cleanup; a new run gets a new directory. Historical and run-specific evidence stays under versioned `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
+One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
+
+- `analysis.md` is a snapshot anchored to the analyzed commit; a later analysis replaces it
+- accepted shared decisions and scope changes update `spec.md`; slice-only changes update their ticket
+- `review.md` covers only its named range, and that review's findings close in its addendum. A new review replaces it, and the one it replaces moves into its `logs/review-<head-sha7>/`
+- `pr.md` appends one round at a time
+- each `browser/<run-id>/report.md` records one browser run, cleanup included; a new run gets a new directory
+
+Historical and run-specific evidence stays under `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
 
 ## status.md
 
@@ -49,7 +57,13 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
 | `reviewing` | the review of uncommitted work, or of a range the user named, runs |
 | `testing` | the verification of what a user sees runs, over the change or its siblings |
-| `ready-for-host` | the run's last step passed, or the latest review round on GitHub is answered, with no open ticket, failed criterion or regression, every line `ticket-check` prints over `issues/` named in Summary as missing verification, and no open P0 or P1 finding other than a `host:` one; missing verification belongs in Summary, every host action named in Next step, never counted, and in Summary once Next step is full, and `attention` stays `none` unless a decision blocks delivery |
+| `ready-for-host` | the run's last step passed, or the latest review round on GitHub is answered, with no open ticket, failed criterion or regression, and no open P0 or P1 finding other than a `host:` one |
+
+At `ready-for-host`:
+
+- Summary names every line `ticket-check` prints over `issues/` as missing verification
+- every host action is named in Next step, never counted, and in Summary once Next step is full
+- `attention` stays `none` unless a decision blocks delivery
 
 The branch's pull request, its CI and its commit counts are facts `{{cli}}` prints beside this file, never a status the agent writes. The host reads this file and those facts to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
