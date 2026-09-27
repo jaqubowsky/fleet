@@ -57,7 +57,7 @@ A task moves through the pipeline in `rules/refs/artifacts.md`, and `status.md` 
  new            analyzing                     review by blast radius, one commit
                                               implementing, reviewing
                                                           │
- down ◀── land ◀── ready-for-host ◀── check-feature ◀─────┘
+ down ◀── land ◀── ready-for-host ◀── verification ◀──────┘
  logs/usage.json,  --sign, --push     testing
  memory.json
  task dir stays

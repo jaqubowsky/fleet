@@ -22,6 +22,7 @@ One line each: what a reader might expect here and another ticket, or nobody, de
 ## Acceptance criteria
 
 - [ ] <criterion a command or a person can check>
+- [ ] Seen: <what a user sees, when the ticket changes it>
 
 ## Notes
 

@@ -1,6 +1,6 @@
 ---
 name: record-walkthrough
-description: 'Record one video of a finished change for a person to watch: the flow replayed at a readable pace, a chapter per criterion, the target highlighted before each action. Use on the user''s word once check-feature passed, before a pull request someone will review by eye.'
+description: 'Record one video of a finished change for a person to watch, a chapter per criterion. Use on the user''s word once check-feature passed.'
 compatibility: Requires the running app, playwright-cli and ffmpeg
 ---
 

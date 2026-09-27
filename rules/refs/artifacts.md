@@ -46,7 +46,7 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 | `blocked` | the work waits on a decision or an input only a person can give, the analysis question included; `attention` names it |
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
 | `reviewing` | the review of uncommitted work, or of a range the user named, runs |
-| `testing` | a browser check of the change or of its siblings runs |
+| `testing` | the verification of what a user sees runs, over the change or its siblings |
 | `ready-for-host` | the run's last step passed with no open ticket, failed criterion or regression, every line `ticket-check` prints over `issues/` named in Summary as missing verification, and no open P0 or P1 finding other than a `host:` one; missing verification belongs in Summary, host actions in Next step, and `attention` stays `none` unless a decision blocks delivery |
 | `pr-open` | a pull request is open and its latest round is answered; host actions belong in Next step, and `attention` names only a decision or input blocking delivery |
 
@@ -66,7 +66,7 @@ Summary and Next step hold only the present, so `## Log` is the run's timeline: 
 | Turning point | Line |
 | --- | --- |
 | a finding, yours or a sub-agent's, that changes the plan or the scope | what was found; the file or log that shows it |
-| a check that closes a step: the baseline, a done-check, the gate, a browser walk | its result; its log |
+| a check that closes a step: the baseline, a done-check, the gate, the verification of what a user sees | its result; its log |
 | a decision, yours or a person's | `Decided: <what>, because <why>`; where it is recorded |
 | an approach dropped | `Dropped: <what>, because <why>`; the log that shows it |
 | `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |
@@ -81,8 +81,13 @@ Findings only: the verdict, what it rests on, what is out of scope, what is open
 
 ## The pipeline
 
-A ticket, a bug report or a feature runs, in this order: `analyze-task`, `to-tickets`, then per ticket `implement` with `tdd` and its gate before its one commit, and a `two-axis-review` of the uncommitted diff when its blast radius earns one, as `implement` decides and logs, then `check-feature` once, after the last ticket, over every criterion of the task. At most one review per ticket, one walk per task, however many tracker issues it spans. `check-regressions` follows when the task's diff changes a shared seam, `record-walkthrough` on the user's word. The analysis ends with one question in `analysis.md`, named in `attention:` under `status: blocked`, that covers the run shape, the split into tickets and the test seams; the later skills ask only for a product decision nothing settled or a split no answer named. An order to deliver end to end answers that question in advance, all but such a product decision.
+A ticket, a bug report or a feature runs in this order:
 
-The agent shortens the run when the analysis shows one accepted behaviour, one seam and one commit: `analyze-task`, then `implement` with `tdd`, its gate and its review decision before the commit, and the analysis says so. The opening prompt overrides in either direction.
+1. `analyze-task`
+2. `to-tickets`
+3. `implement`, per ticket
+4. when the work changes what a user sees: its verification, once after the run's last commit. It covers the `Seen:` criteria of the committed tickets, or a short run's accepted behaviour. `project.md` names how; without one, the check the change calls for
+
+The short run is `analyze-task`, one `implement`, then step 4. It fits one accepted behaviour, one seam and one commit. The opening prompt overrides the choice in either direction.
 
 A prompt with no ticket behind it ("run the build", "read this log") runs no pipeline and leaves no file but `status.md`.

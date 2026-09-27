@@ -286,7 +286,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 				const tables = breakTables(seat);
 				assert.notEqual(tables.length, 0, `${seat} has no natural-break table`);
 				for (const table of tables) {
-					assert.ok(table.includes("| the one ticket the order named is committed | `ready-for-host`, with no session for a next ticket |"), `${seat} table lacks the one-ticket break`);
+					assert.ok(table.includes("| the run's last commit is in, and nothing a user sees is left unverified | `ready-for-host`, with no session for a next ticket |"), `${seat} table lacks the one-ticket break`);
 				}
 			}
 		});
@@ -369,6 +369,25 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /Log line on the review decision/);
 			assert.match(rendered(out, "container", "context/Dockerfile"), /container\/ticket-check\.sh\s+\/usr\/local\/bin\/ticket-check/);
 			assert.ok(rendered(out, "container", "context/container/ticket-check.sh").includes("not done"));
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} verifies what a user sees the way project.md names, with no browser in the container rules`, () => {
+		renderSeats(name, (out) => {
+			const files = (readdirSync(out, { recursive: true }) as string[]).filter((file) => file.endsWith(".md"));
+			const rules = files.filter((file) => file.startsWith("container/") && /(^|\/)(AGENTS|CLAUDE)\.md$|\/rules\/[^/]+\.md$/.test(file));
+			assert.ok(rules.length > 0);
+			for (const file of rules) assert.doesNotMatch(readFileSync(join(out, file), "utf8"), /browser/i, file);
+			const triggers = files
+				.flatMap((file) => readFileSync(join(out, file), "utf8").split("\n").map((line) => `${file}: ${line}`))
+				.filter((line) => /changes a shared seam|`check-regressions` (runs|follows)/.test(line));
+			assert.equal(triggers.length, 1, triggers.join("\n"));
+			assert.match(triggers[0]!, /check-regressions\/SKILL\.md: description:/);
+			assert.match(rendered(out, "container", "refs/ticket.md"), /- \[ \] Seen: /);
+			assert.match(rendered(out, "container", "implement/SKILL.md"), /`Seen:`/);
+			assert.match(rendered(out, "container", "refs/artifacts.md"), /\| `testing` \| the verification of what a user sees/);
 		});
 	});
 }

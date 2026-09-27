@@ -1,12 +1,12 @@
 ---
 name: check-regressions
-description: 'Walk the neighbours of a change: every behaviour that passes through a seam the diff modified, on the base checkout and on this one. Use when the task''s diff changes a shared seam, or when the user asks whether a change broke something beside it.'
+description: 'Walk every behaviour through a seam the diff modified, on the base and on this checkout. Use when the task''s diff changes a shared seam, or the user asks what a change broke beside it.'
 compatibility: Requires a container that can start the project's app, plus playwright-cli and base-worktree
 ---
 
 # Check regressions
 
-One question: did this change break a behaviour that worked on the base. `check-feature` has already proved the change itself; this skill proves its neighbours, and costs a base checkout and a second walk, so it runs on a named seam or on the user's word.
+One question: did this change break a behaviour that worked on the base. `check-feature` has already proved the change itself; this skill proves its neighbours, and costs a base checkout and a second walk.
 
 A **sibling** is a behaviour that worked on the base branch and passes through something this diff changed.
 

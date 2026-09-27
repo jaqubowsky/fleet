@@ -73,3 +73,12 @@ test("a done ticket written with CRLF passes, and a tab-indented or starred box 
 	assert.match(run.out, /unticked: - \[ \] tabbed/);
 	assert.match(run.out, /unticked: \* \[ \] starred/);
 });
+
+test("an unticked Seen criterion is printed as missing verification", () => {
+	const dir = issues({ "06-seen.md": `${done}- [ ] Seen: the saved filter shows in the list\n` });
+
+	const run = ticketCheck(join(dir, "06-seen.md"));
+
+	assert.equal(run.status, 1);
+	assert.match(run.out, /06-seen\.md: unticked: - \[ \] Seen: the saved filter shows in the list/);
+});

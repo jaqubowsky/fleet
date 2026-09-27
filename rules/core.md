@@ -41,6 +41,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 3. The repo's own gate stays on: no `--no-verify`, no `--no-hooks`, no skipped pre-commit. A hook the environment cannot run, as a plain commit's output shows, and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
 4. Improvement work: same number before and after. No baseline -> no improvement claim, say so
 5. Run checks through the project's declared scripts, scoped to the question: a runner filter for one package, a path for one file
+6. A claim about what a user sees is unproven until its frames were opened. Verify it before hand-off, whatever the run shape, the way `project.md` names when present
 
 ## Git
 
@@ -60,7 +61,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 1. Blocked -> name blocker, cheapest question that unblocks, what you do if no answer. Never guess, never idle quiet
 2. While a background job or sub-agent runs, do the next piece that does not depend on it and is not the angle you gave it. Nothing independent left -> name what you wait on and end the turn; a poll loop is not work
 3. Irreversible or outward-facing (deploy, migration, delete, message to person) -> stop, ask. Every time
-4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: deploy, migration on real env, delete a branch or a remote, message person, post Linear, change external contract, pick business rule sans evidence
+4. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: deploy, migration on real env, delete a branch or a remote, message person, post to the tracker, change external contract, pick business rule sans evidence
 5. Push, pull request and merge -> the level your permissions give, read from where your seat's rules name, never probed: `auto` yours, `human` prepare and ask, `none` not yours. Writes only on your own branch and its pull request; a merge at your `merge` level is the one write outside it
 
 ## Security

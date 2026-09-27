@@ -1,6 +1,6 @@
 ---
 name: check-feature
-description: 'Walk the acceptance criteria of a finished change through the running app in the browser, one screenshot per criterion. Use once per task, after its last commit, when the task reaches a screen.'
+description: 'Walk the criteria of a finished change through the running app in a browser, one screenshot each. Use when a change a user sees is verified in a browser.'
 compatibility: Requires a container that can start the project's app, plus playwright-cli for the browser session
 ---
 
@@ -20,6 +20,3 @@ One question: does this change do what was asked, on the real screens of the run
 
 5. **Cleanup** as [browser.md](references/browser.md) says. Then end with the run's verdict and the report's absolute path.
 
-## After it
-
-`check-regressions` runs when the task's diff changes a shared seam (a component, hook, query or endpoint the diff changed and other screens use) or the user asks. `record-walkthrough` runs on the user's word, once this audit passed.

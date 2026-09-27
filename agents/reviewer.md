@@ -50,4 +50,4 @@ Verdict: OK | OK with notes | BLOCK
 - <what this review could not judge and what it would take>
 ```
 
-`Shared seams` lists every function, component, hook, query or endpoint the diff modified that other screens or callers use, found by grep; `check-regressions` runs on it. `Verdict` is BLOCK on any P0, OK with notes on any P1 or P2, OK otherwise. `No findings.` under an axis is a result. The verdict covers the range in `Range:` and no other.
+`Shared seams` lists every function, component, hook, query or endpoint the diff modified that other screens or callers use, found by grep. `Verdict` is BLOCK on any P0, OK with notes on any P1 or P2, OK otherwise. `No findings.` under an axis is a result. The verdict covers the range in `Range:` and no other.
