@@ -412,6 +412,21 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 }
 
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} reviewer opens review.md with PASS or FAIL and blocks only a proven break of an acceptance line`, () => {
+		renderSeats(name, (out) => {
+			const reviewer = rendered(out, "container", "agents/reviewer.md");
+			assert.match(reviewer, /```md\nPASS <head-sha> \| FAIL <head-sha>\n/);
+			assert.match(reviewer, /P0 is a `proven` break of an acceptance line, quoted, and the only one that blocks/);
+			assert.match(reviewer, /The first line is `FAIL` on any P0, `PASS` otherwise/);
+			assert.match(reviewer, /proven \| plausible \| unverified/);
+			assert.doesNotMatch(reviewer, /Verdict: OK/);
+			const skill = rendered(out, "container", "two-axis-review/SKILL.md");
+			assert.doesNotMatch(skill, /two axes/i);
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} updates a pull request body through the REST API and reads colours from computed styles`, () => {
 		renderSeats(name, (out) => {
 			assert.ok(rendered(out, "container", "babysit-pr/SKILL.md").includes("gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>"));

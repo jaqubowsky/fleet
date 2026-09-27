@@ -1,10 +1,10 @@
 ---
 name: two-axis-review
-description: 'Independent review of one diff on two axes, correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user asks to review a branch, a PR or work in progress.'
+description: 'Independent review of one diff for correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user asks to review a branch, a PR or work in progress.'
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review one diff on two axes, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
+Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
 
 ## Process
 
@@ -41,13 +41,14 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 5. Hand back
 
-Read `review.md`. Report the verdict and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Fix each finding that carries a smallest fix and close it with its evidence: a test that fails without the fix, or a log path and line. Leave each `host:` finding unbuilt: its fix leaves the task. A product decision, whether the reviewer wrote it as `host:` or as a smallest fix, is a question for the user under `attention:`, not a fix. An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
+Read `review.md`. Report its `PASS` or `FAIL` line and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Fix each finding that carries a smallest fix and close it with its evidence: a test that fails without the fix, or a log path and line. A `plausible` or `unverified` finding whose break no test or trace reproduces closes as not reproduced, unbuilt. Leave each `host:` finding unbuilt: its fix leaves the task. A product decision, whether the reviewer wrote it as `host:` or as a smallest fix, is a question for the user under `attention:`, not a fix. An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
 
 ```md
 ## Closed after review
 
 - P<0-2> <finding>: fixed, <test name, or log path:line>
 - P<0-2> <finding>: host, <why its fix leaves the task>
+- P<0-2> <finding>: not reproduced, <the test or trace that stayed green>
 - P<0-2> <finding>: user, <the question under attention:>
 - `<gate command>`: exit <n>, <log path>
 - Unreviewed: <each file a fix added outside `changed.txt`, or none>
@@ -57,8 +58,5 @@ Checks after commit or rebase keep their detail in check logs or a new browser r
 
 ## Done
 
-`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence, its `host:` reason or its question, and fills the Unreviewed line.
+`review.md` names the range step 1 pinned, every file in `changed.txt` appears in it under a finding or under Correct, every clone pair is ruled on, every check step 2 named appears under Checks read, and Shared seams lists every modified symbol other callers use or says none. Once the fixes are in, the addendum names every finding with its evidence, its `host:` reason, its question or the check that did not reproduce it, and fills the Unreviewed line.
 
-## Why two axes in one reviewer
-
-Code that follows every standard can implement the wrong thing, and code that does exactly what the task asked can break the project's conventions. The two sections stay separate in `review.md` so one verdict never hides the other; one reviewer holds both because both need the same diff, the same evidence and the same fresh eyes, and a second context would only pay for the diff twice.

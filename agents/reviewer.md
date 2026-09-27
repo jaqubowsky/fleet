@@ -20,21 +20,22 @@ Against the repo's documented standards, then the wiki positions, then the smell
 
 ## Findings
 
-A finding names a path and line, quotes the evidence, gives the smallest fix, and carries a priority. A fix that leaves the task (a shared package, a public API, an external contract, a product decision) is written as `host:` and the reason, in place of the fix. Priorities: P0 blocks merge, P1 is fixed before release, P2 is a note. Evidence is source, a check log line, or a contract line; a finding without one is left out. A file the diff touches and you found clean is listed under Correct with one phrase of why.
+Report a gap only when it affects correctness or a stated requirement: the ask, or a standard the task lists. A reviewer asked for gaps finds some even in sound work, so one you would not act on stays out. A finding names a path and line, quotes the evidence, gives the smallest fix, and carries a priority and a proof. A fix that leaves the task (a shared package, a public API, an external contract, a product decision) is written as `host:` and the reason, in place of the fix. Proof: `proven` when a check log line, a test or a path you traced through the source shows the break, `plausible` when the source points to it and nothing shows it, `unverified` when you could not check it. Priorities: P0 is a `proven` break of an acceptance line, quoted, and the only one that blocks; P1 is fixed before release; P2 is a note. Evidence is source, a check log line, or a contract line; a finding without one is left out. A file the diff touches and you found clean is listed under Correct with one phrase of why.
 
 ## Output
 
 ```md
+PASS <head-sha> | FAIL <head-sha>
+
 # Review
 
 Range: <base>...<sha> | <sha>..working tree
-Verdict: OK | OK with notes | BLOCK
 
 ## Correctness and fulfillment
-- P<0-2> <finding>, `<path:line>`, <evidence>, <smallest fix | host: reason>
+- P<0-2> <proven | plausible | unverified> <finding>, `<path:line>`, <evidence>, <smallest fix | host: reason>
 
 ## Engineering quality
-- P<0-2> <finding>, `<path:line>`, <evidence>, <smallest fix | host: reason>
+- P<0-2> <proven | plausible | unverified> <finding>, `<path:line>`, <evidence>, <smallest fix | host: reason>
 - clone `<a>` ~ `<b>`: extract | stays copied, <reason>
 
 ## Correct
@@ -50,4 +51,4 @@ Verdict: OK | OK with notes | BLOCK
 - <what this review could not judge and what it would take>
 ```
 
-`Shared seams` lists every function, component, hook, query or endpoint the diff modified that other screens or callers use, found by grep. `Verdict` is BLOCK on any P0, OK with notes on any P1 or P2, OK otherwise. `No findings.` under an axis is a result. The verdict covers the range in `Range:` and no other.
+`Shared seams` lists every function, component, hook, query or endpoint the diff modified that other screens or callers use, found by grep. The first line is `FAIL` on any P0, `PASS` otherwise; `<head-sha>` is the last SHA of `Range:`, the `<sha>` of `<sha>..working tree`. The two axes stay separate sections, so a pass on one never hides a break on the other. `No findings.` under an axis is a result. The verdict covers the range in `Range:` and no other.
