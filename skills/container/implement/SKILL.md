@@ -15,7 +15,13 @@ Implement the work described in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_N
 
 3. **Load context.** `analysis.md` from the task directory, the parent spec (`spec.md` beside `issues/`) if it exists, plus `CONTEXT.md` and any ADRs touching the area.
 
-4. **Name the goal, the boundaries and the gate.** Before the first edit, print the three lines your rules require: `Goal:` what this ticket makes work, `Boundaries:` what stays untouched, `Done-check:` the command that proves this ticket done and why it is the right command.
+4. **Name the goal, the boundaries and the gate.** Before the first edit, print the three lines your rules require:
+
+   ```text
+   Goal: <what this ticket makes work>
+   Boundaries: <what stays untouched>
+   Done-check: <the command that proves this ticket done>, <why it is the right command>
+   ```
 
    The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 7 runs, so name it now, not later.
 

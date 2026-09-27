@@ -81,6 +81,7 @@ The repository inside a container is a private clone, so writes there stay there
 ## Watching
 
 {{file:watching}}
+
 - `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed. A settle or `unknown` while `status.md` says the work goes on usually means {{harness}} waits on something in the background, a sub-agent or a long command; `{{cli}} peek` tells that from a crash before you act on it.
 - Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 

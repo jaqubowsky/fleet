@@ -18,7 +18,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Task directory
 
-1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: layout, the pipeline and the status contract are in {{refs}}. Read that contract and `status.md` before your first command
+1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: layout, the pipeline and the status contract are in {{refs}}. Read that file and `status.md` before your first command
 2. `project.md`, when present, says how this project does what the rules require: read it too
 3. `runbook/` at the root of `$FLEET_ARTIFACTS` may hold how this app starts and how its screens drive. The root is shared by every container on this repository and read by the person
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md`, `~/.omp/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
