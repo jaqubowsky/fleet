@@ -63,7 +63,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 3. A poll loop is not work. A bounded wait on an external system, such as CI, is work: run it the way its skill says
 4. Irreversible or outward-facing (deploy, migration, delete, message to person) -> stop, ask. Every time
 5. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: deploy, migration on real env, delete a branch or a remote, message person, post to the tracker, change external contract, pick business rule sans evidence
-6. Push, pull request, merge and every other action your seat's permission lines name -> at the level its line gives, read where your seat's rules say, never probed
+6. Push, pull request, merge and every other action your seat's permission lines name -> as its line says, read where your seat's rules name, never probed
 7. Writes stay on your own branch and its pull request. Outside them, only what one of your seat's permission lines names, such as a merge
 
 ## Security
