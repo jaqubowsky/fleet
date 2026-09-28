@@ -38,9 +38,11 @@ export function hostAt(cwd: string, root = ROOT): Host {
 		};
 		return config.some(ghElsewhere) ? { ...granted, pr: "none" as const, merge: "none" as const } : granted;
 	};
-	const reaches = (path: string) => {
-		const rest = relative(real(resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, homedir()))).toLowerCase(), real(profiles).toLowerCase());
-		return !rest.startsWith("..") && !isAbsolute(rest);
-	};
+	const reaches = (path: string) => within(profiles, resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, homedir())));
 	return { levels, reaches };
+}
+
+export function within(path: string, root: string): boolean {
+	const rest = relative(real(root).toLowerCase(), real(path).toLowerCase());
+	return !rest.startsWith("..") && !isAbsolute(rest);
 }

@@ -71,3 +71,42 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 	assert.match(shell?.reason ?? "", /only the person changes it/);
 	assert.equal(read, undefined);
 });
+
+test("pi and omp refuse an edit or a shell redirect into their own homes, and leave reads and the fleet cache alone", () => {
+	const home = "/Users/me";
+	for (const name of ["pi", "omp"] as const) {
+		let captured: Handler | undefined;
+		guard(HARNESSES[name], undefined, home)({ on: (_event, fn) => { captured = fn as Handler; } });
+		const ask = (toolName: string, input: Record<string, unknown>, cwd = "/Users/me/Work/app") => captured!({ toolName, input }, { cwd });
+
+		for (const [toolName, input, cwd] of [
+			["edit", { path: "~/.pi/agent/settings.json" }],
+			["write", { path: "/Users/me/.omp/skills/host/grilling/SKILL.md" }],
+			["edit", { path: "settings.json" }, "/Users/me/.pi/agent"],
+			["bash", { command: "echo x > ~/.pi/agent/AGENTS.md" }],
+			["bash", { command: "printf y >> $HOME/.omp/agent/config.yml" }],
+			["bash", { command: "cd ~/.pi/agent && echo '{}' >settings.json" }],
+			["bash", { command: "sed -i s/a/b/ ~/.pi/agent/settings.json" }],
+			["bash", { command: "echo x | tee ~/.omp/agent/config.yml" }],
+			["bash", { command: "jq '.x=1' ~/.pi/agent/settings.json > /tmp/s && mv /tmp/s ~/.pi/agent/settings.json" }],
+			["bash", { command: "cp AGENTS.md /Users/me/.omp/agent/AGENTS.md" }],
+			["bash", { command: 'echo x > "$HOME"/.pi/agent/settings.json' }],
+			["bash", { command: "echo x >& ~/.pi/agent/AGENTS.md" }],
+			["bash", { command: "echo x &> ~/.pi/agent/AGENTS.md" }],
+			["bash", { command: "echo x >| ~/.pi/agent/AGENTS.md" }],
+			["bash", { command: 'bash -c "cd ~/.pi && echo x > agent/AGENTS.md"' }],
+			["bash", { command: "cd -- ~/.omp && touch agent/x" }],
+			["bash", { command: "echo x > ~/.PI/agent/AGENTS.md" }],
+		] as [string, Record<string, unknown>, string?][])
+			assert.match(ask(toolName, input, cwd)?.reason ?? "", /harness renders/, `${name} ${JSON.stringify(input)}`);
+
+		assert.equal(ask("read", { path: "~/.pi/agent/settings.json" }), undefined, name);
+		assert.equal(ask("bash", { command: "cat ~/.omp/agent/config.yml > /tmp/config.yml" }), undefined, name);
+		assert.equal(ask("bash", { command: "echo x > ~/.pi/cache/note" }), undefined, name);
+		assert.equal(ask("edit", { path: "src/app.ts" }), undefined, name);
+		assert.equal(ask("bash", { command: "npm test > out.log 2>&1" }), undefined, name);
+		assert.equal(ask("bash", { command: "rg '> ~/.pi' src" }), undefined, name);
+		assert.equal(ask("bash", { command: 'git commit -m "refuse echo x > ~/.pi/agent/AGENTS.md"' }), undefined, name);
+		assert.equal(ask("bash", { command: "grep -r model ~/.omp/agent" }), undefined, name);
+	}
+});

@@ -84,7 +84,7 @@ function segmentsOf(subject: string, withDelegated: boolean): Segment[] {
 			const end = subject.indexOf("\n", i);
 			i = (end < 0 ? subject.length : end) - 1;
 			continue;
-		} else if (";&|\n".includes(char) && !(char === "&" && (/[<>]/.test(subject[i - 1]) || subject[i + 1] === ">"))) {
+		} else if (";&|\n".includes(char) && !(char === "&" && (/[<>]/.test(subject[i - 1]) || subject[i + 1] === ">")) && !(char === "|" && subject[i - 1] === ">")) {
 			cut(char === "|" && subject[i - 1] !== "|" && subject[i + 1] !== "|");
 			continue;
 		} else if (/[<>]/.test(char) && redirect < 0) redirect = current.length;
