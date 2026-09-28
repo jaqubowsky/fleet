@@ -36,7 +36,7 @@ Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give
 1. **Failing test** at whatever seam reaches the bug: unit, integration, e2e.
 2. **Curl / HTTP script** against a running dev server.
 3. **CLI invocation** with a fixture input, diffing stdout against a known-good snapshot.
-4. **Headless browser script** (Playwright / Puppeteer): drives the UI, asserts on DOM/console/network.
+4. **Headless browser session** (`playwright-cli`, its skill loaded first): drives the UI, asserts on DOM/console/network.
 5. **Replay a captured trace.** Save a real network request / payload / event log to disk; replay it through the code path in isolation.
 6. **Throwaway harness.** Spin up a minimal subset of the system (one service, mocked deps) that exercises the bug code path with a single function call.
 7. **Property / fuzz loop.** If the bug is "sometimes wrong output", run 1000 random inputs and look for the failure mode.
