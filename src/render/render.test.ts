@@ -503,6 +503,9 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
 			assert.match(skill, /`acceptance\.md`.*Fits, Gaps and Seen/);
 			assert.match(skill, /one fix round and one recheck/);
+			assert.match(skill, /carries your stop rule/);
+			assert.match(skill, /measure, make one fix, measure again, then stop at `blocked`/);
+			assert.match(skill, /one ticket per module or per group of related findings/);
 			assert.match(skill, /reconcile the tracker with the facts/);
 			assert.match(skill, /`ticket\.md`/);
 			assert.match(skill, /--merge --match-head-commit/);
