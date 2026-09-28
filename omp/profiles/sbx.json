@@ -19,6 +19,9 @@
   "github": {
     "enabled": true
   },
+  "browser": {
+    "enabled": false
+  },
   "display": {
     "pinnedAgents": "collapsed",
     "smoothStreaming": false,

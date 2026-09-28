@@ -380,6 +380,14 @@ test("the claude container turns the feedback survey off, so no survey sits in t
 	});
 });
 
+test("the omp container turns its browser tool off, so playwright-cli is its one browser", () => {
+	renderSeats("omp", (out) => {
+		const settings = JSON.parse(readFileSync(`${out}/container/context/agent-config.yml`, "utf8"));
+
+		assert.equal(settings.browser.enabled, false);
+	});
+});
+
 test("a host Linear server any profile names leaves pi's and omp's machine-wide mcp.json, and the servers beside it stay", () => {
 	const context7 = { url: "https://mcp.context7.com/mcp" };
 	const profiles = {
