@@ -2,7 +2,7 @@ import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { ACTIVITY } from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
-import { activityNow, steer } from "./commands.ts";
+import { activityNow, blockedWork, steer } from "./commands.ts";
 import { CONTINUE } from "../harness.ts";
 import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
 import { eventAgents, eventsLog, lifecycle, steersSince } from "./events.ts";
@@ -23,6 +23,7 @@ import { agentName } from "./name.ts";
 import {
 	type Agent,
 	branchFacts,
+	calls,
 	fieldsOf,
 	logLines,
 	type Sandbox,
@@ -149,7 +150,8 @@ export function watch(
 		}
 		const text = wake(status, facts, logShown.get(name));
 		logShown.set(name, logLines(status));
-		return activity ? `${text}\n\nactivity: ${activity}` : text;
+		const blocked = where ? blockedWork(where.dir, io) : 0;
+		return `${text}${blocked ? `\n\nstill working while blocked: ${calls(blocked)} since status.md turned blocked` : ""}${activity ? `\n\nactivity: ${activity}` : ""}`;
 	};
 
 	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean } = {}) => {

@@ -420,6 +420,31 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 	assert.ok(!io.calls.some((c) => c.join(" ").startsWith("sbx exec pi-broken") && !c.join(" ").includes("git branch --show-current")));
 });
 
+const call = (at: string) => JSON.stringify({ at, tool: "bash", ok: true, agent: "main" });
+
+function blockedTask(dir: string, status = "status: blocked\nattention: owner decision\n"): Record<string, unknown> {
+	return {
+		[`read ${dir}/status.md`]: status,
+		[`list ${dir}/logs/status`]: ["003-20260916T094000Z.md", "001-20260916T090000Z.md", "002-20260916T093000Z.md"],
+		[`read ${dir}/logs/status/001-20260916T090000Z.md`]: "status: implementing\nattention: none\n",
+		[`read ${dir}/logs/status/002-20260916T093000Z.md`]: "status: blocked\nattention: owner decision\n",
+		[`read ${dir}/logs/status/003-20260916T094000Z.md`]: "status: blocked\nattention: owner decision\n\n## Log\n- waits on the owner\n",
+		[`read ${dir}/logs/activity.jsonl`]: [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:30:00.400Z"), call("2026-09-16T09:45:00Z"), call("2026-09-16T09:50:00Z")].join("\n"),
+	};
+}
+
+test("ls marks a blocked container that keeps making tool calls, counted from the version where status.md turned blocked", () => {
+	const listing = {
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }] } },
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
+	};
+
+	assert.match(ls(fakeIo({ ...listing, ...blockedTask(task) })), /^pi-a  running  working  task  2 tool calls since blocked  up 40m, silent 10m, 4 tool calls, last bash$/m);
+	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: implementing\nattention: none\n") })), /since blocked/);
+	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: blocked\nattention: the agent stopped on an error: rate_limit\n") })), /since blocked/);
+});
+
 test("ls leaves an idle container unmarked while its PR's CI runs", () => {
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },

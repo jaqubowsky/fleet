@@ -17,6 +17,7 @@ export type Row = {
 	branch: string;
 	dirty: number;
 	stalled?: boolean;
+	blocked?: number;
 	activity?: string;
 	facts?: string;
 };
@@ -117,13 +118,17 @@ export function brief(statusMd: string | undefined): string {
 	].join("\n");
 }
 
+export function calls(count: number): string {
+	return `${count} tool call${count === 1 ? "" : "s"}`;
+}
+
 export function formatRows(rows: Row[]): string {
 	if (!rows.length) return "no fleet containers";
 	const width = Math.max(...rows.map((r) => r.sandbox.length));
 	return rows
 		.map(
 			(r) =>
-				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.stalled ? "  stalled" : ""}${r.activity ? `  ${r.activity}` : ""}${r.facts ? `\n  ${r.facts}` : ""}`,
+				`${r.sandbox.padEnd(width)}  ${r.status.padEnd(8)} ${r.agent.padEnd(8)} ${r.branch}${r.dirty ? `  ${r.dirty} uncommitted` : ""}${r.stalled ? "  stalled" : ""}${r.blocked ? `  ${calls(r.blocked)} since blocked` : ""}${r.activity ? `  ${r.activity}` : ""}${r.facts ? `\n  ${r.facts}` : ""}`,
 		)
 		.join("\n");
 }

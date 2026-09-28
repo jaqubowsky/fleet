@@ -1,7 +1,8 @@
 import type { Io } from "./io.ts";
+import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE } from "../../extensions/session-handoff.ts";
 import { ACTIVITY, HISTORY, versions } from "../../extensions/status-history.ts";
-import { activityOf, projection } from "./activity.ts";
+import { activityOf, callsSince, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
@@ -45,6 +46,20 @@ export function activityNow(sandbox: string, task: string, io: Io): string {
 	return projection(activityOf(io.read(`${task}/${ACTIVITY}`)), costSoFar(sandbox, task, io), io.now());
 }
 
+const STAMP_SECOND_MS = 1000;
+
+export function blockedWork(task: string, io: Io): number {
+	const { status, attention } = fieldsOf(io.read(`${task}/status.md`));
+	if (status !== "blocked" || attention?.startsWith(STOPPED)) return 0;
+	const dir = `${task}/${HISTORY}`;
+	let from: Date | undefined;
+	for (const version of versions(io.list(dir)).reverse()) {
+		if (fieldsOf(io.read(`${dir}/${version.name}`)).status !== "blocked") break;
+		from = version.time;
+	}
+	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), new Date(from.getTime() + STAMP_SECOND_MS)) : 0;
+}
+
 function costSoFar(sandbox: string, task: string, io: Io): number | undefined {
 	if (!io.harness.containerSessions) return sessionUsage(task, io)?.totals.cost;
 	try {
@@ -76,6 +91,7 @@ export function ls(io: Io): string {
 			agent,
 			branch: checkout.branch,
 			dirty: checkout.dirty,
+			blocked: task ? blockedWork(task, io) : 0,
 			stalled: !facts?.running && !!last && idleStalled(agent, fieldsOf(io.read(`${task}/status.md`)).status, io.now().getTime() - new Date(last).getTime()),
 			activity: task && (running || !io.harness.containerSessions) ? activityNow(s.name, task, io) : undefined,
 			facts: facts && `commits ${facts.commits}; pr ${facts.pr}`,

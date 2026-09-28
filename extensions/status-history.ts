@@ -12,7 +12,7 @@ function stamp(at: Date): string {
 	return `${at.getUTCFullYear()}${two(at.getUTCMonth() + 1)}${two(at.getUTCDate())}T${two(at.getUTCHours())}${two(at.getUTCMinutes())}${two(at.getUTCSeconds())}Z`;
 }
 
-export function versions(names: string[]): { name: string; number: number; at: string }[] {
+export function versions(names: string[]): { name: string; number: number; at: string; time: Date }[] {
 	return names
 		.flatMap((name) => {
 			const match = name.match(VERSION);
@@ -20,7 +20,7 @@ export function versions(names: string[]): { name: string; number: number; at: s
 			const [, number, ...parts] = match.map(Number);
 			const [y, mo, d, h, mi, s] = parts;
 			const at = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
-			return [{ name, number, at: `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())} ${two(at.getHours())}:${two(at.getMinutes())}:${two(at.getSeconds())}` }];
+			return [{ name, number, time: at, at: `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())} ${two(at.getHours())}:${two(at.getMinutes())}:${two(at.getSeconds())}` }];
 		})
 		.sort((a, b) => a.number - b.number);
 }

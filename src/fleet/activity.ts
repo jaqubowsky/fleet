@@ -1,18 +1,22 @@
-import { elapsed } from "./status.ts";
+import { calls, elapsed } from "./status.ts";
 
 type Call = { at: string; tool: string; ok: boolean; agent: string };
 type Streak = { length: number; from: string };
 
 export type Activity = { started: string; last: string; calls: number; lastTool: string; streak: number; streakFrom?: string };
 
-export function activityOf(jsonl: string | undefined): Activity | undefined {
-	const calls = (jsonl ?? "").split("\n").flatMap((line): Call[] => {
+function callsOf(jsonl: string | undefined): Call[] {
+	return (jsonl ?? "").split("\n").flatMap((line): Call[] => {
 		try {
 			return line.trim() ? [JSON.parse(line)] : [];
 		} catch {
 			return [];
 		}
 	});
+}
+
+export function activityOf(jsonl: string | undefined): Activity | undefined {
+	const calls = callsOf(jsonl);
 	if (!calls.length) return undefined;
 	const streaks = new Map<string, Streak>();
 	for (const call of calls) {
@@ -31,13 +35,17 @@ export function activityOf(jsonl: string | undefined): Activity | undefined {
 	};
 }
 
+export function callsSince(jsonl: string | undefined, from: Date): number {
+	return callsOf(jsonl).filter((call) => new Date(call.at) >= from).length;
+}
+
 export function projection(activity: Activity | undefined, cost: number | undefined, now: Date): string {
 	return [
 		...(activity
 			? [
 					`up ${elapsed(new Date(activity.started), now)}`,
 					`silent ${elapsed(new Date(activity.last), now)}`,
-					`${activity.calls} tool call${activity.calls === 1 ? "" : "s"}`,
+					calls(activity.calls),
 					`last ${activity.lastTool}`,
 					...(activity.streak ? [`${activity.streak} failed in a row`] : []),
 				]

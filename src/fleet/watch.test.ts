@@ -583,6 +583,25 @@ test("a restarted watch counts the resumes already sent", (t: TestContext) => {
 	assert.equal(at(120), 1);
 });
 
+test("a wake counts the tool calls a container made after status.md turned blocked", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	const dir = "/home/me/.sandboxes/webapp/claude-worker";
+	const call = (at: string) => JSON.stringify({ at, tool: "Bash", ok: true, agent: "main" });
+	io.files[`${dir}/status.md`] = "status: blocked\nattention: owner decision\n";
+	io.files[`${dir}/logs/status/001-20260916T093000Z.md`] = "status: blocked\nattention: owner decision\n";
+	io.files[`${dir}/logs/activity.jsonl`] = [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:45:00Z")].join("\n");
+	io.list = (path: string) => (path === `${dir}/logs/status` ? ["001-20260916T093000Z.md"] : []);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "blocked");
+
+	assert.match(wakes[0], /\n\nstatus: blocked\n/);
+	assert.match(wakes[0], /\n\nstill working while blocked: 1 tool call since status\.md turned blocked(\n|$)/);
+});
+
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
 	const io = fakeIo({}, HARNESSES.claude);
 	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = [
