@@ -96,7 +96,7 @@ Where the land line of `{{cli}} profile <repo>` has this session push, a contain
 ```
 
 - A rejected push means someone rewrote history. Show the user; forcing is their own command
-- Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. `pr.md` already holds them, one line per finding, and a line pasted into a thread opens with `[{{harness}} / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing
+- Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. `pr.md` already holds them, and a line pasted into a thread opens with `[{{harness}} / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing
 
 ## Watching
 
@@ -134,7 +134,7 @@ This is the authority rule for session handoff; it grants no other permission.
 ## When it refuses
 
 - `{{cli}} down` refuses a dirty tree, and commits that reached neither the host repo nor the container's origin. `{{cli}} peek` shows what would go, and `--force` discards either.
-- `{{cli}} land` refuses a container branch that no longer descends from the one here, which is what a signed landing leaves behind: the container resyncs with `git fetch origin && git reset --hard origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
+- `{{cli}} land` refuses a container branch that no longer descends from the one here, which is what a signed landing leaves behind: the container resyncs to `origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
 - `{{cli}} land --push` refuses anything that is not a fast-forward.
 - `{{cli}} steer` answers `agent_blocked` while a dialog waits in that tab: read the pane, ask the user, answer the dialog, then steer.
 - `{{cli}} up` ending in `{{harness}} did not come up` leaves a tab to read: `herdr agent read <pane> --source recent-unwrapped --lines 60`, and report what it printed.

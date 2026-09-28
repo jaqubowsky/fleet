@@ -10,7 +10,7 @@ Transcripts are the experiment; the harness (rules, skills, guard, fleet, image,
 
 ## 1. New transcripts
 
-`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every task directory's `logs/sessions/**/*.jsonl` under `~/.sandboxes/*/*/` for containers, and the host session stores (`~/.pi/agent/sessions/`, `~/.omp/agent/sessions/`, `~/.claude/projects/`); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per task directory or host file) with side, size and date, so the user can narrow the run.
+`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every container's `logs/sessions/**/*.jsonl` under `~/.sandboxes/*/*/`, and the Mac's own session stores (`~/.pi/agent/sessions/`, `~/.omp/agent/sessions/`, `~/.claude/projects/`); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per `~/.sandboxes/*/*/` directory or Mac session file) with side, size and date, so the user can narrow the run.
 
 The newest `audits/*.md` carries the findings of the last run into step 4: every row with its id, severity and run count. Declining a fix does not close a row.
 
