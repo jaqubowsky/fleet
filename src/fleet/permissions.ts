@@ -1,4 +1,4 @@
-import { describe, hostLinearServer, loadProfiles, profileFor, repoName, USER_CONFIG, type Host, type Profile } from "../profile/profile.ts";
+import { describe, linearServer, loadProfiles, profileFor, repoName, USER_CONFIG, type Host, type Profile } from "../profile/profile.ts";
 import type { Io } from "./io.ts";
 
 export function repoProfile(root: string, name: string, io: Io): Profile {
@@ -92,7 +92,7 @@ const PROJECT_MCP = {
 type McpConfig = { mcpServers?: Record<string, unknown> };
 
 function registerLinear(checkout: string, host: Host, io: Io): string[] {
-	const server = hostLinearServer(host);
+	const server = linearServer(host);
 	if (!server) return [];
 	const [name, url] = server;
 	const top = io.git(["rev-parse", "--show-toplevel"], checkout);

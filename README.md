@@ -88,7 +88,7 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `host/projects/template.md` | the headings of a per-repository overlay (User config) |
 | `pi/`, `omp/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: one CLI, one harness each |
-| `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it |
+| `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it; ends with what a new Mac lacks that it cannot set up, under `== set up by hand` |
 | `inventory.md` | what lives outside this repo: tokens, MCP servers, model logins, network policy |
 | `BOOTSTRAP.md` | setting this Mac up from nothing |
 

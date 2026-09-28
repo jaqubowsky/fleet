@@ -96,12 +96,12 @@ export function profileFor(profiles: Profiles, repo: string): Profile {
 
 const LINEAR_URL = { read: "https://mcp.linear.app/mcp/readonly", write: "https://mcp.linear.app/mcp" };
 
-export function hostLinearServer(host: Host): [string, string] | undefined {
-	return host.linear !== "none" && host.linearServer ? [host.linearServer, LINEAR_URL[host.linear]] : undefined;
+export function linearServer(seat: Pick<Host, "linear" | "linearServer">): [string, string] | undefined {
+	return seat.linear !== "none" && seat.linearServer ? [seat.linearServer, LINEAR_URL[seat.linear]] : undefined;
 }
 
 export function hostLinearServers(profiles: Profiles): Record<string, string> {
-	return Object.fromEntries(Object.values(profiles).flatMap(({ host }) => [hostLinearServer(host)].filter((server) => server !== undefined)));
+	return Object.fromEntries(Object.values(profiles).flatMap(({ host }) => [linearServer(host)].filter((server) => server !== undefined)));
 }
 
 const WRITES = { container: "write only what you were told to", host: "move states, file not-started issues, tick the criteria you saw hold and post the acceptance comment by judgment" };

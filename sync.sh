@@ -13,8 +13,9 @@ whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
 config, rebuilds a container image whose rendered seat changed, and removes
 what nothing uses: leftovers of the old per-harness setup, npm packages pi no
 longer lists, task directories of removed containers that never started,
-settings backups and dangling links. Without --apply it prints what it would
-change and changes nothing.
+settings backups and dangling links. It ends by naming what a new Mac lacks
+that it cannot set up itself, with the step that does. Without --apply it
+prints what it would change and changes nothing.
 USAGE
 	exit 2
 }
@@ -89,11 +90,35 @@ image_agent_version() {
 	"$1" --version 2>/dev/null | tr -cd '0-9.' || true
 }
 
+by_hand() {
+	echo "== set up by hand"
+	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your repository profiles and overlays: README.md, User config"
+	command -v sbx >/dev/null || echo "  missing sbx on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
+	command -v herdr >/dev/null || echo "  missing herdr on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
+	command -v op >/dev/null || echo "  missing op on PATH, the 1Password CLI: BOOTSTRAP.md, step 2"
+	command -v node >/dev/null || { echo "  missing node on PATH: BOOTSTRAP.md, step 2"; return; }
+	node --input-type=module -e '
+		const [root, home] = process.argv.slice(1);
+		const { readFileSync } = await import("node:fs");
+		const { loadProfiles, linearServer } = await import(`${root}/src/profile/profile.ts`);
+		const read = (path) => { try { return readFileSync(path, "utf8"); } catch { return undefined; } };
+		const lines = new Set();
+		for (const { container, host } of Object.values(loadProfiles(read, root, home))) {
+			const [cname, curl] = linearServer(container) ?? [];
+			if (cname) lines.add(`  not verified ${cname}, no check from this Mac lists sbx MCP servers: sbx mcp add ${cname} --url ${curl}`);
+			const [hname] = linearServer(host) ?? [];
+			if (hname) lines.add(`  not verified ${hname}, registered per checkout: <cli> profile <checkout> --apply in each checkout`);
+		}
+		for (const line of lines) console.log(line);
+	' "$ROOT" "$HOME"
+}
+
 template_loaded() {
 	sbx template ls --json 2>/dev/null | jq -e --arg r "${1%%:*}" --arg t "${1##*:}" \
 		'.images[] | select((.repository | endswith("/" + $r)) and .tag == $t)' >/dev/null
 }
 
+command -v node >/dev/null || { by_hand; exit 1; }
 HARNESS_ROWS="$(harnesses)"
 
 echo "== dependencies"
@@ -179,6 +204,8 @@ else
 	echo "  sbx ls failed, so task directories stay untouched"
 fi
 while IFS= read -r -d '' link; do act rm "$link"; done < <(find "$HOME/.local/bin" "$HOME/.claude/hooks" -maxdepth 1 -type l ! -exec test -e {} \; -print0 2>/dev/null)
+
+by_hand
 
 echo
 if [ "$changes" = 0 ]; then
