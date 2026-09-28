@@ -2,8 +2,10 @@ import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { ACTIVITY } from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
-import { activityNow } from "./commands.ts";
-import { eventAgents, eventsLog, lifecycle } from "./events.ts";
+import { activityNow, steer } from "./commands.ts";
+import { CONTINUE } from "../harness.ts";
+import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
+import { eventAgents, eventsLog, lifecycle, steersSince } from "./events.ts";
 import type { Io } from "./io.ts";
 import {
 	FAILED_IN_A_ROW,
@@ -334,7 +336,47 @@ export function watch(
 		}
 	};
 
+	const resets = new Map<string, Date | undefined>();
+
+	const noticeLimits = () => {
+		const idle = [...tracked.values()].filter((t) => t.status === "idle" || t.status === "done");
+		const rows = idle.some((t) => !dirs.has(t.name)) ? listed() : undefined;
+		for (const t of idle) {
+			const where = dirs.get(t.name) ?? (rows && locate(t.name, rows));
+			if (!where || !limitStop(fieldsOf(statusOf(t.name)).attention)) continue;
+			const stoppedAt = io.stat(`${where.dir}/status.md`)?.mtime;
+			if (!stoppedAt) continue;
+			const stop = `${t.name}@${stoppedAt.toISOString()}`;
+			if (!resets.has(stop)) {
+				let pane = "";
+				try {
+					pane = io.herdrText(["agent", "read", t.name, "--source", "recent-unwrapped", "--lines", "40"]);
+				} catch (error) {
+					io.log(`[fleet] watch: limit: ${String(error)}`);
+				}
+				resets.set(stop, resetAt(pane, stoppedAt));
+			}
+			const resumes = steersSince(io.read(events) ?? "", t.name, CONTINUE, stoppedAt);
+			const last = resumes.at(-1);
+			const worked = activityOf(io.read(`${where.dir}/${ACTIVITY}`))?.last;
+			if (last && worked && new Date(worked) > last) continue;
+			const due = resumeDue(stoppedAt, resets.get(stop), resumes);
+			if (io.now() < due) continue;
+			if (resumes.length >= RETRIES) {
+				if (io.now().getTime() < due.getTime() + STALL_TICK_MS) emit(t.name, `stopped on the account limit, ${RETRIES} resumes did not take`);
+				continue;
+			}
+			try {
+				steer(where.sandbox, CONTINUE, io);
+				io.log(`[fleet] ${t.name}: resumed after the account limit`);
+			} catch (error) {
+				io.log(`[fleet] watch: resume ${t.name}: ${String(error)}`);
+			}
+		}
+	};
+
 	const ring = () => {
+		noticeLimits();
 		noticeFailures();
 		const now = Date.now();
 		noticeIdle(now);

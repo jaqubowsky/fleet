@@ -3,6 +3,7 @@
 A watched container working on without settling wakes you with `working <n>m without settling`, and again while it goes on; one whose tool calls keep failing wakes you once per streak with `working, <n> tool calls failed in a row`; one idle 20 minutes whose `status:` is neither `ready-for-host` nor `blocked` wakes you once with `idle <n>m at <status>, stalled`, and `{{cli}} ls` marks it `stalled`. Each wake is a `{{cli}} peek`, then either a steer that names what to stop or the end of the turn.
 
 - A container stopped by a model or network error wakes you with `<prev> -> stopped on an error`; one closed with `{{cli}} down` wakes nothing more.
+- One stopped by the account limit is resumed by the watch with the stock continue, at the reset time its message gives, else every 30 minutes up to 10 times; if none takes, it wakes you once with `stopped on the account limit, 10 resumes did not take`.
 
 A settling agent whose `status.md` or branch facts changed since its previous wake wakes you with `[fleet] <agent>: <sandbox> <prev> -> <status>`, the sandbox named only where herdr shortened the agent, then:
 

@@ -24,6 +24,15 @@ export function eventAgents(log: string, owner: { sessionId?: string; pane?: str
 	return [...seen];
 }
 
+export function steersSince(log: string, agent: string, text: string, after: Date): Date[] {
+	const quoted = JSON.stringify(text);
+	return log.split("\n").flatMap((line) => {
+		const [at, , kind, name] = line.split(" ");
+		const when = new Date(at);
+		return kind === "steer" && name === agent && line.endsWith(` ${quoted}`) && when > after ? [when] : [];
+	});
+}
+
 export function lifecycle(log: string): { closed: Set<string>; steered: Map<string, string> } {
 	const closed = new Set<string>();
 	const steered = new Map<string, string>();

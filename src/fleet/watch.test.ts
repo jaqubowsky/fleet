@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import net from "node:net";
 import { test, type TestContext } from "node:test";
-import { HARNESSES } from "../harness.ts";
+import { CONTINUE, HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
 import { commitsProbe } from "./status.ts";
@@ -499,6 +499,90 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 	assert.equal(io.lines.filter((line) => line.includes("docker daemon failed")).length, 1);
 });
 
+function limited(t: TestContext, pane: string, stoppedAt: Date, agent_status = "idle") {
+	const fixture = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status }]);
+	const { io } = fixture;
+	const dir = "/home/me/.sandboxes/webapp/claude-worker";
+	const events = "/home/me/.claude/fleet-cache/fleet-events.log";
+	io.files[`${dir}/status.md`] = "status: blocked\nattention: the agent stopped on an error: rate_limit\n";
+	const stat = io.stat;
+	io.stat = (path) => (path === `${dir}/status.md` ? { size: 1, mtime: stoppedAt, dir: false } : stat(path));
+	const herdrText = io.herdrText;
+	io.herdrText = (args) => (args[1] === "read" ? pane : herdrText(args));
+	io.append = (path, line) => {
+		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
+	};
+	let now = stoppedAt;
+	io.now = () => now;
+	const resumes = () => io.calls.filter((c) => c[0] === "herdr" && c[2] === "prompt" && c[4] === CONTINUE).length;
+	const at = (minutes: number) => {
+		now = new Date(stoppedAt.getTime() + minutes * 60_000);
+		fixture.intervals.get(60_000)?.();
+		return resumes();
+	};
+	return { ...fixture, events, at, dir };
+}
+
+test("a container stopped by the account limit resumes with the stock continue at the reset time its message gives", (t: TestContext) => {
+	const stoppedAt = new Date(2026, 8, 16, 21, 40);
+	const { io, at } = limited(t, "You've hit your session limit · resets 11:10pm", stoppedAt);
+	watch(() => undefined, io, () => {});
+
+	assert.equal(at(89), 0);
+	assert.equal(at(90), 1);
+	assert.equal(at(91), 1);
+});
+
+test("with no reset time the watch retries the continue every 30 minutes and gives up after 10 with one wake", (t: TestContext) => {
+	const stoppedAt = new Date(2026, 8, 16, 21, 40);
+	const { io, at } = limited(t, "API Error: rate_limit", stoppedAt);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	assert.equal(at(29), 0);
+	assert.equal(at(30), 1);
+	assert.equal(at(59), 1);
+	for (let n = 2; n <= 10; n++) assert.equal(at(30 * n), n);
+	assert.equal(at(330), 10);
+	assert.equal(at(331), 10);
+	assert.equal(at(400), 10);
+	assert.equal(wakes.filter((w) => /account limit/.test(w)).length, 1);
+	assert.match(wakes.at(-1) ?? "", /^\[fleet\] claude-worker: stopped on the account limit, 10 resumes did not take/);
+});
+
+test("the watch never sends the continue to a container that is working or waits on a dialog", async (t: TestContext) => {
+	for (const state of ["working", "blocked", "unknown"])
+		await t.test(state, (st: TestContext) => {
+			const { io, at } = limited(st, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40), state);
+			watch(() => undefined, io, () => {});
+			assert.equal(at(120), 0);
+		});
+});
+
+test("a resume the container took, shown by a tool call after it, ends the retries", (t: TestContext) => {
+	const stoppedAt = new Date(2026, 8, 16, 21, 40);
+	const { io, at, dir } = limited(t, "API Error: rate_limit", stoppedAt);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	assert.equal(at(30), 1);
+	io.files[`${dir}/logs/activity.jsonl`] = JSON.stringify({ at: new Date(stoppedAt.getTime() + 31 * 60_000).toISOString(), tool: "Bash", ok: true, agent: "main" });
+	assert.equal(at(60), 1);
+	assert.equal(at(400), 1);
+	assert.deepEqual(wakes, []);
+});
+
+test("a restarted watch counts the resumes already sent", (t: TestContext) => {
+	const stoppedAt = new Date(2026, 8, 16, 21, 40);
+	const { io, at, events } = limited(t, "API Error: rate_limit", stoppedAt);
+	const sent = (minutes: number) => `${new Date(stoppedAt.getTime() + minutes * 60_000).toISOString()} w1:host steer claude-worker session= ${JSON.stringify(CONTINUE)}`;
+	io.files[events] = `${[sent(30), sent(60), sent(90)].join("\n")}\n`;
+	watch(() => undefined, io, () => {});
+
+	assert.equal(at(119), 0);
+	assert.equal(at(120), 1);
+});
+
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
 	const io = fakeIo({}, HARNESSES.claude);
 	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = [
@@ -685,3 +769,4 @@ test("a settle whose status.md was written before the branch's latest commit fla
 	assert.match(wakes[0], /\n\nstatus\.md: written before the branch's latest commit or push, so its next step may already be done$/);
 	assert.doesNotMatch(wakes[1], /status\.md: written before/);
 });
+

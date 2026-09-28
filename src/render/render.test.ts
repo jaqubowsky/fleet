@@ -502,6 +502,8 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /The host checkout stays on the default branch/);
 			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
 			assert.match(skill, /`acceptance\.md`.*Fits, Gaps and Seen/);
+			assert.match(skill, /One stopped by the account limit is resumed by the watch with the stock continue/);
+			assert.match(skill, name === "claude" ? /Before a long run, arm the limit resume/ : /keeps running while the session waits out an account limit/);
 			assert.match(skill, /one fix round and one recheck/);
 			assert.match(skill, /carries your stop rule/);
 			assert.match(skill, /measure, make one fix, measure again, then stop at `blocked`/);
