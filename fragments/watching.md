@@ -1,6 +1,12 @@
 {{watch.source}}
 
-A watched container working on without settling wakes you with `working <n>m without settling`, and again while it goes on; one whose tool calls keep failing wakes you once per streak with `working, <n> tool calls failed in a row`; one idle 20 minutes whose `status:` is neither `ready-for-host` nor `blocked` wakes you once with `idle <n>m at <status>, stalled`, and `{{cli}} ls` marks it `stalled`. Each wake is a `{{cli}} peek`, then either a steer that names what to stop or the end of the turn.
+A watched container wakes you:
+
+- working on without settling: `working <n>m without settling`, and again while it goes on
+- its tool calls failing: `working, <n> tool calls failed in a row`, once per streak
+- idle 20 minutes with a `status:` other than `ready-for-host` or `blocked`: `idle <n>m at <status>, stalled`, once
+
+Each of these wakes is a `{{cli}} peek`, then either a steer that names what to stop or the end of the turn.
 
 - A container stopped by a model or network error wakes you with `<prev> -> stopped on an error`; one closed with `{{cli}} down` wakes nothing more.
 - One stopped by the account limit is resumed by the watch with the stock continue, at the reset time its message gives, else every 30 minutes up to 10 times; if none takes, it wakes you once with `stopped on the account limit, 10 resumes did not take`.

@@ -40,7 +40,7 @@ status: new | analyzing | implementing | reviewing | testing | ready-for-host | 
 attention: none | <one sentence of at most 300 characters naming the decision or input that blocks the work>
 
 ## Summary
-<only at ready-for-host or blocked: 2-5 sentences, at most 600 characters, for the host: what was delivered, missing verification or blocker, host actions, links to canonical artifacts>
+<2-5 sentences, at most 600 characters, for the host: what was delivered, missing verification or blocker, host actions, links to canonical artifacts>
 
 ## Log
 - <turning point>; <file, log or commit that shows it>
@@ -73,7 +73,7 @@ Write the file at each event below, before the next tool call: edit the fields t
 | a session handoff is suggested | `attention` |
 | the turn ends, before the chat report | every field that no longer holds |
 
-Summary holds only the hand-off, so `## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. A fresh session takes its work from the frontier of `issues/` and the last Log line. Each turning point appends one line in the next write, whichever event that write is for:
+`## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. A fresh session takes its work from the frontier of `issues/` and the last Log line. Each turning point appends one line in the next write, whichever event that write is for:
 
 | Turning point | Line |
 | --- | --- |
