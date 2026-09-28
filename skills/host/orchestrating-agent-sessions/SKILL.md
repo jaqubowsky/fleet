@@ -27,6 +27,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 
 A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. Keep it to a few sentences: a long one reaches the container as pasted content, which it may read as data rather than an order.
 
+- A report from the user reaches the container as a fact in your voice: what was seen and where
 - A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself
 - How the work runs (reviews, commits, session handoffs) is the container's rules' to decide
 - After a handoff the stock continue is the whole steer, since a decision already sits in `spec.md` once the container has it. On a run without `spec.md`, the continue carries the `Decided:` lines again
