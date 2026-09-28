@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
 import { HARNESSES } from "../harness.ts";
-import { REAL_PROFILES } from "../profile/fixture.ts";
+import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import { parity, VOCABULARY } from "./parity.ts";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -24,7 +24,7 @@ function sources(extra: Record<string, unknown>): Record<string, unknown> {
 		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n",
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n",
 		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
-		"read /root/host/repos.json": REAL_PROFILES,
+		"read /root/host/repos.json": SAMPLE_PROFILES,
 		...extra,
 	};
 }

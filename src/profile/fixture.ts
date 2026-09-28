@@ -10,8 +10,18 @@ export const PRIVATE_PROFILE = {
 	resources: { memory: "4g", cpus: "4" },
 };
 
-export const REAL_PROFILES = readFileSync(join(import.meta.dirname, "../../host/repos.json"), "utf8");
+export const REPO_PROFILES = readFileSync(join(import.meta.dirname, "../../host/repos.json"), "utf8");
 
-export const WITH_PRIVATE = JSON.stringify({ ...JSON.parse(REAL_PROFILES), [PRIVATE_REPO]: PRIVATE_PROFILE });
+const OWNERS = {
+	"acme/*": {
+		host: { sign: "none", push: "human", pr: "none", merge: "none", down: "human", linear: "none" },
+		container: { push: "none", pr: "auto", linear: "read", linearServer: "linear-acme-readonly", token: "op://Dev/GitHub PAT webapp/credential" },
+		resources: { memory: "12g", cpus: "4" },
+	},
+};
 
-export const today = () => profileFor(parseProfiles(REAL_PROFILES), "").host;
+export const SAMPLE_PROFILES = JSON.stringify({ ...OWNERS, ...JSON.parse(REPO_PROFILES) });
+
+export const WITH_PRIVATE = JSON.stringify({ ...JSON.parse(SAMPLE_PROFILES), [PRIVATE_REPO]: PRIVATE_PROFILE });
+
+export const today = () => profileFor(parseProfiles(REPO_PROFILES), "").host;

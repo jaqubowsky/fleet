@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PRIVATE_REPO } from "../profile/fixture.ts";
-import { checkout, privateRoot } from "./checkouts.ts";
+import { checkout, EMPTY_HOME, privateRoot } from "./checkouts.ts";
 import guard from "../../extensions/guard.ts";
 import { HARNESSES } from "../harness.ts";
 
@@ -10,7 +10,7 @@ type Handler = (event: { toolName: string; input?: Record<string, unknown> }, ct
 
 function handler(root?: string): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
 	let captured: Handler | undefined;
-	guard(HARNESSES.pi, root)({ on: (_event, fn) => { captured = fn as Handler; } });
+	guard(HARNESSES.pi, root, EMPTY_HOME)({ on: (_event, fn) => { captured = fn as Handler; } });
 	assert.ok(captured, "the extension registered no tool_call handler");
 
 	return (event, ctx = { cwd: process.cwd() }) => captured!(event, ctx);
@@ -66,10 +66,11 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 	const edit = guard({ toolName: "edit", input: { path: "host/repos.json" } }, { cwd: root });
 	const shell = guard({ toolName: "bash", input: { command: "sed -i s/none/auto/ host/repos.json" } }, { cwd: root });
 	const read = guard({ toolName: "read", input: { path: "host/repos.json" } }, { cwd: root });
+	const mine = ["edit", "write"].map((toolName) => guard({ toolName, input: { path: "~/.config/harness/repos.json" } }, { cwd: root }));
 
-	assert.match(edit?.reason ?? "", /only the person changes it/);
-	assert.match(shell?.reason ?? "", /only the person changes it/);
+	for (const refusal of [edit, shell, ...mine]) assert.match(refusal?.reason ?? "", /only the person changes them/);
 	assert.equal(read, undefined);
+	assert.equal(guard({ toolName: "read", input: { path: "~/.config/harness/repos.json" } }, { cwd: root }), undefined);
 });
 
 test("pi and omp refuse an edit or a shell redirect into their own homes, and leave reads and the fleet cache alone", () => {

@@ -1,12 +1,14 @@
 type Level = "none" | "human" | "auto";
 type LinearLevel = "none" | "read" | "write";
-type Host = { sign: Level; push: Level; pr: Level; merge: Level; down: Level; linear: LinearLevel; linearServer?: string };
+export type Host = { sign: Level; push: Level; pr: Level; merge: Level; down: Level; linear: LinearLevel; linearServer?: string };
 type Container = { push: Level; pr: Level; linear: LinearLevel; linearServer?: string; token: string };
 type Resources = { memory: string; cpus: string };
-export type Profile = { match: string; host: Host; container: Container; resources: Resources };
+export type Profile = { match: string; file: string; host: Host; container: Container; resources: Resources };
 type Profiles = Record<string, Profile>;
 
 export const PROFILES = "host/repos.json";
+export const USER_CONFIG = ".config/harness";
+const USER_PROFILES = `~/${USER_CONFIG}/repos.json`;
 
 const LEVELS = ["none", "human", "auto"];
 const LINEAR = ["none", "read", "write"];
@@ -41,18 +43,18 @@ function seat(value: unknown, levels: string[], texts: string[], where: string):
 	return entry;
 }
 
-function json(text: string): unknown {
+function json(text: string, file: string): unknown {
 	try {
 		return JSON.parse(text);
 	} catch (error) {
-		throw new Error(`${PROFILES}: ${(error as Error).message}`);
+		throw new Error(`${file}: ${(error as Error).message}`);
 	}
 }
 
-export function parseProfiles(source: string): Profiles {
+function entries(source: string, file: string): Profiles {
 	const profiles: Profiles = {};
-	for (const [match, value] of Object.entries(object(json(source), PROFILES))) {
-		const where = `${PROFILES} ${match}`;
+	for (const [match, value] of Object.entries(object(json(source, file), file))) {
+		const where = `${file} ${match}`;
 		if (!/^(\*|[^/\s*]+\/(\*|[^/\s*]+))$/.test(match)) throw new Error(`${where}: a match is owner/repo, owner/* or *`);
 		const key = match.toLowerCase();
 		if (profiles[key]) throw new Error(`${where} repeats ${profiles[key].match}`);
@@ -66,10 +68,21 @@ export function parseProfiles(source: string): Profiles {
 		text(resources, ["memory", "cpus"], `${where}.resources`);
 		if (host.sign === "human" && container.push === "auto")
 			throw new Error(`${where}: host.sign human cannot go with container.push auto; unsigned commits would reach GitHub before signing, and signing them afterwards takes a force push`);
-		profiles[key] = { match, host, container, resources: resources as Resources };
+		profiles[key] = { match, file, host, container, resources: resources as Resources };
 	}
-	if (!profiles["*"]) throw new Error(`${PROFILES} has no * entry, the profile an unknown repository gets`);
 	return profiles;
+}
+
+export function parseProfiles(repo: string, user?: string): Profiles {
+	const profiles = { ...entries(repo, PROFILES), ...(user === undefined ? {} : entries(user, USER_PROFILES)) };
+	if (!profiles["*"]) throw new Error(`${USER_PROFILES} and ${PROFILES} have no * entry, the profile an unknown repository gets`);
+	return profiles;
+}
+
+export function loadProfiles(read: (path: string) => string | undefined, root: string, home: string): Profiles {
+	const repo = read(`${root}/${PROFILES}`);
+	if (repo === undefined) throw new Error(`missing ${root}/${PROFILES}`);
+	return parseProfiles(repo, read(`${home}/${USER_CONFIG}/repos.json`));
 }
 
 export function repoName(origin: string): string {
@@ -83,10 +96,12 @@ export function profileFor(profiles: Profiles, repo: string): Profile {
 
 const LINEAR_URL = { read: "https://mcp.linear.app/mcp/readonly", write: "https://mcp.linear.app/mcp" };
 
+export function hostLinearServer(host: Host): [string, string] | undefined {
+	return host.linear !== "none" && host.linearServer ? [host.linearServer, LINEAR_URL[host.linear]] : undefined;
+}
+
 export function hostLinearServers(profiles: Profiles): Record<string, string> {
-	const servers: Record<string, string> = {};
-	for (const { host } of Object.values(profiles)) if (host.linear !== "none" && host.linearServer) servers[host.linearServer] = LINEAR_URL[host.linear];
-	return servers;
+	return Object.fromEntries(Object.values(profiles).flatMap(({ host }) => [hostLinearServer(host)].filter((server) => server !== undefined)));
 }
 
 const WRITES = { container: "write only what you were told to", host: "move states, file not-started issues and post the acceptance comment by judgment" };
@@ -127,7 +142,7 @@ export function describe(repo: string, profile: Profile, cli: string): string {
 	return [
 		`# Permissions: ${repo || "no GitHub origin"}`,
 		"",
-		`Profile \`${profile.match}\` of \`${PROFILES}\` in the harness. This file describes; the credentials enforce. Commit is always allowed on both seats.`,
+		`Profile \`${profile.match}\` of \`${profile.file}\`. This file describes; the credentials enforce. Commit is always allowed on both seats.`,
 		"",
 		"## Container",
 		"",

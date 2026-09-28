@@ -7,12 +7,12 @@ import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { HARNESSES } from "../harness.ts";
 import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
-import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
+import { PRIVATE_PROFILE, PRIVATE_REPO, SAMPLE_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
 const repo = "/Users/me/Work/webapp";
 const containerLocks = 'sbx exec pi-webapp-web-1 sh -c cd "$WORKSPACE_DIR" && git ls-files';
 const base = {
-	"read /root/host/repos.json": REAL_PROFILES,
+	"read /root/host/repos.json": SAMPLE_PROFILES,
 	"read /home/me/.config/sbx/credentials.yaml": "bindings:\n  openai:\n    oauth:\n",
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
@@ -997,7 +997,7 @@ const pushing = {
 };
 const privateRepos = "sbx exec claude-private-app-x gh api /user/repos";
 const fromSession = JSON.stringify({
-	...JSON.parse(REAL_PROFILES),
+	...JSON.parse(SAMPLE_PROFILES),
 	[PRIVATE_REPO]: { ...PRIVATE_PROFILE, container: { ...PRIVATE_PROFILE.container, token: "env:GH_TOKEN" } },
 });
 
@@ -1054,7 +1054,7 @@ test("where the container may push, up removes the container whose token sees an
 test("up writes the repository's overlay into the task directory as project.md, and none, not even an earlier one, when it has none", async () => {
 	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
 	const overlay = "# acme/webapp\n\n## Merge method\n\n--squash\n";
-	const io = fakeIo({ ...base, "read /root/host/projects/acme/webapp.md": overlay });
+	const io = fakeIo({ ...base, "read /home/me/.config/harness/projects/acme/webapp.md": overlay });
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.equal(io.files[`${task}/project.md`], overlay);
 
@@ -1073,18 +1073,18 @@ test("up runs the overlay's Setup sh block after the install, and the plain inst
 	};
 	const plain = await installOf(base);
 
-	const script = await installOf({ ...base, "read /root/host/projects/acme/webapp.md": setupOverlay });
+	const script = await installOf({ ...base, "read /home/me/.config/harness/projects/acme/webapp.md": setupOverlay });
 	const install = script.indexOf("yarn install");
 	const setup = script.indexOf("npx playwright install chromium");
 	assert.ok(install !== -1 && setup > install, "the setup command does not follow the install");
 	assert.ok(setup < script.indexOf("deps: ready"), "the setup command runs after ready is reported");
 	assert.doesNotMatch(script, /Playwright needs|--squash/);
 
-	assert.equal(await installOf({ ...base, "read /root/host/projects/acme/webapp.md": "# acme/webapp\n\n## Setup\n\n## Merge method\n\n--squash\n" }), plain);
+	assert.equal(await installOf({ ...base, "read /home/me/.config/harness/projects/acme/webapp.md": "# acme/webapp\n\n## Setup\n\n## Merge method\n\n--squash\n" }), plain);
 });
 
 test("an overlay Setup block runs even where no lockfile installs", async () => {
-	const io = fakeIo({ ...base, "read /root/host/projects/acme/webapp.md": "## Setup\n\n```sh\nlefthook install\n```\n" });
+	const io = fakeIo({ ...base, "read /home/me/.config/harness/projects/acme/webapp.md": "## Setup\n\n```sh\nlefthook install\n```\n" });
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	const install = io.calls.find((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install"));

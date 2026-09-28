@@ -1,6 +1,6 @@
 import type { Io } from "../fleet/io.ts";
 import type { Harness, HarnessName } from "../harness.ts";
-import { hostLinearServers, parseProfiles, PROFILES } from "../profile/profile.ts";
+import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 
 export type Seat = "host" | "container";
 export type SeatModel = { model: string; thinking: string };
@@ -192,11 +192,6 @@ class Renderer {
 	}
 }
 
-const MCP_SERVER: Partial<Record<HarnessName, (url: string) => Record<string, string>>> = {
-	pi: (url) => ({ url, auth: "oauth" }),
-	omp: (url) => ({ type: "http", url }),
-};
-
 function hostSettings(r: Renderer, servers: Record<string, string>): string {
 	const settings = r.settings("host.json");
 	if (r.input.harness.name !== "pi" || !Object.keys(servers).length) return settings;
@@ -206,18 +201,18 @@ function hostSettings(r: Renderer, servers: Record<string, string>): string {
 }
 
 function hostMcp(r: Renderer, servers: Record<string, string>): void {
-	if (!Object.keys(servers).length) return;
-	const shape = MCP_SERVER[r.input.harness.name]!;
 	const config = JSON.parse(r.io.read(`${r.input.out}/agent/mcp.json`) ?? "{}") as { mcpServers?: Record<string, unknown> };
-	const mcpServers = { ...config.mcpServers, ...Object.fromEntries(Object.entries(servers).map(([name, url]) => [name, shape(url)])) };
-	r.put("agent/mcp.json", `${JSON.stringify({ ...config, mcpServers }, null, 2)}\n`);
+	const present = Object.entries(config.mcpServers ?? {});
+	const kept = present.filter(([name]) => !(name in servers));
+	if (kept.length === present.length) return;
+	r.put("agent/mcp.json", `${JSON.stringify({ ...config, mcpServers: Object.fromEntries(kept) }, null, 2)}\n`);
 }
 
 function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, agentFiles: [string, string][], containerFiles: [string, string][]): void {
 	const { seat } = r.input;
 	const rules = r.rules();
 	if (seat === "host") {
-		const servers = hostLinearServers(parseProfiles(r.source(PROFILES)));
+		const servers = hostLinearServers(loadProfiles((path) => r.io.read(path), r.input.root, r.io.home));
 		r.put(`agent/${settingsFile}`, hostSettings(r, servers));
 		hostMcp(r, servers);
 		r.put("agent/AGENTS.md", buildAgents(rules, []));

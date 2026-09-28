@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import { PRIVATE_REPO } from "../profile/fixture.ts";
-import { checkout, privateRoot } from "./checkouts.ts";
+import { checkout, EMPTY_HOME, privateRoot } from "./checkouts.ts";
 import { hostAt } from "./host.ts";
 
 const own = `git@github.com:${PRIVATE_REPO}.git`;
 
 test("a checkout whose only remote is origin takes the host levels of origin's profile", () => {
-	const levels = hostAt(checkout(own), privateRoot()).levels();
+	const levels = hostAt(checkout(own), privateRoot(), EMPTY_HOME).levels();
 
 	assert.deepEqual([levels.push, levels.pr, levels.merge], ["auto", "auto", "auto"]);
 });
@@ -17,7 +17,7 @@ test("a local sandbox remote beside origin leaves the host its pull requests", (
 	const dir = checkout(own);
 	execFileSync("git", ["-C", dir, "remote", "add", "sandbox-claude-x-t08", "git://127.0.0.1:49170/x"]);
 
-	const levels = hostAt(dir, privateRoot()).levels();
+	const levels = hostAt(dir, privateRoot(), EMPTY_HOME).levels();
 
 	assert.deepEqual([levels.push, levels.pr, levels.merge], ["auto", "auto", "auto"]);
 });
@@ -36,7 +36,7 @@ test("a second GitHub remote under any name or a gh default repository takes pul
 	execFileSync("git", ["-C", resolved, "config", "remote.origin.gh-resolved", "acme/webapp"]);
 
 	for (const dir of [upstream, sandboxNamed, dotted, pushesToGitHub, resolved]) {
-		const levels = hostAt(dir, privateRoot()).levels();
+		const levels = hostAt(dir, privateRoot(), EMPTY_HOME).levels();
 
 		assert.deepEqual([levels.push, levels.pr, levels.merge], ["auto", "none", "none"], dir);
 	}

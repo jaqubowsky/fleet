@@ -84,7 +84,8 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, status history, state relay, statusline, phone remote |
 | `sbx/` | `build.sh`, the container rule `sandbox.md`, `base-worktree`, `ticket-check` and `toolchain.Dockerfile`, which every `<harness>/sbx/Dockerfile` pulls in at `{{toolchain}}` |
 | `host/` | herdr config and pi screen rules, the no-ssh-agent kit, the guard corpus and test runner |
-| `host/projects/` | per-repository overlays `<owner>/<repo>.md`, holding only what the repository, the tracker and the profile do not say themselves, which `up` writes into the task directory as `project.md`, running the one `sh` block under `## Setup` in the container after the dependency install; `template.md` holds the headings |
+| `host/repos.json` | the `*` profile, the one a repository your own profiles omit gets (User config) |
+| `host/projects/template.md` | the headings of a per-repository overlay (User config) |
 | `pi/`, `omp/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
 | `bin/` | `fleet`, `ofleet`, `cfleet`: one CLI, one harness each |
 | `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it |
@@ -92,6 +93,23 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `BOOTSTRAP.md` | setting this Mac up from nothing |
 
 The homes hold only rendered files and runtime state. Edit here and run `./sync.sh --apply`, never edit a home. Render replaces the directories listed in `OWNED` in `src/render/render.ts` whole, so a file removed here disappears there too.
+
+## User config
+
+What names your own repositories lives outside this repository, in `~/.config/harness/`:
+
+- `repos.json`: your repository permission profiles, the same shape as `host/repos.json`. An entry here wins over the harness's for the same match; a repository no entry matches gets the harness's `*`
+- `projects/<owner>/<repo>.md`: the overlay of one repository, holding only what the repository, the tracker and the profile do not say themselves. `up` writes it into the task directory as `project.md` and runs the one `sh` block under `## Setup` in the container after the dependency install. `host/projects/template.md` holds the headings
+
+Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `<cli> profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi and OMP in the checkout's `.pi/mcp.json` or `.omp/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
+
+Moving from the old paths, before you pull this change:
+
+1. `mkdir -p ~/.config/harness/projects`
+2. `jq 'del(.["*"])' host/repos.json > ~/.config/harness/repos.json`; keep `*` too if yours differs from the harness's
+3. `mv host/projects/*/ ~/.config/harness/projects/`, which leaves `template.md` behind
+4. `git checkout host/repos.json && git pull`, then `./sync.sh --apply`: the render and the settings aligner take every host Linear server out of `~/.<harness>/agent/mcp.json` and `managedMcpServers`
+5. `<cli> profile <checkout> --apply` in each checkout whose profile gives the host Linear, once per harness
 
 ## Commands
 
@@ -127,7 +145,7 @@ npm run check     # tsc --noEmit
 
 ## Trust model
 
-Every signature comes from this Mac. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch. Who pushes, opens and merges pull requests is each repository's profile in `host/repos.json`, which agents read and never write: where it gives a container push `auto`, the container pushes its own branch with a token `up` refuses if it sees any other private repository; everywhere else pushes come from this Mac at the host's `push` level: the key behind Touch ID at `human`, HTTPS with the token the host session holds in `GH_TOKEN` at `auto` (`inventory.md`, GitHub tokens).
+Every signature comes from this Mac. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch. Who pushes, opens and merges pull requests is each repository's profile in `~/.config/harness/repos.json`, or the `*` of `host/repos.json` for a repository it omits, which agents read and never write: where it gives a container push `auto`, the container pushes its own branch with a token `up` refuses if it sees any other private repository; everywhere else pushes come from this Mac at the host's `push` level: the key behind Touch ID at `human`, HTTPS with the token the host session holds in `GH_TOKEN` at `auto` (`inventory.md`, GitHub tokens).
 
 `land` fetches the branch through the `sandbox-<name>` remote that sbx registers in the host repo and refuses a branch that no longer descends from the one already here. It signs where the repository's profile gives the host `sign` (`--sign` forces it) and re-signs only the commits origin does not have, one Touch ID tap each, so the branch stays a fast-forward of what was pushed before. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge stays with the person unless the profile gives the host merge `auto`; deploy and publishing stay with the person.
 

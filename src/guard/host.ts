@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, relative, resolve } from "node:path";
-import { parseProfiles, PROFILES, profileFor, repoName } from "../profile/profile.ts";
+import { loadProfiles, PROFILES, profileFor, repoName, USER_CONFIG } from "../profile/profile.ts";
 import type { Host } from "./policy.ts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
@@ -26,19 +26,21 @@ function real(path: string): string {
 	}
 }
 
-export function hostAt(cwd: string, root = ROOT): Host {
-	const profiles = resolve(root, PROFILES);
+const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : undefined);
+
+export function hostAt(cwd: string, root = ROOT, home = homedir()): Host {
+	const profiles = [resolve(root, PROFILES), resolve(home, USER_CONFIG, "repos.json")];
 	const levels = () => {
 		const config = remotes(cwd);
 		const origin = config.find(([key]) => key === "remote.origin.url")?.[1] ?? "";
-		const granted = profileFor(parseProfiles(readFileSync(profiles, "utf8")), repoName(origin)).host;
+		const granted = profileFor(loadProfiles(read, root, home), repoName(origin)).host;
 		const ghElsewhere = ([key, value]: string[]) => {
 			const [, remote, field] = /^remote\.(.+)\.([^.]+)$/.exec(key) ?? [];
 			return field === "gh-resolved" || (remote !== "origin" && (field === "url" || field === "pushurl") && repoName(value) !== "");
 		};
 		return config.some(ghElsewhere) ? { ...granted, pr: "none" as const, merge: "none" as const } : granted;
 	};
-	const reaches = (path: string) => within(profiles, resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, homedir())));
+	const reaches = (path: string) => profiles.some((file) => within(file, resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, home))));
 	return { levels, reaches };
 }
 

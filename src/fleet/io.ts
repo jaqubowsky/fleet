@@ -18,7 +18,7 @@ export type Io = {
 	append(path: string, line: string): void;
 	mkdir(path: string): void;
 	log(line: string): void;
-	run(command: string, args: string[]): void;
+	run(command: string, args: string[], cwd?: string): void;
 	launch(command: string, args: string[]): Promise<number>;
 	sleep(ms: number): Promise<void>;
 	now(): Date;
@@ -90,8 +90,8 @@ export function realIo(home: string, harness: Harness): Io {
 		},
 		mkdir: (path) => mkdirSync(path, { recursive: true }),
 		log: (line) => console.log(line),
-		run: (command, args) => {
-			const result = spawnSync(command, args, { stdio: "inherit" });
+		run: (command, args, cwd) => {
+			const result = spawnSync(command, args, { cwd, stdio: "inherit" });
 			if (result.error) throw result.error;
 			if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 		},

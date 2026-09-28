@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
 import { CONTINUE, HARNESSES } from "../harness.ts";
-import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
+import { PRIVATE_PROFILE, PRIVATE_REPO, SAMPLE_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { render, renderText } from "./render.ts";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -28,7 +28,7 @@ function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
 		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
-		"read /root/host/repos.json": REAL_PROFILES,
+		"read /root/host/repos.json": SAMPLE_PROFILES,
 		...extra,
 	};
 }
@@ -380,10 +380,11 @@ test("the claude container turns the feedback survey off, so no survey sits in t
 	});
 });
 
-test("a profile that gives the host Linear adds its server to pi and omp mcp.json, beside the servers already there", () => {
+test("a host Linear server any profile names leaves pi's and omp's machine-wide mcp.json, and the servers beside it stay", () => {
+	const context7 = { url: "https://mcp.context7.com/mcp" };
 	const profiles = {
-		"read /root/host/repos.json": WITH_PRIVATE,
-		"read /home/agent/mcp.json": JSON.stringify({ mcpServers: { context7: { url: "https://mcp.context7.com/mcp" } } }),
+		"read /home/me/.config/harness/repos.json": JSON.stringify({ [PRIVATE_REPO]: PRIVATE_PROFILE }),
+		"read /home/agent/mcp.json": JSON.stringify({ mcpServers: { context7, "linear-private": { url: "https://mcp.linear.app/mcp", auth: "oauth" } } }),
 		"read /root/pi/profiles/host.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3"] }),
 		"read /root/pi/profiles/sbx.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"] }),
 	};
@@ -392,15 +393,8 @@ test("a profile that gives the host Linear adds its server to pi and omp mcp.jso
 
 	for (const io of [pi, omp]) render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
 
-	assert.deepEqual(JSON.parse(pi.files["/home/agent/mcp.json"]).mcpServers, {
-		context7: { url: "https://mcp.context7.com/mcp" },
-		"linear-private": { url: "https://mcp.linear.app/mcp", auth: "oauth" },
-	});
+	for (const io of [pi, omp]) assert.deepEqual(JSON.parse(io.files["/home/agent/mcp.json"]).mcpServers, { context7 }, io.harness.name);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"]);
-	assert.deepEqual(JSON.parse(omp.files["/home/agent/mcp.json"]).mcpServers, {
-		context7: { url: "https://mcp.context7.com/mcp" },
-		"linear-private": { type: "http", url: "https://mcp.linear.app/mcp" },
-	});
 });
 
 test("with no host Linear server in any profile, the host render writes no mcp.json and loads no adapter", () => {

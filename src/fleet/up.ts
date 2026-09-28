@@ -191,7 +191,7 @@ export async function up(
 		const allowed = describe(name, { ...profile, resources }, io.harness.cli);
 		io.write(`${task}/permissions.md`, allowed);
 		io.log(allowed);
-		const overlay = projectOverlay(input.root, name, io);
+		const overlay = projectOverlay(name, io);
 		if (overlay === undefined) io.remove(`${task}/project.md`);
 		else io.write(`${task}/project.md`, overlay);
 		const setup = setupCommand(overlay);

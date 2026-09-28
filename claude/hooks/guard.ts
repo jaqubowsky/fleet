@@ -19,10 +19,10 @@ function privilegedNotBare(command: string): boolean {
 	return commandsOf(command).some((segment) => PRIVILEGED.test(segment.replace(QUOTED, ""))) && !BARE.test(command.replace(QUOTED, (quoted) => (quoted.includes("\n") ? "\n" : "")));
 }
 
-export function answer(input: HookInput, root?: string): string {
+export function answer(input: HookInput, root?: string, home?: string): string {
 	const tool = input.tool_name ?? "";
 	if (!POLICY.test(tool)) return "";
-	const decided = decide(tool, input.tool_input ?? {}, hostAt(input.cwd ?? process.cwd(), root));
+	const decided = decide(tool, input.tool_input ?? {}, hostAt(input.cwd ?? process.cwd(), root, home));
 	const verdict: Decision = decided.decision === "allow" && tool === "Bash" && privilegedNotBare(String(input.tool_input?.command)) ? { decision: "deny", reason: NOT_BARE } : decided;
 	if (verdict.decision === "allow" && !verdict.explicit) return "";
 	return JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: verdict.decision, permissionDecisionReason: verdict.reason } });

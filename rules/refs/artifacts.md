@@ -9,7 +9,7 @@ Each file has one role. The commit, the branch and the dirty state live in git; 
 ```text
 status.md      current user-facing state: status, attention, log, and the summary at a hand-off
 permissions.md what each seat may do in this repository: one line per action and level; {{cli}} up writes it
-project.md     how this project does what the rules require, when host/projects/<owner>/<repo>.md exists; {{cli}} up writes it
+project.md     how this project does what the rules require, when ~/.config/harness/projects/<owner>/<repo>.md exists; {{cli}} up writes it
 ticket.md      the tracker issue this task delivers, copied at start by the host; Status and ticks are the container's
 analysis.md    what was found: verdict, evidence, open questions
 spec.md        what will be built and why

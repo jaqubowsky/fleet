@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PRIVATE_PROFILE, PRIVATE_REPO, REAL_PROFILES, WITH_PRIVATE } from "./fixture.ts";
+import { PRIVATE_PROFILE, PRIVATE_REPO, REPO_PROFILES, SAMPLE_PROFILES, WITH_PRIVATE } from "./fixture.ts";
 import { describe, hostLinearServers, parseProfiles, profileFor, repoName } from "./profile.ts";
 
-const star = JSON.parse(REAL_PROFILES)["*"];
+const star = JSON.parse(SAMPLE_PROFILES)["*"];
 
 test("an exact repository beats its owner, the owner beats *, and an unknown repository gets *", () => {
 	const profiles = parseProfiles(JSON.stringify({ "*": star, "acme/*": PRIVATE_PROFILE, "Acme/Special": { ...PRIVATE_PROFILE, resources: { memory: "2g", cpus: "1" } } }));
@@ -44,22 +44,28 @@ test("a profile file that breaks the contract is refused with the field it break
 	assert.throws(() => parseProfiles('{ "*": {},, }'), /^Error: host\/repos\.json: /);
 });
 
-test("the profile file holds today's three profiles", () => {
-	const profiles = parseProfiles(REAL_PROFILES);
-	const webapp = profileFor(profiles, "acme/webapp");
-	const globex = [profileFor(profiles, "globex/x"), profileFor(profiles, "bob/y")];
-	const personal = profileFor(profiles, "alice/cv");
+test("the harness's profile file holds only *, the profile an unknown repository gets", () => {
+	const profiles = parseProfiles(REPO_PROFILES);
 
-	assert.deepEqual(webapp.host, { sign: "none", push: "human", pr: "none", merge: "none", down: "human", linear: "none" });
-	assert.deepEqual(webapp.container, { push: "none", pr: "auto", linear: "read", linearServer: "linear-acme-readonly", token: "op://Dev/GitHub PAT webapp/credential" });
-	for (const profile of [...globex, personal]) {
-		assert.deepEqual(profile.host, { sign: "human", push: "human", pr: "none", merge: "none", down: "human", linear: "none" });
-		assert.deepEqual({ ...profile.container, token: undefined }, { push: "none", pr: "auto", linear: "none", token: undefined });
-	}
-	assert.deepEqual(globex.map((p) => p.container.token), ["op://Dev/GitHub PAT globex/credential", "op://Dev/GitHub PAT globex/credential"]);
-	assert.equal(personal.container.token, "op://Dev/GitHub PAT Personal/credential");
-	assert.equal(webapp.resources.memory, "12g");
-	assert.deepEqual([...globex, personal].map((p) => p.resources.memory), ["8g", "8g", "8g"]);
+	assert.deepEqual(Object.keys(profiles), ["*"]);
+	assert.deepEqual(profiles["*"].host, { sign: "human", push: "human", pr: "none", merge: "none", down: "human", linear: "none" });
+	assert.equal(profiles["*"].container.token, "op://Dev/GitHub PAT Personal/credential");
+});
+
+test("an entry in the person's own file wins over the harness's for the same match, and the harness's * answers a repository that file omits", () => {
+	const mine = JSON.stringify({ "*": PRIVATE_PROFILE, "Acme/*": PRIVATE_PROFILE });
+	const theirs = JSON.stringify({ "*": star, "acme/*": star, "other/*": star });
+
+	const both = parseProfiles(theirs, mine);
+	const onlyTheirs = parseProfiles(theirs, JSON.stringify({ "acme/*": PRIVATE_PROFILE }));
+
+	assert.deepEqual([profileFor(both, "acme/x").match, profileFor(both, "acme/x").file], ["Acme/*", "~/.config/harness/repos.json"]);
+	assert.equal(profileFor(both, "someone/else").resources.memory, "4g");
+	assert.deepEqual([profileFor(both, "other/x").match, profileFor(both, "other/x").file], ["other/*", "host/repos.json"]);
+	assert.deepEqual([profileFor(onlyTheirs, "someone/else").match, profileFor(onlyTheirs, "someone/else").file], ["*", "host/repos.json"]);
+	assert.throws(() => parseProfiles(JSON.stringify({ "acme/*": star }), JSON.stringify({ "other/*": star })), /no \* entry/);
+	assert.throws(() => parseProfiles(theirs, '{ "*": {},, }'), /^Error: ~\/\.config\/harness\/repos\.json: /);
+	assert.throws(() => parseProfiles(theirs, JSON.stringify({ "a/b": { ...PRIVATE_PROFILE, host: { ...PRIVATE_PROFILE.host, push: "x" } } })), /^Error: ~\/\.config\/harness\/repos\.json a\/b\.host\.push/);
 });
 
 test("the description gives each seat one line per action, with its level and what it means there", () => {

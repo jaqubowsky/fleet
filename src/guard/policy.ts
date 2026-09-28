@@ -82,8 +82,8 @@ const OWN_PR: Record<string, RegExp> = {
 	merge: new RegExp(String.raw`^\s*gh\s+pr\s+merge(\s+\d+)?(\s+(--(squash|merge|rebase|delete-branch|auto)|--(subject|body)${VALUE}|--match-head-commit(\s+|=)[0-9a-f]{40}))*\s*$`),
 };
 
-const OWN_PROFILES = "host/repos.json sets what the host may do, so only the person changes it. Read it with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names the file passes only when every part of it is such a read, so run the read on its own.";
-const MAY_NAME_PROFILES = "A $variable or glob in this command could expand to host/repos.json, which only the person changes, so the guard counts it as naming that file. Spell the paths out, or run any read of host/repos.json on its own.";
+const OWN_PROFILES = "~/.config/harness/repos.json, and host/repos.json in the harness for a repository it omits, set what the host may do, so only the person changes them. Read them with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names either file passes only when every part of it is such a read, so run the read on its own.";
+const MAY_NAME_PROFILES = "A $variable or glob in this command could expand to ~/.config/harness/repos.json or host/repos.json, which only the person changes, so the guard counts it as naming that file. Spell the paths out, or run any read of them on its own.";
 const READS_PROFILES = new RegExp(String.raw`^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)`);
 const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
@@ -155,7 +155,7 @@ export function decide(tool: string, input: Record<string, unknown>, host: Host)
 
 	if (HOST_PUSH.test(programs(subject, false).join("\n"))) {
 		const push = host.levels().push;
-		if (push === "none") return deny("This repository's profile gives the host no push (host.push none in host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
+		if (push === "none") return deny("This repository's profile gives the host no push (host.push none in ~/.config/harness/repos.json or host/repos.json). The branch reaches GitHub another way, or the person changes the profile.");
 		if (push === "auto" && OWN_PUSH.test(subject)) return granted("This repository's profile lets the host push.");
 	}
 

@@ -35,7 +35,7 @@ export function land(input: LandInput, io: Io): void {
 	const refusal = landRefusal({ ...checkout, branch }, current, base);
 	if (refusal) throw new Error(refusal);
 	const { host } = repoProfile(input.root, repoName(io.git(["remote", "get-url", "origin"], input.repo)), io);
-	if (input.push && host.push === "none") throw new Error("this repository's profile gives the host no push (host.push is none in host/repos.json); the branch reaches GitHub another way");
+	if (input.push && host.push === "none") throw new Error("this repository's profile gives the host no push (host.push is none in ~/.config/harness/repos.json or host/repos.json); the branch reaches GitHub another way");
 	const signs = input.sign || host.sign !== "none";
 
 	try {

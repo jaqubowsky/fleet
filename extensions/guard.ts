@@ -22,7 +22,7 @@ export default function guard(h: Harness, root?: string, home = homedir()) {
 
 			if (writesOwnConfig(payload.tool_name, payload.tool_input, ctx.cwd, home)) return { block: true, reason: OWN_CONFIG };
 
-			const verdict = decide(payload.tool_name, payload.tool_input, hostAt(ctx.cwd, root));
+			const verdict = decide(payload.tool_name, payload.tool_input, hostAt(ctx.cwd, root, home));
 			if (verdict.decision === "allow") return;
 
 			return { block: true, reason: verdict.reason };

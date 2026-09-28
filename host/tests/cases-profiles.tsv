@@ -1,4 +1,4 @@
-# The host reads host/repos.json and never writes it: only the person changes what the host may do.
+# The host reads ~/.config/harness/repos.json and host/repos.json and never writes them: only the person changes what the host may do.
 allow	Read	host/repos.json
 deny	Edit	host/repos.json
 deny	Write	host/repos.json
@@ -55,3 +55,12 @@ deny	Edit	.
 deny	Edit	host
 deny	Write	host/Repos.json
 allow	Bash	[ -f host/repos.json ] && test -s host/repos.json && echo yes
+allow	Read	~/.config/harness/repos.json
+deny	Edit	~/.config/harness/repos.json
+deny	Write	$HOME/.config/harness/repos.json
+deny	NotebookEdit	~/.config/harness/repos.json
+allow	Bash	jq '.["*"].host' ~/.config/harness/repos.json
+deny	Bash	sed -i s/none/auto/ ~/.config/harness/repos.json
+deny	Bash	cp /tmp/p.json ~/.config/harness/repos.json
+deny	Bash	cd ~/.config/harness && sed -i s/none/auto/ *
+allow	Write	~/.config/harness/projects/acme/app.md

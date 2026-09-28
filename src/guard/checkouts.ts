@@ -6,7 +6,9 @@ import { today, WITH_PRIVATE } from "../profile/fixture.ts";
 import { hostAt } from "./host.ts";
 import type { Host, HostLevels } from "./policy.ts";
 
-export const at = (levels: HostLevels): Host => ({ ...hostAt(resolve(import.meta.dirname, "../..")), levels: () => levels });
+export const EMPTY_HOME = mkdtempSync(join(tmpdir(), "guard-home-"));
+
+export const at = (levels: HostLevels): Host => ({ ...hostAt(resolve(import.meta.dirname, "../.."), undefined, EMPTY_HOME), levels: () => levels });
 
 export const here = at(today());
 

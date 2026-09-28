@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { REAL_PROFILES } from "../profile/fixture.ts";
+import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import { baseBranch, isBase, land, landRefusal } from "./land.ts";
 
 test("refusals: dirty, detached, base branch, checked out locally", () => {
@@ -27,7 +27,7 @@ test("base branch resolves origin/HEAD to the real remote branch", () => {
 });
 
 const probe = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && printf';
-const unsigning = { "read /root/host/repos.json": REAL_PROFILES, "git remote get-url origin": "git@github.com:acme/webapp.git" };
+const unsigning = { "read /root/host/repos.json": SAMPLE_PROFILES, "git remote get-url origin": "git@github.com:acme/webapp.git" };
 
 test("land fetches from the sandbox remote and stays unsigned where the profile gives host.sign none", () => {
 	const io = fakeIo({ ...unsigning, [probe]: "web-1\t0\tabc", "git rev-parse --abbrev-ref origin/HEAD": "origin/main", "git branch --show-current": "main", "git --no-pager log": "abc N feat: x" });
@@ -154,7 +154,7 @@ test("land reads the profile before it imports anything", () => {
 });
 
 test("land --push refuses where the profile gives the host no push, before it imports anything", () => {
-	const profiles = JSON.parse(REAL_PROFILES);
+	const profiles = JSON.parse(SAMPLE_PROFILES);
 	profiles["acme/*"].host.push = "none";
 	const io = fakeIo({ ...landed, "read /root/host/repos.json": JSON.stringify(profiles) });
 

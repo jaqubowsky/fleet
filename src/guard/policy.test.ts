@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { symlinkSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { test } from "node:test";
 import { PRIVATE_REPO, today, WITH_PRIVATE } from "../profile/fixture.ts";
 import { parseProfiles, profileFor } from "../profile/profile.ts";
 import { cases, input } from "./corpus.ts";
 import { hostAt } from "./host.ts";
-import { at, here, privateRoot } from "./checkouts.ts";
+import { at, EMPTY_HOME, here, privateRoot } from "./checkouts.ts";
 import { decide, type HostLevels } from "./policy.ts";
 
 test("a tool the policy does not know is refused, and its own tools are read on their subject", () => {
@@ -65,22 +64,29 @@ test("a refusal says whether the command named the permissions file or only a va
 	const expanded = decide("Bash", { command: "cd host && sed -i s/none/auto/ *" }, here);
 
 	assert.equal(expanded.decision, "deny");
-	assert.match(named.reason, /only the person changes it/);
-	assert.match(expanded.reason, /\$variable or glob in this command could expand to host\/repos\.json/);
+	assert.match(named.reason, /only the person changes them/);
+	assert.match(expanded.reason, /\$variable or glob in this command could expand to ~\/\.config\/harness\/repos\.json or host\/repos\.json/);
 });
 
 test("every spelling of the path to the host's permissions reaches the same refusal", () => {
 	const root = privateRoot();
-	const host = hostAt(root, root);
+	const host = hostAt(root, root, EMPTY_HOME);
 	const file = join(root, "host", "repos.json");
 	symlinkSync(join(root, "host"), join(root, "linked"));
-	const spellings = [file, "host/repos.json", "./host/../host/repos.json", `~/${relative(homedir(), file)}`, `$HOME/${relative(homedir(), file)}`, "linked/repos.json"];
+	const spellings = [file, "host/repos.json", "./host/../host/repos.json", `~/${relative(EMPTY_HOME, file)}`, `$HOME/${relative(EMPTY_HOME, file)}`, "linked/repos.json"];
 
 	for (const path of spellings) {
 		for (const tool of ["Edit", "Write", "NotebookEdit"]) assert.equal(decide(tool, { file_path: path }, host).decision, "deny", `${tool} ${path}`);
 		assert.equal(decide("Read", { file_path: path }, host).decision, "allow", `Read ${path}`);
 	}
 	assert.equal(decide("Write", { file_path: join(root, "host", "notes.md") }, host).decision, "allow");
+	const mine = hostAt(root, root, EMPTY_HOME);
+	const own = join(EMPTY_HOME, ".config", "harness", "repos.json");
+	for (const path of [own, "~/.config/harness/repos.json", "$HOME/.config/harness/repos.json", relative(root, own)]) {
+		for (const tool of ["Edit", "Write", "NotebookEdit"]) assert.equal(decide(tool, { file_path: path }, mine).decision, "deny", `${tool} ${path}`);
+		assert.equal(decide("Read", { file_path: path }, mine).decision, "allow", `Read ${path}`);
+	}
+	assert.equal(decide("Write", { file_path: join(EMPTY_HOME, ".config", "harness", "projects", "a", "b.md") }, mine).decision, "allow");
 	assert.equal(decide("NotebookEdit", { notebook_path: "host/repos.json" }, host).reason, decide("Edit", { file_path: "host/repos.json" }, host).reason);
 });
 

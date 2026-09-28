@@ -3,10 +3,12 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { answer } from "../../claude/hooks/guard.ts";
+import { answer as hook } from "../../claude/hooks/guard.ts";
 import { PRIVATE_REPO } from "../profile/fixture.ts";
-import { checkout, here, privateRoot } from "./checkouts.ts";
+import { checkout, EMPTY_HOME, here, privateRoot } from "./checkouts.ts";
 import { decide, POLICY_TOOLS } from "./policy.ts";
+
+const answer = (input: Parameters<typeof hook>[0], root?: string) => hook(input, root, EMPTY_HOME);
 
 const wrapper = resolve(import.meta.dirname, "../../claude/hooks/guard.sh");
 
@@ -76,6 +78,7 @@ test("the claude hook refuses an edit or a shell write of the host's permissions
 	const ask = (tool_name: string, tool_input: Record<string, unknown>) => answer({ tool_name, tool_input, cwd: root }, root);
 
 	assert.match(ask("Edit", { file_path: "host/repos.json" }), /"permissionDecision":"deny"/);
+	for (const tool of ["Edit", "Write"]) assert.match(ask(tool, { file_path: "~/.config/harness/repos.json" }), /"permissionDecision":"deny"/, tool);
 	assert.match(ask("Bash", { command: "echo '{}' | tee host/repos.json" }), /"permissionDecision":"deny"/);
 	assert.equal(ask("Read", { file_path: "host/repos.json" }), "");
 });

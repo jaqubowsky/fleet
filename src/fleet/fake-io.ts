@@ -79,8 +79,8 @@ export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness =
 		log: (line) => {
 			lines.push(line);
 		},
-		run: (command, args) => {
-			calls.push(["run", command, ...args]);
+		run: (command, args, cwd) => {
+			calls.push(["run", ...(cwd === undefined ? [] : [cwd]), command, ...args]);
 		},
 		launch: async (command, args) => {
 			calls.push(["launch", command, ...args]);
