@@ -126,6 +126,16 @@ test("every container carries the default-branch push guard with the modules it 
 	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && /container-guard|guard\/container/.test(path)), []);
 });
 
+test("a ref line marked for the host renders without its marker for the host and not at all for the container", () => {
+	const io = fakeIo(sources({ "list /root/rules/refs": ["artifacts.md"], "read /root/rules/refs/artifacts.md": "status.md  state\n{{seat.host}} acceptance.md  the host's\nlogs/  evidence\n" }), HARNESSES.claude);
+
+	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/host" }, io);
+	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
+
+	assert.equal(io.files["/host/refs/artifacts.md"], "status.md  state\nacceptance.md  the host's\nlogs/  evidence\n");
+	assert.equal(io.files["/stage/home/refs/artifacts.md"], "status.md  state\nlogs/  evidence\n");
+});
+
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 

@@ -1,5 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { realIo } from "../fleet/io.ts";
+import { HARNESSES, type HarnessName } from "../harness.ts";
+import { render } from "./render.ts";
 
 export type Misplaced = { at: string; names: string; owner: string };
 
@@ -63,4 +67,27 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 			return names.length ? [{ at: `${file}:${i + 1}`, names: names.join(", "), owner: layer.owner }] : [];
 		});
 	});
+}
+
+const HOST_CHECK = /acceptance\.md|\bhost('s|-side)? (\w+ )?(acceptance|accepts|review\w*|checks|verifies)\b/i;
+
+export function containerTexts(root: string): Record<string, string> {
+	const out = mkdtempSync(join(tmpdir(), "layers-"));
+	try {
+		return Object.fromEntries(
+			(Object.keys(HARNESSES) as HarnessName[]).flatMap((name) => {
+				const dir = join(out, name);
+				render({ root, harness: HARNESSES[name], seat: "container", out: dir }, { ...realIo(out, HARNESSES[name]), log: () => {} });
+				return walk(dir)
+					.filter((f) => /\.(md|ts)$/.test(f))
+					.map((f) => [`${name}/${relative(dir, f)}`, readFileSync(f, "utf8")]);
+			}),
+		);
+	} finally {
+		rmSync(out, { recursive: true, force: true });
+	}
+}
+
+export function hostChecks(texts: Record<string, string>): string[] {
+	return Object.entries(texts).flatMap(([file, text]) => text.split("\n").flatMap((line, i) => (HOST_CHECK.test(line) ? [`${file}:${i + 1}`] : [])));
 }

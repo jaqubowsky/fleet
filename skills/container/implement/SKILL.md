@@ -47,7 +47,7 @@ Implement the ticket, spec or analysis you were handed.
    - an external or role-prompt contract
    - a failure that is expensive or hard to see
 
-   Any other diff takes the gate as its check. An order for a review runs it whatever the diff. Record the decision, run or skipped with the reason. A review's findings close as the review says.
+   Any other diff takes the gate as its check. An order for a review runs it whatever the diff. Record the decision, run or skipped, with a reason that names only what this diff can break, or why it cannot. A review's findings close as the review says.
 
 9. **Commit** the work, with the review's fixes when one ran, to the current branch.
 

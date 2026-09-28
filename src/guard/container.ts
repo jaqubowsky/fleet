@@ -66,5 +66,5 @@ export function pushRefusal(command: string, cwd: string): string | undefined {
 	const current = git(cwd, "branch", "--show-current") ?? "";
 	const implicit = git(cwd, "rev-parse", "--symbolic-full-name", "@{push}")?.replace(/^refs\/remotes\/[^/]+\//, "") ?? current;
 	if (!pushes.some(({ args }) => destinations(args, current, implicit).some((target) => target === EVERYTHING || target === base))) return undefined;
-	return `A container never pushes to origin's default branch ${base}, whatever push level the profile gives it: work reaches ${base} through a pull request the host accepts. ${current && current !== base ? `Push your own branch: \`git push -u origin ${current}\`.` : "Switch to your own branch first: `git switch -c <name>`, named after the task."}`;
+	return `A container never pushes to origin's default branch ${base}, whatever push level the profile gives it: work reaches ${base} through a pull request. ${current && current !== base ? `Push your own branch: \`git push -u origin ${current}\`.` : "Switch to your own branch first: `git switch -c <name>`, named after the task."}`;
 }

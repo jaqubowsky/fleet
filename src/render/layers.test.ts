@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { layerSources, misplaced } from "./layers.ts";
+import { containerTexts, hostChecks, layerSources, misplaced } from "./layers.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -35,4 +35,15 @@ test("a contract naming a skill belongs to the container owner", () => {
 
 test("a skill keeps its own output file by name", () => {
 	assert.deepEqual(atSeededLine("skills/container/to-tickets/SKILL.md", "Update `spec.md` when a decision changes."), []);
+});
+
+test("no text a container reads names a check the host runs after it", () => {
+	assert.deepEqual(hostChecks(containerTexts(root)), []);
+});
+
+test("a container line naming the host's acceptance or review is found with its file and line", () => {
+	assert.deepEqual(hostChecks({ "claude/home/rules/sandbox.md": "1. Commit\n2. Skip review: the host reviews independently\n", "pi/home/agent/refs/artifacts.md": "acceptance.md  the host's acceptance: Fits, Gaps, Seen\n" }), [
+		"claude/home/rules/sandbox.md:2",
+		"pi/home/agent/refs/artifacts.md:1",
+	]);
 });
