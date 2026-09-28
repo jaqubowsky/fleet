@@ -4,25 +4,25 @@ description: 'Independent review of one diff for correctness and engineering qua
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` in the task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}); with no task directory, `review.md` beside the repository's `.issues/`.
+Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` where your seat's rules keep it, else beside the repository's `.issues/`.
 
 ## Process
 
 ### 1. Pin the diff
 
-- Uncommitted work, from `implement` or named by the user: `git add -A -N` so new files show, then `git diff HEAD --stat` is non-empty before anything else runs. The range is `<HEAD-sha>..working tree`.
+- Uncommitted work, before its commit or named by the user: `git add -A -N` so new files show, then `git diff HEAD --stat` is non-empty before anything else runs. The range is `<HEAD-sha>..working tree`.
 - Otherwise the fixed point is what the user named: a commit, a branch, `main`, `HEAD~3`; missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs.
 
 Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other.
 
 ### 2. Gather the evidence
 
-Into `logs/review-<head-sha7>/` in the task directory:
+Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 
 - `diff.patch`: `git diff <base>...<head>`, and `changed.txt`: `git diff --name-only --diff-filter=ACMR <base>...<head>`; for uncommitted work, `git diff HEAD` in both.
 - `commits.txt`: `git log <base>..<head> --oneline`; none for uncommitted work.
 - `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md). No detector is a line in `clones.txt` saying so.
-- The checks: the logs `implement` step 7 wrote on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
+- The checks: the gate logs already written on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
 - A check log past 200 lines, repo-wide output such as a formatter's, gets its cut beside it here: `grep -F -f changed.txt <log> > <log>.changed`, the lines that name a changed file.
 
 ### 3. Name the standards
@@ -40,11 +40,11 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 
 ### 4. Run the reviewer
 
-{{file:review-call}} The task text carries, in this order:
+{{review.call}} The task text carries, in this order:
 
 1. the range in SHAs
-2. the task directory path and which of `analysis.md`, `spec.md`, `issues/` exist; when none does, the prompt that set the task, quoted
-3. the path of `logs/review-<head-sha7>/` and each file in it except `pairs.tsv` and a log that has a `.changed` cut
+2. the paths of the analysis, the spec and the tickets that set the task, those that exist; when none does, the prompt that set the task, quoted
+3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
 5. the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`
 6. `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
@@ -58,7 +58,7 @@ Read `review.md`. Report its `PASS` or `FAIL` line and the finding count per axi
 - one that carries a smallest fix: fix it and close it with its evidence, a test that fails without the fix or a log path and line
 - a `plausible` or `unverified` one whose break no test or trace reproduces: not reproduced, unbuilt
 - a `host:` one: unbuilt, its fix leaves the task
-- a product decision, whether the reviewer wrote it as `host:` or as a smallest fix: a question for the user under `attention:`, not a fix
+- a product decision, whether the reviewer wrote it as `host:` or as a smallest fix: a question for the user, not a fix
 
 An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
 
@@ -68,12 +68,12 @@ An item under Not covered that names work still to come goes into the file that 
 - P<0-2> <finding>: fixed, <test name, or log path:line>
 - P<0-2> <finding>: host, <why its fix leaves the task>
 - P<0-2> <finding>: not reproduced, <the test or trace that stayed green>
-- P<0-2> <finding>: user, <the question under attention:>
+- P<0-2> <finding>: user, <the question asked>
 - `<gate command>`: exit <n>, <log path>
 - Unreviewed: <each file a fix added outside `changed.txt`, or none>
 ```
 
-Checks after commit or rebase keep their detail in check logs or a new browser run report. `status.md` records one turning point with a pointer to that evidence, not the individual checks. The Range stays pinned to the diff the reviewer inspected. A fix that reaches files the reviewer never saw closes here too: the Unreviewed line names them, and the next review covers its own ticket's diff or a range the user names.
+Checks after commit or rebase keep their detail in check logs or a new browser run report. The Range stays pinned to the diff the reviewer inspected. A fix that reaches files the reviewer never saw closes here too: the Unreviewed line names them, and the next review covers its own ticket's diff or a range the user names.
 
 ## Done
 

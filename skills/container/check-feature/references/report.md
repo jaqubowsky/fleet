@@ -12,7 +12,7 @@ Runbook: <files edited and why, or none>
 | --- | --- | --- |
 | <criterion> | <verdict> | <screenshot, or test command and result> |
 
-In `check-regressions` the table carries a fourth column, `Seam`, and the verdicts `regressed`, `pre-existing`, `coverage-gap`.
+In a regression walk the table carries a fourth column, `Seam`, and the verdicts `regressed`, `pre-existing`, `coverage-gap`.
 
 ## Failures
 

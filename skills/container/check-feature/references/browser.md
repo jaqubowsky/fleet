@@ -1,6 +1,6 @@
 # Browser session
 
-Shared by `check-feature`, `check-regressions` and `record-walkthrough`.
+Shared by every browser walk and replay.
 
 ## Prove the checkout
 
@@ -45,7 +45,7 @@ An action waits for itself and for nothing after it: `find`, `eval` and `screens
 
 ## Evidence
 
-One screenshot per criterion, at the state that decides its verdict, `<NN>-<criterion-slug>.png` in the run directory, the path absolute (a bare filename lands in the working directory, which is the repository). Scroll the state into view, `highlight <ref>` the element that matters, capture the viewport; full page only when one criterion covers the whole page. A failed criterion adds the console or the response that shows the cause, as text. Tracing and video stay off here: a trace is hundreds of megabytes nobody opens, and the video belongs to `record-walkthrough`.
+One screenshot per criterion, at the state that decides its verdict, `<NN>-<criterion-slug>.png` in the run directory, the path absolute (a bare filename lands in the working directory, which is the repository). Scroll the state into view, `highlight <ref>` the element that matters, capture the viewport; full page only when one criterion covers the whole page. A failed criterion adds the console or the response that shows the cause, as text. Tracing and video stay off here: a trace is hundreds of megabytes nobody opens, and a video is a replay of its own, after the walk.
 
 Every capture is read by the agent that took it, before it is filed: the state the criterion names is in the frame, and everything else in the frame is accounted for, an element on top of another, a panel that did not close, a region that came up empty. A snapshot reports the tree the page declares, so a layout that renders wrong passes it; the image is where that surfaces. Full HD unless the criterion turns on a smaller screen, which sets its own size with `resize` and says so in the report.
 

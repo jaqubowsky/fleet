@@ -81,7 +81,7 @@ Summary and Next step hold only the present, so `## Log` is the run's timeline: 
 | Turning point | Line |
 | --- | --- |
 | a finding, yours or a sub-agent's, that changes the plan or the scope | what was found; the file or log that shows it |
-| a check that closes a step: the baseline, a done-check, the gate, the verification of what a user sees | its result; its log |
+| a check that closes a step: the baseline, a done-check, the gate, a settled CI wait, the verification of what a user sees | its result; its log |
 | a decision, yours or a person's | `Decided: <what>, because <why>`; where it is recorded |
 | an approach dropped | `Dropped: <what>, because <why>`; the log that shows it |
 | `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |

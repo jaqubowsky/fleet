@@ -71,6 +71,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"handoff.command": "/session-handoff",
 			"handoff.continue": continueInOneSteer("fleet"),
 			"ci.wait": pollCi("pi"),
+			"review.call": "One `reviewer` call with `async: false`, so this turn waits for it, `output` set to the absolute path of `review.md`, `outputMode: \"file-only\"`.",
 		},
 	},
 	omp: {
@@ -107,6 +108,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"handoff.command": "/session-handoff",
 			"handoff.continue": continueInOneSteer("ofleet"),
 			"ci.wait": pollCi("omp"),
+			"review.call": "One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: \"file-only\"`.",
 		},
 	},
 	claude: {
@@ -141,6 +143,7 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"handoff.command": "/clear",
 			"ci.wait": "Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
 			"handoff.continue": `For an end-to-end task, follow the approval with a second steer: \`cfleet steer <sandbox> "${CONTINUE}"\`; \`/clear\` takes no text.`,
+			"review.call": "One foreground `Agent` call with `subagent_type: \"reviewer\"`, so this turn waits for it; its final message is `review.md`, and you write it to the absolute path unchanged.",
 		},
 	},
 };

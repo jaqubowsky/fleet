@@ -42,10 +42,10 @@ Choose from the described behavior, not from the issue label or title. State the
 | Described behavior | Path |
 | --- | --- |
 | New behavior or capability | one `explorer` run traces the existing behaviour from its entry point: callers, data flow, the user-visible outcome, and where the gap is |
-| Broken, slow, visually incorrect or regressed | REQUIRED SUB-SKILL: use `diagnosing-bugs`; follow its feedback-loop, reproduction, hypothesis and instrumentation phases |
+| Broken, slow, visually incorrect or regressed | Diagnose it: a feedback loop, a reproduction, hypotheses, instrumentation |
 | Both in one request | Diagnose the defect first, then the `explorer` trace for the new behavior; keep causes, fixes and additions distinguishable |
 
-Stop before the fix phase of `diagnosing-bugs`. Present the reproduced symptom, the reproduction command and its result, the supported cause, and the proposed fix with its verification. Blocked reproduction is an incomplete diagnosis, never a fix. Static code reading alone is not a confirmed diagnosis.
+Stop before the fix. Present the reproduced symptom, the reproduction command and its result, the supported cause, and the proposed fix with its verification. Blocked reproduction is an incomplete diagnosis, never a fix. Static code reading alone is not a confirmed diagnosis.
 
 If expected behavior is genuinely unclear, ask for it while gathering independent evidence. Do not guess a product requirement in order to classify a bug.
 
@@ -74,13 +74,11 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-REQUIRED SUB-SKILL: use `brain` after the code analysis. Compare recorded decisions with the proposal, cite wiki pages and their sources, report missing knowledge or access honestly. Wiki advice challenges the approach; it does not make a recommendation mandatory.
-
-REQUIRED SUB-SKILL: use `unslop` for the final answer, in the user's language.
+After the code analysis, compare the person's recorded decisions with the proposal, cite wiki pages and their sources, report missing knowledge or access honestly. Wiki advice challenges the approach; it does not make a recommendation mandatory.
 
 The reply is the report: the headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
 
-In a task directory (`$FLEET_ARTIFACTS/$SANDBOX_NAME`, layout in {{refs}}) the same report is `analysis.md`, headed by `Commit: <sha7>` of the HEAD analyzed. Outside fleet the chat report is the whole deliverable.
+A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed.
 
 ### Verdict
 
@@ -104,7 +102,7 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### The run and the one question
 
-The run this analysis calls for, in one line with the reason: the pipeline or the short run, as {{refs}} orders and picks them. Under it, the proposed split into tickets and the test seams, one line each. Then the one question: every open decision a numbered item, the run, the split and its seams always the last. The question goes in `attention:` under `status: blocked`. An order to deliver end to end answers it in advance, all but a product decision nothing settled.
+The run this analysis calls for, in one line with the reason: tickets, or the short run when the work is one accepted behaviour, one seam and one commit. Under it, the proposed split into tickets and the test seams, one line each. Then the one question: every open decision a numbered item, the run, the split and its seams always the last.
 
 ```md
 1. <decision>
@@ -132,4 +130,4 @@ Each row quotes a run that went wrong: the first without this document in contex
 | Excuse | Reality |
 | --- | --- |
 | "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |
-| "The analysis is in `analysis.md`", followed by one paragraph of prose | The reply is the report, in its slots. `analysis.md` is the copy the next session reads; the person reads the chat. |
+| "The analysis is in the file", followed by one paragraph of prose | The reply is the report, in its slots. The file is the copy the next session reads; the person reads the chat. |

@@ -5,7 +5,7 @@ How step 2 collects clone evidence, and what the flags do. Duplicated Code is th
 Run the detector once, in the skill, before the reviewer is called, into the evidence directory the skill names:
 
 ```bash
-REPORT="$FLEET_ARTIFACTS/$SANDBOX_NAME/logs/review-<head-sha7>"
+REPORT="<the evidence directory from step 2>"
 jscpd --silent --no-tips --reporters json --output "$REPORT" \
   --min-tokens 50 --cross-formats js-ts \
   --ignore "**/__snapshots__/**,**/fixtures/**,**/*.generated.*" . > /dev/null

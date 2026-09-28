@@ -45,7 +45,7 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 5. Work that changes what a user sees is verified once, after the run's last commit, over the `Seen:` criteria or the short run's accepted behaviour: the way `project.md` names, else the check the change calls for
 6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`
 
-The short run skips step 2, for one accepted behaviour, one seam and one commit; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
+The short run skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 
 ## Session handoff
 

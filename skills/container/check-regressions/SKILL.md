@@ -6,7 +6,7 @@ compatibility: Requires a container that can start the project's app, plus playw
 
 # Check regressions
 
-One question: did this change break a behaviour that worked on the base. `check-feature` has already proved the change itself; this skill proves its neighbours, and costs a base checkout and a second walk.
+One question: did this change break a behaviour that worked on the base. A browser walk has already proved the change itself; this skill proves its neighbours, and costs a base checkout and a second walk.
 
 A **sibling** is a behaviour that worked on the base branch and passes through something this diff changed.
 
@@ -20,4 +20,4 @@ A **sibling** is a behaviour that worked on the base branch and passes through s
 
 4. **Base.** For every criterion that failed, `base-worktree <merge-base>` prints a detached checkout with `node_modules` and `.env` linked in; start the app from there on the port the runbook keeps for a second build and drive the same flow. Works there and fails here: `regressed`. Broken there too: `pre-existing`, a finding this branch inherited. Both observations go into the report. Done when every failed criterion has its base observation.
 
-5. **Report and cleanup.** Write the report from [report.md](../check-feature/references/report.md), with the `Seam` column, to `$FLEET_ARTIFACTS/$SANDBOX_NAME/browser/<run-id>/report.md`, then clean up both builds. A `coverage-gap` keeps the run approvable and stays in the report, so the person approves knowing what this run could not prove; the test that closes it belongs to `tdd`.
+5. **Report and cleanup.** Write the report from [report.md](../check-feature/references/report.md), with the `Seam` column, to `browser/<run-id>/report.md` where the feature walk's report goes, then clean up both builds. A `coverage-gap` keeps the run approvable and stays in the report, so the person approves knowing what this run could not prove; the test that closes it is a follow-up.

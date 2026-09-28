@@ -243,6 +243,10 @@ function renderSeats(name: keyof typeof HARNESSES, read: (out: string) => void):
 	}
 }
 
+function containerRules(out: string): string[] {
+	return (readdirSync(`${out}/container`, { recursive: true }) as string[]).filter((file) => /(^|\/)(AGENTS|CLAUDE)\.md$|\/rules\/[^/]+\.md$/.test(file));
+}
+
 function rendered(out: string, seat: string, suffix: string): string {
 	const file = (readdirSync(`${out}/${seat}`, { recursive: true }) as string[]).find((path) => path.endsWith(suffix));
 	assert.ok(file, `${seat} has no ${suffix}`);
@@ -395,7 +399,8 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 				.filter((line) => /(?<!at most )one review per ticket|one review and one commit|review of its uncommitted diff before its one commit|the reviewed work|and its review before the commit|when a review of the task names a shared seam|reviewer sub-agent already reviews/i.test(line));
 			assert.deepEqual(promises, []);
 			assert.match(rendered(out, "container", "implement/SKILL.md"), /blast radius/);
-			assert.match(rendered(out, "container", "implement/SKILL.md"), /`ticket-check <ticket file>`/);
+			const rules = containerRules(out).map((file) => readFileSync(join(out, "container", file), "utf8")).join("\n");
+			assert.match(rules, /`ticket-check <ticket file>`/);
 			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /Log line on the review decision/);
 			assert.match(rendered(out, "container", "context/Dockerfile"), /container\/ticket-check\.sh\s+\/usr\/local\/bin\/ticket-check/);
 			assert.ok(rendered(out, "container", "context/container/ticket-check.sh").includes("not done"));
@@ -407,9 +412,9 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} verifies what a user sees the way project.md names, with no browser in the container rules`, () => {
 		renderSeats(name, (out) => {
 			const files = (readdirSync(out, { recursive: true }) as string[]).filter((file) => file.endsWith(".md"));
-			const rules = files.filter((file) => file.startsWith("container/") && /(^|\/)(AGENTS|CLAUDE)\.md$|\/rules\/[^/]+\.md$/.test(file));
+			const rules = containerRules(out);
 			assert.ok(rules.length > 0);
-			for (const file of rules) assert.doesNotMatch(readFileSync(join(out, file), "utf8"), /browser/i, file);
+			for (const file of rules) assert.doesNotMatch(readFileSync(join(out, "container", file), "utf8"), /browser/i, file);
 			const triggers = files
 				.flatMap((file) => readFileSync(join(out, file), "utf8").split("\n").map((line) => `${file}: ${line}`))
 				.filter((line) => /changes a shared seam|`check-regressions` (runs|follows)/.test(line));
@@ -429,10 +434,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(implement, /Commit the first coherent vertical piece before widening/);
 			assert.match(implement, /In a short run, or on an order naming this one ticket, the rest stays in this ticket/);
 			assert.match(implement, /name the acceptance line most likely to be false and make the check that would catch it the first red of step 5/);
-			const rules = (readdirSync(`${out}/container`, { recursive: true }) as string[])
-				.filter((file) => /(^|\/)(AGENTS|CLAUDE)\.md$|\/rules\/[^/]+\.md$/.test(file))
-				.map((file) => readFileSync(join(out, "container", file), "utf8"))
-				.join("\n");
+			const rules = containerRules(out).map((file) => readFileSync(join(out, "container", file), "utf8")).join("\n");
 			assert.match(rules, /A question for the host goes into `attention:` under `status: blocked`, and the turn ends there\. Never a `\w+` dialog here/);
 			assert.equal(rendered(out, "container", "refs/artifacts.md").match(/every host action (is )?named in Next step, never counted, and in Summary once Next step is full/g)?.length, 1);
 			assert.match(rendered(out, "container", "to-tickets/SKILL.md"), /Cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer/);
@@ -465,7 +467,8 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			if (name === "claude") assert.match(skill, /`run_in_background: true`/);
 			else assert.match(skill, /one read per tool call.*up to twenty calls/);
 			assert.doesNotMatch(skill, /The wait blocks on purpose/);
-			assert.match(skill, /the settled state as a `## Log` line in `status.md`/);
+			assert.match(skill, /The wait ends by recording the settled state/);
+			assert.match(rendered(out, "container", "refs/artifacts.md"), /a check that closes a step: [^|]*a settled CI wait/);
 			const core = rendered(out, "container", name === "claude" ? "rules/core.md" : "AGENTS.md");
 			assert.match(core, /A poll loop is not work\. A bounded wait on an external system, such as CI, is work: run it the way its skill says/);
 		});
