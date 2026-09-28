@@ -4,21 +4,21 @@ One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo
 
 ## Files
 
-Each file has one role and one author. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
+Each file has one role. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
 
 ```text
-status.md      current user-facing state: status, attention, summary, next step, log    every skill, throughout its run
-permissions.md what each seat may do in this repository: one line per action and level    {{cli}} up
-project.md     how this project does what the rules require, when host/projects/<owner>/<repo>.md exists    {{cli}} up
-ticket.md      the tracker issue this task delivers, copied at start; Status and ticks are the container's    the host; implement
-analysis.md    what was found: verdict, evidence, open questions    analyze-task, diagnosing-bugs
-spec.md        what will be built and why                          to-tickets
-issues/        NN-<slug>.md, one ticket per commit                  to-tickets; implement claims and closes them
-review.md      verdict line, findings, checks read, shared seams   two-axis-review
-pr.md          pull request rounds: threads answered, verdicts      babysit-pr
-browser/       <run-id>/report.md, screenshots, a walkthrough video    check-feature, check-regressions, record-walkthrough
-acceptance.md  the host's acceptance: Fits, Gaps, Seen    the host
-logs/          sessions/, status/, activity.jsonl, usage.json, memory.json, <skill>-<id>/ evidence    {{harness}}, {{cli}} down, any skill
+status.md      current user-facing state: status, attention, summary, next step, log
+permissions.md what each seat may do in this repository: one line per action and level; {{cli}} up writes it
+project.md     how this project does what the rules require, when host/projects/<owner>/<repo>.md exists; {{cli}} up writes it
+ticket.md      the tracker issue this task delivers, copied at start by the host; Status and ticks are the container's
+analysis.md    what was found: verdict, evidence, open questions
+spec.md        what will be built and why
+issues/        NN-<slug>.md, one ticket per commit
+review.md      verdict line, findings, checks read, shared seams
+pr.md          pull request rounds: threads answered, verdicts
+browser/       <run-id>/report.md, screenshots, a walkthrough video
+acceptance.md  the host's acceptance: Fits, Gaps, Seen
+logs/          sessions/, status/, activity.jsonl, usage.json, memory.json from {{harness}} and {{cli}} down; <skill>-<id>/ evidence
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
@@ -92,17 +92,4 @@ The log is append-only: every rewrite keeps its existing lines verbatim. The har
 
 ## analysis.md
 
-Findings only: the verdict, what it rests on, what is out of scope, what is open, and the run it calls for. The decision on what to build is `spec.md`; the steps are the tickets. The shape is in skill `analyze-task`.
-
-## The pipeline
-
-A ticket, a bug report or a feature runs in this order:
-
-1. `analyze-task`
-2. `to-tickets`
-3. `implement`, per ticket
-4. when the work changes what a user sees: its verification, once after the run's last commit. It covers the `Seen:` criteria of the committed tickets, or a short run's accepted behaviour. `project.md` names how; without one, the check the change calls for
-
-The short run is `analyze-task`, one `implement`, then step 4. It fits one accepted behaviour, one seam and one commit. The opening prompt overrides the choice in either direction.
-
-A prompt with no ticket behind it ("run the build", "read this log") runs no pipeline and leaves no file but `status.md`.
+Findings only: the verdict, what it rests on, what is out of scope, what is open, and the run it calls for. The decision on what to build is `spec.md`; the steps are the tickets.

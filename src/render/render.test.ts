@@ -436,7 +436,9 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(rules, /A question for the host goes into `attention:` under `status: blocked`, and the turn ends there\. Never a `\w+` dialog here/);
 			assert.equal(rendered(out, "container", "refs/artifacts.md").match(/every host action (is )?named in Next step, never counted, and in Summary once Next step is full/g)?.length, 1);
 			assert.match(rendered(out, "container", "to-tickets/SKILL.md"), /Cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer/);
-			assert.match(rendered(out, "container", "refs/ticket.md"), /past 500 it is two tickets/);
+			const ticket = rendered(out, "container", "refs/ticket.md");
+			assert.match(ticket, /progress lives in the tracker and in git; a local copy's `Status:` is the container's working mark/);
+			assert.doesNotMatch(ticket, /\d/);
 		});
 	});
 }
