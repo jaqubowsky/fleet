@@ -126,16 +126,6 @@ test("every container carries the default-branch push guard with the modules it 
 	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && /container-guard|guard\/container/.test(path)), []);
 });
 
-test("a ref line marked for the host renders without its marker for the host and not at all for the container", () => {
-	const io = fakeIo(sources({ "list /root/rules/refs": ["artifacts.md"], "read /root/rules/refs/artifacts.md": "status.md  state\n{{seat.host}} acceptance.md  the host's\nlogs/  evidence\n" }), HARNESSES.claude);
-
-	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/host" }, io);
-	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
-
-	assert.equal(io.files["/host/refs/artifacts.md"], "status.md  state\nacceptance.md  the host's\nlogs/  evidence\n");
-	assert.equal(io.files["/stage/home/refs/artifacts.md"], "status.md  state\nlogs/  evidence\n");
-});
-
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 
@@ -519,7 +509,8 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /`slug \(who, date\): …`/);
 			assert.match(skill, /The host checkout stays on the default branch/);
 			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
-			assert.match(skill, /`acceptance\.md`.*Fits, Gaps and Seen/);
+			assert.match(skill, /tick in the issue each criterion you checked and comment the evidence you looked at beside it/);
+			assert.doesNotMatch(skill, /acceptance\.md|cannot read or write/);
 			assert.match(skill, /One stopped by the account limit is resumed by the watch with the stock continue/);
 			assert.match(skill, name === "claude" ? /Before a long run, arm the limit resume/ : /keeps running while the session waits out an account limit/);
 			assert.match(skill, /one fix round and one recheck/);
@@ -532,7 +523,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			const rules = rendered(out, "host", name === "claude" ? "rules/host.md" : "AGENTS.md");
 			assert.match(rules, /moves past a merge that changed a lockfile, tell the user to run the project's install before running anything from this checkout, naming the command; you do not run it/);
 			const refs = rendered(out, "host", "refs/artifacts.md");
-			assert.match(refs, /^acceptance\.md /m);
+			assert.doesNotMatch(refs, /acceptance\.md/);
 			assert.match(refs, /^ticket\.md /m);
 		});
 	});

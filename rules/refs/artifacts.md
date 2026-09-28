@@ -17,7 +17,6 @@ issues/        NN-<slug>.md, one ticket per commit
 review.md      verdict line, findings, checks read, shared seams
 pr.md          pull request rounds: threads answered, verdicts
 browser/       <run-id>/report.md, screenshots, a walkthrough video
-{{seat.host}} acceptance.md  the host's acceptance: Fits, Gaps, Seen
 logs/          sessions/, status.jsonl, activity.jsonl, usage.json, memory.json from {{harness}} and {{cli}} down; <skill>-<id>/ evidence
 ```
 

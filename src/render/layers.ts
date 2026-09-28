@@ -69,7 +69,7 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 	});
 }
 
-const HOST_CHECK = /acceptance\.md|\bhost('s|-side)? (\w+ )?(acceptance|accepts|review\w*|checks|verifies)\b/i;
+const HOST_CHECK = /\bhost('s|-side)? (\w+ )?(acceptance|accepts|review\w*|checks|verifies)\b/i;
 
 export function containerTexts(root: string): Record<string, string> {
 	const out = mkdtempSync(join(tmpdir(), "layers-"));

@@ -8,7 +8,6 @@ export type Models = { seats: Record<string, SeatModel> };
 export type Source = { name: string; body: string };
 
 const HOST_ONLY_RULES = ["host.md"];
-const HOST_LINE = "{{seat.host}} ";
 const SKILL_SCOPES: Record<Seat, string[]> = { host: ["shared", "host"], container: ["shared", "container"] };
 const AGENTS = ["explorer", "researcher", "reviewer"];
 
@@ -106,16 +105,9 @@ class Renderer {
 			this.input.seen?.set(where.slice(root.length + 1), text);
 			return text;
 		};
-		const text = renderText(this.seated(body), tokens, fragment, path);
+		const text = renderText(body, tokens, fragment, path);
 		this.input.seen?.set(path, text);
 		return text;
-	}
-
-	seated(body: string): string {
-		return body
-			.split("\n")
-			.flatMap((line) => (line.startsWith(HOST_LINE) ? (this.input.seat === "host" ? [line.slice(HOST_LINE.length)] : []) : [line]))
-			.join("\n");
 	}
 
 	put(path: string, body: string): void {

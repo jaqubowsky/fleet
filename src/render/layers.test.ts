@@ -43,7 +43,7 @@ test("no text a container reads names a check the host runs after it", () => {
 });
 
 test("a container line naming the host's acceptance or review is found with its file and line", () => {
-	assert.deepEqual(hostChecks({ "claude/home/rules/sandbox.md": "1. Commit\n2. Skip review: the host reviews independently\n", "pi/home/agent/refs/artifacts.md": "acceptance.md  the host's acceptance: Fits, Gaps, Seen\n" }), [
+	assert.deepEqual(hostChecks({ "claude/home/rules/sandbox.md": "1. Commit\n2. Skip review: the host reviews independently\n", "pi/home/agent/refs/artifacts.md": "issues/  the host's acceptance lands in the tracker issue\n" }), [
 		"claude/home/rules/sandbox.md:2",
 		"pi/home/agent/refs/artifacts.md:1",
 	]);
