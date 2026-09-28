@@ -47,6 +47,8 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 
 The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 
+An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
+
 ## Session handoff
 
 A fresh session reads only `status.md`, the task files and git, so each unit of work starts clean. Suggest a session handoff at every natural break:

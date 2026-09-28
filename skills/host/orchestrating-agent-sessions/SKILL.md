@@ -44,7 +44,7 @@ Stop for the user on any other `blocked` or `attention` state, and on a decision
 
 ## Coordinating a project
 
-The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user. Read the overlay it prints before planning: where work comes from, how a change a user sees is proven, the merge method, where standing decisions live.
+The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user. Read the overlay it prints before planning: where work comes from, how a change a user sees is proven, the merge method.
 
 1. The plan is the tracker the overlay names: one issue per ticket, its description in the shape of {{refs.ticket}}, its workflow states the board, a real dependency the tracker's blocking relation. Speak of states as not started, in progress, in review, done and dropped, and read their names from the tracker's workflow for that team. Plan edits are tracker edits, never a branch or a pull request. The vision stays in the repository, the person's: propose a change and ask before writing it. `{{cli}} init <repo>` lays out the vision and a project `AGENTS.md`, leaving every file already there. A container's task directory is the record of one job, not the plan
 2. The overlay's `Tracker transitions` names the states the tracker's own integration moves; the host moves every other one, by judgment, as its linear line of `{{cli}} profile <repo>` allows, and containers read. Before selecting, starting, accepting, merging or dropping work, reconcile the tracker with the facts, `{{cli}} ls` and the pull requests, the integration's transitions included; on drift the facts win.
@@ -62,7 +62,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
    - `gh pr merge <n> --merge --match-head-commit <head sha>`, run bare in the checkout, the overlay's method flag in place of `--merge`
    - `<head sha>` is the full 40-character SHA read in the same turn as {{refs.ci}} says, never one from memory
    - the guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
-10. A decision that changes what the user sees reaches the user in your next reply. Standing decisions go where the overlay says, each as `slug (who, date): …`; a ticket's own decisions go into its issue
+10. A decision that changes what the user sees reaches the user in your next reply. Write the ADR a decision of yours needs in `docs/adr/`
 11. The host checkout stays on the default branch: it is also the user's window. A fresh host session resumes from the tracker and `{{cli}} ls`
 
 ## Reading a task

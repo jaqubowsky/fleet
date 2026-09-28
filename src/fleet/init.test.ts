@@ -46,6 +46,13 @@ test("init on a populated repository leaves every existing file byte for byte", 
 	assert.deepEqual(lines, ["left AGENTS.md", "left spec/vision.md"]);
 });
 
+test("the seed keeps no decisions of its own, since they are ADRs in docs/adr/", () => {
+	for (const file of seedFiles) {
+		assert.doesNotMatch(file, /decision/i, file);
+		assert.doesNotMatch(readFileSync(join(seed, file), "utf8"), /decision/i, file);
+	}
+});
+
 test("the seed AGENTS.md sends work to the tracker the project overlay names", () => {
 	const agents = readFileSync(join(seed, "AGENTS.md"), "utf8");
 	assert.match(agents, /tracker/);

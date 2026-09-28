@@ -479,6 +479,19 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 }
 
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} records a decision a later change could undo as an ADR, on both seats`, () => {
+		renderSeats(name, (out) => {
+			for (const seat of ["host", "container"] as const) {
+				const core = rendered(out, seat, name === "claude" ? "rules/core.md" : "AGENTS.md");
+				assert.match(core, /A decision a later change could undo unknowingly becomes an ADR in `docs\/adr\/`, in the format the ADRs there use\. A ticket's own decisions go into its issue/);
+			}
+			assert.match(rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), /Write the ADR a decision of yours needs in `docs\/adr\/`/);
+			assert.match(rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md"), /An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs\/adr\/`/);
+		});
+	});
+}
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} babysit-pr waits on CI without holding the session`, () => {
 		renderSeats(name, (out) => {
 			const skill = rendered(out, "container", "babysit-pr/SKILL.md");
@@ -506,7 +519,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(skill, /becomes a not-started issue with the tracker's own priority and the project's own labels/);
 			assert.match(skill, /the full 40-character SHA read in the same turn/);
 			assert.match(skill, /reaches the user in your next reply/);
-			assert.match(skill, /`slug \(who, date\): …`/);
+			assert.doesNotMatch(skill, /[Ss]tanding decisions|slug \(who, date\)/);
 			assert.match(skill, /The host checkout stays on the default branch/);
 			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
 			assert.match(skill, /tick in the issue each criterion you checked and comment the evidence you looked at beside it/);

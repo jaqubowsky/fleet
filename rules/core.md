@@ -55,6 +55,7 @@ Writing, changing or reading a test, or reproducing a bug report -> {{refs.testi
 
 1. Expensive to change AND success-determining -> defer. Cheap technical -> decide now
 2. Plan = fewest steps reaching the done-check, smallest blast radius. Wider shape -> name it as an option with its cost, build it on the user's word
+3. A decision a later change could undo unknowingly becomes an ADR in `docs/adr/`, in the format the ADRs there use. A ticket's own decisions go into its issue
 
 ## Autonomy
 
