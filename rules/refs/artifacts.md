@@ -36,7 +36,7 @@ Historical and run-specific evidence stays under `browser/` or `logs/<skill>-<id
 ## status.md
 
 ```md
-status: new | analyzing | implementing | reviewing | testing | ready-for-host | blocked
+status: new | analyzing | implementing | reviewing | testing | paused | ready-for-host | blocked
 attention: none | <one sentence of at most 300 characters naming the decision or input that blocks the work>
 
 ## Summary
@@ -54,6 +54,7 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 | `implementing` | a ticket is claimed, or a P0 or P1 review finding, a failed criterion or a regression is being fixed |
 | `reviewing` | the review of uncommitted work, or of a range the user named, runs |
 | `testing` | the verification of what a user sees runs, over the change or its siblings |
+| `paused` | the stop the order named is reached before the run's end, such as one step of an order given step by step; `attention` names no decision |
 | `ready-for-host` | the run's last step passed, or the latest review round on GitHub is answered, with no open ticket, failed criterion or regression, and no open P0 or P1 finding other than a `host:` one |
 
 At `ready-for-host`:

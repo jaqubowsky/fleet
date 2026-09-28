@@ -8,7 +8,7 @@ export const RING_MS = 15 * 60_000;
 export const FAILED_IN_A_ROW = 5;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
-const FINISHED = new Set(["ready-for-host", "blocked"]);
+const FINISHED = new Set(["ready-for-host", "paused", "blocked"]);
 
 
 export function shouldWake(prev: string | undefined, next: string): boolean {

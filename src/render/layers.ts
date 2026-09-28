@@ -20,7 +20,7 @@ const MECHANICS = [
 	/permissions\.md/,
 	/project\.md/,
 	/ready-for-host/,
-	/status: (new|analyzing|implementing|reviewing|testing|pr-open|blocked)\b/,
+	/status: (new|analyzing|implementing|reviewing|testing|paused|pr-open|blocked)\b/,
 	/task director/i,
 	/\$FLEET_ARTIFACTS/,
 	/\$SANDBOX_NAME/,

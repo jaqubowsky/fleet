@@ -739,6 +739,22 @@ test("a blocked container wakes the host even while its PR's CI runs", (t: TestC
 	assert.match(wakes[0], /pr: #12 open, CI running, 0 of 1 checks done/);
 });
 
+test("a container paused at its step's end wakes the host even while its PR's CI runs", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: paused\nattention: none\n";
+	onBranch(io, [{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" }]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /status: paused/);
+});
+
 test("a settle with status.md unchanged but new branch facts wakes the host again", (t: TestContext) => {
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },

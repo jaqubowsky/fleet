@@ -6,7 +6,7 @@ import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { HARNESSES } from "../harness.ts";
 import { eventsLog, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
-import { taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
+import { idleStalled, STALL_MS, taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
 
 function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h.prefix}worker`, pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
@@ -137,6 +137,11 @@ test("a container working past the stall window rings once, then again after the
 
 	assert.deepEqual(stalled(entries, 30 * minute, 20 * minute, 15 * minute), ["w:p1"]);
 	assert.deepEqual(stalled(entries, 40 * minute, 20 * minute, 15 * minute), ["w:p1", "w:p2", "w:p4"]);
+});
+
+test("an idle container paused at the stop its order named is not stalled, one idle mid-step is", () => {
+	assert.equal(idleStalled("idle", "paused", STALL_MS), false);
+	assert.equal(idleStalled("idle", "implementing", STALL_MS), true);
 });
 
 test("a transition line only when the status changed", () => {

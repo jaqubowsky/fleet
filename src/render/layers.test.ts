@@ -19,6 +19,7 @@ test("every line in skills, principles and refs sits in its own layer", () => {
 
 test("a container skill naming another skill or a mechanic belongs to the container owner", () => {
 	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then run skill `implement` and write `status.md`."), [{ names: "implement, status.md", owner: "sbx/container/sandbox.md" }]);
+	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then set `status: paused`."), [{ names: "status: paused", owner: "sbx/container/sandbox.md" }]);
 });
 
 test("a host skill naming a mechanic belongs to the host owner", () => {

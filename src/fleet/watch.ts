@@ -34,6 +34,7 @@ import {
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
+const WAITS_ON_HOST = new Set(["blocked", "paused"]);
 
 type Frame = {
 	event?: string;
@@ -156,7 +157,7 @@ export function watch(
 		if (rows) locate(name, rows);
 		const status = statusOf(name);
 		const facts = factsOf(name);
-		if (when.unlessCi && facts.running && fieldsOf(status).status !== "blocked") return;
+		if (when.unlessCi && facts.running && !WAITS_ON_HOST.has(fieldsOf(status).status ?? "")) return;
 		const last = woken.get(name);
 		if (
 			when.settled &&

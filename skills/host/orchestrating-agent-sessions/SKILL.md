@@ -10,7 +10,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | Ask | Command | Result to report |
 | --- | --- | --- |
 | put up a container for a task | `{{cli}} up <label> --repo <path> [--branch <name>] [--base <name>] [--model {{model.flag}}] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch, `<label>` without `--branch`, continues `origin/<name>` when origin has it, else starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise), and `up` prints which; {{harness}} waiting, no prompt sent |
-| what is running | `{{cli}} ls` | one line per container: status, herdr state, branch, dirty count, `stalled` past 20 idle minutes short of `ready-for-host` or `blocked`, time since its first prompt, cost so far; under a running one, its commits since origin's default branch and its pull request with CI; a sandbox that does not answer shows `failed` and its error, the rest list as usual |
+| what is running | `{{cli}} ls` | one line per container: status, herdr state, branch, dirty count, `stalled` past 20 idle minutes short of `ready-for-host`, `paused` or `blocked`, time since its first prompt, cost so far; under a running one, its commits since origin's default branch and its pull request with CI; a sandbox that does not answer shows `failed` and its error, the rest list as usual |
 | what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | git status, log, diff --stat, install log, pane tail |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
@@ -38,7 +38,7 @@ Deliver issues 12 and 14 end to end. Decided: restoring a project brings back on
 
 ## Driving a task
 
-On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A session-handoff suggestion follows Session handoff below.
+On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A session-handoff suggestion follows Session handoff below. A container at `paused` has finished the step your steer named: steer the next one.
 
 Stop for the user on any other `blocked` or `attention` state, and on a decision that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 
