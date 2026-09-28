@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, statSync } from "node:fs";
+import { pbkdf2 } from "node:crypto";
+import { mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -64,7 +65,12 @@ async function ended(origin: string, token: string) {
 	};
 }
 
+const busyThreadPool = () => {
+	for (let job = 0; job < 4; job++) pbkdf2("", "", 2e6, 64, "sha512", () => {});
+};
+
 test("revoking ends every phone's stream and refuses the old link", { timeout: 10000 }, async (t) => {
+	busyThreadPool();
 	const dir = directory();
 	const here = new Remote();
 	const there = new Remote();
@@ -101,4 +107,17 @@ test("reading the stored link never ends a phone's stream", { timeout: 10000 }, 
 	}
 
 	assert.equal(closed, false);
+});
+
+test("a damaged stored link fails requests and leaves the session running", async (t) => {
+	const dir = directory();
+	const remote = new Remote();
+	t.after(() => remote.stop());
+	await remote.start(dir, 0, assets);
+	const { session: origin, token } = remote.identity()!;
+
+	writeFileSync(join(dir, "credentials.json"), "{");
+	await new Promise((resolve) => setTimeout(resolve, 1500));
+
+	assert.equal((await bootstrap(origin, token)).status, 500);
 });

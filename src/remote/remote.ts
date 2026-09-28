@@ -1,12 +1,5 @@
 import { randomBytes } from "node:crypto";
-import {
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	unwatchFile,
-	watchFile,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Hub, register, unregister } from "./hub.ts";
 import { RemoteRuntime, type Assets, type Credentials } from "./runtime.ts";
@@ -46,19 +39,28 @@ export class Remote {
 	readonly runtime = new RemoteRuntime();
 	private hub?: Hub;
 	private dir?: string;
-	private watched?: string;
-	private readonly revoked = () => this.runtime.endStreams();
+	private watch?: ReturnType<typeof setInterval>;
 
 	async start(dir: string, port: number, assets: { session: Assets; hub: Assets }) {
 		const keys = () => stored(dir);
-		keys();
+		let issued = keys().control;
 		await this.runtime.start(0, assets.session, keys);
 		if (this.hub) return;
 		this.dir = dir;
 		register(dir, this.id, this.runtime.port!);
 		this.hub = new Hub(port, dir, assets.hub, keys);
-		this.watched = join(dir, "credentials.json");
-		watchFile(this.watched, { interval: 1000, persistent: false }, this.revoked);
+		this.watch = setInterval(() => {
+			let control;
+			try {
+				({ control } = keys());
+			} catch {
+				return;
+			}
+			if (control === issued) return;
+			issued = control;
+			this.runtime.endStreams();
+		}, 1000);
+		this.watch.unref();
 		await this.hub.claim();
 	}
 
@@ -68,8 +70,8 @@ export class Remote {
 	}
 
 	async stop() {
-		if (this.watched) unwatchFile(this.watched, this.revoked);
-		this.watched = undefined;
+		clearInterval(this.watch);
+		this.watch = undefined;
 		if (this.dir) unregister(this.dir, this.id);
 		const hub = this.hub;
 		this.hub = undefined;
