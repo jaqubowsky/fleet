@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { test, type TestContext } from "node:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clearedNote, contextTokens, tail } from "../../claude/hooks/container.ts";
+import { changes } from "../../extensions/status-history.ts";
 
 const turn = (input: number, cached: number) => JSON.stringify({ type: "assistant", message: { usage: { input_tokens: input, cache_read_input_tokens: cached, cache_creation_input_tokens: 0 } } });
 const status = "status: implementing\nattention: none\n\n## Summary\nx\n";
@@ -71,11 +72,11 @@ function container(t: TestContext, status: string) {
 	writeFileSync(join(task, "status.md"), status);
 	const script = join(import.meta.dirname, "../../claude/hooks/container.ts");
 	const hook = (event: string, input = "{}") => execFileSync(process.execPath, [script, event], { input, env: { ...process.env, FLEET_ARTIFACTS: root, SANDBOX_NAME: "claude-a" } });
-	const kept = () => (existsSync(join(task, "logs/status")) ? readdirSync(join(task, "logs/status")).sort().map((name) => readFileSync(join(task, "logs/status", name), "utf8")) : []);
+	const kept = () => (existsSync(join(task, "logs/status.jsonl")) ? changes(readFileSync(join(task, "logs/status.jsonl"), "utf8")).map(({ status, attention }) => [status, attention]) : []);
 	return { task, hook, kept };
 }
 
-test("each tool call keeps a changed status.md as a version, and a session start alone keeps none", (t) => {
+test("each tool call keeps a changed status.md as a change, and a session start alone keeps none", (t) => {
 	const { task, hook, kept } = container(t, "status: new\nattention: none\n");
 
 	hook("session-start");
@@ -85,7 +86,7 @@ test("each tool call keeps a changed status.md as a version, and a session start
 	hook("post-tool-use");
 
 	assert.deepEqual(afterStart, []);
-	assert.deepEqual(kept(), ["status: analyzing\nattention: none\n"]);
+	assert.deepEqual(kept(), [["analyzing", "none"]]);
 });
 
 test("a finished and a failed tool call each append one activity line, a sub-agent's under its own id", (t) => {
@@ -108,13 +109,13 @@ test("the end of a turn keeps a status.md change that no tool call reported", (t
 	writeFileSync(join(task, "status.md"), "status: ready-for-host\nattention: none\n");
 	hook("stop");
 
-	assert.deepEqual(kept(), ["status: ready-for-host\nattention: none\n"]);
+	assert.deepEqual(kept(), [["ready-for-host", "none"]]);
 });
 
-test("a session that stops on an API error keeps its blocked status as a version", (t) => {
+test("a session that stops on an API error keeps its blocked status as a change", (t) => {
 	const { hook, kept } = container(t, "status: implementing\nattention: none\n");
 
 	hook("stop-failure", JSON.stringify({ error: "402 Payment Required" }));
 
-	assert.deepEqual(kept(), ["status: blocked\nattention: the agent stopped on an error: 402 Payment Required\n"]);
+	assert.deepEqual(kept(), [["blocked", "the agent stopped on an error: 402 Payment Required"]]);
 });

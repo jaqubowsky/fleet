@@ -421,26 +421,29 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 });
 
 const call = (at: string) => JSON.stringify({ at, tool: "bash", ok: true, agent: "main" });
+const change = (at: string, status: string, attention: string, added: string[] = [], removed: string[] = [], summary?: string) =>
+	JSON.stringify({ at, status, attention, summary, added, removed });
 
 function blockedTask(dir: string, status = "status: blocked\nattention: owner decision\n"): Record<string, unknown> {
 	return {
 		[`read ${dir}/status.md`]: status,
-		[`list ${dir}/logs/status`]: ["003-20260916T094000Z.md", "001-20260916T090000Z.md", "002-20260916T093000Z.md"],
-		[`read ${dir}/logs/status/001-20260916T090000Z.md`]: "status: implementing\nattention: none\n",
-		[`read ${dir}/logs/status/002-20260916T093000Z.md`]: "status: blocked\nattention: owner decision\n",
-		[`read ${dir}/logs/status/003-20260916T094000Z.md`]: "status: blocked\nattention: owner decision\n\n## Log\n- waits on the owner\n",
-		[`read ${dir}/logs/activity.jsonl`]: [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:30:00.400Z"), call("2026-09-16T09:45:00Z"), call("2026-09-16T09:50:00Z")].join("\n"),
+		[`read ${dir}/logs/status.jsonl`]: [
+			change("2026-09-16T09:00:00.000Z", "implementing", "none"),
+			change("2026-09-16T09:30:00.400Z", "blocked", "owner decision"),
+			change("2026-09-16T09:40:00.000Z", "blocked", "owner decision", ["- waits on the owner"]),
+		].join("\n"),
+		[`read ${dir}/logs/activity.jsonl`]: [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:30:00.400Z"), call("2026-09-16T09:35:00Z"), call("2026-09-16T09:45:00Z"), call("2026-09-16T09:50:00Z")].join("\n"),
 	};
 }
 
-test("ls marks a blocked container that keeps making tool calls, counted from the version where status.md turned blocked", () => {
+test("ls marks a blocked container that keeps making tool calls, counted after the change where status.md turned blocked", () => {
 	const listing = {
 		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
 		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }] } },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 	};
 
-	assert.match(ls(fakeIo({ ...listing, ...blockedTask(task) })), /^pi-a  running  working  task  2 tool calls since blocked  up 40m, silent 10m, 4 tool calls, last bash$/m);
+	assert.match(ls(fakeIo({ ...listing, ...blockedTask(task) })), /^pi-a  running  working  task  3 tool calls since blocked  up 40m, silent 10m, 5 tool calls, last bash$/m);
 	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: implementing\nattention: none\n") })), /since blocked/);
 	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: blocked\nattention: the agent stopped on an error: rate_limit\n") })), /since blocked/);
 });
@@ -749,40 +752,21 @@ test("ls keeps a claude container's activity when its image cannot price the tra
 	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
 });
 
-test("history lists every status.md version in local time with what changed in it and the log lines it added", (t) => {
+test("history lists every status.md change in local time with what changed in it, the log lines it added and those it removed", (t) => {
 	const zone = process.env.TZ;
 	process.env.TZ = "Europe/Warsaw";
 	t.after(() => {
 		if (zone === undefined) delete process.env.TZ;
 		else process.env.TZ = zone;
 	});
-	const version = (status: string, attention: string, summary: string | undefined, log: string[]) =>
-		`status: ${status}\nattention: ${attention}\n${summary ? `\n## Summary\n${summary}\n` : ""}\n## Log\n${log.map((line) => `- ${line}\n`).join("")}`;
+	const decided = "- Decided: 55% wide, because the user chose it; analysis.md";
 	const io = fakeIo({
 		...running,
-		[`list ${task}/logs/status`]: [
-			"003-20260923T204358Z.md",
-			"001-20260923T204013Z.md",
-			"002-20260923T204306Z.md",
-		],
-		[`read ${task}/logs/status/001-20260923T204013Z.md`]: version(
-			"blocked",
-			"choose the grid width",
-			"WEB-1715 waits on the grid width.",
-			[],
-		),
-		[`read ${task}/logs/status/002-20260923T204306Z.md`]: version(
-			"implementing",
-			"none",
-			undefined,
-			["Decided: 55% wide, because the user chose it; analysis.md"],
-		),
-		[`read ${task}/logs/status/003-20260923T204358Z.md`]: version(
-			"ready-for-host",
-			"none",
-			"The preview is\n55% wide.",
-			["Decided: 55% wide, because the user chose it; analysis.md", "Grid committed; abc1234"],
-		),
+		[`read ${task}/logs/status.jsonl`]: [
+			change("2026-09-23T20:40:13.000Z", "blocked", "choose the grid width", [], [], "WEB-1715 waits on the grid width."),
+			change("2026-09-23T20:43:06.000Z", "implementing", "none", [decided]),
+			change("2026-09-23T20:43:58.000Z", "ready-for-host", "none", ["- Grid committed; abc1234"], [decided], "The preview is\n55% wide."),
+		].join("\n"),
 	});
 
 	const out = history("pi-a", "/somewhere/else", io);
@@ -799,6 +783,7 @@ test("history lists every status.md version in local time with what changed in i
 			"003  2026-09-23 22:43:58  implementing -> ready-for-host",
 			"     summary: The preview is 55% wide.",
 			"     + Grid committed; abc1234",
+			"     removed: Decided: 55% wide, because the user chose it; analysis.md",
 		].join("\n"),
 	);
 });
@@ -808,6 +793,6 @@ test("history of a container already down reads the task directory of the repo i
 
 	assert.equal(
 		history("pi-gone", "/w/webapp", io),
-		"/home/me/.sandboxes/webapp/pi-gone/logs/status: no versions yet; the container keeps one each time status.md changes",
+		"/home/me/.sandboxes/webapp/pi-gone/logs/status.jsonl: no changes yet; the container adds a line each time status.md changes",
 	);
 });

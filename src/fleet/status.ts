@@ -1,3 +1,4 @@
+import { addedLines, fieldsOf, logLines } from "../../extensions/status-history.ts";
 import type { Io } from "./io.ts";
 
 export type Sandbox = { name: string; status: string; workspaces: string[] };
@@ -59,51 +60,6 @@ export const checkoutProbe =
 function bounded(text: string, limit: number): string {
 	const compact = text.trim().replace(/\s+/g, " ");
 	return compact.length > limit ? `${compact.slice(0, limit - 3)}...` : compact;
-}
-
-function sectionOf(
-	statusMd: string | undefined,
-	name: string,
-): string | undefined {
-	return statusMd
-		?.replace(/\r\n/g, "\n")
-		.split(/^## /m)
-		.find((part) => part.startsWith(`${name}\n`))
-		?.slice(name.length + 1);
-}
-
-export function fieldsOf(statusMd: string | undefined): {
-	status?: string;
-	attention?: string;
-	summary?: string;
-} {
-	const header = (name: string) =>
-		statusMd?.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1];
-	const section = (name: string) =>
-		sectionOf(statusMd, name)?.trim() || undefined;
-	return {
-		status: header("status"),
-		attention: header("attention"),
-		summary: section("Summary"),
-	};
-}
-
-export function logLines(statusMd: string | undefined): string[] {
-	return (
-		sectionOf(statusMd, "Log")
-			?.split("\n")
-			.filter((line) => line.startsWith("- ")) ?? []
-	);
-}
-
-export function addedLines(lines: string[], before: string[]): string[] {
-	const left = new Map<string, number>();
-	for (const line of before) left.set(line, (left.get(line) ?? 0) + 1);
-	return lines.filter((line) => {
-		const count = left.get(line) ?? 0;
-		if (count) left.set(line, count - 1);
-		return !count;
-	});
 }
 
 export function calls(count: number): string {

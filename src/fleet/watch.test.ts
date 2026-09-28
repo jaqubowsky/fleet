@@ -590,9 +590,8 @@ test("a wake counts the tool calls a container made after status.md turned block
 	const dir = "/home/me/.sandboxes/webapp/claude-worker";
 	const call = (at: string) => JSON.stringify({ at, tool: "Bash", ok: true, agent: "main" });
 	io.files[`${dir}/status.md`] = "status: blocked\nattention: owner decision\n";
-	io.files[`${dir}/logs/status/001-20260916T093000Z.md`] = "status: blocked\nattention: owner decision\n";
+	io.files[`${dir}/logs/status.jsonl`] = `${JSON.stringify({ at: "2026-09-16T09:30:00.000Z", status: "blocked", attention: "owner decision", added: [], removed: [] })}\n`;
 	io.files[`${dir}/logs/activity.jsonl`] = [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:45:00Z")].join("\n");
-	io.list = (path: string) => (path === `${dir}/logs/status` ? ["001-20260916T093000Z.md"] : []);
 	const wakes: string[] = [];
 	watch(() => undefined, io, (text) => wakes.push(text));
 

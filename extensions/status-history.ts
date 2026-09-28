@@ -1,44 +1,68 @@
-import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const HISTORY = "logs/status";
+export const STATUS_LOG = "logs/status.jsonl";
 export const ACTIVITY = "logs/activity.jsonl";
 
-const VERSION = /^(\d+)-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z\.md$/;
+export type StatusChange = { at: string; status?: string; attention?: string; summary?: string; added: string[]; removed: string[] };
 
-const two = (n: number) => String(n).padStart(2, "0");
-
-function stamp(at: Date): string {
-	return `${at.getUTCFullYear()}${two(at.getUTCMonth() + 1)}${two(at.getUTCDate())}T${two(at.getUTCHours())}${two(at.getUTCMinutes())}${two(at.getUTCSeconds())}Z`;
+function sectionOf(statusMd: string | undefined, name: string): string | undefined {
+	return statusMd
+		?.replace(/\r\n/g, "\n")
+		.split(/^## /m)
+		.find((part) => part.startsWith(`${name}\n`))
+		?.slice(name.length + 1);
 }
 
-export function versions(names: string[]): { name: string; number: number; at: string; time: Date }[] {
-	return names
-		.flatMap((name) => {
-			const match = name.match(VERSION);
-			if (!match) return [];
-			const [, number, ...parts] = match.map(Number);
-			const [y, mo, d, h, mi, s] = parts;
-			const at = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
-			return [{ name, number, time: at, at: `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())} ${two(at.getHours())}:${two(at.getMinutes())}:${two(at.getSeconds())}` }];
-		})
-		.sort((a, b) => a.number - b.number);
+export function fieldsOf(statusMd: string | undefined): { status?: string; attention?: string; summary?: string } {
+	const header = (name: string) => statusMd?.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1];
+	return {
+		status: header("status"),
+		attention: header("attention"),
+		summary: sectionOf(statusMd, "Summary")?.trim() || undefined,
+	};
 }
 
-export function snapshot(taskDirectory: string, at = new Date()): string | undefined {
+export function logLines(statusMd: string | undefined): string[] {
+	return sectionOf(statusMd, "Log")?.split("\n").filter((line) => line.startsWith("- ")) ?? [];
+}
+
+export function addedLines(lines: string[], before: string[]): string[] {
+	const left = new Map<string, number>();
+	for (const line of before) left.set(line, (left.get(line) ?? 0) + 1);
+	return lines.filter((line) => {
+		const count = left.get(line) ?? 0;
+		if (count) left.set(line, count - 1);
+		return !count;
+	});
+}
+
+export function changes(jsonl: string | undefined): StatusChange[] {
+	return (jsonl ?? "").split("\n").filter(Boolean).map((line) => JSON.parse(line) as StatusChange);
+}
+
+function replay(kept: StatusChange[]): Omit<StatusChange, "at" | "added" | "removed"> & { log: string[] } {
+	const log = kept.reduce<string[]>((lines, change) => [...addedLines(lines, change.removed), ...change.added], []);
+	const { status, attention, summary } = kept.at(-1) ?? {};
+	return { status, attention, summary, log };
+}
+
+export function snapshot(taskDirectory: string, at = new Date()): StatusChange | undefined {
 	let status: string;
 	try {
 		status = readFileSync(join(taskDirectory, "status.md"), "utf8");
 	} catch {
 		return undefined;
 	}
-	const dir = join(taskDirectory, HISTORY);
-	mkdirSync(dir, { recursive: true });
-	const last = versions(readdirSync(dir)).at(-1);
-	if (last && readFileSync(join(dir, last.name), "utf8") === status) return undefined;
-	const name = `${String((last?.number ?? 0) + 1).padStart(3, "0")}-${stamp(at)}.md`;
-	writeFileSync(join(dir, name), status);
-	return name;
+	const file = join(taskDirectory, STATUS_LOG);
+	const before = replay(changes(existsSync(file) ? readFileSync(file, "utf8") : undefined));
+	const log = logLines(status);
+	const change: StatusChange = { at: at.toISOString(), ...fieldsOf(status), added: addedLines(log, before.log), removed: addedLines(before.log, log) };
+	const same = change.status === before.status && change.attention === before.attention && change.summary === before.summary;
+	if (same && !change.added.length && !change.removed.length) return undefined;
+	mkdirSync(join(taskDirectory, "logs"), { recursive: true });
+	appendFileSync(file, `${JSON.stringify(change)}\n`);
+	return change;
 }
 
 export function record(taskDirectory: string, call: { tool: string; ok: boolean; agent?: string }, at = new Date()): void {

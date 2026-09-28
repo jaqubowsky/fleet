@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
 import handoffOnError from "../../extensions/handoff-on-error.ts";
-import statusHistory, { snapshot, versions } from "../../extensions/status-history.ts";
+import statusHistory, { changes, snapshot } from "../../extensions/status-history.ts";
 
 function task(t: TestContext, status?: string): string {
 	const dir = mkdtempSync(join(tmpdir(), "status-history-"));
@@ -29,33 +29,32 @@ function runtime() {
 	return { handlers, pi: { on: (event: string, handler: (event?: unknown) => void) => handlers.set(event, handler) } };
 }
 
-test("each change to status.md becomes the next numbered version, and an unchanged file adds none", (t) => {
-	const dir = task(t, "status: analyzing\n");
+const kept = (dir: string) => changes(readFileSync(join(dir, "logs/status.jsonl"), "utf8"));
 
-	const first = snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 40, 13)));
+test("each change to status.md adds one line with only the Log lines it added and removed, and an unchanged file adds none", (t) => {
+	const dir = task(t, "status: analyzing\nattention: none\n\n## Log\n- analysis started; analysis.md\n");
+
+	snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 40, 13)));
 	const repeat = snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 41, 0)));
-	writeFileSync(join(dir, "status.md"), "status: implementing\n");
-	const second = snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 43, 58)));
+	writeFileSync(join(dir, "status.md"), "status: implementing\nattention: none\n\n## Log\n- analysis written; analysis.md\n- ticket 01 claimed; issues/01.md\n");
+	snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 43, 58)));
+	const replayed = snapshot(dir, new Date(Date.UTC(2026, 8, 23, 20, 44, 30)));
 
-	assert.deepEqual([first, repeat, second], ["001-20260923T204013Z.md", undefined, "002-20260923T204358Z.md"]);
-	assert.equal(readFileSync(join(dir, "logs/status/002-20260923T204358Z.md"), "utf8"), "status: implementing\n");
+	assert.equal(repeat, undefined);
+	assert.equal(replayed, undefined);
+	assert.deepEqual(kept(dir), [
+		{ at: "2026-09-23T20:40:13.000Z", status: "analyzing", attention: "none", added: ["- analysis started; analysis.md"], removed: [] },
+		{ at: "2026-09-23T20:43:58.000Z", status: "implementing", attention: "none", added: ["- analysis written; analysis.md", "- ticket 01 claimed; issues/01.md"], removed: ["- analysis started; analysis.md"] },
+	]);
 });
 
-test("a task without status.md keeps no version", (t) => {
+test("a task without status.md keeps no line", (t) => {
 	const dir = task(t);
 
 	assert.equal(snapshot(dir), undefined);
 });
 
-test("versions read in number order past 999, in the reader's local time, and leave other files out", (t) => {
-	env(t, { TZ: "Europe/Warsaw" });
-
-	const kept = versions(["1000-20260923T230203Z.md", "notes.md", "999-20260923T215959Z.md", "7-20260923T204013.md"]);
-
-	assert.deepEqual(kept.map((v) => [v.number, v.at]), [[999, "2026-09-23 23:59:59"], [1000, "2026-09-24 01:02:03"]]);
-});
-
-test("pi and omp keep a version after every tool, whichever tool wrote the file", (t) => {
+test("pi and omp keep a change after every tool, whichever tool wrote the file", (t) => {
 	const dir = task(t, "status: new\nattention: none\n");
 	env(t, { FLEET_ARTIFACTS: dirname(dir), SANDBOX_NAME: basename(dir) });
 	const { handlers, pi } = runtime();
@@ -65,9 +64,7 @@ test("pi and omp keep a version after every tool, whichever tool wrote the file"
 	handlers.get("tool_execution_end")?.({ toolName: "write", isError: false });
 	handlers.get("tool_execution_end")?.({ toolName: "write", isError: false });
 
-	const kept = readdirSync(join(dir, "logs/status"));
-	assert.equal(kept.length, 1);
-	assert.equal(readFileSync(join(dir, "logs/status", kept[0]), "utf8"), "status: analyzing\nattention: none\n");
+	assert.deepEqual(kept(dir).map(({ at, ...rest }) => rest), [{ status: "analyzing", attention: "none", added: [], removed: [] }]);
 });
 
 test("pi and omp append one activity line per finished tool: time, tool, ok, agent", (t) => {
@@ -87,7 +84,7 @@ test("pi and omp append one activity line per finished tool: time, tool, ok, age
 	assert.ok(lines.every((line) => !Number.isNaN(Date.parse(line.at))));
 });
 
-test("an agent that dies on an API error leaves its blocked status as a version", (t) => {
+test("an agent that dies on an API error leaves its blocked status as a change", (t) => {
 	const dir = task(t, "status: implementing\nattention: none\n");
 	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
 	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
@@ -96,7 +93,5 @@ test("an agent that dies on an API error leaves its blocked status as a version"
 
 	handlers.get("agent_end")?.({ messages: [{ role: "assistant", stopReason: "error", errorMessage: "402 Payment Required" }] });
 
-	const kept = readdirSync(join(dir, "logs/status"));
-	assert.equal(kept.length, 1);
-	assert.match(readFileSync(join(dir, "logs/status", kept[0]), "utf8"), /^status: blocked\nattention: the agent stopped on an error: 402 Payment Required$/m);
+	assert.deepEqual(kept(dir).map(({ status, attention }) => [status, attention]), [["blocked", "the agent stopped on an error: 402 Payment Required"]]);
 });

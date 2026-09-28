@@ -128,7 +128,7 @@ A pi or OMP host picks up a new render after `/reload`. A Claude host reads its 
 | Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | same | `StopFailure` hook | each agent's own error event |
-| Status history into `logs/status/` | `tool_execution_end` | same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
+| Status history into `logs/status.jsonl` | `tool_execution_end` | same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
 | Transcripts in `logs/sessions/` | written as they happen | same | copied out by `cfleet down` | Claude Code has no session directory setting |
 | Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | same | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `cfleet down` |
 | Cost in `logs/usage.json` | the session's own cost records | same | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |

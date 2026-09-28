@@ -18,7 +18,7 @@ review.md      verdict line, findings, checks read, shared seams
 pr.md          pull request rounds: threads answered, verdicts
 browser/       <run-id>/report.md, screenshots, a walkthrough video
 {{seat.host}} acceptance.md  the host's acceptance: Fits, Gaps, Seen
-logs/          sessions/, status/, activity.jsonl, usage.json, memory.json from {{harness}} and {{cli}} down; <skill>-<id>/ evidence
+logs/          sessions/, status.jsonl, activity.jsonl, usage.json, memory.json from {{harness}} and {{cli}} down; <skill>-<id>/ evidence
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
@@ -86,7 +86,7 @@ Write the file at each event below, before the next tool call: edit the fields t
 | a commit lands | the outcome; the commit |
 | the work starts waiting on a person | what it waits on |
 
-The log is append-only: every rewrite keeps its existing lines verbatim. The harness copies each version of this file into `logs/status/` by itself.
+The log is append-only: every rewrite keeps its existing lines verbatim. The harness adds a line for each change of this file to `logs/status.jsonl` by itself.
 
 ## analysis.md
 

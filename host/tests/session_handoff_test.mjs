@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fakeIo } from "../../src/fleet/fake-io.ts";
@@ -75,8 +75,8 @@ for (const seat of ["host", "sbx"]) {
 			await replacement;
 			assert.notEqual(runtime.session, old);
 			assert.match(readFileSync(join(dir, "task/status.md"), "utf8"), /attention: session handoff complete; fresh session idle/);
-			const versions = readdirSync(join(dir, "task/logs/status")).sort();
-			assert.match(readFileSync(join(dir, "task/logs/status", versions.at(-1)), "utf8"), /attention: session handoff complete; fresh session idle/);
+			const changes = readFileSync(join(dir, "task/logs/status.jsonl"), "utf8").trimEnd().split("\n");
+			assert.equal(JSON.parse(changes.at(-1)).attention, "session handoff complete; fresh session idle");
 			assert.equal(runtime.session.isStreaming, false);
 			assert.equal(runtime.session.pendingMessageCount, 0);
 			assert.equal(editor, "");

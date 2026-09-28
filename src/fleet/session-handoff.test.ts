@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import handoff, { COMPLETE, suggested } from "../../extensions/session-handoff.ts";
+import { changes } from "../../extensions/status-history.ts";
 import { clearedNote } from "../../claude/hooks/container.ts";
 import { fakeIo } from "./fake-io.ts";
 import { renderText, seatSettings } from "../render/render.ts";
@@ -139,16 +140,14 @@ test("the command opens an idle fresh session holding only hidden optional conte
 	assert.deepEqual(r.state(), { attempts: 1, sessions: 1 });
 });
 
-test("the attention note the command writes is kept as a version", async (t) => {
+test("the attention note the command writes is kept as a change", async (t) => {
 	const r = await runtime(t);
 	r.suggest();
 
 	await r.approve();
 
-	const dir = join(r.taskDirectory, "logs/status");
-	const kept = readdirSync(dir).sort().map((name) => readFileSync(join(dir, name), "utf8"));
-	assert.equal(kept.length, 1);
-	assert.match(kept[0], /^attention: session handoff complete; fresh session idle$/m);
+	const kept = changes(readFileSync(join(r.taskDirectory, "logs/status.jsonl"), "utf8"));
+	assert.deepEqual(kept.map(({ attention }) => attention), ["session handoff complete; fresh session idle"]);
 });
 
 test("text after the command becomes the fresh session's first prompt", async (t) => {

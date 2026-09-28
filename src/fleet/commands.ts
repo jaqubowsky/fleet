@@ -1,7 +1,7 @@
 import type { Io } from "./io.ts";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE } from "../../extensions/session-handoff.ts";
-import { ACTIVITY, HISTORY, versions } from "../../extensions/status-history.ts";
+import { ACTIVITY, changes, fieldsOf, STATUS_LOG } from "../../extensions/status-history.ts";
 import { activityOf, callsSince, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
@@ -10,13 +10,10 @@ import { idleStalled } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, harnessStamp, imageStampPath, staleImage, taskDir } from "./up.ts";
 import {
-	addedLines,
 	agentFor,
 	branchFacts,
 	checkoutProbe,
-	fieldsOf,
 	formatRows,
-	logLines,
 	parseCheckout,
 	sandboxes,
 	type Agent,
@@ -46,18 +43,17 @@ export function activityNow(sandbox: string, task: string, io: Io): string {
 	return projection(activityOf(io.read(`${task}/${ACTIVITY}`)), costSoFar(sandbox, task, io), io.now());
 }
 
-const STAMP_SECOND_MS = 1000;
+const justAfter = (at: string) => new Date(Date.parse(at) + 1);
 
 export function blockedWork(task: string, io: Io): number {
 	const { status, attention } = fieldsOf(io.read(`${task}/status.md`));
 	if (status !== "blocked" || attention?.startsWith(STOPPED)) return 0;
-	const dir = `${task}/${HISTORY}`;
-	let from: Date | undefined;
-	for (const version of versions(io.list(dir)).reverse()) {
-		if (fieldsOf(io.read(`${dir}/${version.name}`)).status !== "blocked") break;
-		from = version.time;
+	let from: string | undefined;
+	for (const change of changes(io.read(`${task}/${STATUS_LOG}`)).reverse()) {
+		if (change.status !== "blocked") break;
+		from = change.at;
 	}
-	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), new Date(from.getTime() + STAMP_SECOND_MS)) : 0;
+	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), justAfter(from)) : 0;
 }
 
 function costSoFar(sandbox: string, task: string, io: Io): number | undefined {
@@ -327,37 +323,39 @@ export function artifacts(repo: string, io: Io): string {
 	].join("\n");
 }
 
+const two = (n: number) => String(n).padStart(2, "0");
+
+function localTime(iso: string): string {
+	const at = new Date(iso);
+	return `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())} ${two(at.getHours())}:${two(at.getMinutes())}:${two(at.getSeconds())}`;
+}
+
 export function history(sandbox: string, repo: string, io: Io): string {
 	const running = sandboxes(io).find(
 		(s) => s.name === sandbox || agentName(s.name) === sandbox,
 	);
-	const dir = `${taskDir(running?.workspaces[0] ?? repo, running?.name ?? sandbox, io)}/${HISTORY}`;
-	const kept = versions(io.list(dir));
+	const file = `${taskDir(running?.workspaces[0] ?? repo, running?.name ?? sandbox, io)}/${STATUS_LOG}`;
+	const kept = changes(io.read(file));
 	if (!kept.length)
-		return `${dir}: no versions yet; the container keeps one each time status.md changes`;
+		return `${file}: no changes yet; the container adds a line each time status.md changes`;
 	const out: string[] = [];
 	let before: Record<string, string | undefined> = { attention: "none" };
-	let logged: string[] = [];
-	for (const version of kept) {
-		const text = io.read(`${dir}/${version.name}`) ?? "";
-		const fields = fieldsOf(text);
+	kept.forEach((change, index) => {
 		const now = {
-			status: fields.status,
-			attention: fields.attention,
-			summary: fields.summary?.replace(/\s+/g, " "),
+			status: change.status,
+			attention: change.attention,
+			summary: change.summary?.replace(/\s+/g, " "),
 		};
-		const log = logLines(text);
 		out.push(
-			`${String(version.number).padStart(3, "0")}  ${version.at}  ${before.status && before.status !== now.status ? `${before.status} -> ` : ""}${now.status ?? "not recorded"}`,
+			`${String(index + 1).padStart(3, "0")}  ${localTime(change.at)}  ${before.status && before.status !== now.status ? `${before.status} -> ` : ""}${now.status ?? "not recorded"}`,
 		);
 		for (const name of ["attention", "summary"] as const)
 			if (now[name] && now[name] !== before[name])
 				out.push(`     ${name}: ${now[name]}`);
-		for (const line of addedLines(log, logged))
-			out.push(`     + ${line.slice(2)}`);
+		for (const line of change.added) out.push(`     + ${line.slice(2)}`);
+		for (const line of change.removed) out.push(`     removed: ${line.slice(2)}`);
 		before = now;
-		logged = log;
-	}
+	});
 	return out.join("\n");
 }
 

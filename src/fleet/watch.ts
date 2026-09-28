@@ -1,6 +1,6 @@
 import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
-import { ACTIVITY } from "../../extensions/status-history.ts";
+import { ACTIVITY, fieldsOf, logLines } from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
 import { activityNow, blockedWork, steer } from "./commands.ts";
 import { CONTINUE } from "../harness.ts";
@@ -24,8 +24,6 @@ import {
 	type Agent,
 	branchFacts,
 	calls,
-	fieldsOf,
-	logLines,
 	type Sandbox,
 	sandboxes,
 	wake,

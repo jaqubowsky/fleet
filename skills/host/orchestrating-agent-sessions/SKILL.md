@@ -15,7 +15,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
-| what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every version of `status.md` in order, with its time: status changes, attention, summary and the Log lines it added |
+| what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every change of `status.md` in order, with its time: status changes, attention, summary, the Log lines it added and any it removed |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
 | what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
@@ -72,7 +72,7 @@ A `[fleet]` line or a question about a task starts at `status.md`, then the one 
 | Question | Read |
 | --- | --- |
 | where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
-| what happened, in order | `## Log` in `status.md`; every version of the file with `{{cli}} history` |
+| what happened, in order | `## Log` in `status.md`; every change of the file with `{{cli}} history` |
 | which commits | `{{cli}} ls` for the branch and its dirty count, `git log <base>..<branch>` after `{{cli}} land` |
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
