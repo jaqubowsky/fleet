@@ -639,13 +639,12 @@ test("CLI watch outside a herdr pane follows only the containers it names", () =
 });
 
 const PR_VIEW = "pr view task --json number,state,statusCheckRollup";
-const COMMITTED = new Date("2026-09-28T08:00:00Z");
 
 function onBranch(io: ReturnType<typeof fakeIo>, checks: unknown[]) {
 	const sbx = io.sbx;
 	io.sbx = (args, opts) =>
 		args.join(" ") === `exec claude-worker sh -c ${commitsProbe}`
-			? `task\torigin/main\t2\t1\t 2 files changed, 5 insertions(+)\tabc1234 add two\t${COMMITTED.getTime() / 1000}`
+			? "task\torigin/main\t2\t1\t 2 files changed, 5 insertions(+)\tabc1234 add two"
 			: sbx(args, opts);
 	io.gh = (args, cwd) => {
 		io.calls.push(["gh", cwd, ...args]);
@@ -763,29 +762,3 @@ test("a settle with status.md unchanged but new branch facts wakes the host agai
 	assert.equal(wakes.length, 2);
 	assert.match(wakes[1], /commits: 3 since origin\/main/);
 });
-
-test("a settle whose status.md was written before the branch's latest commit flags it; a fresher one does not", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
-	]);
-	const statusMd = "/home/me/.sandboxes/webapp/claude-worker/status.md";
-	io.files[statusMd] = "status: implementing\nattention: none\n\n## Next step\nMerge origin/main once #23 lands.\n";
-	onBranch(io, []);
-	let written = new Date(COMMITTED.getTime() - 60_000);
-	io.stat = (path) => (path === statusMd ? { size: 1, mtime: written, dir: false } : undefined);
-	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
-
-	status("worker:pane", "idle");
-	t.mock.timers.tick(1100);
-	written = new Date(COMMITTED.getTime() + 60_000);
-	io.files[statusMd] = "status: implementing\nattention: none\n\n## Next step\nClaim ticket 29.\n";
-	status("worker:pane", "working");
-	status("worker:pane", "idle");
-	t.mock.timers.tick(1100);
-
-	assert.equal(wakes.length, 2);
-	assert.match(wakes[0], /\n\nstatus\.md: written before the branch's latest commit or push, so its next step may already be done$/);
-	assert.doesNotMatch(wakes[1], /status\.md: written before/);
-});
-

@@ -8,7 +8,6 @@ import { fakeIo } from "./fake-io.ts";
 import {
 	agentFor,
 	branchFacts,
-	brief,
 	commitFacts,
 	commitsProbe,
 	elapsed,
@@ -77,30 +76,6 @@ test("a garbled dirty count reads as zero rather than NaN", () => {
 	assert.equal(parseCheckout("main\tabc\tdef").dirty, 0);
 });
 
-test("missing sections are explicit and legacy now and log stay out", () => {
-	const status =
-		"status: implementing\nattention: none\nnow: stale step\n\n## Log\n- old detail\n";
-
-	assert.equal(
-		brief(status),
-		"status: implementing\nattention: none\nsummary: not recorded\nnext step: not recorded",
-	);
-	assert.equal(
-		brief(undefined),
-		"status: no status.md\nattention: not recorded\nsummary: not recorded\nnext step: not recorded",
-	);
-});
-
-test("a status brief carries summary and continuation without copying the log", () => {
-	const status =
-		"status: implementing\nattention: none\n\n## Summary\nThe regression is reproduced. The fix awaits review; see [analysis](analysis.md).\n\n## Next step\nRun two-axis-review against abc1234.\n\n## Log\n- analysis: reproduced; analysis.md\n- fix: green; commit abc1234\n";
-
-	assert.equal(
-		brief(status),
-		"status: implementing\nattention: none\nsummary: The regression is reproduced. The fix awaits review; see [analysis](analysis.md).\nnext step: Run two-axis-review against abc1234.",
-	);
-});
-
 type Git = (...args: string[]) => string;
 
 function repo(t: TestContext): { dir: string; git: Git } {
@@ -144,29 +119,9 @@ test("a pushed branch counts its commits from the merge base with origin's defau
 	clone.git("branch", "--set-upstream-to=origin/task");
 	commitFile(clone, "two.txt", 3);
 
-	const facts = commitFacts(probe(clone.dir));
+	const line = commitFacts(probe(clone.dir)).line;
 
-	assert.match(facts.line, /^2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest [0-9a-f]{7,} add two\.txt$/);
-	assert.equal(facts.moved?.getTime(), Number(clone.git("log", "-1", "--format=%ct")) * 1000);
-});
-
-test("a push after the branch's last commit moves the branch to the push", (t) => {
-	const clone = repo(t);
-	commitFile(clone, "base.txt", 1);
-	onDefault(clone);
-	clone.git("switch", "-qc", "task");
-	writeFileSync(join(clone.dir, "one.txt"), "x\n");
-	clone.git("add", "one.txt");
-	execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "add one"], {
-		cwd: clone.dir,
-		env: { ...process.env, GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" },
-	});
-	clone.git("update-ref", "refs/remotes/origin/task", "HEAD");
-
-	const moved = commitFacts(probe(clone.dir)).moved?.getTime() ?? 0;
-
-	assert.ok(moved > Date.parse("2020-01-01T00:00:00Z"), `moved at ${new Date(moved).toISOString()}`);
-	assert.ok(Date.now() - moved < 60_000);
+	assert.match(line, /^2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest [0-9a-f]{7,} add two\.txt$/);
 });
 
 test("an unpushed branch counts every commit as unpushed", (t) => {
@@ -217,37 +172,37 @@ const FACTS = "commits: none since origin/main\n\npr: none";
 
 test("a wake projects status and commits, and no log line the host already saw", () => {
 	const status =
-		"status: done\nattention: none\n\n## Summary\nThe fix passes.\nReview is complete; see review.md.\n\n## Next step\nWait for the host.\n\n## Log\n- internal detail\n";
+		"status: ready-for-host\nattention: none\n\n## Summary\nThe fix passes.\nReview is complete; see review.md.\n\n## Log\n- internal detail\n";
 
 	assert.equal(
 		wake(status, FACTS, ["- internal detail"]),
-		"status: done\n\nnext step: Wait for the host.\n\ncommits: none since origin/main\n\npr: none",
+		"status: ready-for-host\n\ncommits: none since origin/main\n\npr: none",
 	);
 	assert.equal(
 		wake(undefined, FACTS),
-		"status: no status.md\n\nnext step: not recorded\n\ncommits: none since origin/main\n\npr: none",
+		"status: no status.md\n\ncommits: none since origin/main\n\npr: none",
 	);
 });
 
 test("a wake shows attention only when it calls for a response", () => {
 	const status =
-		"status: blocked\nattention: choose a date format\n\n## Next step\nWait for the user.\n";
+		"status: blocked\nattention: choose a date format\n\n## Summary\nThe grid needs a date format.\n\n## Log\n";
 
 	assert.match(
 		wake(status, FACTS),
-		/status: blocked\n\nattention: choose a date format\n\nnext step: Wait for the user\./,
+		/^status: blocked\n\nattention: choose a date format\n\ncommits:/,
 	);
 });
 
 test("a wake counts the log lines written since the previous wake", () => {
 	const status =
-		"status: implementing\nattention: none\n\n## Summary\nx\n\n## Next step\ny\n\n## Log\n- Scope set; analysis.md\n- Baseline build passed; logs/initial-build.log\n- Decided: keep the stacked layout under 860 px, because the ticket covers wide screens only; analysis.md\n";
+		"status: implementing\nattention: none\n\n## Log\n- Scope set; analysis.md\n- Baseline build passed; logs/initial-build.log\n- Decided: keep the stacked layout under 860 px, because the ticket covers wide screens only; analysis.md\n";
 
 	const result = wake(status, FACTS, ["- Scope set; analysis.md"]);
 
 	assert.equal(
 		result,
-		"status: implementing\n\nnext step: y\n\nlog: 2 new entries in status.md\n\ncommits: none since origin/main\n\npr: none",
+		"status: implementing\n\nlog: 2 new entries in status.md\n\ncommits: none since origin/main\n\npr: none",
 	);
 });
 
@@ -279,15 +234,14 @@ test("a log line written again word for word still reaches the wake", () => {
 });
 
 test("a wake bounds every status field and the latest commit", () => {
-	const status = `status: ${"s".repeat(500)}\nattention: ${"a".repeat(500)}\n\n## Summary\n${"b".repeat(5000)}\n\n## Next step\n${"n".repeat(1000)}\n\n## Log\nsecret log detail\n`;
+	const status = `status: ${"s".repeat(500)}\nattention: ${"a".repeat(500)}\n\n## Summary\n${"b".repeat(5000)}\n\n## Log\nsecret log detail\n`;
 	const commits = commitFacts(`task\torigin/main\t10\t10\t 3 files changed\tabc1234 ${"c".repeat(500)}`).line;
 
 	const result = wake(status, `commits: ${commits}\n\npr: none`);
 
-	assert.equal(result.split("\n").length, 9);
-	assert.ok(result.length < 800);
-	assert.match(result, /next step: n+\.\.\./);
-	assert.doesNotMatch(result, /summary:|secret log detail|5 c|last:|review:/);
+	assert.equal(result.split("\n").length, 7);
+	assert.ok(result.length < 600);
+	assert.doesNotMatch(result, /summary:|next step:|secret log detail|5 c|last:|review:/);
 });
 
 test("rows carry the activity projection when the container has one", () => {

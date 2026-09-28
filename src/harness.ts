@@ -33,7 +33,7 @@ const pollCi = (agent: string) => `${agent} has no background shell, so change i
 const watchSource = (agent: string, cli: string, env: string) =>
 	`Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
-export const CONTINUE = "Continue the previous task: read current durable artifacts and follow Next step in status.md.";
+export const CONTINUE = "Continue the previous task: read current durable artifacts, then take the work from the frontier of issues/ and the last Log line in status.md.";
 const continueInOneSteer = (cli: string) => `For an end-to-end task, approve and continue in one steer: \`${cli} steer <sandbox> "/session-handoff ${CONTINUE}"\`.`;
 
 export const HARNESSES: Record<HarnessName, Harness> = {

@@ -26,7 +26,7 @@ const usage = `usage:
   ${cli} steer <sandbox> <text...>                    send the container's ${h.agent} this text
   ${cli} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${cli} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
-  ${cli} history <sandbox> [--repo <path>]            every status.md version in order: status, attention, summary, next step and the Log lines it added
+  ${cli} history <sandbox> [--repo <path>]            every status.md version in order: status, attention, summary and the Log lines it added
   ${cli} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
   ${cli} land <sandbox> [--branch <name>] [--sign] [--push]   import the container branch; signs what origin lacks where the profile has the host sign, or on --sign; --push stays a fast-forward
   ${cli} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays

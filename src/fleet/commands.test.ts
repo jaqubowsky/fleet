@@ -756,13 +756,8 @@ test("history lists every status.md version in local time with what changed in i
 		if (zone === undefined) delete process.env.TZ;
 		else process.env.TZ = zone;
 	});
-	const version = (
-		summary: string,
-		next: string,
-		status: string,
-		log: string[],
-	) =>
-		`status: ${status}\nattention: none\n\n## Summary\n${summary}\n\n## Next step\n${next}\n\n## Log\n${log.map((line) => `- ${line}\n`).join("")}`;
+	const version = (status: string, attention: string, summary: string | undefined, log: string[]) =>
+		`status: ${status}\nattention: ${attention}\n${summary ? `\n## Summary\n${summary}\n` : ""}\n## Log\n${log.map((line) => `- ${line}\n`).join("")}`;
 	const io = fakeIo({
 		...running,
 		[`list ${task}/logs/status`]: [
@@ -771,22 +766,22 @@ test("history lists every status.md version in local time with what changed in i
 			"002-20260923T204306Z.md",
 		],
 		[`read ${task}/logs/status/001-20260923T204013Z.md`]: version(
-			"Started WEB-1715.",
-			"Read the ticket.",
-			"analyzing",
+			"blocked",
+			"choose the grid width",
+			"WEB-1715 waits on the grid width.",
 			[],
 		),
 		[`read ${task}/logs/status/002-20260923T204306Z.md`]: version(
-			"The preview is about\n55% wide.",
-			"Read the ticket.",
-			"analyzing",
-			["Baseline build passed; logs/initial-build.log"],
+			"implementing",
+			"none",
+			undefined,
+			["Decided: 55% wide, because the user chose it; analysis.md"],
 		),
 		[`read ${task}/logs/status/003-20260923T204358Z.md`]: version(
-			"Analysis done.",
-			"Change the grid.",
-			"implementing",
-			["Baseline build passed; logs/initial-build.log", "Scope set; analysis.md"],
+			"ready-for-host",
+			"none",
+			"The preview is\n55% wide.",
+			["Decided: 55% wide, because the user chose it; analysis.md", "Grid committed; abc1234"],
 		),
 	});
 
@@ -795,16 +790,15 @@ test("history lists every status.md version in local time with what changed in i
 	assert.equal(
 		out,
 		[
-			"001  2026-09-23 22:40:13  analyzing",
-			"     summary: Started WEB-1715.",
-			"     next step: Read the ticket.",
-			"002  2026-09-23 22:43:06  analyzing",
-			"     summary: The preview is about 55% wide.",
-			"     + Baseline build passed; logs/initial-build.log",
-			"003  2026-09-23 22:43:58  analyzing -> implementing",
-			"     summary: Analysis done.",
-			"     next step: Change the grid.",
-			"     + Scope set; analysis.md",
+			"001  2026-09-23 22:40:13  blocked",
+			"     attention: choose the grid width",
+			"     summary: WEB-1715 waits on the grid width.",
+			"002  2026-09-23 22:43:06  blocked -> implementing",
+			"     attention: none",
+			"     + Decided: 55% wide, because the user chose it; analysis.md",
+			"003  2026-09-23 22:43:58  implementing -> ready-for-host",
+			"     summary: The preview is 55% wide.",
+			"     + Grid committed; abc1234",
 		].join("\n"),
 	);
 });

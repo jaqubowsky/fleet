@@ -48,8 +48,7 @@ export function staleImage(root: string, io: Io): string | undefined {
 	return `${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`;
 }
 
-const TASK_STATUS =
-	"status: new\nattention: none\n\n## Summary\nNo progress or verification has been recorded yet.\n\n## Next step\nFollow the assigned task and record the first progress update.\n\n## Log\n";
+const TASK_STATUS = "status: new\nattention: none\n\n## Log\n";
 
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);

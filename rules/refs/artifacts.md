@@ -7,7 +7,7 @@ One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo
 Each file has one role. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
 
 ```text
-status.md      current user-facing state: status, attention, summary, next step, log
+status.md      current user-facing state: status, attention, log, and the summary at a hand-off
 permissions.md what each seat may do in this repository: one line per action and level; {{cli}} up writes it
 project.md     how this project does what the rules require, when host/projects/<owner>/<repo>.md exists; {{cli}} up writes it
 ticket.md      the tracker issue this task delivers, copied at start by the host; Status and ticks are the container's
@@ -40,10 +40,7 @@ status: new | analyzing | implementing | reviewing | testing | ready-for-host | 
 attention: none | <one sentence of at most 300 characters naming the decision or input that blocks the work>
 
 ## Summary
-<2-5 sentences, at most 600 characters, for the host: what happened, current state, missing verification or blocker, links to canonical artifacts>
-
-## Next step
-<exact workflow continuation, at most 300 characters>
+<only at ready-for-host or blocked: 2-5 sentences, at most 600 characters, for the host: what was delivered, missing verification or blocker, host actions, links to canonical artifacts>
 
 ## Log
 - <turning point>; <file, log or commit that shows it>
@@ -62,21 +59,21 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 At `ready-for-host`:
 
 - Summary names every line `ticket-check` prints over `issues/` as missing verification
-- every host action is named in Next step, never counted, and in Summary once Next step is full
+- every host action is named in Summary, never counted
 - `attention` stays `none` unless a decision blocks delivery
 
-The branch's pull request, its CI and its commit counts are facts `{{cli}}` prints beside this file, never a status the agent writes. The host reads this file and those facts to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` and `## Next step` in terms of delivered behavior, current observable state and the next intended outcome. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
+The branch's pull request, its CI and its commit counts are facts `{{cli}}` prints beside this file, never a status the agent writes. The host reads this file and those facts to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` in terms of delivered behavior and current observable state. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
 Write the file at each event below, before the next tool call: edit the fields the event names in place and append the Log line.
 
 | Event | Edit |
 | --- | --- |
-| the `status:` value changes | `status`, Summary, Next step |
-| the work starts waiting on a person | `status`, `attention`, Summary, Next step |
-| a session handoff is suggested | `attention`, Summary, Next step |
+| the `status:` value changes | `status`; Summary written when it turns `ready-for-host` or `blocked`, removed when it leaves them |
+| the work starts waiting on a person | `status`, `attention`, Summary |
+| a session handoff is suggested | `attention` |
 | the turn ends, before the chat report | every field that no longer holds |
 
-Summary and Next step hold only the present, so `## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. Each turning point appends one line in the next write, whichever event that write is for:
+Summary holds only the hand-off, so `## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. A fresh session takes its work from the frontier of `issues/` and the last Log line. Each turning point appends one line in the next write, whichever event that write is for:
 
 | Turning point | Line |
 | --- | --- |

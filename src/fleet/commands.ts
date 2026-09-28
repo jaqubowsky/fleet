@@ -345,13 +345,12 @@ export function history(sandbox: string, repo: string, io: Io): string {
 			status: fields.status,
 			attention: fields.attention,
 			summary: fields.summary?.replace(/\s+/g, " "),
-			"next step": fields.next?.replace(/\s+/g, " "),
 		};
 		const log = logLines(text);
 		out.push(
 			`${String(version.number).padStart(3, "0")}  ${version.at}  ${before.status && before.status !== now.status ? `${before.status} -> ` : ""}${now.status ?? "not recorded"}`,
 		);
-		for (const name of ["attention", "summary", "next step"] as const)
+		for (const name of ["attention", "summary"] as const)
 			if (now[name] && now[name] !== before[name])
 				out.push(`     ${name}: ${now[name]}`);
 		for (const line of addedLines(log, logged))

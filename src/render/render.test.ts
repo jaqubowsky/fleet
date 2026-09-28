@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
-import { HARNESSES } from "../harness.ts";
+import { CONTINUE, HARNESSES } from "../harness.ts";
 import { REAL_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { render, renderText } from "./render.ts";
 
@@ -274,6 +274,22 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
+test("the continue steer sends a fresh session to the frontier of issues/ and the last Log line", () => {
+	assert.match(CONTINUE, /the frontier of issues\/ and the last Log line/);
+});
+
+for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+	test(`${name} renders no Next step and carries the continue steer`, () => {
+		renderSeats(name, (out) => {
+			const naming = (readdirSync(out, { recursive: true }) as string[])
+				.filter((file) => file.endsWith(".md"))
+				.filter((file) => readFileSync(join(out, file), "utf8").includes("Next step"));
+			assert.deepEqual(naming, []);
+			assert.ok((readdirSync(out, { recursive: true }) as string[]).some((file) => file.endsWith(".md") && readFileSync(join(out, file), "utf8").includes(CONTINUE)));
+		});
+	});
+}
+
 for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	test(`${name} gives both seats the CI ref, and the skills that read CI point at it without a copy`, () => {
 		renderSeats(name, (out) => {
@@ -446,7 +462,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 			assert.match(implement, /name the acceptance line most likely to be false and make the check that would catch it the first red of step 5/);
 			const rules = containerRules(out).map((file) => readFileSync(join(out, "container", file), "utf8")).join("\n");
 			assert.match(rules, /A question for the host goes into `attention:` under `status: blocked`, and the turn ends there\. Never a `\w+` dialog here/);
-			assert.equal(rendered(out, "container", "refs/artifacts.md").match(/every host action (is )?named in Next step, never counted, and in Summary once Next step is full/g)?.length, 1);
+			assert.equal(rendered(out, "container", "refs/artifacts.md").match(/every host action (is )?named in Summary, never counted/g)?.length, 1);
 			assert.match(rendered(out, "container", "to-tickets/SKILL.md"), /Cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer/);
 			const ticket = rendered(out, "container", "refs/ticket.md");
 			assert.match(ticket, /progress lives in the tracker and in git; a local copy's `Status:` is the container's working mark/);

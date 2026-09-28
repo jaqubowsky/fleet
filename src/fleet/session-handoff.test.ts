@@ -13,7 +13,7 @@ async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
 	t.after(() => rmSync(dir, { recursive: true, force: true }));
 	const taskDirectory = dir;
-	const status = "status: implementing\nattention: none\n\n## Summary\nThe fix passes. Review remains; see [analysis](analysis.md).\n\n## Next step\nRun two-axis-review.\n\n## Log\n";
+	const status = "status: implementing\nattention: none\n\n## Log\n- Gate passed; logs/gate.log\n";
 	writeFileSync(join(dir, "status.md"), status);
 	for (const [key, value] of Object.entries({ PI_CODING_AGENT_DIR: dir, FLEET_ARTIFACTS: dir, SANDBOX_NAME: "." })) {
 		const previous = process.env[key];

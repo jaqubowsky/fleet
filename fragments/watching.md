@@ -7,7 +7,7 @@ A watched container working on without settling wakes you with `working <n>m wit
 
 A settling agent whose `status.md` or branch facts changed since its previous wake wakes you with `[fleet] <agent>: <sandbox> <prev> -> <status>`, the sandbox named only where herdr shortened the agent, then:
 
-- a short projection of `status.md`: status, attention, next step, the number of new `## Log` entries
+- a short projection of `status.md`: status, attention, the number of new `## Log` entries
 - the branch's facts: commits since the merge base with origin's default branch, pushed and unpushed, files and lines changed, the latest commit, and the pull request with its CI
 - its activity from `logs/activity.jsonl`: time up, minutes silent, tool calls, last tool, failures in a row and cost so far
 - for a container at `status: blocked` that goes on calling tools, `still working while blocked: <n> tool calls since status.md turned blocked`, and `{{cli}} ls` marks it `<n> tool calls since blocked`: it spends while it waits on you, so answer its `attention:` or steer it to stop

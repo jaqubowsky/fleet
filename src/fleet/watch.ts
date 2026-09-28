@@ -132,12 +132,7 @@ export function watch(
 		const where = dirs.get(name);
 		if (!where) return { text: "commits: not counted\n\npr: not read", running: false };
 		const facts = branchFacts(io, where.sandbox, where.repo);
-		const written = io.stat(`${where.dir}/status.md`)?.mtime;
-		const behind =
-			facts.moved && written && written < facts.moved
-				? "\n\nstatus.md: written before the branch's latest commit or push, so its next step may already be done"
-				: "";
-		return { text: `commits: ${facts.commits}\n\npr: ${facts.pr}${behind}`, running: facts.running };
+		return { text: `commits: ${facts.commits}\n\npr: ${facts.pr}`, running: facts.running };
 	};
 
 	const details = (name: string, status: string | undefined, facts: string): string => {

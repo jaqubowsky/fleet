@@ -25,7 +25,7 @@ for (const seat of ["host", "sbx"]) {
 	process.env.FLEET_ARTIFACTS = dir;
 	process.env.SANDBOX_NAME = "task";
 	mkdirSync(join(dir, "task"));
-	writeFileSync(join(dir, "task/status.md"), "status: implementing\nattention: none\n\n## Summary\nReady for review. Checks passed.\n\n## Next step\nRun two-axis-review.\n\n## Log\n");
+	writeFileSync(join(dir, "task/status.md"), "status: implementing\nattention: none\n\n## Log\n- Gate passed; logs/gate.log\n");
 	let turns = 0;
 	let editor = "previous draft";
 	let replacement;
