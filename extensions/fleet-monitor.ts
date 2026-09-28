@@ -32,7 +32,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 		const release = () => {
 			running = false;
 			const { closed } = lifecycle(io.read(log) ?? "");
-			const kept = held.splice(0).filter((text) => !closed.has(wakeName(text) ?? ""));
+			const kept = held.splice(0).filter((text) => !closed.has(wakeName(text) ?? "") || text.split("\n")[0].endsWith(" -> taken down"));
 			if (kept.length) send(kept.join("\n\n"));
 		};
 		const said = new Set<string>();
@@ -73,7 +73,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			name: "fleet_watch",
 			label: "Fleet watch",
 			description:
-				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone), working 20 minutes without settling, or idle 20 minutes short of ready-for-host, paused or blocked wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, the number of Log lines added since its previous wake), commit counts since origin's default branch, and the pull request with its CI; a settle with the pull request open and CI running wakes nothing unless status.md is blocked or paused. That turn is where you act on it. Pass the sandbox name from ${h.cli} ls; empty string = every container.`,
+				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone, taken down), working 20 minutes without settling, or idle 20 minutes short of ready-for-host, paused or blocked wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, the number of Log lines added since its previous wake), commit counts since origin's default branch, and the pull request with its CI; a settle with the pull request open and CI running wakes nothing unless status.md is blocked or paused. That turn is where you act on it. Pass the sandbox name from ${h.cli} ls; empty string = every container.`,
 			promptSnippet: "watch containers; a settling one wakes this session with a [fleet] line",
 			parameters: {
 				type: "object",

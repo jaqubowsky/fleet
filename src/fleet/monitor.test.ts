@@ -45,11 +45,14 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h
 		handlers.session_start({}, { sessionManager: { getSessionId: () => sessionId } });
 		return { handlers, tools, messages, notices };
 	};
+	const exit = (pane = "worker:pane") => {
+		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.exited", data: { pane_id: pane } })}\n`));
+	};
 	const settle = (pane = "worker:pane") => {
 		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`));
 		t.mock.timers.tick(1100);
 	};
-	return { events, start, settle };
+	return { events, exit, start, settle };
 }
 
 test("only the invoking Pi session receives automatic fleet notifications", (t) => {
@@ -182,7 +185,7 @@ test("a wake that lands while the host works waits for its turn to end", async (
 	assert.match(watcher.messages[0].message.content, /^\[fleet\] pi-worker: working -> idle\n/);
 });
 
-test("a held wake for a container the host took down meanwhile never arrives", async (t) => {
+test("a container the host takes down mid-turn arrives after the turn as taken down, and its held settle never does", async (t) => {
 	const runtime = monitorRuntime(t);
 	const watcher = runtime.start("session-a");
 	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
@@ -190,7 +193,9 @@ test("a held wake for a container the host took down meanwhile never arrives", a
 	watcher.handlers.agent_start();
 	runtime.settle();
 	runtime.events("2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a");
+	runtime.exit();
 	watcher.handlers.agent_end();
 
-	assert.deepEqual(watcher.messages, []);
+	assert.equal(watcher.messages.length, 1);
+	assert.match(watcher.messages[0].message.content, /^\[fleet\] pi-worker: idle -> taken down\n/);
 });

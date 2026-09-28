@@ -148,9 +148,9 @@ export function watch(
 		return `${text}${blocked ? `\n\nstill working while blocked: ${calls(blocked)} since status.md turned blocked` : ""}${activity ? `\n\nactivity: ${activity}` : ""}`;
 	};
 
-	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean } = {}) => {
+	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean; down?: boolean } = {}) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
-		if (closed.has(name)) return;
+		if (closed.has(name) && !when.down) return;
 		const rows = listed();
 		if (rows) locate(name, rows);
 		const status = statusOf(name);
@@ -167,6 +167,13 @@ export function watch(
 			return;
 		woken.set(name, { status, facts: facts.text, at: io.now().toISOString() });
 		onWake(wakeLines(name, dirs.get(name)?.sandbox ?? name, change, details(name, status, facts.text)));
+	};
+
+	const leave = (pane: string, entry: Tracked, rows: Sandbox[] | undefined, exited: boolean) => {
+		const down = lifecycle(io.read(events) ?? "").closed.has(entry.name) || (rows !== undefined && !rows.some((s) => agentName(s.name) === entry.name));
+		if (down) emit(entry.name, `${entry.status} -> taken down`, { down });
+		else if (exited) emit(entry.name, `${entry.status} -> gone`);
+		tracked.delete(pane);
 	};
 
 	const settle = (pane: string, from: string | undefined) => {
@@ -188,8 +195,7 @@ export function watch(
 		const entry = pane ? tracked.get(pane) : undefined;
 		if (!pane || !entry) return;
 		if (/pane[._]exited/.test(frame.event ?? "")) {
-			emit(entry.name, `${entry.status} -> gone`);
-			tracked.delete(pane);
+			leave(pane, entry, listed(), true);
 			return;
 		}
 		const next = frame.data?.agent_status ?? "unknown";
@@ -286,10 +292,8 @@ export function watch(
 		}
 		for (const pane of [...tracked.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
-			const gone = tracked.get(pane);
-			if (gone && !listed.some((a) => a.pane_id === pane))
-				emit(gone.name, `${gone.status} -> gone`);
-			tracked.delete(pane);
+			const entry = tracked.get(pane);
+			if (entry) leave(pane, entry, rows, !listed.some((a) => a.pane_id === pane));
 		}
 		const now = Date.now();
 		for (const a of fresh)

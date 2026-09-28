@@ -376,7 +376,7 @@ test("a steer since the last wake lets the next settle wake the host again", (t:
 	assert.equal(wakes.length, 2);
 });
 
-test("a container taken down wakes nobody, neither its last settle nor its exit", (t: TestContext) => {
+test("a container a down closes wakes once as taken down, never with its last settle or its exit", (t: TestContext) => {
 	const { io, status, sockets } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
@@ -388,7 +388,7 @@ test("a container taken down wakes nobody, neither its last settle nor its exit"
 	);
 
 	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] =
-		"2026-09-16T10:05:00.000Z w1:host down claude-worker session=\n";
+		"2026-09-16T10:05:00.000Z w2:other down claude-worker session=\n";
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
 	for (const socket of sockets)
@@ -399,7 +399,28 @@ test("a container taken down wakes nobody, neither its last settle nor its exit"
 			),
 		);
 
-	assert.deepEqual(wakes, []);
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: idle -> taken down\n/);
+});
+
+test("a watched container whose sandbox leaves the list wakes once as taken down while its pane stays", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
+	]);
+	const wakes: string[] = [];
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
+
+	const sbx = io.sbx;
+	io.sbx = (args, opts) => (args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts));
+	intervals.get(30_000)?.();
+	intervals.get(30_000)?.();
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: idle -> taken down\n/);
 });
 
 test("a working container whose status.md says it stopped on an error wakes the host once", (t: TestContext) => {
