@@ -28,4 +28,6 @@ One line each: what a reader might expect here and another ticket, or nobody, de
 
 Optional: a decision this slice made, a prototype snippet trimmed to that decision.
 
+In a tracker the heading's title is the issue title and the tracker's key its only number, `Status:` is the issue's workflow state, `Blocked by:` is the tracker's blocking relation with landed blockers left out, and the description starts at `## Parent`; its local copy puts the heading and `Status:` back above it.
+
 A ticket holds the plan, never progress: progress lives in the tracker and in git; a local copy's `Status:` is the container's working mark.
