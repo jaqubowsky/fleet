@@ -117,6 +117,21 @@ test("words inside a quoted argument are data, and a script handed to a shell is
 	assert.equal(decide("Bash", { command: 'grep -c "git push" f' }, at(NO_PUSH)).decision, "allow");
 });
 
+test("a command refused bare stays refused behind a wrapper that runs it", () => {
+	const wrappers = ["sudo -u me", "sudo -E -u me -g staff", "nohup", "timeout 5", "timeout -k 2 -s KILL 30s", "timeout --signal=TERM 5m", "env GH_TOKEN=x", "env -u HOME -C /tmp A=1", "nice", "nice -n 10", "nice -5", "nohup nice -n 5 timeout 9 sudo -u me", "sudo -iu me", "sudo -Eu me", "sudo -uroot", "sudo --user me", "sudo --user=me", "sudo -R /tmp -c staff", "env -iu HOME", "env --unset HOME", "env --chdir /tmp", "env -P /bin", "timeout --signal KILL 5", "nice --adjustment 5", "/usr/bin/timeout 5", "/usr/bin/sudo -u me"];
+	for (const wrapper of wrappers) {
+		assert.equal(decide("Bash", { command: `${wrapper} gh pr merge 1` }, here).decision, "deny", wrapper);
+		assert.equal(decide("Bash", { command: `${wrapper} git push --force origin main` }, here).decision, "deny", wrapper);
+		assert.equal(decide("Bash", { command: `${wrapper} gh pr view 1` }, here).decision, "allow", wrapper);
+	}
+});
+
+test("env -S and --split-string run their value as the command line", () => {
+	for (const command of ['env -S "gh pr merge 1"', "env -S 'git push --force origin main'", 'env -S"gh pr merge 1"', 'env --split-string="gh pr merge 1"', 'env --split-string "gh pr merge 1"', 'env -i -S "A=1 gh pr merge 1"'])
+		assert.equal(decide("Bash", { command }, here).decision, "deny", command);
+	assert.equal(decide("Bash", { command: 'env -S "gh pr view 1"' }, here).decision, "allow");
+});
+
 test("a heredoc body counts only when it feeds an interpreter", () => {
 	assert.equal(decide("Bash", { command: heredoc("cat > doc.md", "restore ~/.ssh/config here") }, here).decision, "allow");
 	assert.equal(decide("Bash", { command: heredoc("cat > d.md", "see ~/.config/op/plugins.sh") }, here).decision, "allow");

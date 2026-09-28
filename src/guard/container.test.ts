@@ -35,6 +35,9 @@ test("in a container on its own branch, a push to origin's default branch is ref
 		"cd . && git push origin main",
 		'bash -c "git push origin main"',
 		"git push --repo origin main",
+		"sudo -u agent git push origin main",
+		"timeout 60 git push origin main",
+		"nohup nice -n 5 git push origin main",
 	])
 		assert.match(pushRefusal(command, dir) ?? "", /default branch main/, command);
 });

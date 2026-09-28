@@ -1,6 +1,13 @@
 const DELEGATED_SEGMENT = /^\s*sbx\s+(exec|run)(\s|$)/;
 const KEYWORD = /^(then|do|else|if|elif|while|until|!|\{|[A-Za-z_][A-Za-z0-9_]*=.*)$/s;
-const WRAPPER = /^(sudo|command|exec|time|env|xargs)$/;
+const WRAPPER = /^(?:\S*\/)?(sudo|command|exec|time|env|xargs|nohup|timeout|nice)$/;
+const VALUED: Record<string, { short: string; long: string[] }> = {
+	sudo: { short: "ugpCDrtUhTRca", long: ["user", "group", "prompt", "chdir", "role", "type", "other-user", "host", "command-timeout", "close-from", "chroot", "login-class", "auth-type"] },
+	env: { short: "uCP", long: ["unset", "chdir"] },
+	timeout: { short: "sk", long: ["signal", "kill-after"] },
+	nice: { short: "n", long: ["adjustment"] },
+};
+const SPLIT = /^(-S|--split-string)(=?)(.*)$/s;
 const SHELL = /^(\S*\/)?(ba|z|da|k)?sh$/;
 const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
 
@@ -135,10 +142,7 @@ function argvs(subject: string, withDelegated: boolean): Program[] {
 		let argv = words(text);
 		for (;;) {
 			if (KEYWORD.test(argv[0] ?? "")) argv = argv.slice(1);
-			else if (WRAPPER.test(argv[0] ?? "")) {
-				argv = argv.slice(1);
-				while (argv[0]?.startsWith("-")) argv = argv.slice(1);
-			} else if (withDelegated && argv[0] === "sbx" && /^(exec|run|cp)$/.test(argv[1] ?? "")) argv = argv.slice(3);
+			else if (WRAPPER.test(argv[0] ?? "")) argv = unwrapped(argv); else if (withDelegated && argv[0] === "sbx" && /^(exec|run|cp)$/.test(argv[1] ?? "")) argv = argv.slice(3);
 			else break;
 		}
 
@@ -154,6 +158,28 @@ export function programs(subject: string, withDelegated: boolean): string[] {
 
 export function argvsOf(subject: string): string[][] {
 	return argvs(subject, false).map(({ argv }) => argv);
+}
+
+function unwrapped(argv: string[]): string[] {
+	const wrapper = argv[0].replace(WRAPPER, "$1");
+	let rest = argv.slice(1);
+	while (rest[0]?.startsWith("-") && rest[0] !== "-") {
+		const [option] = rest;
+		const split = wrapper === "env" ? option.match(SPLIT) : null;
+		if (split) return [...words(split[3] || (split[2] ? "" : (rest[1] ?? ""))), ...rest.slice(split[3] || split[2] ? 1 : 2)];
+		rest = rest.slice(1);
+		if (option === "--") break;
+		if (takesValue(VALUED[wrapper], option)) rest = rest.slice(1);
+	}
+	return wrapper === "timeout" ? rest.slice(1) : rest;
+}
+
+function takesValue(valued: { short: string; long: string[] } | undefined, option: string): boolean {
+	if (!valued) return false;
+	if (option.startsWith("--")) return !option.includes("=") && valued.long.includes(option.slice(2));
+	const cluster = option.slice(1);
+	const first = [...cluster].findIndex((letter) => valued.short.includes(letter));
+	return first === cluster.length - 1;
 }
 
 function shellScript(argv: string[]): string {
