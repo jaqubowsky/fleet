@@ -8,9 +8,9 @@ import { HARNESSES } from "../harness.ts";
 type Verdict = { block: boolean; reason: string } | undefined;
 type Handler = (event: { toolName: string; input?: Record<string, unknown> }, ctx: { cwd: string }) => Verdict;
 
-function handler(root?: string): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
+function handler(root?: string, harness = HARNESSES.pi): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
 	let captured: Handler | undefined;
-	guard(HARNESSES.pi, root, EMPTY_HOME)({ on: (_event, fn) => { captured = fn as Handler; } });
+	guard(harness, root, EMPTY_HOME)({ on: (_event, fn) => { captured = fn as Handler; } });
 	assert.ok(captured, "the extension registered no tool_call handler");
 
 	return (event, ctx = { cwd: process.cwd() }) => captured!(event, ctx);
@@ -29,6 +29,13 @@ test("the extension blocks what the policy denies and stays out of the way other
 	const unknown = guard({ toolName: "telepathy", input: { thought: "x" } });
 	assert.equal(unknown?.block, true);
 	assert.match(unknown?.reason ?? "", /Unknown tool policy: telepathy/);
+});
+
+test("omp's wait passes the guard while pi's wait stays unknown", () => {
+	const wait = { toolName: "wait", input: { ids: ["job-1"] } };
+
+	assert.equal(handler(undefined, HARNESSES.omp)(wait), undefined);
+	assert.match(handler()(wait)?.reason ?? "", /Unknown tool policy: wait/);
 });
 
 test("a denied command comes back blocked with the reason the policy gave", () => {
