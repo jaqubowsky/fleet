@@ -144,9 +144,29 @@ test("a pushed branch counts its commits from the merge base with origin's defau
 	clone.git("branch", "--set-upstream-to=origin/task");
 	commitFile(clone, "two.txt", 3);
 
-	const line = commitFacts(probe(clone.dir)).line;
+	const facts = commitFacts(probe(clone.dir));
 
-	assert.match(line, /^2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest [0-9a-f]{7,} add two\.txt$/);
+	assert.match(facts.line, /^2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest [0-9a-f]{7,} add two\.txt$/);
+	assert.equal(facts.moved?.getTime(), Number(clone.git("log", "-1", "--format=%ct")) * 1000);
+});
+
+test("a push after the branch's last commit moves the branch to the push", (t) => {
+	const clone = repo(t);
+	commitFile(clone, "base.txt", 1);
+	onDefault(clone);
+	clone.git("switch", "-qc", "task");
+	writeFileSync(join(clone.dir, "one.txt"), "x\n");
+	clone.git("add", "one.txt");
+	execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "add one"], {
+		cwd: clone.dir,
+		env: { ...process.env, GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" },
+	});
+	clone.git("update-ref", "refs/remotes/origin/task", "HEAD");
+
+	const moved = commitFacts(probe(clone.dir)).moved?.getTime() ?? 0;
+
+	assert.ok(moved > Date.parse("2020-01-01T00:00:00Z"), `moved at ${new Date(moved).toISOString()}`);
+	assert.ok(Date.now() - moved < 60_000);
 });
 
 test("an unpushed branch counts every commit as unpushed", (t) => {

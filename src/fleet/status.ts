@@ -134,19 +134,22 @@ export const commitsProbe = [
 	'base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null)" || { printf "%s" "$branch"; exit 0; }',
 	'from="$(git merge-base "$base" HEAD)" || { printf "%s\\t%s" "$branch" "$base"; exit 0; }',
 	'pushed="refs/remotes/origin/$branch"',
+	'pushedAt="$(git log -g -1 --format=%gd --date=unix "$pushed" 2>/dev/null | sed "s/.*@{//; s/}//")"',
 	'git rev-parse -q --verify "$pushed" >/dev/null || pushed="$from"',
-	'printf "%s\\t%s\\t%s\\t%s\\t%s\\t%s" "$branch" "$base" "$(git rev-list --count "$from"..HEAD)" "$(git rev-list --count "$pushed"..HEAD)" "$(git diff --shortstat "$from" HEAD)" "$(git log -1 --format="%h %s" "$from"..HEAD)"',
+	'printf "%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s" "$branch" "$base" "$(git rev-list --count "$from"..HEAD)" "$(git rev-list --count "$pushed"..HEAD)" "$(git diff --shortstat "$from" HEAD)" "$(git log -1 --format="%h %s" "$from"..HEAD)" "$(git log -1 --format=%ct "$from"..HEAD)" "$pushedAt"',
 ].join("\n");
 
-export function commitFacts(probed: string): { branch?: string; line: string } {
-	const [branch, base, total, unpushed, shortstat = "", latest = ""] = probed.trim().split("\t");
+export function commitFacts(probed: string): { branch?: string; line: string; moved?: Date } {
+	const [branch, base, total, unpushed, shortstat = "", latest = "", committedAt, pushedAt] = probed.trim().split("\t");
 	if (!base) return { branch: branch || undefined, line: "not counted: this clone has no origin/HEAD" };
 	if (total === undefined) return { branch, line: `not counted: no merge base with ${base}` };
 	if (total === "0") return { branch, line: `none since ${base}` };
 	const count = (word: string) => shortstat.match(new RegExp(`(\\d+) ${word}`))?.[1] ?? "0";
 	const files = count("files? changed");
+	const moved = Math.max(Number(committedAt) || 0, Number(pushedAt) || 0);
 	return {
 		branch,
+		moved: moved ? new Date(moved * 1000) : undefined,
 		line: `${total} since ${base}, ${Number(total) - Number(unpushed)} pushed, ${unpushed} unpushed, ${files} file${files === "1" ? "" : "s"} +${count("insertions?")} -${count("deletions?")}, latest ${bounded(latest, 80)}`,
 	};
 }
@@ -171,8 +174,8 @@ export function prFacts(json: string): { line: string; running: boolean } {
 	return { line: `#${pr.number} ${state}, ${ci}`, running: state === "open" && pending.length > 0 };
 }
 
-export function branchFacts(io: Io, sandbox: string, repo: string): { commits: string; pr: string; running: boolean } {
-	let commits: { branch?: string; line: string } = { line: "not counted" };
+export function branchFacts(io: Io, sandbox: string, repo: string): { commits: string; pr: string; running: boolean; moved?: Date } {
+	let commits: ReturnType<typeof commitFacts> = { line: "not counted" };
 	try {
 		commits = commitFacts(io.sbx(["exec", sandbox, "sh", "-c", commitsProbe], { quiet: true }));
 	} catch (error) {
@@ -188,7 +191,7 @@ export function branchFacts(io: Io, sandbox: string, repo: string): { commits: s
 			pr.line = /no pull requests found/.test(message) ? "none" : `not read: ${bounded(message.split("\n").at(-1) ?? message, 120)}`;
 		}
 	}
-	return { commits: commits.line, pr: pr.line, running: pr.running };
+	return { commits: commits.line, pr: pr.line, running: pr.running, moved: commits.moved };
 }
 
 export function wake(
