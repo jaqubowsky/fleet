@@ -100,12 +100,24 @@ export function watch(
 	let connection = 0;
 	let stopped = false;
 	let failing: string | undefined;
+	let failingLocate: string | undefined;
 
 	const locate = (name: string, rows: Sandbox[]) => {
 		const dir = taskDirOf(io.home, rows, name);
 		const row = rows.find((s) => agentName(s.name) === name);
 		if (dir && row) dirs.set(name, { dir, sandbox: row.name, repo: row.workspaces[0] });
 		return dirs.get(name);
+	};
+
+	const listed = (): Sandbox[] | undefined => {
+		try {
+			const rows = sandboxes(io);
+			failingLocate = undefined;
+			return rows;
+		} catch (error) {
+			if (String(error) !== failingLocate) io.log(`[fleet] watch: locate: ${String(error)}`);
+			failingLocate = String(error);
+		}
 	};
 
 	const statusOf = (name: string): string | undefined => {
@@ -141,11 +153,8 @@ export function watch(
 	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean } = {}) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name)) return;
-		try {
-			locate(name, sandboxes(io));
-		} catch (error) {
-			io.log(`[fleet] watch: locate: ${String(error)}`);
-		}
+		const rows = listed();
+		if (rows) locate(name, rows);
 		const status = statusOf(name);
 		const facts = factsOf(name);
 		if (when.unlessCi && facts.running && fieldsOf(status).status !== "blocked") return;
@@ -314,13 +323,8 @@ export function watch(
 	const noticeIdle = (now: number) => {
 		const quiet = [...tracked].filter(([, t]) => t.rang <= t.since && idleStalled(t.status, undefined, now - t.since));
 		if (!quiet.length) return;
-		let rows: Sandbox[];
-		try {
-			rows = sandboxes(io);
-		} catch (error) {
-			io.log(`[fleet] watch: locate: ${String(error)}`);
-			return;
-		}
+		const rows = listed();
+		if (!rows) return;
 		for (const [pane, t] of quiet) {
 			if (!locate(t.name, rows)) continue;
 			const status = fieldsOf(statusOf(t.name)).status;

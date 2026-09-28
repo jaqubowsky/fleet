@@ -400,6 +400,26 @@ test("ls shows a running container's commits and PR, and an idle one past the th
 	assert.ok(io.calls.some((c) => c.join(" ") === "gh /r pr view task --json number,state,statusCheckRollup"));
 });
 
+test("ls prints a container whose sandbox fails as failed with its error, and lists the rest", () => {
+	const io = fakeIo({
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-broken", status: "running", workspaces: ["/r"] },
+				{ name: "pi-webapp-web-1", status: "running", workspaces: ["/r"] },
+			],
+		},
+		[`sbx exec pi-broken sh -c ${checkoutProbe}`]: new Error(`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`),
+		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"herdr agent list": { result: { agents: [{ pane_id: "w1:p2", name: "pi-broken", agent_status: "idle" }] } },
+	});
+
+	assert.equal(
+		ls(io),
+		"pi-broken         failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+	);
+	assert.ok(!io.calls.some((c) => c.join(" ").startsWith("sbx exec pi-broken") && !c.join(" ").includes("git branch --show-current")));
+});
+
 test("ls leaves an idle container unmarked while its PR's CI runs", () => {
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },

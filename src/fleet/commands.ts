@@ -58,12 +58,15 @@ function costSoFar(sandbox: string, task: string, io: Io): number | undefined {
 export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
-		const running = s.status === "running";
-		const checkout = running
-			? parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }))
-			: { branch: "?", dirty: 0, head: "" };
-		const repo = s.workspaces[0];
 		const agent = agentFor(live, agentName(s.name))?.agent_status ?? "gone";
+		let checkout = { branch: "?", dirty: 0, head: "" };
+		try {
+			if (s.status === "running") checkout = parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }));
+		} catch (error) {
+			return { sandbox: s.name, status: "failed", agent, branch: "?", dirty: 0, facts: lastLine(error) };
+		}
+		const running = s.status === "running";
+		const repo = s.workspaces[0];
 		const task = repo ? taskDir(repo, s.name, io) : undefined;
 		const last = task ? activityOf(io.read(`${task}/${ACTIVITY}`))?.last : undefined;
 		const facts = running && repo ? branchFacts(io, s.name, repo) : undefined;
@@ -79,6 +82,10 @@ export function ls(io: Io): string {
 		};
 	});
 	return formatRows(rows);
+}
+
+function lastLine(error: unknown): string {
+	return (error instanceof Error ? error.message : String(error)).trim().split("\n").at(-1) ?? "";
 }
 
 export function peek(sandbox: string, io: Io, lines = 40): string {

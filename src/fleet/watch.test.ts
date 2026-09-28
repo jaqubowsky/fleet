@@ -479,6 +479,26 @@ test("a refresh that keeps failing the same way logs it once", (t: TestContext) 
 	);
 });
 
+test("a sandbox listing that fails the same way on every wake logs it once", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	const wakes: string[] = [];
+	watch(() => undefined, io, (text) => wakes.push(text));
+	const listed = io.sbx;
+	io.sbx = ((args: string[], opts) => {
+		if (args[0] === "ls") throw new Error("sbx ls --json failed (1)\ndocker daemon failed to start inside the sandbox");
+		return listed(args, opts);
+	}) as typeof io.sbx;
+
+	status("worker:pane", "blocked");
+	status("worker:pane", "working");
+	status("worker:pane", "blocked");
+
+	assert.equal(wakes.length, 2);
+	assert.equal(io.lines.filter((line) => line.includes("docker daemon failed")).length, 1);
+});
+
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
 	const io = fakeIo({}, HARNESSES.claude);
 	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = [
