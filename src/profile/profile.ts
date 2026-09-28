@@ -104,7 +104,7 @@ export function hostLinearServers(profiles: Profiles): Record<string, string> {
 	return Object.fromEntries(Object.values(profiles).flatMap(({ host }) => [hostLinearServer(host)].filter((server) => server !== undefined)));
 }
 
-const WRITES = { container: "write only what you were told to", host: "move states, file not-started issues and post the acceptance comment by judgment" };
+const WRITES = { container: "write only what you were told to", host: "move states, file not-started issues, tick the criteria you saw hold and post the acceptance comment by judgment" };
 
 const linear = (entry: Host | Container, seat: keyof typeof WRITES): string =>
 	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : `; ${WRITES[seat]}, and say what you posted`}`;
