@@ -8,6 +8,8 @@
 
 ## Merge method
 
+## Tracker transitions
+
 ## Standing decisions
 
 ## Labels and review state
