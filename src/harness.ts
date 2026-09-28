@@ -30,7 +30,6 @@ const TESTING_BESIDE_AGENTS = "`refs/testing.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const pollCi = (agent: string) => `${agent} has no background shell, so change it to \`reads=1\`: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
-const PI_WATCH = "Steer returns at once and puts the container under watch; the `[fleet]` wake is where the outcome lands.";
 const watchSource = (agent: string, cli: string, env: string) =>
 	`Only the ${agent} session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
@@ -64,7 +63,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.testing": TESTING_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
-			watch: PI_WATCH,
 			"steer.result": "steered; pi takes it after its current tool call, and the container is under watch from now on",
 			"watch.source": watchSource("Pi", "fleet", "PI_SESSION_ID"),
 			"reload.models": RELOAD_MODELS,
@@ -101,7 +99,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.testing": TESTING_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
-			watch: PI_WATCH,
 			"steer.result": "steered; omp takes it after its current tool call, and the container is under watch from now on",
 			"watch.source": watchSource("OMP", "ofleet", "OMP_SESSION_ID"),
 			"reload.models": RELOAD_MODELS,
@@ -136,7 +133,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.testing": "`~/.claude/refs/testing.md`",
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
-			watch: "Steer returns at once; the `[fleet]` wake is where the outcome lands, and it reaches you only through `cfleet watch` held with `Monitor` at `timeout_ms: 1800000`: start it before the first steer, one per session, and re-arm it at its expiry notice.",
 			"steer.result": "steered; claude takes it as its next message, and `cfleet watch` reports how it settles",
 			"watch.source": "Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `cfleet watch`, held with `Monitor` at `timeout_ms: 1800000`, its maximum. Start it before the first steer and keep one per session; its expiry notice, and a notice that it stopped with an earlier session, is the re-arm, before anything else. With no names it follows the containers whose latest `cfleet up` or `cfleet steer` came from this herdr pane, drops one at its `cfleet down`, and picks up new ones within 30 seconds; names add those sandboxes beside them, whoever put them up. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it.",
 			"reload.models": "after `align-settings.py --apply`",

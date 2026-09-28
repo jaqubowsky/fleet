@@ -6,7 +6,6 @@ export type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{ where: /^rules\/delegation\.md: 1\. "Parallel" =/, reason: "only omp has a batch call for subagents; pi starts runs in the background, claude sends several background `Agent` calls in one message" },
-	{ where: /^rules\/host\.md: 3\. `<cli> steer` on the user's word\./, reason: "claude has no extension that can start a turn, so its wake arrives only through `cfleet watch` held with `Monitor`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `cfleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "claude has no follow-up delivery between tool calls, so a steer is its next message, and its watch is a held `cfleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/, reason: "claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json and managed settings, which `align-settings.py` merges, where pi and omp `/reload` a rendered file" },

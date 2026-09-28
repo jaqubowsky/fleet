@@ -35,6 +35,12 @@ A steer is the order itself, in your voice, in this order: what to do, what is d
 Deliver issues 12 and 14 end to end. Decided: restoring a project brings back only the files deleted with it. Stop at ready-for-host.
 ```
 
+## Driving a task
+
+On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A session-handoff suggestion follows Session handoff below.
+
+Stop for the user on any other `blocked` or `attention` state, and on a decision that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
+
 ## Coordinating a project
 
 The host plans, delegates, accepts or rejects, and merges; containers implement and propose, and never merge. The loop is the same in every repository, and `{{cli}} profile <repo>` sets how much of it runs without the user. Read the overlay it prints before planning: where work comes from, how a change a user sees is proven, the merge method, where standing decisions live.
@@ -60,6 +66,8 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 
 ## Reading a task
 
+A `[fleet]` line or a question about a task starts at `status.md`, then the one file that answers it.
+
 | Question | Read |
 | --- | --- |
 | where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
@@ -77,6 +85,18 @@ A rule or skill change reaches a container through `{{cli}} build` and a new con
 How a container's branch and pull request reach GitHub is the land line of `{{cli}} profile <repo>`.
 
 The repository inside a container is a private clone, so writes there stay there until `{{cli}} land`, or until the container pushes its branch. Three host directories are mounted alongside it at the same absolute path inside as outside: `~/.sandboxes/<repo>` (`$FLEET_ARTIFACTS`, shared by every container on that repo, holding one task directory per container and `runbook/`); `{{cache}}` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
+
+## Pull request rounds
+
+Where the land line of `{{cli}} profile <repo>` has this session push, a container babysitting its pull request needs it for what only the Mac holds, the signing key and the route to the remote. The land waits for the user's word; the steer follows it:
+
+```bash
+{{cli}} land --sign --push <sandbox>
+{{cli}} steer <sandbox> "pushed, run the next round"
+```
+
+- A rejected push means someone rewrote history. Show the user; forcing is their own command
+- Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. `pr.md` already holds them, one line per finding, and a line pasted into a thread opens with `[{{harness}} / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing
 
 ## Watching
 
