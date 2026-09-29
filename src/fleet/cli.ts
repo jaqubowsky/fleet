@@ -2,7 +2,20 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { type AgentName, CLI, SEATS } from "../harness.ts";
 import { render } from "../render/render.ts";
-import { artifacts, build, copy, down, exec, handoff, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
+import {
+	artifacts,
+	build,
+	copy,
+	down,
+	exec,
+	handoff,
+	history,
+	ls,
+	peek,
+	renderHost,
+	resolveSandbox,
+	steer,
+} from "./commands.ts";
 import { init } from "./init.ts";
 import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
@@ -14,12 +27,15 @@ import { paneScope, watch } from "./watch.ts";
 const home = homedir();
 const root = process.env.FLEET_ROOT ?? resolve(import.meta.dirname, "../..");
 const seat = process.env.FLEET_SEAT;
-const io = realIo(home, seat && Object.hasOwn(SEATS, seat) ? SEATS[seat as AgentName] : undefined);
+const io = realIo(
+	home,
+	seat && Object.hasOwn(SEATS, seat) ? SEATS[seat as AgentName] : undefined,
+);
 
 const usage = `usage:
   ${CLI} up <label> [--pi|--claude] [--branch <name>] [--base <name>] [--model <model>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, on a branch named after <label> without --branch and never the default branch, bind what its profile allows, lay out the task directory with permissions.md and, when ~/.config/harness/projects holds an overlay, project.md, start the container's agent in a herdr tab, the seat's own without --pi|--claude, send nothing
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
-  ${CLI} profile [<repo>] [--apply]                   what ~/.config/harness/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.config/harness/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and where the host reads Linear its server for this checkout alone
+  ${CLI} profile [<repo>] [--apply]                   what ~/.config/harness/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.config/harness/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell
   ${CLI} ls                                           containers with herdr status, branch and dirty count
   ${CLI} peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
@@ -38,9 +54,20 @@ const usage = `usage:
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory`;
 
-const BARE = new Set(["apply", "continue", "force", "push", "sign", "pi", "claude"]);
+const BARE = new Set([
+	"apply",
+	"continue",
+	"force",
+	"push",
+	"sign",
+	"pi",
+	"claude",
+]);
 
-export function flags(args: string[], allowed: string[]): { opts: Record<string, string | true>; rest: string[] } {
+export function flags(
+	args: string[],
+	allowed: string[],
+): { opts: Record<string, string | true>; rest: string[] } {
 	const opts: Record<string, string | true> = {};
 	const rest: string[] = [];
 	for (let i = 0; i < args.length; i++) {
@@ -54,13 +81,15 @@ export function flags(args: string[], allowed: string[]): { opts: Record<string,
 			continue;
 		}
 		const name = arg.slice(2);
-		if (!allowed.includes(name)) throw new Error(`unknown option --${name}\n${usage}`);
+		if (!allowed.includes(name))
+			throw new Error(`unknown option --${name}\n${usage}`);
 		if (BARE.has(name)) {
 			opts[name] = true;
 			continue;
 		}
 		const next = args[i + 1];
-		if (next === undefined || next.startsWith("--")) throw new Error(`missing value for --${name}`);
+		if (next === undefined || next.startsWith("--"))
+			throw new Error(`missing value for --${name}`);
 		opts[name] = args[++i];
 	}
 	return { opts, rest };
@@ -72,7 +101,8 @@ function need(value: string | undefined, what: string): string {
 }
 
 function kindOf(opts: Record<string, string | true>): AgentName | undefined {
-	if (opts.pi && opts.claude) throw new Error("--pi and --claude exclude each other");
+	if (opts.pi && opts.claude)
+		throw new Error("--pi and --claude exclude each other");
 	return opts.pi ? "pi" : opts.claude ? "claude" : undefined;
 }
 
@@ -86,8 +116,30 @@ function repoOf(opts: Record<string, string | true>): string {
 
 const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async up(args) {
-		const { opts, rest } = flags(args, ["repo", "branch", "base", "model", "memory", "cpus", "pi", "claude"]);
-		await up({ repo: repoOf(opts), label: need(rest[0], "label"), kind: kindOf(opts), branch: opts.branch as string | undefined, base: opts.base as string | undefined, model: opts.model as string | undefined, memory: opts.memory as string | undefined, cpus: opts.cpus as string | undefined, root }, io);
+		const { opts, rest } = flags(args, [
+			"repo",
+			"branch",
+			"base",
+			"model",
+			"memory",
+			"cpus",
+			"pi",
+			"claude",
+		]);
+		await up(
+			{
+				repo: repoOf(opts),
+				label: need(rest[0], "label"),
+				kind: kindOf(opts),
+				branch: opts.branch as string | undefined,
+				base: opts.base as string | undefined,
+				model: opts.model as string | undefined,
+				memory: opts.memory as string | undefined,
+				cpus: opts.cpus as string | undefined,
+				root,
+			},
+			io,
+		);
 	},
 	init(args) {
 		const { rest } = flags(args, []);
@@ -95,7 +147,12 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	profile(args) {
 		const { opts, rest } = flags(args, ["apply"]);
-		io.log(permissions({ root, repo: rest[0] ?? process.cwd(), apply: opts.apply === true }, io));
+		io.log(
+			permissions(
+				{ root, repo: rest[0] ?? process.cwd(), apply: opts.apply === true },
+				io,
+			),
+		);
 	},
 	ls(args) {
 		flags(args, []);
@@ -112,7 +169,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	async handoff(args) {
 		const { opts, rest } = flags(args, ["continue"]);
-		await handoff(sandboxOf(rest[0]), io, { continue: opts.continue === true, root });
+		await handoff(sandboxOf(rest[0]), io, {
+			continue: opts.continue === true,
+			root,
+		});
 	},
 	exec(args) {
 		const { rest } = flags(args, []);
@@ -132,7 +192,17 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	land(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "sign", "push"]);
-		land({ sandbox: sandboxOf(rest[0]).name, repo: repoOf(opts), root, branch: opts.branch as string | undefined, sign: opts.sign === true, push: opts.push === true }, io);
+		land(
+			{
+				sandbox: sandboxOf(rest[0]).name,
+				repo: repoOf(opts),
+				root,
+				branch: opts.branch as string | undefined,
+				sign: opts.sign === true,
+				push: opts.push === true,
+			},
+			io,
+		);
 	},
 	down(args) {
 		const { opts, rest } = flags(args, ["force"]);
@@ -145,15 +215,22 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	render(args) {
 		const { opts } = flags(args, ["seat", "out"]);
 		const seat = opts.seat === "container" ? "container" : "host";
-		if (opts.seat !== undefined && opts.seat !== seat) throw new Error(`--seat takes host or container, not ${opts.seat}`);
-		if (typeof opts.out === "string") render({ root, agent: seatOf(io).name, seat, out: resolve(opts.out) }, io);
+		if (opts.seat !== undefined && opts.seat !== seat)
+			throw new Error(`--seat takes host or container, not ${opts.seat}`);
+		if (typeof opts.out === "string")
+			render({ root, agent: seatOf(io).name, seat, out: resolve(opts.out) }, io);
 		else if (seat === "host") renderHost(root, io);
 		else throw new Error("the container seat needs --out <dir>");
 	},
 	async relay(args) {
 		const { rest } = flags(args, []);
 		const [sandbox, task, ...agentArgs] = rest;
-		process.exitCode = await relay(need(sandbox, "sandbox"), need(task, "task directory"), agentArgs, io);
+		process.exitCode = await relay(
+			need(sandbox, "sandbox"),
+			need(task, "task directory"),
+			agentArgs,
+			io,
+		);
 	},
 	async watch(args) {
 		const { rest } = flags(args, []);

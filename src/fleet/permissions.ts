@@ -1,5 +1,14 @@
-import { describe, linearServer, loadProfiles, profileFor, repoName, USER_CONFIG, type Host, type Profile } from "../profile/profile.ts";
-import { type Io, seatOf } from "./io.ts";
+import {
+	describe,
+	linearServer,
+	loadProfiles,
+	profileFor,
+	repoName,
+	USER_CONFIG,
+	type Host,
+	type Profile,
+} from "../profile/profile.ts";
+import type { Io } from "./io.ts";
 
 export function repoProfile(root: string, name: string, io: Io): Profile {
 	return profileFor(loadProfiles(io.read, root, io.home), name);
@@ -24,19 +33,27 @@ export type PermissionsInput = { root: string; repo: string; apply?: boolean };
 
 export function permissions(input: PermissionsInput, io: Io): string {
 	const checkout = io.stat(input.repo)?.dir ? input.repo : undefined;
-	if (!checkout && !/^[^/\s]+\/[^/\s]+$/.test(input.repo)) throw new Error(`${input.repo} is neither a checkout nor owner/name`);
-	const name = checkout ? repoName(io.git(["remote", "get-url", "origin"], checkout)) : input.repo;
+	if (!checkout && !/^[^/\s]+\/[^/\s]+$/.test(input.repo))
+		throw new Error(`${input.repo} is neither a checkout nor owner/name`);
+	const name = checkout
+		? repoName(io.git(["remote", "get-url", "origin"], checkout))
+		: input.repo;
 	const profile = repoProfile(input.root, name, io);
 	const text = `${describe(name, profile)}\n${overlaySection(name, io)}`;
 	if (!input.apply) return text;
-	seatOf(io);
-	if (!checkout) throw new Error(`--apply sets a checkout; give its path, not ${input.repo}`);
+	if (!checkout)
+		throw new Error(`--apply sets a checkout; give its path, not ${input.repo}`);
 	return `${text}\n${apply(checkout, name, profile, io).join("\n")}`;
 }
 
 const GH_TOKEN_HELPER = "!gh auth git-credential";
 
-function apply(checkout: string, name: string, profile: Profile, io: Io): string[] {
+function apply(
+	checkout: string,
+	name: string,
+	profile: Profile,
+	io: Io,
+): string[] {
 	const changes: string[] = [];
 	const local = (key: string): string => {
 		try {
@@ -79,7 +96,9 @@ function apply(checkout: string, name: string, profile: Profile, io: Io): string
 		}
 		const pushes = io.git(["remote", "get-url", "--push", "origin"], checkout);
 		if (pushes !== https)
-			throw new Error(`origin pushes to ${pushes}, not ${https}: a pushInsteadOf outside this checkout rewrites it, so host.push auto cannot hold here`);
+			throw new Error(
+				`origin pushes to ${pushes}, not ${https}: a pushInsteadOf outside this checkout rewrites it, so host.push auto cannot hold here`,
+			);
 	}
 	changes.push(...registerLinear(checkout, profile.host, io));
 	return changes.length ? changes : ["nothing changed"];
@@ -87,30 +106,55 @@ function apply(checkout: string, name: string, profile: Profile, io: Io): string
 
 type McpConfig = { mcpServers?: Record<string, unknown> };
 
+function parseJson<T>(text: string, path: string): T {
+	try {
+		return JSON.parse(text) as T;
+	} catch (cause) {
+		throw new Error(`${path}: invalid JSON`, { cause });
+	}
+}
+
 function registerLinear(checkout: string, host: Host, io: Io): string[] {
 	const server = linearServer(host);
 	if (!server) return [];
 	const [name, url] = server;
 	const top = io.git(["rev-parse", "--show-toplevel"], checkout);
-	if (seatOf(io).name === "claude") {
-		const projects = (JSON.parse(io.read(`${io.home}/.claude.json`) ?? "{}") as { projects?: Record<string, { mcpServers?: Record<string, { url?: string }> }> }).projects;
-		const registered = projects?.[top]?.mcpServers?.[name];
-		if (registered?.url === url) return [];
-		if (registered) io.run("claude", ["mcp", "remove", "--scope", "local", name], top);
-		io.run("claude", ["mcp", "add", "--scope", "local", "--transport", "http", name, url], top);
-		return [`host Linear server ${name} registered for ${top} in claude's local scope`];
-	}
 	const changes: string[] = [];
+	const claudeConfig = `${io.home}/.claude.json`;
+	const projects = parseJson<{
+		projects?: Record<string, { mcpServers?: Record<string, { url?: string }> }>;
+	}>(io.read(claudeConfig) ?? "{}", claudeConfig).projects;
+	const registered = projects?.[top]?.mcpServers?.[name];
+	if (registered?.url !== url) {
+		if (registered)
+			io.run("claude", ["mcp", "remove", "--scope", "local", name], top);
+		io.run(
+			"claude",
+			["mcp", "add", "--scope", "local", "--transport", "http", name, url],
+			top,
+		);
+		changes.push(
+			`host Linear server ${name} registered for ${top} in claude's local scope`,
+		);
+	}
 	const path = `${top}/.pi/mcp.json`;
-	const config = JSON.parse(io.read(path) ?? "{}") as McpConfig;
+	const config = parseJson<McpConfig>(io.read(path) ?? "{}", path);
 	const entry = { url, auth: "oauth" };
 	if (JSON.stringify(config.mcpServers?.[name]) !== JSON.stringify(entry)) {
 		io.mkdir(`${top}/.pi`);
-		io.write(path, `${JSON.stringify({ ...config, mcpServers: { ...config.mcpServers, [name]: entry } }, null, 2)}\n`);
+		io.write(
+			path,
+			`${JSON.stringify({ ...config, mcpServers: { ...config.mcpServers, [name]: entry } }, null, 2)}\n`,
+		);
 		changes.push(`host Linear server ${name} registered in ${path}`);
 	}
-	const exclude = io.git(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], top);
-	if (!(io.read(exclude) ?? "").split("\n").includes("/.pi/")) {
+	const exclude = io.git(
+		["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"],
+		top,
+	);
+	const excluded = io.read(exclude) ?? "";
+	if (!excluded.split("\n").includes("/.pi/")) {
+		if (excluded && !excluded.endsWith("\n")) io.append(exclude, "");
 		io.append(exclude, "/.pi/");
 		changes.push(`/.pi/ added to ${exclude}`);
 	}

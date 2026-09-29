@@ -41,8 +41,8 @@ At runtime the host and a container share one task directory and talk through he
  │   herdr socket + status.md     │ ◀─────────── │ working, blocked, done         │
  │   = one [fleet] line per wake  │              │                                │
  │                                │  git remote  │                                │
- │ fleet land --sign --push       │ ◀─────────── │ unsigned commits               │
- │   Touch ID signs, pushes ff    │ sandbox-<n>  │                                │
+ │ fleet land --push              │ ◀─────────── │ unsigned commits               │
+ │   signs per profile, pushes ff │ sandbox-<n>  │                                │
  └───────────────┬────────────────┘              └───────────────┬────────────────┘
                  │                                               │
                  │     ~/.sandboxes/<repo>/<sandbox>/            │
@@ -58,7 +58,7 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
                                               implementing, reviewing
                                                           │
  down ◀── land ◀── ready-for-host ◀── verification ◀──────┘
- logs/usage.json,  --sign, --push     testing
+ logs/usage.json,  --push, sign by profile   testing
  memory.json
  task dir stays
 
@@ -101,7 +101,7 @@ What names your own repositories lives outside this repository, in `~/.config/ha
 - `repos.json`: your repository permission profiles, the same shape as `host/repos.json`. An entry here wins over the harness's for the same match; a repository no entry matches gets the harness's `*`
 - `projects/<owner>/<repo>.md`: the overlay of one repository, holding only what the repository, the tracker and the profile do not say themselves. `up` writes it into the task directory as `project.md` and runs the one `sh` block under `## Setup` in the container after the dependency install. `host/projects/template.md` holds the headings
 
-Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `fleet profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi in the checkout's `.pi/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
+Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `fleet profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi in the checkout's `.pi/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per checkout; one call configures both pi and Claude.
 
 Moving from the old paths, before you pull this change:
 
@@ -109,13 +109,13 @@ Moving from the old paths, before you pull this change:
 2. `jq 'del(.["*"])' host/repos.json > ~/.config/harness/repos.json`; keep `*` too if yours differs from the harness's
 3. `mv host/projects/*/ ~/.config/harness/projects/`, which leaves `template.md` behind
 4. `git checkout host/repos.json && git pull`, then `./sync.sh --apply`: the render and the settings aligner take every host Linear server out of `~/.<harness>/agent/mcp.json` and `managedMcpServers`
-5. `fleet profile <checkout> --apply` in each checkout whose profile gives the host Linear, once per harness
+5. `fleet profile <checkout> --apply` once in each checkout whose profile gives the host Linear; a plain shell sets up pi and Claude together
 6. In each overlay whose tracker moves states on its own, name them under `## Tracker transitions`, for example: `Linear moves an issue to In Review when its pull request opens and to Done when it merges, linked by the branch name <team>-<n>-<slug>`
 7. Drop `## Standing decisions` from each overlay: a decision a later change could undo is an ADR in the project's `docs/adr/`
 
 ## Commands
 
-`fleet` drives pi and Claude containers alike, from a pi or a Claude Code host session, and `fleet --help` lists its verbs with every flag. The host session names itself in `FLEET_SEAT`, which each harness sets: Claude Code through the `env` of its managed settings, pi through the fleet monitor. `up`, `steer`, `watch`, `render` and `profile --apply` refuse without it; the verbs that only read or take a container down run anywhere. `up --pi|--claude` and `build --pi|--claude` pick the container's agent, the seat's own without a flag; every later verb reads it from the `agent` field of `sbx ls --json`. Every seat writes `up`, `steer` and `down` to one log, `~/.sandboxes/fleet-events.log`, so a watch sees a container whichever seat took it down. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
+`fleet` drives pi and Claude containers alike, from a pi or a Claude Code host session, and `fleet --help` lists its verbs with every flag. The host session names itself in `FLEET_SEAT`, which each harness sets: Claude Code through the `env` of its managed settings, pi through the fleet monitor. `up`, `steer`, `watch` and `render` refuse without it; `profile --apply` also runs from a plain shell and configures both host agents; the verbs that only read or take a container down run anywhere. `up --pi|--claude` and `build --pi|--claude` pick the container's agent, the seat's own without a flag; every later verb reads it from the `agent` field of `sbx ls --json`. Every seat writes `up`, `steer` and `down` to one log, `~/.sandboxes/fleet-events.log`, so a watch sees a container whichever seat took it down. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
 
 A pi host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `fleet build --pi|--claude`, and `up` warns when the image is older than the repository.
 
