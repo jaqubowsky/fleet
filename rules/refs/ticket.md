@@ -21,8 +21,11 @@ One line each: what a reader might expect here and another ticket, or nobody, de
 
 ## Acceptance criteria
 
-- [ ] <criterion a command or a person can check>
+- [ ] <given state or input> -> <observable outcome, with its concrete value>
+- [ ] <what the change refuses or leaves untouched at its boundary> -> <observable outcome>
 - [ ] Seen: <what a user sees, when the ticket changes it>
+
+Each criterion is an invariant a test asserts as written: its expected value comes from here, never from the code.
 
 ## Notes
 
