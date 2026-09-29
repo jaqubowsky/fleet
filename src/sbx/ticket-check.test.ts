@@ -5,21 +5,39 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const script = new URL("../../sbx/container/ticket-check.sh", import.meta.url).pathname;
+const script = new URL("../../sbx/container/ticket-check.sh", import.meta.url)
+	.pathname;
 
 function issues(tickets: Record<string, string>): string {
 	const dir = join(mkdtempSync(join(tmpdir(), "tc-")), "issues");
 	mkdirSync(dir);
-	for (const [name, text] of Object.entries(tickets)) writeFileSync(join(dir, name), text);
+	for (const [name, text] of Object.entries(tickets))
+		writeFileSync(join(dir, name), text);
 	return dir;
 }
 
-function ticketCheck(...args: string[]): { status: number | null; out: string } {
+function ticketCheck(...args: string[]): {
+	status: number | null;
+	out: string;
+} {
 	const run = spawnSync("bash", [script, ...args], { encoding: "utf8" });
 	return { status: run.status, out: run.stdout + run.stderr };
 }
 
-const done = "# 01: One\n\nStatus: done\n\n## Acceptance criteria\n\n- [x] it works (test a)\n";
+function checkTask(dir: string) {
+	const task = join(dir, "..");
+	return spawnSync("bash", [script], {
+		encoding: "utf8",
+		env: {
+			...process.env,
+			FLEET_ARTIFACTS: join(task, ".."),
+			SANDBOX_NAME: task.split("/").pop(),
+		},
+	});
+}
+
+const done =
+	"# 01: One\n\nStatus: done\n\n## Acceptance criteria\n\n- [x] it works (test a)\n";
 
 test("a done ticket with every criterion ticked passes", () => {
 	const dir = issues({ "01-one.md": done });
@@ -28,7 +46,9 @@ test("a done ticket with every criterion ticked passes", () => {
 });
 
 test("a committed ticket still claimed fails and names its status", () => {
-	const dir = issues({ "02-two.md": done.replace("Status: done", "Status: claimed") });
+	const dir = issues({
+		"02-two.md": done.replace("Status: done", "Status: claimed"),
+	});
 
 	const run = ticketCheck(join(dir, "02-two.md"));
 
@@ -46,10 +66,11 @@ test("an unticked criterion fails and is quoted", () => {
 });
 
 test("with no argument every ticket of the task directory is checked", () => {
-	const dir = issues({ "01-one.md": done, "02-two.md": "# 02\n\nStatus: ready-for-agent\n" });
-	const task = join(dir, "..");
-
-	const run = spawnSync("bash", [script], { encoding: "utf8", env: { ...process.env, FLEET_ARTIFACTS: join(task, ".."), SANDBOX_NAME: task.split("/").pop() } });
+	const dir = issues({
+		"01-one.md": done,
+		"02-two.md": "# 02\n\nStatus: ready-for-agent\n",
+	});
+	const run = checkTask(dir);
 
 	assert.equal(run.status, 1);
 	assert.match(run.stdout, /02-two\.md: Status: ready-for-agent, not done/);
@@ -58,15 +79,16 @@ test("with no argument every ticket of the task directory is checked", () => {
 
 test("a task directory with no tickets passes", () => {
 	const dir = issues({});
-	const task = join(dir, "..");
-
-	const run = spawnSync("bash", [script], { encoding: "utf8", env: { ...process.env, FLEET_ARTIFACTS: join(task, ".."), SANDBOX_NAME: task.split("/").pop() } });
+	const run = checkTask(dir);
 
 	assert.equal(run.status, 0, run.stdout);
 });
 
 test("a done ticket written with CRLF passes, and a tab-indented or starred box still counts as unticked", () => {
-	const dir = issues({ "04-crlf.md": done.replaceAll("\n", "\r\n"), "05-boxes.md": `${done}\t- [ ] tabbed\n* [ ] starred\n` });
+	const dir = issues({
+		"04-crlf.md": done.replaceAll("\n", "\r\n"),
+		"05-boxes.md": `${done}\t- [ ] tabbed\n* [ ] starred\n`,
+	});
 
 	assert.equal(ticketCheck(join(dir, "04-crlf.md")).status, 0);
 	const run = ticketCheck(join(dir, "05-boxes.md"));
@@ -74,11 +96,16 @@ test("a done ticket written with CRLF passes, and a tab-indented or starred box 
 	assert.match(run.out, /unticked: \* \[ \] starred/);
 });
 
-test("an unticked Seen criterion is printed as missing verification", () => {
-	const dir = issues({ "06-seen.md": `${done}- [ ] Seen: the saved filter shows in the list\n` });
+test("an unticked screen criterion is printed as missing verification", () => {
+	const dir = issues({
+		"06-screen.md": `${done}- [ ] The saved filter appears in the list after reopening it\n`,
+	});
 
-	const run = ticketCheck(join(dir, "06-seen.md"));
+	const run = ticketCheck(join(dir, "06-screen.md"));
 
 	assert.equal(run.status, 1);
-	assert.match(run.out, /06-seen\.md: unticked: - \[ \] Seen: the saved filter shows in the list/);
+	assert.match(
+		run.out,
+		/06-screen\.md: unticked: - \[ \] The saved filter appears in the list after reopening it/,
+	);
 });

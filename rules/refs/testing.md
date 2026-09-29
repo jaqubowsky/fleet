@@ -1,6 +1,6 @@
 # Testing
 
-Reached from `rules/core.md` when a test is written, changed or read.
+These rules apply when a test is read or changed, or a bug is reproduced.
 
 1. Unit = behavior, not class or method
 2. Black box. Arrange/Act/Assert as blank-line sections, no comment labels

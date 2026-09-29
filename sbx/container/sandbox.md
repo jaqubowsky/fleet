@@ -41,8 +41,8 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled
 2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first
 3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
-4. Before each commit, the review decision is a Log line in `status.md`, run or skipped with the reason. A run is `two-axis-review`, at most one per ticket: `review.md`, evidence in `logs/review-<head-sha7>/`
-5. Work that changes what a user sees is verified once, after the run's last commit, over the `Seen:` criteria or the short run's accepted behaviour: the way `project.md` names, else the check the change calls for
+4. Before the first commit covered by a review decision, name its tickets and the run-or-skip reason in one `status.md` Log line. A later commit outside that scope needs a new decision. A run is `two-axis-review`: `review.md`, evidence in `logs/review-<head-sha7>/`
+5. Work that changes what a user sees is verified after the last visible change against the ticket's observable acceptance criteria and the diff: the way `project.md` names, else the check the change calls for. Open the frames before claiming what the user sees
 6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`
 
 The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
@@ -51,7 +51,7 @@ An ADR the run's decisions need is proposed in its pull request, as a commit add
 
 ## Session handoff
 
-A fresh session reads only `status.md`, the task files and git, so each unit of work starts clean. Suggest a session handoff at every natural break:
+A fresh session starts with the `status.md` header, Summary and last Log turning points, then the frontier ticket and git. Read older Log entries only when the frontier depends on them. Suggest a session handoff at every natural break:
 
 {{file:natural-breaks}}
 

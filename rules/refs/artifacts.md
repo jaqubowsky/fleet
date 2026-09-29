@@ -58,9 +58,9 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 
 At `ready-for-host`:
 
-- Summary names every line `ticket-check` prints over `issues/` as missing verification
+- `ticket-check` prints nothing for the completed scope; an open ticket or criterion stays `blocked` with its missing input in `attention`
 - every host action is named in Summary, never counted
-- `attention` stays `none` unless a decision blocks delivery
+- `attention` stays `none`
 
 The branch's pull request, its CI and its commit counts are facts `{{cli}}` prints beside this file, never a status the agent writes. The host reads this file and those facts to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` in terms of delivered behavior and current observable state. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
@@ -73,12 +73,12 @@ Write the file at each event below, before the next tool call: edit the fields t
 | a session handoff is suggested | `attention` |
 | the turn ends, before the chat report | every field that no longer holds |
 
-`## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. A fresh session takes its work from the frontier of `issues/` and the last Log line. Each turning point appends one line in the next write, whichever event that write is for:
+`## Log` is the run's timeline: what the host and every later session read to learn what happened, in order. A fresh session reads the current Summary and recent Log turning points, then takes its work from the frontier of `issues/`; older history stays available when the frontier needs it. Each turning point appends one line in the next write, whichever event that write is for:
 
 | Turning point | Line |
 | --- | --- |
 | a finding, yours or a sub-agent's, that changes the plan or the scope | what was found; the file or log that shows it |
-| a check that closes a step: the baseline, a done-check, the gate, a settled CI wait, the verification of what a user sees | its result; its log |
+| a check that closes a step: the baseline, a done-check, the final gate for that step, a settled CI wait, the verification of what a user sees | the outcome and its log path; intermediate reruns and counts stay in that log |
 | a decision, yours or a person's | `Decided: <what>, because <why>`; where it is recorded |
 | an approach dropped | `Dropped: <what>, because <why>`; the log that shows it |
 | `analysis.md`, `spec.md` with `issues/`, `review.md`, a `pr.md` round or a browser report is written or replaced | the outcome; that file, and for `review.md` its `logs/review-<head-sha7>/` |

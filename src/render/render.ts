@@ -8,37 +8,71 @@ export type Models = { seats: Record<string, SeatModel> };
 export type Source = { name: string; body: string };
 
 const HOST_ONLY_RULES = ["host.md"];
-const SKILL_SCOPES: Record<Seat, string[]> = { host: ["shared", "host"], container: ["shared", "container"] };
+const SKILL_SCOPES: Record<Seat, string[]> = {
+	host: ["shared", "host"],
+	container: ["shared", "container"],
+};
 const AGENTS = ["explorer", "researcher", "reviewer"];
 
-function qualified(seat: string, entry: SeatModel): { provider: string; model: string } {
+function qualified(
+	seat: string,
+	entry: SeatModel,
+): { provider: string; model: string } {
 	const cut = entry.model.indexOf("/");
-	if (cut < 1 || cut === entry.model.length - 1) throw new Error(`seat ${seat} needs a provider/model: ${entry.model}`);
-	return { provider: entry.model.slice(0, cut), model: entry.model.slice(cut + 1) };
+	if (cut < 1 || cut === entry.model.length - 1)
+		throw new Error(`seat ${seat} needs a provider/model: ${entry.model}`);
+	return {
+		provider: entry.model.slice(0, cut),
+		model: entry.model.slice(cut + 1),
+	};
 }
 
-export function renderSettings(template: string, models: Models, paths: Record<string, string> = {}): string {
+function parseJson<T>(text: string): T {
+	try {
+		return JSON.parse(text) as T;
+	} catch (cause) {
+		throw new Error("Invalid rendered JSON", { cause });
+	}
+}
+
+export function renderSettings(
+	template: string,
+	models: Models,
+	paths: Record<string, string> = {},
+): string {
 	const rendered = template
 		.replace(/\{\{(root|home)\}\}/g, (all, key: string) => paths[key] ?? all)
-		.replace(/\{\{(models|thinking|providers)\.([a-z-]+)\}\}/g, (_, field: string, seat: string) => {
-			const entry = models.seats?.[seat];
-			if (!entry) throw new Error(`no entry for seat ${seat}`);
-			if (field === "thinking") return entry.thinking;
-			const parts = qualified(seat, entry);
-			return field === "models" ? parts.model : parts.provider;
-		});
+		.replace(
+			/\{\{(models|thinking|providers)\.([a-z-]+)\}\}/g,
+			(_, field: string, seat: string) => {
+				const entry = models.seats?.[seat];
+				if (!entry) throw new Error(`no entry for seat ${seat}`);
+				if (field === "thinking") return entry.thinking;
+				const parts = qualified(seat, entry);
+				return field === "models" ? parts.model : parts.provider;
+			},
+		);
 	const left = rendered.match(/\{\{[^}]+\}\}/);
 	if (left) throw new Error(`unresolved token: ${left[0]}`);
-	JSON.parse(rendered);
+	parseJson(rendered);
 	return rendered;
 }
 
-export function renderText(text: string, tokens: Record<string, string>, fragment: (name: string) => string | undefined, where: string): string {
-	return text.replace(/\{\{(file:)?([a-z][a-z0-9.-]*)\}\}/g, (all, file: string | undefined, key: string) => {
-		const value = file ? fragment(key)?.replace(/\n$/, "") : tokens[key];
-		if (value === undefined) throw new Error(`${where}: unresolved token ${all}`);
-		return value;
-	});
+export function renderText(
+	text: string,
+	tokens: Record<string, string>,
+	fragment: (name: string) => string | undefined,
+	where: string,
+): string {
+	return text.replace(
+		/\{\{(file:)?([a-z][a-z0-9.-]*)\}\}/g,
+		(all, file: string | undefined, key: string) => {
+			const value = file ? fragment(key)?.replace(/\n$/, "") : tokens[key];
+			if (value === undefined)
+				throw new Error(`${where}: unresolved token ${all}`);
+			return value;
+		},
+	);
 }
 
 export function buildAgents(sources: Source[], exclude: string[]): string {
@@ -48,17 +82,32 @@ export function buildAgents(sources: Source[], exclude: string[]): string {
 		.join("\n");
 }
 
-export function seatSettings(io: Io, root: string, agent: AgentName, template: string): string {
+export function seatSettings(
+	io: Io,
+	root: string,
+	agent: AgentName,
+	template: string,
+): string {
 	const own = `${root}/${agent}/profiles`;
-	const models = JSON.parse(io.read(`${own}/models.json`) ?? "{}") as Models;
+	const models = parseJson<Models>(io.read(`${own}/models.json`) ?? "{}");
 	const paths = { root, home: `${io.home}/${KINDS[agent].home}` };
-	const base = JSON.parse(renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, paths));
-	const seat = JSON.parse(renderSettings(io.read(`${own}/${template}`) ?? "{}", models, paths));
+	const base = parseJson<Record<string, unknown>>(
+		renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, paths),
+	);
+	const seat = parseJson<Record<string, unknown>>(
+		renderSettings(io.read(`${own}/${template}`) ?? "{}", models, paths),
+	);
 	return `${JSON.stringify({ ...base, ...seat }, null, 2)}\n`;
 }
 
-export function seatTokens(io: Io, root: string, agent: AgentName): Record<string, string> {
-	const models = JSON.parse(io.read(`${root}/${agent}/profiles/models.json`) ?? "{}") as Models;
+export function seatTokens(
+	io: Io,
+	root: string,
+	agent: AgentName,
+): Record<string, string> {
+	const models = parseJson<Models>(
+		io.read(`${root}/${agent}/profiles/models.json`) ?? "{}",
+	);
 	const tokens: Record<string, string> = {};
 	for (const [seat, entry] of Object.entries(models.seats ?? {})) {
 		const parts = qualified(seat, entry);
@@ -69,7 +118,14 @@ export function seatTokens(io: Io, root: string, agent: AgentName): Record<strin
 	return tokens;
 }
 
-export type RenderInput = { root: string; agent: AgentName; seat: Seat; out: string; placeholders?: string[]; seen?: Map<string, string> };
+export type RenderInput = {
+	root: string;
+	agent: AgentName;
+	seat: Seat;
+	out: string;
+	placeholders?: string[];
+	seen?: Map<string, string>;
+};
 
 class Renderer {
 	readonly input: RenderInput;
@@ -97,12 +153,26 @@ class Renderer {
 		const { root, agent } = this.input;
 		const kind = KINDS[agent];
 		const body = this.source(path);
-		const tokens: Record<string, string> = { ...kind.tokens, cli: CLI, continue: CONTINUE, ...this.seats, root };
+		const tokens: Record<string, string> = {
+			...kind.tokens,
+			cli: CLI,
+			continue: CONTINUE,
+			...this.seats,
+			root,
+		};
 		for (const key of this.input.placeholders ?? []) tokens[key] = `<${key}>`;
 		const fragment = (name: string) => {
-			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
+			const where = [
+				`${this.own}/fragments/${name}.md`,
+				`${root}/fragments/${name}.md`,
+			].find((file) => this.io.read(file) !== undefined);
 			if (where === undefined) return undefined;
-			const text = renderText(this.io.read(where) ?? "", tokens, () => undefined, where);
+			const text = renderText(
+				this.io.read(where) ?? "",
+				tokens,
+				() => undefined,
+				where,
+			);
 			this.input.seen?.set(where.slice(root.length + 1), text);
 			return text;
 		};
@@ -123,10 +193,14 @@ class Renderer {
 			const info = this.io.stat(`${this.input.root}/${from}/${name}`);
 			if (!info) continue;
 			if (info.dir) this.tree(`${from}/${name}`, `${to}/${name}`);
-			else if (name.endsWith(".md")) this.put(`${to}/${name}`, this.text(`${from}/${name}`));
+			else if (name.endsWith(".md"))
+				this.put(`${to}/${name}`, this.text(`${from}/${name}`));
 			else {
 				this.io.mkdir(`${this.input.out}/${to}`);
-				this.io.copy(`${this.input.root}/${from}/${name}`, `${this.input.out}/${to}/${name}`);
+				this.io.copy(
+					`${this.input.root}/${from}/${name}`,
+					`${this.input.out}/${to}/${name}`,
+				);
 			}
 		}
 	}
@@ -140,7 +214,10 @@ class Renderer {
 	}
 
 	refs(): string[] {
-		return this.io.list(`${this.input.root}/rules/refs`).filter((f) => f.endsWith(".md")).sort();
+		return this.io
+			.list(`${this.input.root}/rules/refs`)
+			.filter((f) => f.endsWith(".md"))
+			.sort();
 	}
 
 	sandboxRule(): Source {
@@ -149,15 +226,21 @@ class Renderer {
 
 	skills(flat: boolean, to: string): void {
 		for (const scope of SKILL_SCOPES[this.input.seat]) {
-			for (const skill of this.io.list(`${this.input.root}/skills/${scope}`).sort()) {
+			for (const skill of this.io
+				.list(`${this.input.root}/skills/${scope}`)
+				.sort()) {
 				if (skill === ".DS_Store") continue;
-				this.tree(`skills/${scope}/${skill}`, flat ? `${to}/${skill}` : `${to}/${scope}/${skill}`);
+				this.tree(
+					`skills/${scope}/${skill}`,
+					flat ? `${to}/${skill}` : `${to}/${scope}/${skill}`,
+				);
 			}
 		}
 	}
 
 	agents(to: string): void {
-		for (const name of AGENTS) this.put(`${to}/${name}.md`, this.text(`agents/${name}.md`));
+		for (const name of AGENTS)
+			this.put(`${to}/${name}.md`, this.text(`agents/${name}.md`));
 	}
 
 	settings(template: string): string {
@@ -167,7 +250,15 @@ class Renderer {
 	context(): void {
 		const dockerfile = `${this.input.agent}/sbx/Dockerfile`;
 		const toolchain = this.source("sbx/container/toolchain.Dockerfile").trimEnd();
-		this.put("context/Dockerfile", renderText(this.source(dockerfile), { toolchain }, () => undefined, dockerfile));
+		this.put(
+			"context/Dockerfile",
+			renderText(
+				this.source(dockerfile),
+				{ toolchain },
+				() => undefined,
+				dockerfile,
+			),
+		);
 		this.extra([
 			["sbx/container/.dockerignore", "context/.dockerignore"],
 			["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
@@ -188,17 +279,24 @@ class Renderer {
 function hostSettings(r: Renderer, servers: Record<string, string>): string {
 	const settings = r.settings("host.json");
 	if (r.input.agent !== "pi" || !Object.keys(servers).length) return settings;
-	const { packages = [] } = JSON.parse(r.settings("sbx.json")) as { packages?: string[] };
-	const own = JSON.parse(settings) as { packages?: string[] };
+	const { packages = [] } = parseJson<{ packages?: string[] }>(
+		r.settings("sbx.json"),
+	);
+	const own = parseJson<{ packages?: string[] }>(settings);
 	return `${JSON.stringify({ ...own, packages: [...(own.packages ?? []), ...packages.filter((p) => p.startsWith("npm:pi-mcp-adapter@"))] }, null, 2)}\n`;
 }
 
 function hostMcp(r: Renderer, servers: Record<string, string>): void {
-	const config = JSON.parse(r.io.read(`${r.input.out}/agent/mcp.json`) ?? "{}") as { mcpServers?: Record<string, unknown> };
+	const config = parseJson<{ mcpServers?: Record<string, unknown> }>(
+		r.io.read(`${r.input.out}/agent/mcp.json`) ?? "{}",
+	);
 	const present = Object.entries(config.mcpServers ?? {});
 	const kept = present.filter(([name]) => !(name in servers));
 	if (kept.length === present.length) return;
-	r.put("agent/mcp.json", `${JSON.stringify({ ...config, mcpServers: Object.fromEntries(kept) }, null, 2)}\n`);
+	r.put(
+		"agent/mcp.json",
+		`${JSON.stringify({ ...config, mcpServers: Object.fromEntries(kept) }, null, 2)}\n`,
+	);
 }
 
 const PI_AGENT_FILES: [string, string][] = [
@@ -210,25 +308,40 @@ function pi(r: Renderer): void {
 	const { seat } = r.input;
 	const rules = r.rules();
 	if (seat === "host") {
-		const servers = hostLinearServers(loadProfiles((path) => r.io.read(path), r.input.root, r.io.home));
+		const servers = hostLinearServers(
+			loadProfiles((path) => r.io.read(path), r.input.root, r.io.home),
+		);
 		r.put("agent/settings.json", hostSettings(r, servers));
 		hostMcp(r, servers);
 		r.put("agent/AGENTS.md", buildAgents(rules, []));
-		for (const name of r.refs()) r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
+		for (const name of r.refs())
+			r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agent/agents");
 		r.skills(false, "skills");
-		r.extra(PI_AGENT_FILES.map(([from, to]): [string, string] => [from, `agent/${to}`]));
+		r.extra(
+			PI_AGENT_FILES.map(([from, to]): [string, string] => [from, `agent/${to}`]),
+		);
 		return;
 	}
 	r.context();
 	r.put("context/agent-settings.json", r.settings("sbx.json"));
-	r.put("home/agent/AGENTS.md", buildAgents([...rules, r.sandboxRule()], HOST_ONLY_RULES));
-	for (const name of r.refs()) r.put(`home/agent/refs/${name}`, r.text(`rules/refs/${name}`));
+	r.put(
+		"home/agent/AGENTS.md",
+		buildAgents([...rules, r.sandboxRule()], HOST_ONLY_RULES),
+	);
+	for (const name of r.refs())
+		r.put(`home/agent/refs/${name}`, r.text(`rules/refs/${name}`));
 	r.agents("home/agent/agents");
 	r.skills(true, "home/skills");
 	r.extra([
-		...PI_AGENT_FILES.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
-		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
+		...PI_AGENT_FILES.map(([from, to]): [string, string] => [
+			from,
+			`home/agent/${to}`,
+		]),
+		[
+			"extensions/handoff-on-error.ts",
+			"home/agent/extensions/handoff-on-error.ts",
+		],
 		["extensions/status-history.ts", "home/agent/extensions/status-history.ts"],
 		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
 		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
@@ -247,14 +360,19 @@ function claude(r: Renderer): void {
 	const rules = r.rules();
 	if (seat === "host") {
 		for (const rule of rules) r.put(`rules/${rule.name}`, rule.body);
-		for (const name of r.refs()) r.put(`refs/${name}`, r.text(`rules/refs/${name}`));
+		for (const name of r.refs())
+			r.put(`refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agents");
 		r.skills(true, "skills");
 		r.put("CLAUDE.md", r.text("claude/CLAUDE.md"));
 		return;
 	}
-	for (const rule of [...rules, r.sandboxRule()].filter((x) => !HOST_ONLY_RULES.includes(x.name))) r.put(`home/rules/${rule.name}`, rule.body);
-	for (const name of r.refs()) r.put(`home/refs/${name}`, r.text(`rules/refs/${name}`));
+	for (const rule of [...rules, r.sandboxRule()].filter(
+		(x) => !HOST_ONLY_RULES.includes(x.name),
+	))
+		r.put(`home/rules/${rule.name}`, rule.body);
+	for (const name of r.refs())
+		r.put(`home/refs/${name}`, r.text(`rules/refs/${name}`));
 	r.agents("home/agents");
 	r.skills(true, "home/skills");
 	r.put("home/CLAUDE.md", r.text("claude/CLAUDE.md"));
@@ -268,7 +386,10 @@ function claude(r: Renderer): void {
 		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
 		["src/fleet/usage.ts", "home/fleet/src/fleet/usage.ts"],
-		["extensions/handoff-on-error.ts", "home/fleet/extensions/handoff-on-error.ts"],
+		[
+			"extensions/handoff-on-error.ts",
+			"home/fleet/extensions/handoff-on-error.ts",
+		],
 		["extensions/status-history.ts", "home/fleet/extensions/status-history.ts"],
 		["extensions/session-handoff.ts", "home/fleet/extensions/session-handoff.ts"],
 	]);
@@ -280,7 +401,8 @@ export const OWNED: Record<AgentName, string[]> = {
 };
 
 export function render(input: RenderInput, io: Io): void {
-	if (input.seat === "host") for (const dir of OWNED[input.agent]) io.remove(`${input.out}/${dir}`);
+	if (input.seat === "host")
+		for (const dir of OWNED[input.agent]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
 	if (input.agent === "pi") pi(r);
 	else claude(r);

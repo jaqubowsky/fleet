@@ -3,34 +3,21 @@
 Status: ready-for-agent
 Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
-## Parent
-
-The spec this ticket belongs to, when there is one. Read it first: it carries the sources and decisions the whole feature shares.
+<Describe who is affected, what fails today, and one concrete example or source. Use a Problem heading when this needs more than a paragraph.>
 
 ## Outcome
 
-What works when this ticket is done, from the user's side, end to end through every layer it touches. Never a layer-by-layer list.
+<Describe precisely what works for the user after this ticket, through the layers it touches. Name the input, result and boundary; do not list implementation steps.>
 
-## Scope
-
-What this ticket changes, and the sources only this slice needs: the issue, ADR or review comment that constrains it, the code it copies from.
-
-## Out of scope
-
-One line each: what a reader might expect here and another ticket, or nobody, delivers.
+<Explain the work and constraints the next agent needs to make that outcome hold. Link a spec, ADR or prior implementation where it matters. Use Work or Out of scope headings only when the content earns them.>
 
 ## Acceptance criteria
 
-- [ ] <given state or input> -> <observable outcome, with its concrete value>
-- [ ] <what the change refuses or leaves untouched at its boundary> -> <observable outcome>
-- [ ] Seen: <what a user sees, when the ticket changes it>
+- [ ] Given <state or input>, when <action>, then <observable outcome with its concrete value>.
+- [ ] <Adjacent behavior that must remain unchanged> -> <observable result>.
 
-Each criterion is an invariant a test asserts as written: its expected value comes from here, never from the code.
+Each criterion is an invariant whose expected result comes from the ticket, not from the current code. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
 
-## Notes
-
-Optional: a decision this slice made, a prototype snippet trimmed to that decision.
-
-In a tracker the heading's title is the issue title and the tracker's key its only number, `Status:` is the issue's workflow state, `Blocked by:` is the tracker's blocking relation with landed blockers left out, and the description starts at `## Parent`; its local copy puts the heading and `Status:` back above it.
+In a tracker, the heading's title is the issue title, its key is the only number, `Status:` is the issue's workflow state, and `Blocked by:` is the tracker's blocking relation with landed blockers left out. The local copy puts the heading and working `Status:` back above the description. Its full text remains available to a container without tracker access.
 
 A ticket holds the plan, never progress: progress lives in the tracker and in git; a local copy's `Status:` is the container's working mark.
