@@ -3,9 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import handoff, { COMPLETE, SUGGESTED } from "../../extensions/session-handoff.ts";
+import handoff, { SUGGESTED } from "../../extensions/session-handoff.ts";
 import { changes } from "../../extensions/status-history.ts";
-import { clearedNote } from "../../claude/hooks/container.ts";
 import { fakeIo } from "./fake-io.ts";
 import { renderText, seatSettings } from "../render/render.ts";
 import { CLI, KINDS } from "../harness.ts";
@@ -195,14 +194,12 @@ test("a cancelled replacement reports that it stayed put", async (t) => {
 	assert.match(r.readStatus(), /^attention: session handoff cancelled; still in the previous session$/m);
 });
 
-test("every kind's container rule suggests a handoff in the words the claude hook clears on", () => {
+test("every kind's container rule suggests a handoff in the same words", () => {
 	const rule = readFileSync("sbx/container/sandbox.md", "utf8");
-	const claude = `status: implementing\nattention: ${SUGGESTED}\n`;
 
 	const rendered = Object.values(KINDS).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: CLI }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
 
 	for (const { harness, text } of rendered) assert.ok(text.includes(`attention: ${SUGGESTED}\``), harness.name);
-	assert.match(clearedNote(claude) ?? "", new RegExp(`^attention: ${COMPLETE}$`, "m"));
 });
 
 test("handoff is loaded only through the sandbox profile and image", () => {

@@ -4,7 +4,7 @@ import { test, type TestContext } from "node:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { clearedNote, contextTokens, tail } from "../../claude/hooks/container.ts";
+import { contextTokens, tail } from "../../claude/hooks/container.ts";
 import { changes } from "../../extensions/status-history.ts";
 
 const turn = (input: number, cached: number) => JSON.stringify({ type: "assistant", message: { usage: { input_tokens: input, cache_read_input_tokens: cached, cache_creation_input_tokens: 0 } } });
@@ -53,17 +53,6 @@ test("a turn that ends past the threshold leaves the handoff to the agent", (t) 
 	assert.equal(readFileSync(join(task, "status.md"), "utf8"), status);
 });
 
-test("a clear that approves the suggestion records the fresh session", () => {
-	const suggested = status.replace("attention: none", "attention: session handoff suggested");
-
-	assert.equal(clearedNote(suggested), status.replace("attention: none", "attention: session handoff complete; fresh session idle"));
-});
-
-test("a clear nobody suggested leaves the attention line alone", () => {
-	assert.equal(clearedNote(status), undefined);
-	assert.equal(clearedNote(status.replace("attention: none", "attention: pick a date format")), undefined);
-});
-
 function container(t: TestContext, status: string) {
 	const root = mkdtempSync(join(tmpdir(), "claude-hooks-"));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -75,6 +64,24 @@ function container(t: TestContext, status: string) {
 	const kept = () => (existsSync(join(task, "logs/status.jsonl")) ? changes(readFileSync(join(task, "logs/status.jsonl"), "utf8")).map(({ status, attention }) => [status, attention]) : []);
 	return { task, hook, kept };
 }
+
+for (const attention of ["session handoff suggested", "none", "pick a date format"])
+	test(`a clear records the fresh session and points it at the task, attention was ${attention}`, (t) => {
+		const { task, hook } = container(t, `status: implementing\nattention: ${attention}\n`);
+
+		const printed = JSON.parse(hook("session-start", JSON.stringify({ source: "clear" })).toString());
+
+		assert.equal(readFileSync(join(task, "status.md"), "utf8"), "status: implementing\nattention: session handoff complete; fresh session idle\n");
+		assert.match(printed.hookSpecificOutput.additionalContext, /^Previous task directory: /);
+	});
+
+test("a session start that is not a clear leaves the attention line alone", (t) => {
+	const { task, hook } = container(t, "status: implementing\nattention: session handoff suggested\n");
+
+	hook("session-start", JSON.stringify({ source: "resume" }));
+
+	assert.equal(readFileSync(join(task, "status.md"), "utf8"), "status: implementing\nattention: session handoff suggested\n");
+});
 
 test("each tool call keeps a changed status.md as a change, and a session start alone keeps none", (t) => {
 	const { task, hook, kept } = container(t, "status: new\nattention: none\n");

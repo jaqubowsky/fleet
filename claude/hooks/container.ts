@@ -3,7 +3,7 @@ import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, wri
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deathNote } from "../../extensions/handoff-on-error.ts";
-import { COMPLETE, contextNote, pointer, reminderLevel, SUGGESTED, withAttention } from "../../extensions/session-handoff.ts";
+import { COMPLETE, contextNote, pointer, reminderLevel, withAttention } from "../../extensions/session-handoff.ts";
 import { record, snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
@@ -39,14 +39,9 @@ export function contextTokens(transcript: string): number {
 	return 0;
 }
 
-export function clearedNote(status: string): string | undefined {
-	if (!status.split("\n").includes(`attention: ${SUGGESTED}`)) return undefined;
-	return withAttention(status, COMPLETE);
-}
-
 function next(event: string, status: string, input: HookInput): string | undefined {
 	if (event === "stop-failure") return deathNote(status, input.error ?? input.error_type ?? "API error");
-	if (event === "session-start") return input.source === "clear" ? clearedNote(status) : undefined;
+	if (event === "session-start") return input.source === "clear" ? withAttention(status, COMPLETE) : undefined;
 	return undefined;
 }
 
