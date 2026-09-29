@@ -126,7 +126,7 @@ test("the claude container hook denies the call when the guard itself fails, ins
 	assert.match(denied.permissionDecisionReason, /container guard failed/);
 });
 
-test("the pi and omp container extension blocks a push to the default branch, only inside a container", () => {
+test("the pi container extension blocks a push to the default branch, only inside a container", () => {
 	const dir = clone("web-1");
 	const handlerOf = (env: Record<string, string | undefined>) => {
 		const saved = { FLEET_ARTIFACTS: process.env.FLEET_ARTIFACTS, SANDBOX_NAME: process.env.SANDBOX_NAME };

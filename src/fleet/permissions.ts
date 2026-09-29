@@ -84,11 +84,6 @@ function apply(checkout: string, name: string, profile: Profile, io: Io): string
 	return changes.length ? changes : ["nothing changed"];
 }
 
-const PROJECT_MCP = {
-	pi: { dir: ".pi", entry: (url: string) => ({ url, auth: "oauth" }) },
-	omp: { dir: ".omp", entry: (url: string) => ({ type: "http", url }) },
-};
-
 type McpConfig = { mcpServers?: Record<string, unknown> };
 
 function registerLinear(checkout: string, host: Host, io: Io): string[] {
@@ -96,8 +91,7 @@ function registerLinear(checkout: string, host: Host, io: Io): string[] {
 	if (!server) return [];
 	const [name, url] = server;
 	const top = io.git(["rev-parse", "--show-toplevel"], checkout);
-	const harness = io.harness.name;
-	if (harness === "claude") {
+	if (io.harness.name === "claude") {
 		const projects = (JSON.parse(io.read(`${io.home}/.claude.json`) ?? "{}") as { projects?: Record<string, { mcpServers?: Record<string, { url?: string }> }> }).projects;
 		const registered = projects?.[top]?.mcpServers?.[name];
 		if (registered?.url === url) return [];
@@ -105,19 +99,19 @@ function registerLinear(checkout: string, host: Host, io: Io): string[] {
 		io.run("claude", ["mcp", "add", "--scope", "local", "--transport", "http", name, url], top);
 		return [`host Linear server ${name} registered for ${top} in claude's local scope`];
 	}
-	const { dir, entry } = PROJECT_MCP[harness];
 	const changes: string[] = [];
-	const path = `${top}/${dir}/mcp.json`;
+	const path = `${top}/.pi/mcp.json`;
 	const config = JSON.parse(io.read(path) ?? "{}") as McpConfig;
-	if (JSON.stringify(config.mcpServers?.[name]) !== JSON.stringify(entry(url))) {
-		io.mkdir(`${top}/${dir}`);
-		io.write(path, `${JSON.stringify({ ...config, mcpServers: { ...config.mcpServers, [name]: entry(url) } }, null, 2)}\n`);
+	const entry = { url, auth: "oauth" };
+	if (JSON.stringify(config.mcpServers?.[name]) !== JSON.stringify(entry)) {
+		io.mkdir(`${top}/.pi`);
+		io.write(path, `${JSON.stringify({ ...config, mcpServers: { ...config.mcpServers, [name]: entry } }, null, 2)}\n`);
 		changes.push(`host Linear server ${name} registered in ${path}`);
 	}
 	const exclude = io.git(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], top);
-	if (!(io.read(exclude) ?? "").split("\n").includes(`/${dir}/`)) {
-		io.append(exclude, `/${dir}/`);
-		changes.push(`/${dir}/ added to ${exclude}`);
+	if (!(io.read(exclude) ?? "").split("\n").includes("/.pi/")) {
+		io.append(exclude, "/.pi/");
+		changes.push(`/.pi/ added to ${exclude}`);
 	}
 	return changes;
 }

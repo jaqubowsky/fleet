@@ -5,13 +5,13 @@ import { render, type Seat, seatTokens } from "./render.ts";
 export type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
-	{ where: /^rules\/delegation\.md: 1\. "Parallel" =/, reason: "only omp has a batch call for subagents; pi starts runs in the background, claude sends several background `Agent` calls in one message" },
+	{ where: /^rules\/delegation\.md: 1\. "Parallel" =/, reason: "pi starts runs in the background, claude sends several background `Agent` calls in one message" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `cfleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "claude has no follow-up delivery between tool calls, so a steer is its next message, and its watch is a held `cfleet watch`" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/, reason: "claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json and managed settings, which `align-settings.py` merges, where pi and omp `/reload` a rendered file" },
+	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/, reason: "claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json and managed settings, which `align-settings.py` merges, where pi `/reload`s a rendered file" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| approve \|/, reason: "claude's `/clear` takes no text, so the continue is a second steer" },
 	{ where: /^skills\/container\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/, reason: "claude's `Agent` call has no output file, so the caller writes review.md; pi's subagent call needs `async: false` to wait" },
-	{ where: /^skills\/container\/babysit-pr\/SKILL\.md: (Run it as one `Bash` call|<agent> has no background shell)/, reason: "pi and omp have no background shell that wakes the session, so they poll one read per tool call" },
+	{ where: /^skills\/container\/babysit-pr\/SKILL\.md: (Run it as one `Bash` call|<agent> has no background shell)/, reason: "pi has no background shell that wakes the session, so it polls one read per tool call" },
 ];
 
 export const VOCABULARY: [string, string][] = [
@@ -20,11 +20,11 @@ export const VOCABULARY: [string, string][] = [
 	["cache", "each harness keeps its build cache under its own home"],
 	["root", "the harness checkout sits at a different path per machine"],
 	["tool.ask", "each harness names its question tool"],
-	["skill.ingest", "pi and omp prefix a skill command with /skill:, claude does not"],
-	["refs", "pi and omp read refs beside AGENTS.md, claude under ~/.claude/refs"],
-	["refs.testing", "pi and omp read refs beside AGENTS.md, claude under ~/.claude/refs"],
-	["refs.ci", "pi and omp read refs beside AGENTS.md, claude under ~/.claude/refs"],
-	["refs.ticket", "pi and omp read refs beside AGENTS.md, claude under ~/.claude/refs"],
+	["skill.ingest", "pi prefixes a skill command with /skill:, claude does not"],
+	["refs", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
+	["refs.testing", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
+	["refs.ci", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
+	["refs.ticket", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["model.flag", "each harness spells a model in its own syntax"],
 	["handoff.command", "each harness clears a session with its own command; what that command takes is compared in the approve row"],
 ];
@@ -32,10 +32,10 @@ const FRAGMENT = /^(?:([a-z]+)\/)?fragments\/(.+)$/;
 
 function normalise(text: string): string {
 	return text
-		.replace(/~?(\/home\/agent)?\/\.(pi|omp|claude)\b/g, "<home>")
-		.replace(/\b[oc]?fleet\b/g, "<cli>")
-		.replace(/\b(PI|OMP|CLAUDE)_/g, "<AGENT>_")
-		.replace(/\b(pi|omp|claude|Pi|OMP|Claude)\b/g, "<agent>");
+		.replace(/~?(\/home\/agent)?\/\.(pi|claude)\b/g, "<home>")
+		.replace(/\bc?fleet\b/g, "<cli>")
+		.replace(/\b(PI|CLAUDE)_/g, "<AGENT>_")
+		.replace(/\b(pi|claude|Pi|Claude)\b/g, "<agent>");
 }
 
 function rendered(root: string, name: HarnessName, seat: Seat, io: Io): Map<string, string> {

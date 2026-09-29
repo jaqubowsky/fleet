@@ -1,6 +1,6 @@
 # Pi remote
 
-Watch and drive every running host pi from a phone. This directory holds the pi extension entry (`index.ts`) and the browser client, and `src/remote/` holds the server, the Sessions hub and the projection. The pi host profile `pi/profiles/host.json` loads it. Containers and OMP do not: OMP's extension API has no `agent_settled` or `session_info_changed` event.
+Watch and drive every running host pi from a phone. This directory holds the pi extension entry (`index.ts`) and the browser client, and `src/remote/` holds the server, the Sessions hub and the projection. The pi host profile `pi/profiles/host.json` loads it. Containers do not.
 
 ## How it fits together
 

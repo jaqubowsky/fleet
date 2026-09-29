@@ -279,35 +279,6 @@ test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
 	assert.equal(io.calls.length, asked);
 });
 
-test("an omp container wakes its host on herdr's status like any other harness", (t: TestContext) => {
-	const { io, status } = herdr(
-		t,
-		[{ name: "omp-webapp-a", pane_id: "w1:p1", agent_status: "working" }],
-		HARNESSES.omp,
-	);
-	const wakes: string[] = [];
-	watch(
-		() => undefined,
-		io,
-		(text) => wakes.push(text),
-	);
-
-	status("w1:p1", "done");
-	t.mock.timers.tick(1100);
-
-	assert.ok(
-		io.lines.includes("[fleet] watching omp-webapp-a working"),
-		io.lines.join("\n"),
-	);
-	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] omp-webapp-a: working -> done\n/);
-	assert.ok(
-		!io.calls.some(
-			(c) => c[0] === "herdr" && c[1] === "agent" && c[2] === "read",
-		),
-	);
-});
-
 for (const h of Object.values(HARNESSES)) {
 	test(`the ${h.name} watch subscribes to herdr's status and exit events`, (t: TestContext) => {
 		const { io, sockets } = herdr(

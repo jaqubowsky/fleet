@@ -42,7 +42,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	return deny(`Unknown tool policy: ${tool}`);
 }
 
-const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.omp/agent/(auth\.json|agent\.db|models\.db)|\.claude/\.credentials\.json|\.claude\.json)`;
+const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.claude/\.credentials\.json|\.claude\.json)`;
 const HOST_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])/Users/[^/\s]+/${SECRET_PATHS}`);
 const HOME_SECRETS = new RegExp(String.raw`(^|[^A-Za-z0-9_./-])(~|\$HOME)/${SECRET_PATHS}`);
 export const SECRET_MATERIAL = /(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,}|-----BEGIN\s[A-Z ]*PRIVATE KEY|op:\/\/)/;
@@ -56,7 +56,7 @@ const GIT = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*`;
 const GIT_AT = String.raw`${START}(\S*/)?${GIT}`;
 const PUSH_AT = String.raw`${GIT_AT}\s+push\b`;
 const IN_COMMAND = String.raw`(>&|&>|[^|;&\n])*`;
-const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.omp|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
+const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
 const GH_WRITE = "gh writing to the remote is a push by another name. The human opens the PR and runs the release.";

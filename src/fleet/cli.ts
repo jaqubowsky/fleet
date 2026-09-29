@@ -33,7 +33,7 @@ const usage = `usage:
   ${cli} build                                        render the container seat and rebuild ${h.image} from it
   ${cli} render [--seat host|container] [--out <dir>]  render rules, skills, agents and settings into ~/${h.home}, or a seat into <dir>
   ${cli} watch [<sandbox>...]                         print a [fleet] line each time a container this pane put up or steered last, or one named, settles; hold it with Monitor
-  ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi or omp tab: run the container's agent here and hand herdr the state it reports
+  ${cli} relay <sandbox> <task dir> -- <args...>      what up types into a pi tab: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory`;

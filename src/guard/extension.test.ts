@@ -31,10 +31,9 @@ test("the extension blocks what the policy denies and stays out of the way other
 	assert.match(unknown?.reason ?? "", /Unknown tool policy: telepathy/);
 });
 
-test("omp's wait passes the guard while pi's wait stays unknown", () => {
+test("a wait tool stays unknown to pi's guard", () => {
 	const wait = { toolName: "wait", input: { ids: ["job-1"] } };
 
-	assert.equal(handler(undefined, HARNESSES.omp)(wait), undefined);
 	assert.match(handler()(wait)?.reason ?? "", /Unknown tool policy: wait/);
 });
 
@@ -80,41 +79,39 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 	assert.equal(guard({ toolName: "read", input: { path: "~/.config/harness/repos.json" } }, { cwd: root }), undefined);
 });
 
-test("pi and omp refuse an edit or a shell redirect into their own homes, and leave reads and the fleet cache alone", () => {
+test("pi refuses an edit or a shell redirect into its own home, and leaves reads and the fleet cache alone", () => {
 	const home = "/Users/me";
-	for (const name of ["pi", "omp"] as const) {
-		let captured: Handler | undefined;
-		guard(HARNESSES[name], undefined, home)({ on: (_event, fn) => { captured = fn as Handler; } });
-		const ask = (toolName: string, input: Record<string, unknown>, cwd = "/Users/me/Work/app") => captured!({ toolName, input }, { cwd });
+	let captured: Handler | undefined;
+	guard(HARNESSES.pi, undefined, home)({ on: (_event, fn) => { captured = fn as Handler; } });
+	const ask = (toolName: string, input: Record<string, unknown>, cwd = "/Users/me/Work/app") => captured!({ toolName, input }, { cwd });
 
-		for (const [toolName, input, cwd] of [
-			["edit", { path: "~/.pi/agent/settings.json" }],
-			["write", { path: "/Users/me/.omp/skills/host/grilling/SKILL.md" }],
-			["edit", { path: "settings.json" }, "/Users/me/.pi/agent"],
-			["bash", { command: "echo x > ~/.pi/agent/AGENTS.md" }],
-			["bash", { command: "printf y >> $HOME/.omp/agent/config.yml" }],
-			["bash", { command: "cd ~/.pi/agent && echo '{}' >settings.json" }],
-			["bash", { command: "sed -i s/a/b/ ~/.pi/agent/settings.json" }],
-			["bash", { command: "echo x | tee ~/.omp/agent/config.yml" }],
-			["bash", { command: "jq '.x=1' ~/.pi/agent/settings.json > /tmp/s && mv /tmp/s ~/.pi/agent/settings.json" }],
-			["bash", { command: "cp AGENTS.md /Users/me/.omp/agent/AGENTS.md" }],
-			["bash", { command: 'echo x > "$HOME"/.pi/agent/settings.json' }],
-			["bash", { command: "echo x >& ~/.pi/agent/AGENTS.md" }],
-			["bash", { command: "echo x &> ~/.pi/agent/AGENTS.md" }],
-			["bash", { command: "echo x >| ~/.pi/agent/AGENTS.md" }],
-			["bash", { command: 'bash -c "cd ~/.pi && echo x > agent/AGENTS.md"' }],
-			["bash", { command: "cd -- ~/.omp && touch agent/x" }],
-			["bash", { command: "echo x > ~/.PI/agent/AGENTS.md" }],
-		] as [string, Record<string, unknown>, string?][])
-			assert.match(ask(toolName, input, cwd)?.reason ?? "", /harness renders/, `${name} ${JSON.stringify(input)}`);
+	for (const [toolName, input, cwd] of [
+		["edit", { path: "~/.pi/agent/settings.json" }],
+		["write", { path: "/Users/me/.pi/skills/host/grilling/SKILL.md" }],
+		["edit", { path: "settings.json" }, "/Users/me/.pi/agent"],
+		["bash", { command: "echo x > ~/.pi/agent/AGENTS.md" }],
+		["bash", { command: "printf y >> $HOME/.pi/agent/config.yml" }],
+		["bash", { command: "cd ~/.pi/agent && echo '{}' >settings.json" }],
+		["bash", { command: "sed -i s/a/b/ ~/.pi/agent/settings.json" }],
+		["bash", { command: "echo x | tee ~/.pi/agent/config.yml" }],
+		["bash", { command: "jq '.x=1' ~/.pi/agent/settings.json > /tmp/s && mv /tmp/s ~/.pi/agent/settings.json" }],
+		["bash", { command: "cp AGENTS.md /Users/me/.pi/agent/AGENTS.md" }],
+		["bash", { command: 'echo x > "$HOME"/.pi/agent/settings.json' }],
+		["bash", { command: "echo x >& ~/.pi/agent/AGENTS.md" }],
+		["bash", { command: "echo x &> ~/.pi/agent/AGENTS.md" }],
+		["bash", { command: "echo x >| ~/.pi/agent/AGENTS.md" }],
+		["bash", { command: 'bash -c "cd ~/.pi && echo x > agent/AGENTS.md"' }],
+		["bash", { command: "cd -- ~/.pi && touch agent/x" }],
+		["bash", { command: "echo x > ~/.PI/agent/AGENTS.md" }],
+	] as [string, Record<string, unknown>, string?][])
+		assert.match(ask(toolName, input, cwd)?.reason ?? "", /harness renders/, JSON.stringify(input));
 
-		assert.equal(ask("read", { path: "~/.pi/agent/settings.json" }), undefined, name);
-		assert.equal(ask("bash", { command: "cat ~/.omp/agent/config.yml > /tmp/config.yml" }), undefined, name);
-		assert.equal(ask("bash", { command: "echo x > ~/.pi/cache/note" }), undefined, name);
-		assert.equal(ask("edit", { path: "src/app.ts" }), undefined, name);
-		assert.equal(ask("bash", { command: "npm test > out.log 2>&1" }), undefined, name);
-		assert.equal(ask("bash", { command: "rg '> ~/.pi' src" }), undefined, name);
-		assert.equal(ask("bash", { command: 'git commit -m "refuse echo x > ~/.pi/agent/AGENTS.md"' }), undefined, name);
-		assert.equal(ask("bash", { command: "grep -r model ~/.omp/agent" }), undefined, name);
-	}
+	assert.equal(ask("read", { path: "~/.pi/agent/settings.json" }), undefined);
+	assert.equal(ask("bash", { command: "cat ~/.pi/agent/config.yml > /tmp/config.yml" }), undefined);
+	assert.equal(ask("bash", { command: "echo x > ~/.pi/cache/note" }), undefined);
+	assert.equal(ask("edit", { path: "src/app.ts" }), undefined);
+	assert.equal(ask("bash", { command: "npm test > out.log 2>&1" }), undefined);
+	assert.equal(ask("bash", { command: "rg '> ~/.pi' src" }), undefined);
+	assert.equal(ask("bash", { command: 'git commit -m "refuse echo x > ~/.pi/agent/AGENTS.md"' }), undefined);
+	assert.equal(ask("bash", { command: "grep -r model ~/.pi/agent" }), undefined);
 });

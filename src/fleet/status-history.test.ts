@@ -54,7 +54,7 @@ test("a task without status.md keeps no line", (t) => {
 	assert.equal(snapshot(dir), undefined);
 });
 
-test("pi and omp keep a change after every tool, whichever tool wrote the file", (t) => {
+test("pi keeps a change after every tool, whichever tool wrote the file", (t) => {
 	const dir = task(t, "status: new\nattention: none\n");
 	env(t, { FLEET_ARTIFACTS: dirname(dir), SANDBOX_NAME: basename(dir) });
 	const { handlers, pi } = runtime();
@@ -67,7 +67,7 @@ test("pi and omp keep a change after every tool, whichever tool wrote the file",
 	assert.deepEqual(kept(dir).map(({ at, ...rest }) => rest), [{ status: "analyzing", attention: "none", added: [], removed: [] }]);
 });
 
-test("pi and omp append one activity line per finished tool: time, tool, ok, agent", (t) => {
+test("pi appends one activity line per finished tool: time, tool, ok, agent", (t) => {
 	const dir = task(t, "status: new\nattention: none\n");
 	env(t, { FLEET_ARTIFACTS: dirname(dir), SANDBOX_NAME: basename(dir) });
 	const { handlers, pi } = runtime();

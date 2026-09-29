@@ -21,13 +21,13 @@ test("agent name is the sandbox name, fitted to herdr's 32 chars", () => {
 	assert.equal(sandboxName("/x/" + "p".repeat(80), "l", "pi-").length, 63);
 });
 
-test("pi, omp and claude never share an agent name for one label", () => {
-	const names = (label: string) => ["pi-", "omp-", "claude-"].map((prefix) => agentName(sandboxName("/w/webapp", label, prefix)));
+test("pi and claude never share an agent name for one label", () => {
+	const names = (label: string) => ["pi-", "claude-"].map((prefix) => agentName(sandboxName("/w/webapp", label, prefix)));
 	const short = names("web-1716-1718");
 	const long = names("frontend-ticket-123-fix-login-page");
 
-	assert.deepEqual(short, ["pi-webapp-web-1716-1718", "omp-webapp-web-1716-1718", "claude-webapp-web-1716-1718"]);
-	assert.equal(new Set(long).size, 3);
+	assert.deepEqual(short, ["pi-webapp-web-1716-1718", "claude-webapp-web-1716-1718"]);
+	assert.equal(new Set(long).size, 2);
 	assert.ok(long.every((name) => name.length <= 32));
 });
 

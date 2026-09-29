@@ -200,28 +200,33 @@ function hostMcp(r: Renderer, servers: Record<string, string>): void {
 	r.put("agent/mcp.json", `${JSON.stringify({ ...config, mcpServers: Object.fromEntries(kept) }, null, 2)}\n`);
 }
 
-function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: string, agentFiles: [string, string][], containerFiles: [string, string][]): void {
+const PI_AGENT_FILES: [string, string][] = [
+	["pi/models.json", "models.json"],
+	["pi/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
+];
+
+function pi(r: Renderer): void {
 	const { seat } = r.input;
 	const rules = r.rules();
 	if (seat === "host") {
 		const servers = hostLinearServers(loadProfiles((path) => r.io.read(path), r.input.root, r.io.home));
-		r.put(`agent/${settingsFile}`, hostSettings(r, servers));
+		r.put("agent/settings.json", hostSettings(r, servers));
 		hostMcp(r, servers);
 		r.put("agent/AGENTS.md", buildAgents(rules, []));
 		for (const name of r.refs()) r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agent/agents");
 		r.skills(false, "skills");
-		r.extra(agentFiles.map(([from, to]): [string, string] => [from, `agent/${to}`]));
+		r.extra(PI_AGENT_FILES.map(([from, to]): [string, string] => [from, `agent/${to}`]));
 		return;
 	}
 	r.context();
-	r.put(`context/${containerSettingsFile}`, r.settings("sbx.json"));
+	r.put("context/agent-settings.json", r.settings("sbx.json"));
 	r.put("home/agent/AGENTS.md", buildAgents([...rules, r.sandboxRule()], HOST_ONLY_RULES));
 	for (const name of r.refs()) r.put(`home/agent/refs/${name}`, r.text(`rules/refs/${name}`));
 	r.agents("home/agent/agents");
 	r.skills(true, "home/skills");
 	r.extra([
-		...agentFiles.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
+		...PI_AGENT_FILES.map(([from, to]): [string, string] => [from, `home/agent/${to}`]),
 		["extensions/handoff-on-error.ts", "home/agent/extensions/handoff-on-error.ts"],
 		["extensions/status-history.ts", "home/agent/extensions/status-history.ts"],
 		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
@@ -231,7 +236,8 @@ function piFamily(r: Renderer, settingsFile: string, containerSettingsFile: stri
 		["src/guard/container.ts", "home/agent/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/agent/src/guard/argv.ts"],
 		["src/guard/translate.ts", "home/agent/src/guard/translate.ts"],
-		...containerFiles,
+		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
+		["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
 	]);
 }
 
@@ -269,38 +275,13 @@ function claude(r: Renderer): void {
 
 export const OWNED: Record<HarnessName, string[]> = {
 	pi: ["skills", "agent/refs", "agent/agents", "agent/themes"],
-	omp: ["skills", "agent/refs", "agent/agents", "agent/models.json", "agent/themes"],
 	claude: ["rules", "refs", "skills", "agents"],
 };
 
 export function render(input: RenderInput, io: Io): void {
 	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
-	if (input.harness.name === "pi")
-		piFamily(
-			r,
-			"settings.json",
-			"agent-settings.json",
-			[
-				["pi/models.json", "models.json"],
-				["pi/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
-			],
-			[
-				["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
-				["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
-			],
-		);
-	else if (input.harness.name === "omp")
-		piFamily(
-			r,
-			"config.yml",
-			"agent-config.yml",
-			[
-				["pi/models.json", "models.yml"],
-				["omp/themes/ayu-mirage.json", "themes/ayu-mirage.json"],
-			],
-			[["omp/sbx/omp-entrypoint", "context/container/omp-entrypoint"]],
-		);
+	if (input.harness.name === "pi") pi(r);
 	else claude(r);
 	io.log(`${input.harness.name} ${input.seat} -> ${input.out}`);
 }

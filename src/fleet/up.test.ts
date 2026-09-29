@@ -124,7 +124,7 @@ test("up waits for the container tty to leave canonical input mode", async () =>
 	]);
 });
 
-for (const harness of [HARNESSES.claude, HARNESSES.omp]) {
+for (const harness of [HARNESSES.claude]) {
 	test(`up waits for the ${harness.agent} process even when herdr already reports a status`, async () => {
 		const io = fakeIo(base, harness);
 		const sbx = io.sbx;
@@ -286,7 +286,7 @@ test("up refuses a name another agent holds before it creates anything", async (
 			result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] },
 		},
 		"herdr pane list": {
-			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "omp" }] },
+			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "claude" }] },
 		},
 	});
 	const created = (io: typeof held) =>
@@ -304,7 +304,7 @@ test("up refuses a name another agent holds before it creates anything", async (
 	);
 	await assert.rejects(
 		up({ repo, label: "web-1", root: "/root" }, tab),
-		/already runs omp/,
+		/already runs claude/,
 	);
 
 	assert.deepEqual(created(held), []);
@@ -869,11 +869,6 @@ for (const [h, integration, command] of [
 		HARNESSES.pi,
 		".pi/agent/extensions/herdr-agent-state.ts",
 		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
-	],
-	[
-		HARNESSES.omp,
-		".omp/agent/extensions/herdr-omp-agent-state.ts",
-		"HERDR_AGENT=omp /root/bin/ofleet relay omp-webapp-web-1 /home/me/.sandboxes/webapp/omp-webapp-web-1 -- --yolo",
 	],
 ] as const) {
 	test(`up copies herdr's ${h.name} integration into a new container and starts ${h.name} through the relay`, async () => {

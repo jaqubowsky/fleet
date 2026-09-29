@@ -6,9 +6,9 @@ usage() {
 	cat >&2 <<'USAGE'
 usage: sync.sh [--apply]
 
-Brings ~/.pi, ~/.omp and ~/.claude in line with this repository: installs its
+Brings ~/.pi and ~/.claude in line with this repository: installs its
 dependencies, links the CLIs, renders each harness's host seat (a file gone
-from here disappears there), prints where the three renders differ and
+from here disappears there), prints where the two renders differ and
 whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
 config, rebuilds a container image whose rendered seat changed, and removes
 what nothing uses: leftovers of the old per-harness setup, npm packages pi no
@@ -33,8 +33,6 @@ trap 'rm -rf "$WORK"' EXIT
 STAMPS="$HOME/.cache/harness/images"
 LEFTOVERS=(
 	"$HOME/.pi/node_modules"
-	"$HOME/.omp/node_modules"
-	"$HOME/.omp/agent/models.json"
 	"$HOME/.pi/artifacts"
 	"$HOME/.pi/.claude"
 	"$HOME/.claude/settings.json.bak"
@@ -143,7 +141,7 @@ while read -r name cli home image owned <&3; do
 	fi
 done 3<<<"$HARNESS_ROWS"
 
-echo "== parity of the pi, omp and claude renders"
+echo "== parity of the pi and claude renders"
 node --input-type=module -e '
 	const root = process.argv[1];
 	const { HARNESSES } = await import(`${root}/src/harness.ts`);
@@ -178,9 +176,8 @@ echo "== unused"
 for path in "${LEFTOVERS[@]}"; do
 	if [ -e "$path" ] || [ -L "$path" ]; then act rm -rf "$path"; fi
 done
-for dir in "$HOME/.pi/agent/extensions" "$HOME/.omp/agent/extensions"; do
-	if [ -d "$dir" ] && [ -z "$(ls -A "$dir")" ]; then act rmdir "$dir"; fi
-done
+extensions="$HOME/.pi/agent/extensions"
+if [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
 for backup in "$ROOT"/claude/sbx/*.bak; do act rm -f "$backup"; done
 if [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 	unused="$(node --input-type=module -e '

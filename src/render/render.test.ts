@@ -25,7 +25,6 @@ function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
 		"read /root/claude/CLAUDE.md": "Rules live in rules/.\n",
 		"read /root/sbx/container/toolchain.Dockerfile": "RUN install node\n",
 		"read /root/pi/sbx/Dockerfile": "FROM pi-base\n\n{{toolchain}}\n\nCMD [\"pi\"]\n",
-		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n\n{{toolchain}}\n",
 		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
 		"read /root/host/repos.json": SAMPLE_PROFILES,
@@ -50,58 +49,44 @@ test("an image takes the shared toolchain between its own lines", () => {
 	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
 
-test("pi and omp each carry their own theme, and only pi draws its status line itself", () => {
+test("pi carries its own theme and draws its status line itself", () => {
 	const file = (path: string, body: string) => ({ [`read /root/${path}`]: body, [`stat /root/${path}`]: { size: body.length, mtime: new Date(0), dir: false } });
-	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("omp/themes/ayu-mirage.json", "omp theme\n"), ...file("extensions/statusline.ts", "footer\n") };
+	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("extensions/statusline.ts", "footer\n") };
 	const pi = fakeIo(sources(themes));
-	const omp = fakeIo(sources({ ...themes, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
-	for (const io of [pi, omp]) {
-		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
-		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
-	}
+	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
+	render({ root: "/root", harness: pi.harness, seat: "container", out: "/stage" }, pi);
 
 	assert.equal(pi.files["/home/agent/themes/ayu-mirage.json"], "pi theme\n");
 	assert.equal(pi.files["/stage/home/agent/themes/ayu-mirage.json"], "pi theme\n");
-	assert.equal(omp.files["/home/agent/themes/ayu-mirage.json"], "omp theme\n");
-	assert.equal(omp.files["/stage/home/agent/themes/ayu-mirage.json"], "omp theme\n");
 	assert.equal(pi.files["/stage/home/agent/extensions/statusline.ts"], "footer\n");
-	assert.equal(omp.files["/stage/home/agent/extensions/statusline.ts"], undefined);
 });
 
-test("a pi or omp container carries the state relay for herdr's integration, and neither host does", () => {
+test("a pi container carries the state relay for herdr's integration, and its host does not", () => {
 	const relay = { "read /root/extensions/state-relay.ts": "relay\n", "stat /root/extensions/state-relay.ts": { size: 6, mtime: new Date(0), dir: false } };
 	const pi = fakeIo(sources(relay));
-	const omp = fakeIo(sources({ ...relay, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
-	for (const io of [pi, omp]) {
-		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
-		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
-	}
+	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
+	render({ root: "/root", harness: pi.harness, seat: "container", out: "/stage" }, pi);
 
 	assert.equal(pi.files["/stage/home/agent/extensions/state-relay.ts"], "relay\n");
-	assert.equal(omp.files["/stage/home/agent/extensions/state-relay.ts"], "relay\n");
 	assert.equal(pi.files["/home/agent/extensions/state-relay.ts"], undefined);
-	assert.equal(omp.files["/home/agent/extensions/state-relay.ts"], undefined);
 });
 
 test("every container carries status history beside each module that imports it, and no host does", () => {
 	const history = { "read /root/extensions/status-history.ts": "history\n", "stat /root/extensions/status-history.ts": { size: 8, mtime: new Date(0), dir: false } };
 	const pi = fakeIo(sources(history));
-	const omp = fakeIo(sources({ ...history, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 	const claude = fakeIo(sources(history), HARNESSES.claude);
 
-	for (const io of [pi, omp, claude]) {
+	for (const io of [pi, claude]) {
 		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
 		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
 	}
 
-	for (const io of [pi, omp]) {
-		assert.equal(io.files["/stage/home/agent/extensions/status-history.ts"], "history\n");
-		assert.equal(io.files["/stage/context/extensions/status-history.ts"], "history\n");
-	}
+	assert.equal(pi.files["/stage/home/agent/extensions/status-history.ts"], "history\n");
+	assert.equal(pi.files["/stage/context/extensions/status-history.ts"], "history\n");
 	assert.equal(claude.files["/stage/home/fleet/extensions/status-history.ts"], "history\n");
-	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && path.endsWith("status-history.ts")), []);
+	for (const io of [pi, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && path.endsWith("status-history.ts")), []);
 });
 
 test("every container carries the default-branch push guard with the modules it imports, and no host does", () => {
@@ -111,19 +96,17 @@ test("every container carries the default-branch push guard with the modules it 
 		guard[`stat /root/${file}`] = { size: 1, mtime: new Date(0), dir: false };
 	}
 	const pi = fakeIo(sources(guard));
-	const omp = fakeIo(sources({ ...guard, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 	const claude = fakeIo(sources(guard), HARNESSES.claude);
 
-	for (const io of [pi, omp, claude]) {
+	for (const io of [pi, claude]) {
 		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
 		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
 	}
 
-	for (const io of [pi, omp])
-		for (const file of ["extensions/container-guard.ts", "src/guard/container.ts", "src/guard/argv.ts", "src/guard/translate.ts"])
-			assert.equal(io.files[`/stage/home/agent/${file}`], `${file}\n`, `${io.harness.name} ${file}`);
+	for (const file of ["extensions/container-guard.ts", "src/guard/container.ts", "src/guard/argv.ts", "src/guard/translate.ts"])
+		assert.equal(pi.files[`/stage/home/agent/${file}`], `${file}\n`, file);
 	for (const file of ["src/guard/container.ts", "src/guard/argv.ts"]) assert.equal(claude.files[`/stage/home/fleet/${file}`], `${file}\n`, file);
-	for (const io of [pi, omp, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && /container-guard|guard\/container/.test(path)), []);
+	for (const io of [pi, claude]) assert.deepEqual(Object.keys(io.files).filter((path) => path.startsWith("/home/") && /container-guard|guard\/container/.test(path)), []);
 });
 
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
@@ -181,40 +164,6 @@ test("claude agents and container settings take their seat's model and effort", 
 		model: "claude-opus-5-5[1m]",
 		effortLevel: "xhigh",
 	});
-});
-
-test("omp renders YAML model overrides and removes its legacy host JSON", () => {
-	const models = `${JSON.stringify(
-		{
-			providers: {
-				"openai-codex": {
-					modelOverrides: {
-						"gpt-6-sol": { contextWindow: 1050000 },
-					},
-				},
-			},
-		},
-		null,
-		2,
-	)}\n`;
-	const io = fakeIo(
-		sources({
-			"read /root/omp/fragments/agent-explorer.md": "tools: read, grep\n",
-			"read /root/pi/models.json": models,
-			"stat /root/pi/models.json": { size: models.length, mtime: new Date(0), dir: false },
-		}),
-		HARNESSES.omp,
-	);
-	io.files["/home/agent/models.json"] = "legacy";
-
-	render({ root: "/root", harness: HARNESSES.omp, seat: "host", out: "/home" }, io);
-	render({ root: "/root", harness: HARNESSES.omp, seat: "container", out: "/stage" }, io);
-
-	assert.equal(io.files["/home/agent/models.yml"], models);
-	const renderedModels = JSON.parse(io.files["/home/agent/models.yml"]!);
-	assert.equal(renderedModels.providers["openai-codex"].modelOverrides["gpt-6-sol"].contextWindow, 1050000);
-	assert.equal(io.files["/home/agent/models.json"], undefined);
-	assert.equal(io.files["/stage/home/agent/models.yml"], models);
 });
 
 test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
@@ -370,15 +319,7 @@ test("the claude container turns the feedback survey off, so no survey sits in t
 	});
 });
 
-test("the omp container turns its browser tool off, so playwright-cli is its one browser", () => {
-	renderSeats("omp", (out) => {
-		const settings = JSON.parse(readFileSync(`${out}/container/context/agent-config.yml`, "utf8"));
-
-		assert.equal(settings.browser.enabled, false);
-	});
-});
-
-test("a host Linear server any profile names leaves pi's and omp's machine-wide mcp.json, and the servers beside it stay", () => {
+test("a host Linear server any profile names leaves pi's machine-wide mcp.json, and the servers beside it stay", () => {
 	const context7 = { url: "https://mcp.context7.com/mcp" };
 	const profiles = {
 		"read /home/me/.config/harness/repos.json": JSON.stringify({ [PRIVATE_REPO]: PRIVATE_PROFILE }),
@@ -387,11 +328,10 @@ test("a host Linear server any profile names leaves pi's and omp's machine-wide 
 		"read /root/pi/profiles/sbx.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"] }),
 	};
 	const pi = fakeIo(sources(profiles));
-	const omp = fakeIo(sources({ ...profiles, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
-	for (const io of [pi, omp]) render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
 
-	for (const io of [pi, omp]) assert.deepEqual(JSON.parse(io.files["/home/agent/mcp.json"]).mcpServers, { context7 }, io.harness.name);
+	assert.deepEqual(JSON.parse(pi.files["/home/agent/mcp.json"]).mcpServers, { context7 });
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"]);
 });
 
@@ -399,12 +339,10 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 	const silent = Object.fromEntries(Object.entries(JSON.parse(WITH_PRIVATE)).map(([match, entry]: [string, any]) => [match, { ...entry, host: { ...entry.host, linear: "none", linearServer: undefined } }]));
 	const profiles = { "read /root/host/repos.json": JSON.stringify(silent) };
 	const pi = fakeIo(sources({ ...profiles, "read /root/pi/profiles/host.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3"] }) }));
-	const omp = fakeIo(sources({ ...profiles, "read /root/omp/fragments/agent-explorer.md": "tools: read\n" }), HARNESSES.omp);
 
-	for (const io of [pi, omp]) render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
+	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
 
 	assert.equal(pi.files["/home/agent/mcp.json"], undefined);
-	assert.equal(omp.files["/home/agent/mcp.json"], undefined);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3"]);
 });
 

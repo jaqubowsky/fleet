@@ -13,7 +13,7 @@ const files = readdirSync(extensionRoot, { withFileTypes: true }).flatMap((entry
 	if (entry.isFile() && entry.name.endsWith(".ts")) return [join(extensionRoot, entry.name)];
 	const index = join(extensionRoot, entry.name, "index.ts");
 	return entry.isDirectory() && existsSync(index) ? [index] : [];
-}).concat(["pi", "omp"].map((h) => join(root, h, "extensions.ts")).filter(existsSync));
+}).concat([join(root, "pi", "extensions.ts")]);
 const failures = [];
 
 for (const [index, file] of files.entries()) {

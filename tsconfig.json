@@ -23,7 +23,6 @@
     "src/**/*.ts",
     "extensions/**/*.ts",
     "pi/**/*.ts",
-    "omp/**/*.ts",
     "claude/**/*.ts"
   ]
 }

@@ -40,7 +40,7 @@ test("an mcp tool is judged on every string it carries", () => {
 	assert.equal(verdict("mcp__linear", { title: "ticket WEB-1659" }), "allow");
 });
 
-test("an omp bash call that moves its directory or sets its environment is judged as the command it runs", () => {
+test("a bash call that moves its directory or sets its environment is judged as the command it runs", () => {
 	const auto = at(profileFor(parseProfiles(WITH_PRIVATE), PRIVATE_REPO).host);
 	const judge = (input: Record<string, unknown>) => {
 		const payload = translate("bash", input)!;

@@ -22,7 +22,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 		let running = false;
 		const held: string[] = [];
 		const send = (text: string) => {
-			pi.sendMessage({ customType: "fleet", content: text, display: true }, { deliverAs: h.deliverAs ?? "followUp", triggerTurn: true });
+			pi.sendMessage({ customType: "fleet", content: text, display: true }, { deliverAs: "followUp", triggerTurn: true });
 			ui?.notify?.(text.split("\n")[0], "info");
 		};
 		const deliver = (text: string) => {

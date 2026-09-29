@@ -4,7 +4,6 @@
   "type": "module",
   "bin": {
     "fleet": "bin/fleet",
-    "ofleet": "bin/ofleet",
     "cfleet": "bin/cfleet"
   },
   "scripts": {

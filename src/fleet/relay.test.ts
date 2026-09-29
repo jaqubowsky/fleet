@@ -4,12 +4,12 @@ import { HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { relay } from "./relay.ts";
 
-const TASK = "/home/me/.sandboxes/webapp/omp-webapp-a";
+const TASK = "/home/me/.sandboxes/webapp/pi-webapp-a";
 const STATE = `${TASK}/logs/agent-state.json`;
 
 function running(t: TestContext) {
 	t.mock.timers.enable({ apis: ["setInterval"] });
-	const io = fakeIo({}, HARNESSES.omp);
+	const io = fakeIo({}, HARNESSES.pi);
 	const launched: string[][] = [];
 	let finish: (code: number) => void = () => {};
 	io.launch = (command, args) => {
@@ -18,7 +18,7 @@ function running(t: TestContext) {
 			finish = resolve;
 		});
 	};
-	const exited = relay("omp-webapp-a", TASK, ["--yolo", "-c"], io);
+	const exited = relay("pi-webapp-a", TASK, ["--approve", "-c"], io);
 	const report = (state: unknown) => {
 		io.files[STATE] = JSON.stringify(state);
 		t.mock.timers.tick(500);
@@ -37,8 +37,8 @@ test("each new state the container reports reaches herdr for the relay's own pan
 	await agent.exited;
 
 	assert.deepEqual(agent.reports(), [
-		["w1:host", "--source", "fleet:omp", "--agent", "omp", "--state", "working", "--seq", "7"],
-		["w1:host", "--source", "fleet:omp", "--agent", "omp", "--state", "idle", "--seq", "8"],
+		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "working", "--seq", "7"],
+		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "idle", "--seq", "8"],
 	]);
 });
 
@@ -53,13 +53,13 @@ test("the container can set nothing in herdr but its pane's state, message and s
 	await agent.exited;
 
 	assert.deepEqual(agent.reports(), [
-		["w1:host", "--source", "fleet:omp", "--agent", "omp", "--state", "blocked", "--seq", "9", "--message=--agent=claude"],
+		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "blocked", "--seq", "9", "--message=--agent=claude"],
 	]);
 });
 
 test("the agent runs with herdr's variables pointed inside the container, and the relay ends with its exit code", async (t: TestContext) => {
 	t.mock.timers.enable({ apis: ["setInterval"] });
-	const io = fakeIo({}, HARNESSES.omp);
+	const io = fakeIo({}, HARNESSES.pi);
 	io.files[STATE] = JSON.stringify({ state: "working", seq: 1 });
 	const launched: string[][] = [];
 	io.launch = async (command, args) => {
@@ -67,13 +67,13 @@ test("the agent runs with herdr's variables pointed inside the container, and th
 		return 3;
 	};
 
-	const code = await relay("omp-webapp-a", TASK, ["--yolo", "-c"], io);
+	const code = await relay("pi-webapp-a", TASK, ["--approve", "-c"], io);
 	io.files[STATE] = JSON.stringify({ state: "idle", seq: 2 });
 	t.mock.timers.tick(1000);
 
 	assert.equal(code, 3);
 	assert.deepEqual(launched, [
-		["sbx", "run", "--name", "omp-webapp-a", "-e", "HERDR_ENV=1", "-e", "HERDR_PANE_ID=w1:host", "-e", "HERDR_SOCKET_PATH=/tmp/herdr.sock", "-e", `FLEET_AGENT_STATE=${STATE}`, "--", "--yolo", "-c"],
+		["sbx", "run", "--name", "pi-webapp-a", "-e", "HERDR_ENV=1", "-e", "HERDR_PANE_ID=w1:host", "-e", "HERDR_SOCKET_PATH=/tmp/herdr.sock", "-e", `FLEET_AGENT_STATE=${STATE}`, "--", "--approve", "-c"],
 	]);
 	assert.ok(io.calls.some((c) => c[0] === "remove" && c[1] === STATE));
 	assert.deepEqual(io.calls.filter((c) => c[1] === "pane"), []);
@@ -96,7 +96,7 @@ test("a report herdr refuses goes again on the next read", async (t: TestContext
 	await agent.exited;
 
 	assert.deepEqual(agent.reports(), [
-		["w1:host", "--source", "fleet:omp", "--agent", "omp", "--state", "working", "--seq", "7"],
-		["w1:host", "--source", "fleet:omp", "--agent", "omp", "--state", "working", "--seq", "7"],
+		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "working", "--seq", "7"],
+		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "working", "--seq", "7"],
 	]);
 });

@@ -72,26 +72,7 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")), []);
 });
 
-test("OMP exports its session owner and ignores another session's events", (t) => {
-	const runtime = monitorRuntime(t, HARNESSES.omp, [
-		{ name: "omp-worker-a", pane_id: "worker-a:pane", agent_status: "working" },
-		{ name: "omp-worker-b", pane_id: "worker-b:pane", agent_status: "working" },
-	]);
-	runtime.events(
-		"2026-09-16T10:00:00.000Z - up omp-worker-a session=session-a",
-		"2026-09-16T10:01:00.000Z - up omp-worker-b session=session-b",
-	);
-	const watcher = runtime.start("session-a");
-
-	runtime.settle("worker-a:pane");
-	runtime.settle("worker-b:pane");
-
-	assert.equal(process.env.OMP_SESSION_ID, "session-a");
-	assert.equal(watcher.messages.length, 1);
-	assert.match(watcher.messages[0].message.content, /^\[fleet\] omp-worker-a: working -> idle\n/);
-});
-
-for (const h of [HARNESSES.pi, HARNESSES.omp]) {
+for (const h of [HARNESSES.pi]) {
 	test(`a fleet command the ${h.name} model runs carries the session that owns it`, (t) => {
 		const watcher = monitorRuntime(t, h).start("session-a");
 		const run = (command: string) => {
@@ -108,7 +89,7 @@ for (const h of [HARNESSES.pi, HARNESSES.omp]) {
 }
 
 test("a watcher that cannot reach herdr says so in the session once per trouble", async (t) => {
-	const runtime = monitorRuntime(t, HARNESSES.omp, [], new Error("herdr: connection refused"));
+	const runtime = monitorRuntime(t, HARNESSES.pi, [], new Error("herdr: connection refused"));
 	const watcher = runtime.start("session-a");
 
 	await watcher.tools.fleet_watch.execute("call", { agents: "" });

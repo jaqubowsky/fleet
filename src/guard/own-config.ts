@@ -3,12 +3,12 @@ import { HARNESSES } from "../harness.ts";
 import { argvsOf } from "./argv.ts";
 import { within } from "./host.ts";
 
-const HOMES = [HARNESSES.pi, HARNESSES.omp];
+const HOMES = [HARNESSES.pi];
 const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|echo|printf|test|\[|cd|pushd)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 
-export const OWN_CONFIG = "~/.pi and ~/.omp hold the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home.";
+export const OWN_CONFIG = "~/.pi holds the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home.";
 
 function located(word: string, dir: string, home: string): string {
 	return resolve(dir, word.replace(/^(~|\$HOME|\$\{HOME\})(?=\/|$)/, home));

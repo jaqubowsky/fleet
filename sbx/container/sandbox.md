@@ -21,7 +21,7 @@ You run in an isolated container. Someone outside watches this session and gives
 1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file and `status.md` before your first command
 2. `project.md`, when present, says how this project does what the rules require: read it too
 3. `runbook/` at the root of `$FLEET_ARTIFACTS` may hold how this app starts and how its screens drive. The root is shared by every container on this repository and read by the person
-4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md`, `~/.omp/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
+4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
 5. A red gate is yours only when the same command is green on the base. Known base failures live in `$FLEET_ARTIFACTS/runbook/gate-baseline.md`: the command, the base sha and counts per file. Read it, when it exists, before running anything twice. A gate it does not record runs once on the base:
    - on this checkout while it is still clean at the base commit
    - otherwise in `base-worktree <base-commit>`, which builds `/tmp/base` with deps, env files and generated code linked in. A build output under suspicion is shared through those links, so rebuild it there first

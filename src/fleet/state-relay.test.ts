@@ -47,22 +47,22 @@ function container(t: TestContext) {
 }
 
 const REPORT = {
-	id: "herdr:omp:1",
+	id: "herdr:pi:1",
 	method: "pane.report_agent",
-	params: { pane_id: "w1:p1", source: "herdr:omp", agent: "omp", state: "working", message: "Running tests", seq: 7, agent_session_path: "/home/agent/.omp/s.jsonl" },
+	params: { pane_id: "w1:p1", source: "herdr:pi", agent: "pi", state: "working", message: "Running tests", seq: 7, agent_session_path: "/home/agent/.pi/s.jsonl" },
 };
 
 test("herdr's integration gets an answer, and its state lands in the task directory", async (t: TestContext) => {
 	const agent = container(t);
 	await agent.start("agent-state.json");
 
-	const session = await agent.ask({ id: "herdr:omp:session:1", method: "pane.report_agent_session", params: { pane_id: "w1:p1", seq: 6 } });
+	const session = await agent.ask({ id: "herdr:pi:session:1", method: "pane.report_agent_session", params: { pane_id: "w1:p1", seq: 6 } });
 	const before = agent.state("agent-state.json");
 	const answer = await agent.ask(REPORT);
 
-	assert.deepEqual(session, { id: "herdr:omp:session:1", result: {} });
+	assert.deepEqual(session, { id: "herdr:pi:session:1", result: {} });
 	assert.equal(before, undefined);
-	assert.deepEqual(answer, { id: "herdr:omp:1", result: {} });
+	assert.deepEqual(answer, { id: "herdr:pi:1", result: {} });
 	assert.deepEqual(agent.state("agent-state.json"), { state: "working", message: "Running tests", seq: 7 });
 });
 
@@ -97,7 +97,7 @@ test("a client that hangs up before its answer leaves the relay answering", asyn
 	hungUp.end(`${JSON.stringify(REPORT)}\n`);
 	hungUp.destroy();
 	await new Promise((resolve) => setTimeout(resolve, 50));
-	const answer = await agent.ask({ ...REPORT, id: "herdr:omp:2" });
+	const answer = await agent.ask({ ...REPORT, id: "herdr:pi:2" });
 
-	assert.deepEqual(answer, { id: "herdr:omp:2", result: {} });
+	assert.deepEqual(answer, { id: "herdr:pi:2", result: {} });
 });

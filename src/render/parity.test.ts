@@ -21,7 +21,6 @@ function sources(extra: Record<string, unknown>): Record<string, unknown> {
 		"read /root/claude/CLAUDE.md": "Rules live in rules/.\n",
 		"read /root/sbx/container/toolchain.Dockerfile": "RUN install node\n",
 		"read /root/pi/sbx/Dockerfile": "FROM pi-base\n",
-		"read /root/omp/sbx/Dockerfile": "FROM omp-base\n",
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n",
 		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
 		"read /root/host/repos.json": SAMPLE_PROFILES,
@@ -29,7 +28,7 @@ function sources(extra: Record<string, unknown>): Record<string, unknown> {
 	};
 }
 
-test("the three harnesses render alike except where the list says why", () => {
+test("the two harnesses render alike except where the list says why", () => {
 	const result = parity(root, { ...realIo(root, HARNESSES.pi), log: () => {} });
 
 	assert.deepEqual(result.unlisted, []);
@@ -43,7 +42,7 @@ test("a harness text nobody listed fails the parity check", () => {
 
 	const result = parity("/root", io);
 
-	assert.deepEqual(result.unlisted, ["rules/core.md: a different note [pi]", "rules/core.md: shared note [omp, claude]"]);
+	assert.deepEqual(result.unlisted, ["rules/core.md: a different note [pi]", "rules/core.md: shared note [claude]"]);
 });
 
 test("text from a harness's own directory with no shared source is that harness's", () => {
@@ -51,7 +50,6 @@ test("text from a harness's own directory with no shared source is that harness'
 		sources({
 			"read /root/rules/core.md": "# Core\n{{file:own}}\n",
 			"read /root/pi/fragments/own.md": "wait in a poll\n",
-			"read /root/omp/fragments/own.md": "wait in a batch\n",
 			"read /root/claude/fragments/own.md": "wait in the background\n",
 			"read /root/claude/CLAUDE.md": "Rules live in rules/.\n",
 		}),
@@ -66,21 +64,20 @@ test("a shared fragment every harness overrides is still compared", () => {
 	const io = fakeIo(
 		sources({
 			"read /root/pi/fragments/note.md": "one note\n",
-			"read /root/omp/fragments/note.md": "one note\n",
 			"read /root/claude/fragments/note.md": "another note\n",
 		}),
 	);
 
 	const result = parity("/root", io);
 
-	assert.deepEqual(result.unlisted, ["rules/core.md: one note [pi, omp]", "rules/core.md: another note [claude]"]);
+	assert.deepEqual(result.unlisted, ["rules/core.md: one note [pi]", "rules/core.md: another note [claude]"]);
 });
 
 test("an override that differs only in vocabulary is reported", () => {
-	const io = fakeIo(sources({ "read /root/fragments/note.md": "run {{cli}} land\n", "read /root/omp/fragments/note.md": "run ofleet land\n" }));
+	const io = fakeIo(sources({ "read /root/fragments/note.md": "run {{cli}} land\n", "read /root/pi/fragments/note.md": "run fleet land\n" }));
 
 	const result = parity("/root", io);
 
 	assert.deepEqual(result.unlisted, []);
-	assert.deepEqual(result.overrides, ["omp/fragments/note.md matches fragments/note.md up to vocabulary (note.md)"]);
+	assert.deepEqual(result.overrides, ["pi/fragments/note.md matches fragments/note.md up to vocabulary (note.md)"]);
 });

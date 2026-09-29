@@ -1,2 +1,0 @@
-#!/bin/sh
-FLEET_HARNESS="${FLEET_HARNESS:-omp}" exec node "$(dirname "$(readlink -f "$0")")/../src/fleet/cli.ts" "$@"

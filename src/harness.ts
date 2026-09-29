@@ -1,4 +1,4 @@
-export type HarnessName = "pi" | "omp" | "claude";
+export type HarnessName = "pi" | "claude";
 
 export type Harness = {
 	name: HarnessName;
@@ -21,7 +21,6 @@ export type Harness = {
 	sbxGuidance?: string;
 	containerSessions?: string;
 	cache: string;
-	deliverAs?: "followUp" | "nextTurn";
 	tokens: Record<string, string>;
 };
 
@@ -55,7 +54,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "pi" },
 		cache: "cache",
-		deliverAs: "followUp",
 		tokens: {
 			"tool.ask": "ask_user_question",
 			"skill.ingest": "/skill:ingest",
@@ -72,43 +70,6 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"handoff.continue": continueInOneSteer("fleet"),
 			"ci.wait": pollCi("pi"),
 			"review.call": "One `reviewer` call with `async: false`, so this turn waits for it, `output` set to the absolute path of `review.md`, `outputMode: \"file-only\"`.",
-		},
-	},
-	omp: {
-		name: "omp",
-		cli: "ofleet",
-		home: ".omp",
-		prefix: "omp-",
-		agent: "omp",
-		image: "my-omp:v1",
-		owner: "session",
-		sessionIdEnv: "OMP_SESSION_ID",
-		sbxFlags: ["--skills=off"],
-		env: [],
-		agentSpec: (root) => `${root}/omp/kits/omp`,
-		agentArgs: ["--yolo"],
-		resume: "-c",
-		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
-		herdrIntegration: "agent/extensions/herdr-omp-agent-state.ts",
-		codex: { auth: "agent/auth.json", kit: "omp" },
-		cache: "cache",
-		deliverAs: "nextTurn",
-		tokens: {
-			"tool.ask": "ask",
-			"skill.ingest": "/skill:ingest",
-			refs: REFS_BESIDE_AGENTS,
-			"refs.testing": TESTING_BESIDE_AGENTS,
-			"refs.ci": CI_BESIDE_AGENTS,
-			"refs.ticket": TICKET_BESIDE_AGENTS,
-			"steer.result": "steered; omp takes it after its current tool call, and the container is under watch from now on",
-			"watch.source": watchSource("OMP", "ofleet", "OMP_SESSION_ID"),
-			"reload.models": RELOAD_MODELS,
-			"delegation.parallel": "\"Parallel\" = one `task` batch holding several independent `explorer` or `researcher` items, started together, results collected before any synthesis",
-			"model.flag": "<provider/id:thinking>",
-			"handoff.command": "/session-handoff",
-			"handoff.continue": continueInOneSteer("ofleet"),
-			"ci.wait": pollCi("omp"),
-			"review.call": "One `reviewer` call, `output` set to the absolute path of `review.md`, `outputMode: \"file-only\"`.",
 		},
 	},
 	claude: {

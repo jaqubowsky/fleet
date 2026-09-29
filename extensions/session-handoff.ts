@@ -59,7 +59,7 @@ async function sdkQueue(): Promise<MutationQueue> {
 function agentHome(): string {
 	const configured = process.env.PI_CODING_AGENT_DIR?.replace(/^~(?=\/|$)/, homedir());
 	if (configured) return configured;
-	return [join(homedir(), ".pi", "agent"), join(homedir(), ".omp", "agent")].find(existsSync) ?? join(homedir(), ".pi", "agent");
+	return join(homedir(), ".pi", "agent");
 }
 
 export default async function (pi: any, mutationQueue?: MutationQueue) {
@@ -68,7 +68,7 @@ export default async function (pi: any, mutationQueue?: MutationQueue) {
 	const taskDirectory = join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME);
 	const statusFile = join(taskDirectory, "status.md");
 	const agentDir = agentHome();
-	const file = ["settings.json", "config.yml"].map((name) => join(agentDir, name)).find(existsSync) ?? join(agentDir, "settings.json");
+	const file = join(agentDir, "settings.json");
 	let settings;
 	try {
 		settings = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};

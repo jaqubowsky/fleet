@@ -1,8 +1,8 @@
 # harness
 
-One source for three agent harnesses on this Mac: pi, OMP and Claude Code. Each one runs a host session plus one container per task. A container is a private clone in an sbx sandbox with the agent waiting in a herdr tab. The host session puts containers up, watches them and brings their branches home. It prompts a container only when told to.
+One source for two agent harnesses on this Mac: pi and Claude Code. Each one runs a host session plus one container per task. A container is a private clone in an sbx sandbox with the agent waiting in a herdr tab. The host session puts containers up, watches them and brings their branches home. It prompts a container only when told to.
 
-Rules, skills, sub-agents, the guard policy, the fleet CLI and the container setup are written once. `pi/`, `omp/` and `claude/` hold only what one harness cannot share: its settings, its extension or hook wiring, its image and kit, and the text fragments that name its own tools.
+Rules, skills, sub-agents, the guard policy, the fleet CLI and the container setup are written once. `pi/` and `claude/` hold only what one harness cannot share: its settings, its extension or hook wiring, its image and kit, and the text fragments that name its own tools.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ The repository renders into two seats per harness. The host seat is the harness 
                    ~/harness, the only place to edit
  ┌──────────────────────────────────────────────────────────────────┐
  │ written once                        per harness                  │
- │   rules/  rules/refs/  agents/        pi/  omp/  claude/         │
+ │   rules/  rules/refs/  agents/        pi/  claude/               │
  │   skills/{shared,host,container}/     settings, hooks, kit,      │
  │   fragments/  extensions/  src/       image, own fragments       │
  │   sbx/container/                                                 │
@@ -24,7 +24,7 @@ The repository renders into two seats per harness. The host seat is the harness 
                 ▼                                    ▼
    host seat                            container seat
    ./sync.sh --apply, <cli> render      <cli> build, then sbx/build.sh
-   ~/.pi  ~/.omp  ~/.claude             my-pi:v1  my-omp:v1  my-claude:v1
+   ~/.pi  ~/.claude                     my-pi:v1  my-claude:v1
    rules/ with host.md                  rules/ without host.md, + sandbox.md
    skills/shared + skills/host          skills/shared + skills/container
 ```
@@ -35,7 +35,7 @@ At runtime the host and a container share one task directory and talk through he
             this Mac                                   sbx sandbox, one per task
  ┌────────────────────────────────┐              ┌────────────────────────────────┐
  │ host session                   │  up, steer   │ agent in a herdr tab           │
- │ pi, omp or claude              │ ───────────▶ │ private clone, task branch     │
+ │ pi or claude                   │ ───────────▶ │ private clone, task branch     │
  │                                │              │ no SSH agent, no signing key   │
  │ <cli> watch                    │ herdr state  │                                │
  │   herdr socket + status.md     │ ◀─────────── │ working, blocked, done         │
@@ -77,17 +77,17 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `fragments/` | text a harness can replace with its own `<harness>/fragments/<name>.md` |
 | `src/harness.ts` | every value that differs per harness |
 | `src/render/` | renders rules, skills, agents and settings for one harness and seat |
-| `src/fleet/` | the fleet CLI behind `fleet`, `ofleet` and `cfleet` |
-| `src/guard/` | the tool-call policy all three hosts enforce, tested against the case corpus in `host/tests/` |
+| `src/fleet/` | the fleet CLI behind `fleet` and `cfleet` |
+| `src/guard/` | the tool-call policy both hosts enforce, tested against the case corpus in `host/tests/` |
 | `src/remote/` | the pi phone remote, see `extensions/pi-remote/README.md` |
 | `src/statusline/` | the status line pi and Claude draw: folder, branch, model, context bar toward the 250k handoff, usage limits |
-| `extensions/` | pi-family extensions (pi and OMP share the API): fleet monitor, guard, session handoff, error handoff, status history, state relay, statusline, phone remote |
+| `extensions/` | pi extensions: fleet monitor, guard, session handoff, error handoff, status history, state relay, statusline, phone remote |
 | `sbx/` | `build.sh`, the container rule `sandbox.md`, `base-worktree`, `ticket-check` and `toolchain.Dockerfile`, which every `<harness>/sbx/Dockerfile` pulls in at `{{toolchain}}` |
 | `host/` | herdr config and pi screen rules, the no-ssh-agent kit, the guard corpus and test runner |
 | `host/repos.json` | the `*` profile, the one a repository your own profiles omit gets (User config) |
 | `host/projects/template.md` | the headings of a per-repository overlay (User config) |
-| `pi/`, `omp/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
-| `bin/` | `fleet`, `ofleet`, `cfleet`: one CLI, one harness each |
+| `pi/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
+| `bin/` | `fleet`, `cfleet`: one CLI, one harness each |
 | `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it; ends with what a new Mac lacks that it cannot set up, under `== set up by hand` |
 | `inventory.md` | what lives outside this repo: tokens, MCP servers, model logins, network policy |
 | `BOOTSTRAP.md` | setting this Mac up from nothing |
@@ -101,7 +101,7 @@ What names your own repositories lives outside this repository, in `~/.config/ha
 - `repos.json`: your repository permission profiles, the same shape as `host/repos.json`. An entry here wins over the harness's for the same match; a repository no entry matches gets the harness's `*`
 - `projects/<owner>/<repo>.md`: the overlay of one repository, holding only what the repository, the tracker and the profile do not say themselves. `up` writes it into the task directory as `project.md` and runs the one `sh` block under `## Setup` in the container after the dependency install. `host/projects/template.md` holds the headings
 
-Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `<cli> profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi and OMP in the checkout's `.pi/mcp.json` or `.omp/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
+Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `<cli> profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi in the checkout's `.pi/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
 
 Moving from the old paths, before you pull this change:
 
@@ -115,28 +115,28 @@ Moving from the old paths, before you pull this change:
 
 ## Commands
 
-`fleet` drives pi containers, `ofleet` OMP ones, `cfleet` Claude ones. The verbs are the same on all three and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
+`fleet` drives pi containers, `cfleet` Claude ones. The verbs are the same on both and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
 
-A pi or OMP host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `<cli> build`, and `up` warns when the image is older than the repository.
+A pi host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `<cli> build`, and `up` warns when the image is older than the repository.
 
 ## What differs per harness
 
-| Concern | pi | OMP | Claude Code | Why |
-| --- | --- | --- | --- | --- |
-| Waking the host | `extensions/fleet-monitor.ts` runs `src/fleet/watch.ts` in process and triggers a turn per wake | same extension, `deliverAs: nextTurn` | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
-| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | same, by `OMP_SESSION_ID` | the ones this herdr pane put up or steered last; more by name on `cfleet watch` | same as above |
-| Agent state in herdr | `fleet relay` in the pane reports as `fleet:pi` | `ofleet relay`, `fleet:omp` | herdr reads Claude's screen | herdr's Claude integration reports only the session |
-| Guard | extension, pi tool names translated | extension, OMP tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
-| Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |
-| Error handoff | `agent_end` with `stopReason: error` | same | `StopFailure` hook | each agent's own error event |
-| Status history into `logs/status.jsonl` | `tool_execution_end` | same | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
-| Transcripts in `logs/sessions/` | written as they happen | same | copied out by `cfleet down` | Claude Code has no session directory setting |
-| Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | same | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `cfleet down` |
-| Cost in `logs/usage.json` | the session's own cost records | same | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |
-| Statusline | `extensions/statusline.ts` with `src/statusline/` | native segments in `omp/profiles/settings.json` | `claude/statusline.mjs` with `src/statusline/` | OMP draws its own footer; Claude Code runs a command |
-| Models | seats in `pi/profiles/models.json` | seats in `omp/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `inventory.md` |
-| Phone control | `extensions/pi-remote` | not loaded | Remote Control, a product setting | OMP lacks `agent_settled` and `session_info_changed` |
-| Host sandbox | none | none | macOS sandbox from root-owned managed settings | only Claude Code has one |
+| Concern | pi | Claude Code | Why |
+| --- | --- | --- | --- |
+| Waking the host | `extensions/fleet-monitor.ts` runs `src/fleet/watch.ts` in process and triggers a turn per wake | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
+| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | the ones this herdr pane put up or steered last; more by name on `cfleet watch` | same as above |
+| Agent state in herdr | `fleet relay` in the pane reports as `fleet:pi` | herdr reads Claude's screen | herdr's Claude integration reports only the session |
+| Guard | extension, pi tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
+| Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |
+| Error handoff | `agent_end` with `stopReason: error` | `StopFailure` hook | each agent's own error event |
+| Status history into `logs/status.jsonl` | `tool_execution_end` | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
+| Transcripts in `logs/sessions/` | written as they happen | copied out by `cfleet down` | Claude Code has no session directory setting |
+| Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `cfleet down` |
+| Cost in `logs/usage.json` | the session's own cost records | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |
+| Statusline | `extensions/statusline.ts` with `src/statusline/` | `claude/statusline.mjs` with `src/statusline/` | Claude Code runs a command |
+| Models | seats in `pi/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `inventory.md` |
+| Phone control | `extensions/pi-remote` | Remote Control, a product setting | Claude Code ships its own |
+| Host sandbox | none | macOS sandbox from root-owned managed settings | only Claude Code has one |
 
 ## Checks
 
