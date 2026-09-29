@@ -8,7 +8,7 @@ import { changes } from "../../extensions/status-history.ts";
 import { clearedNote } from "../../claude/hooks/container.ts";
 import { fakeIo } from "./fake-io.ts";
 import { renderText, seatSettings } from "../render/render.ts";
-import { HARNESSES } from "../harness.ts";
+import { CLI, KINDS } from "../harness.ts";
 
 async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}) {
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
@@ -115,7 +115,7 @@ test("sandbox uses an overridden rendered threshold", async (t) => {
 		"read /root/pi/profiles/settings.json": '{"unknown":{"keep":true}}',
 		"read /root/pi/profiles/sbx.json": '{"sessionHandoff":{"suggestAtTokens":84}}',
 	});
-	const r = await runtime(t, { settings: seatSettings(io, "/root", HARNESSES.pi, "sbx.json"), replaces: false });
+	const r = await runtime(t, { settings: seatSettings(io, "/root", "pi", "sbx.json"), replaces: false });
 
 	r.usage(83);
 	r.turnEnd();
@@ -197,9 +197,9 @@ test("a cancelled replacement reports that it stayed put", async (t) => {
 
 test("every harness's container rule suggests a handoff with the command its host is told to steer", () => {
 	const rule = readFileSync("sbx/container/sandbox.md", "utf8");
-	const claude = `status: implementing\nattention: ${suggested(HARNESSES.claude.tokens["handoff.command"])}\n`;
+	const claude = `status: implementing\nattention: ${suggested(KINDS.claude.tokens["handoff.command"])}\n`;
 
-	const rendered = Object.values(HARNESSES).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: harness.cli }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
+	const rendered = Object.values(KINDS).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: CLI }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
 
 	for (const { harness, text } of rendered) assert.ok(text.includes(`attention: ${suggested(harness.tokens["handoff.command"])}`), harness.name);
 	assert.match(clearedNote(claude) ?? "", new RegExp(`^attention: ${COMPLETE}$`, "m"));

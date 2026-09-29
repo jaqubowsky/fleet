@@ -73,7 +73,7 @@ excluded = desired["sandbox"]["excludedCommands"]
 
 check("the live file is the repo's file, so a host Linear server a profile names leaves the machine-wide config", desired == source and "managedMcpServers" not in desired)
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
-check("cfleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("cfleet up*", "cfleet build*", "cfleet land*", "cfleet down*")))
+check("fleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("fleet up*", "fleet build*", "fleet land*", "fleet down*")))
 check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
 check("gh lists runs and pull requests and reads a run outside the host sandbox", all(pattern in excluded for pattern in ("gh run list*", "gh run view*", "gh pr list*")))
 check("gh api is not excluded from the host sandbox, since -f, -F and --input make it a write", not [pattern for pattern in excluded if fnmatch.fnmatch("gh api repos/o/r -f a=b", pattern)])

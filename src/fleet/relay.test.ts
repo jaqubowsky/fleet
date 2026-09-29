@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
-import { HARNESSES } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { relay } from "./relay.ts";
 
 const TASK = "/home/me/.sandboxes/webapp/pi-webapp-a";
 const STATE = `${TASK}/logs/agent-state.json`;
+const LISTED = { "sbx ls --json": { sandboxes: [{ name: "pi-webapp-a", agent: "pi", status: "running", workspaces: ["/w/webapp"] }] } };
 
 function running(t: TestContext) {
 	t.mock.timers.enable({ apis: ["setInterval"] });
-	const io = fakeIo({}, HARNESSES.pi);
+	const io = fakeIo(LISTED);
 	const launched: string[][] = [];
 	let finish: (code: number) => void = () => {};
 	io.launch = (command, args) => {
@@ -59,7 +59,7 @@ test("the container can set nothing in herdr but its pane's state, message and s
 
 test("the agent runs with herdr's variables pointed inside the container, and the relay ends with its exit code", async (t: TestContext) => {
 	t.mock.timers.enable({ apis: ["setInterval"] });
-	const io = fakeIo({}, HARNESSES.pi);
+	const io = fakeIo(LISTED);
 	io.files[STATE] = JSON.stringify({ state: "working", seq: 1 });
 	const launched: string[][] = [];
 	io.launch = async (command, args) => {

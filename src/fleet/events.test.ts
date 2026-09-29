@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { eventAgents, lifecycle, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
-import { HARNESSES } from "../harness.ts";
+import { SEATS } from "../harness.ts";
 import { realIo } from "./io.ts";
 
 test("new up and steer events carry the invoking Pi session", () => {
@@ -12,8 +12,8 @@ test("new up and steer events carry the invoking Pi session", () => {
 	logEvent(io, "up", "webapp-web-2");
 
 	assert.deepEqual(io.calls, [
-		["append", "/home/me/.pi/agent/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
-		["append", "/home/me/.pi/agent/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
+		["append", "/home/me/.sandboxes/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
+		["append", "/home/me/.sandboxes/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
 	]);
 });
 
@@ -46,7 +46,7 @@ test("the shell Pi session id reaches event logging", (t) => {
 	const previous = process.env.PI_SESSION_ID;
 	process.env.PI_SESSION_ID = "shell-session";
 	t.after(() => { if (previous === undefined) delete process.env.PI_SESSION_ID; else process.env.PI_SESSION_ID = previous; });
-	const io = realIo("/home/me", HARNESSES.pi);
+	const io = realIo("/home/me", SEATS.pi);
 	const append = t.mock.method(io, "append", (_path: string, _line: string) => {});
 
 	logEvent(io, "up", "worker-a");
@@ -64,11 +64,11 @@ test("a harness without a shell session id owns events by pane", () => {
 });
 
 test("a harness that watches through its CLI logs events in its writable fleet cache", () => {
-	const io = fakeIo({}, HARNESSES.claude);
+	const io = fakeIo({}, SEATS.claude);
 
 	logEvent(io, "down", "worker-a");
 
-	assert.deepEqual(io.calls, [["append", "/home/me/.claude/fleet-cache/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
+	assert.deepEqual(io.calls, [["append", "/home/me/.sandboxes/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
 });
 
 test("a container taken down is closed until it comes up again", () => {

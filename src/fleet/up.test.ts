@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { HARNESSES } from "../harness.ts";
+import { SEATS, KINDS } from "../harness.ts";
 import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, SAMPLE_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 
@@ -56,7 +56,7 @@ test("up creates the container, switches the branch, starts the install in the b
 		io.calls.some(
 			(c) =>
 				c[0] === "append" &&
-				c[1] === "/home/me/.pi/agent/fleet-events.log" &&
+				c[1] === "/home/me/.sandboxes/fleet-events.log" &&
 				/ up pi-webapp-web-1 session=$/.test(c[2]),
 		),
 	);
@@ -124,15 +124,15 @@ test("up waits for the container tty to leave canonical input mode", async () =>
 	]);
 });
 
-for (const harness of [HARNESSES.claude]) {
-	test(`up waits for the ${harness.agent} process even when herdr already reports a status`, async () => {
+for (const harness of [SEATS.claude]) {
+	test(`up waits for the ${harness.name} process even when herdr already reports a status`, async () => {
 		const io = fakeIo(base, harness);
 		const sbx = io.sbx;
 		let probes = 0;
 		io.sbx = (args, opts) => {
 			if (args[0] === "exec" && args[2] === "pgrep") {
 				probes++;
-				assert.deepEqual(args.slice(2), ["pgrep", "-x", harness.agent]);
+				assert.deepEqual(args.slice(2), ["pgrep", "-x", harness.name]);
 				if (probes === 1) throw new Error("exit status 1");
 				return "42";
 			}
@@ -142,11 +142,11 @@ for (const harness of [HARNESSES.claude]) {
 		await up({ repo, label: "web-1", root: "/root" }, io);
 
 		assert.equal(probes, 2);
-		assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", `${harness.agent}-webapp-web-1`]);
+		assert.deepEqual(io.calls.at(-1), ["herdr", "agent", "rename", "w1:p9", `${harness.name}-webapp-web-1`]);
 	});
 
-	test(`up fails with the probe's error when the ${harness.agent} process never starts`, async () => {
-		const io = fakeIo({ ...base, [`sbx exec ${harness.agent}-webapp-web-1 pgrep`]: new Error("pgrep exit status 1") }, harness);
+	test(`up fails with the probe's error when the ${harness.name} process never starts`, async () => {
+		const io = fakeIo({ ...base, [`sbx exec ${harness.name}-webapp-web-1 pgrep`]: new Error("pgrep exit status 1") }, harness);
 
 		await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /did not become ready.*process probe: Error: pgrep exit status 1/);
 	});
@@ -315,7 +315,7 @@ test("up reuses an existing container and only opens the tab", async () => {
 	const io = fakeIo({
 		...base,
 		"sbx ls --json": {
-			sandboxes: [{ name: "pi-webapp-web-1", status: "stopped", workspaces: [] }],
+			sandboxes: [{ name: "pi-webapp-web-1", agent: "pi", status: "stopped", workspaces: [] }],
 		},
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
@@ -631,14 +631,14 @@ test("a seeded submodule is registered in the clone, not left as untracked work"
 	);
 });
 
-for (const harness of Object.values(HARNESSES)) {
-	test(`the ${harness.agent} container keeps its npm cache in the repository's shared cache`, async () => {
-		const io = fakeIo(base, harness);
+for (const harness of Object.values(KINDS)) {
+	test(`the ${harness.name} container keeps its npm cache in the repository's shared cache`, async () => {
+		const io = fakeIo(base, SEATS[harness.name]);
 		await up({ repo, label: "web-1", root: "/root" }, io);
 		const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 
-		assert.ok(run.includes(`npm_config_cache=${cacheDir(repo, io)}/npm`));
-		assert.ok(run.includes(cacheDir(repo, io)));
+		assert.ok(run.includes(`npm_config_cache=${cacheDir(repo, harness, io)}/npm`));
+		assert.ok(run.includes(cacheDir(repo, harness, io)));
 	});
 }
 
@@ -847,7 +847,7 @@ test("up logs which start the branch took", async () => {
 });
 
 test("a claude container is given colour, a pi container is left as it is", async () => {
-	const claudeIo = fakeIo(base, HARNESSES.claude);
+	const claudeIo = fakeIo(base, SEATS.claude);
 	const piIo = fakeIo(base);
 
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, claudeIo);
@@ -866,7 +866,7 @@ test("a claude container is given colour, a pi container is left as it is", asyn
 
 for (const [h, integration, command] of [
 	[
-		HARNESSES.pi,
+		SEATS.pi,
 		".pi/agent/extensions/herdr-agent-state.ts",
 		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
 	],
@@ -880,15 +880,15 @@ for (const [h, integration, command] of [
 			io.calls.some(
 				(c) =>
 					c.join(" ") ===
-					`sbx cp /home/me/${integration} ${h.prefix}webapp-web-1:/home/agent/${integration}`,
+					`sbx cp /home/me/${integration} ${KINDS[h.name].prefix}webapp-web-1:/home/agent/${integration}`,
 			),
 		);
 		assert.equal(io.calls.find((c) => c[1] === "pane")![4], command);
 	});
 }
 
-test("cfleet up starts claude straight through sbx run and copies no herdr integration", async () => {
-	const io = fakeIo(base, HARNESSES.claude);
+test("up of a claude container starts claude straight through sbx run and copies no herdr integration", async () => {
+	const io = fakeIo(base, SEATS.claude);
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
@@ -899,8 +899,8 @@ test("cfleet up starts claude straight through sbx run and copies no herdr integ
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
-test("cfleet up empties the CLAUDE.md sbx writes beside the workspace, and fleet up leaves pi alone", async () => {
-	const claude = fakeIo(base, HARNESSES.claude);
+test("up of a claude container empties the CLAUDE.md sbx writes beside the workspace, and fleet up leaves pi alone", async () => {
+	const claude = fakeIo(base, SEATS.claude);
 	const pi = fakeIo(base);
 
 	await up({ repo, label: "web-1", root: "/root" }, claude);
@@ -923,8 +923,8 @@ test("up stops before creating anything when no sbx binding lets openai in, unle
 	assert.ok(openrouter.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
 });
 
-test("cfleet up stops when claude in the new container is not logged in", async () => {
-	const io = fakeIo({ ...base, "herdr agent read w1:p9 --source visible": "Not logged in · Run /login" }, HARNESSES.claude);
+test("up of a claude container stops when claude in the new container is not logged in", async () => {
+	const io = fakeIo({ ...base, "herdr agent read w1:p9 --source visible": "Not logged in · Run /login" }, SEATS.claude);
 
 	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /claude is not logged in.*\/login in tab claude-webapp-web-1/);
 });
@@ -997,7 +997,7 @@ const fromSession = JSON.stringify({
 });
 
 test("where the profile takes the container token from the session, up hands it to sbx on stdin and asks 1Password nothing", async () => {
-	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession, [privateRepos]: "alice/private-app", "env GH_TOKEN": "github_pat_session" }, HARNESSES.claude);
+	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession, [privateRepos]: "alice/private-app", "env GH_TOKEN": "github_pat_session" }, SEATS.claude);
 
 	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
 
@@ -1009,14 +1009,14 @@ test("where the profile takes the container token from the session, up hands it 
 });
 
 test("where the profile takes the container token from the session and the session has none, up stops before creating anything", async () => {
-	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession }, HARNESSES.claude);
+	const io = fakeIo({ ...pushing, "read /root/host/repos.json": fromSession }, SEATS.claude);
 
 	await assert.rejects(up({ repo: "/r/private-app", label: "x", root: "/root" }, io), /alice\/private-app takes its container token from GH_TOKEN, and this session has none: start claude with GH_TOKEN set/);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && (c[1] === "run" || c[1] === "secret")));
 });
 
 test("where the container may push, up keeps a token that sees this private repository alone", async () => {
-	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app" }, HARNESSES.claude);
+	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app" }, SEATS.claude);
 
 	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
 
@@ -1027,7 +1027,7 @@ test("where the container may push, up keeps a token that sees this private repo
 });
 
 test("where the container may push, up keeps a token that sees no private repository, as for a public project", async () => {
-	const io = fakeIo({ ...pushing, [privateRepos]: "" }, HARNESSES.claude);
+	const io = fakeIo({ ...pushing, [privateRepos]: "" }, SEATS.claude);
 
 	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
 
@@ -1036,7 +1036,7 @@ test("where the container may push, up keeps a token that sees no private reposi
 });
 
 test("where the container may push, up removes the container whose token sees another private repository", async () => {
-	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app\nalice/diary" }, HARNESSES.claude);
+	const io = fakeIo({ ...pushing, [privateRepos]: "alice/private-app\nalice/diary" }, SEATS.claude);
 
 	await assert.rejects(
 		up({ repo: "/r/private-app", label: "x", root: "/root" }, io),
@@ -1084,4 +1084,25 @@ test("an overlay Setup block runs even where no lockfile installs", async () => 
 
 	const install = io.calls.find((c) => c[0] === "sbx" && String(c[5]).includes("fleet-install"));
 	assert.match(String(install?.[7]), /lefthook install/);
+});
+
+for (const seat of Object.values(SEATS))
+	for (const kind of Object.values(KINDS))
+		test(`a ${seat.name} seat puts up a ${kind.name} container and logs it where every seat reads`, async () => {
+			const io = fakeIo(base, seat);
+
+			const out = await up({ repo, label: "web-1", root: "/root", branch: "web-1", kind: kind.name }, io);
+
+			assert.equal(out.sandbox, `${kind.prefix}webapp-web-1`);
+			assert.ok(io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!.includes(kind.agentSpec("/root")));
+			assert.match(io.calls.find((c) => c[1] === "pane")!.at(-1)!, new RegExp(`^HERDR_AGENT=${kind.name} `));
+			assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === "/home/me/.sandboxes/fleet-events.log" && c[2].includes(` up ${out.sandbox} `)));
+		});
+
+test("up without a kind puts up the seat's own agent", async () => {
+	const io = fakeIo(base, SEATS.claude);
+
+	const out = await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
+
+	assert.equal(out.sandbox, "claude-webapp-web-1");
 });

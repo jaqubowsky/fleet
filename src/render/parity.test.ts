@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
-import { HARNESSES } from "../harness.ts";
+import { SEATS } from "../harness.ts";
 import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import { parity, VOCABULARY } from "./parity.ts";
 
@@ -29,7 +29,7 @@ function sources(extra: Record<string, unknown>): Record<string, unknown> {
 }
 
 test("the two harnesses render alike except where the list says why", () => {
-	const result = parity(root, { ...realIo(root, HARNESSES.pi), log: () => {} });
+	const result = parity(root, { ...realIo(root, SEATS.pi), log: () => {} });
 
 	assert.deepEqual(result.unlisted, []);
 	assert.deepEqual([...result.listed].filter(([, lines]) => lines === 0).map(([d]) => d.reason), []);

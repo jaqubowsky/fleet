@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import net from "node:net";
 import { test, type TestContext } from "node:test";
-import { CONTINUE, HARNESSES } from "../harness.ts";
+import { CONTINUE, SEATS, KINDS } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
 import { commitsProbe } from "./status.ts";
@@ -14,14 +14,14 @@ const agents = [
 	{ name: "notes", pane_id: "w1:p3", agent_status: "idle" },
 ];
 const sandboxes = [
-	{ name: "claude-webapp-a", workspaces: ["/w/webapp"] },
-	{ name: "claude-webapp-b", workspaces: ["/w/webapp"] },
+	{ name: "claude-webapp-a", agent: "claude", workspaces: ["/w/webapp"] },
+	{ name: "claude-webapp-b", agent: "claude", workspaces: ["/w/webapp"] },
 ];
 
 function herdr(
 	t: TestContext,
 	agents: { name: string; pane_id: string; agent_status: string }[],
-	harness = HARNESSES.claude,
+	seat = SEATS.claude,
 ) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const intervals = new Map<number, () => void>();
@@ -53,12 +53,13 @@ function herdr(
 			"sbx ls --json": {
 				sandboxes: agents.map((a) => ({
 					name: a.name,
+					agent: a.name.startsWith("pi-") ? "pi" : "claude",
 					workspaces: ["/w/webapp"],
 				})),
 			},
 			"herdr agent list": { result: { agents } },
 		},
-		harness,
+		seat,
 	);
 	const status = (pane: string, next: string) => {
 		for (const socket of sockets)
@@ -181,7 +182,7 @@ test("a watch wake names the full sandbox beside herdr's shortened agent", (t: T
 	const { io, status } = herdr(t, [{ name: agent, pane_id: "t01:pane", agent_status: "working" }]);
 	const sbx = io.sbx;
 	io.sbx = (args, opts) =>
-		args[0] === "ls" ? JSON.stringify({ sandboxes: [{ name: sandbox, workspaces: ["/w/household-budget"] }] }) : sbx(args, opts);
+		args[0] === "ls" ? JSON.stringify({ sandboxes: [{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] }] }) : sbx(args, opts);
 	const wakes: string[] = [];
 	watch(() => undefined, io, (text) => wakes.push(text));
 
@@ -259,7 +260,7 @@ test("a watch with nothing to follow says how to follow a container this pane di
 	watch(() => [], io);
 
 	assert.deepEqual(io.lines, [
-		"[fleet] watching nothing yet; cfleet up adds containers within 30s, and cfleet watch <sandbox> follows one this pane did not start",
+		"[fleet] watching nothing yet; fleet up adds containers within 30s, and fleet watch <sandbox> follows one this pane did not start",
 	]);
 });
 
@@ -279,12 +280,12 @@ test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
 	assert.equal(io.calls.length, asked);
 });
 
-for (const h of Object.values(HARNESSES)) {
+for (const h of Object.values(SEATS)) {
 	test(`the ${h.name} watch subscribes to herdr's status and exit events`, (t: TestContext) => {
 		const { io, sockets } = herdr(
 			t,
 			[
-				{ name: `${h.prefix}webapp-a`, pane_id: "w1:p1", agent_status: "working" },
+				{ name: `${KINDS[h.name].prefix}webapp-a`, pane_id: "w1:p1", agent_status: "working" },
 			],
 			h,
 		);
@@ -338,7 +339,7 @@ test("a steer since the last wake lets the next settle wake the host again", (t:
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
-	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] =
+	io.files["/home/me/.sandboxes/fleet-events.log"] =
 		'2026-09-16T10:05:00.000Z w1:host steer claude-worker session= "go on"\n';
 	status("worker:pane", "working");
 	status("worker:pane", "idle");
@@ -358,7 +359,7 @@ test("a container a down closes wakes once as taken down, never with its last se
 		(text) => wakes.push(text),
 	);
 
-	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] =
+	io.files["/home/me/.sandboxes/fleet-events.log"] =
 		"2026-09-16T10:05:00.000Z w2:other down claude-worker session=\n";
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
@@ -495,7 +496,7 @@ function limited(t: TestContext, pane: string, stoppedAt: Date, agent_status = "
 	const fixture = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status }]);
 	const { io } = fixture;
 	const dir = "/home/me/.sandboxes/webapp/claude-worker";
-	const events = "/home/me/.claude/fleet-cache/fleet-events.log";
+	const events = "/home/me/.sandboxes/fleet-events.log";
 	io.files[`${dir}/status.md`] = "status: blocked\nattention: the agent stopped on an error: rate_limit\n";
 	const stat = io.stat;
 	io.stat = (path) => (path === `${dir}/status.md` ? { size: 1, mtime: stoppedAt, dir: false } : stat(path));
@@ -594,8 +595,8 @@ test("a wake counts the tool calls a container made after status.md turned block
 });
 
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
-	const io = fakeIo({}, HARNESSES.claude);
-	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] = [
+	const io = fakeIo({}, SEATS.claude);
+	io.files["/home/me/.sandboxes/fleet-events.log"] = [
 		"2026-09-16T10:00:00.000Z w1:host up claude-mine session=",
 		"2026-09-16T10:01:00.000Z w2:other up claude-theirs session=",
 		"2026-09-16T10:02:00.000Z w2:other up claude-named session=",
@@ -609,7 +610,7 @@ test("a container steered from another pane leaves the watch without a wake", (t
 	const { io, intervals } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	const log = "/home/me/.claude/fleet-cache/fleet-events.log";
+	const log = "/home/me/.sandboxes/fleet-events.log";
 	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up claude-worker session=";
 	const wakes: string[] = [];
 	watch(paneScope(io, []), io, (text) => wakes.push(text));
@@ -621,8 +622,8 @@ test("a container steered from another pane leaves the watch without a wake", (t
 });
 
 test("CLI watch outside a herdr pane follows only the containers it names", () => {
-	const io = Object.assign(fakeIo({}, HARNESSES.claude), { pane: "-" });
-	io.files["/home/me/.claude/fleet-cache/fleet-events.log"] =
+	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "-" });
+	io.files["/home/me/.sandboxes/fleet-events.log"] =
 		"2026-09-16T10:00:00.000Z - up claude-shell session=";
 
 	assert.deepEqual(paneScope(io, [])(), []);

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HARNESSES } from "../harness.ts";
+import { SEATS } from "../harness.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, REPO_PROFILES, SAMPLE_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { fakeIo } from "./fake-io.ts";
 import { permissions } from "./permissions.ts";
 import { describe, parseProfiles, profileFor } from "../profile/profile.ts";
 
-const checkout = (origin: string, profiles = SAMPLE_PROFILES, more: Record<string, unknown> = {}, harness = HARNESSES.claude) =>
+const checkout = (origin: string, profiles = SAMPLE_PROFILES, more: Record<string, unknown> = {}, harness = SEATS.claude) =>
 	fakeIo({ "read /root/host/repos.json": profiles, "stat /r": { size: 0, mtime: new Date(0), dir: true }, "git remote get-url origin": origin, "git rev-parse --show-toplevel": "/r", ...more }, harness);
 
 const USER_PROFILES = "read /home/me/.config/harness/repos.json";
@@ -17,7 +17,7 @@ test("profile prints a checkout's permissions, and the same for its owner/name",
 
 	assert.match(text, /^# Permissions: acme\/webapp\n/);
 	assert.match(text, /^- linear `read`: read Linear through `linear-acme-readonly`/m);
-	assert.match(text, /^- sign `none`: commits stay unsigned; `cfleet land` signs only with --sign$/m);
+	assert.match(text, /^- sign `none`: commits stay unsigned; `fleet land` signs only with --sign$/m);
 	assert.equal(permissions({ root: "/root", repo: "acme/webapp" }, checkout("")), text);
 	assert.throws(() => permissions({ root: "/root", repo: "nowhere" }, checkout("")), /neither a checkout nor owner\/name/);
 });
@@ -99,7 +99,7 @@ test("profile --apply turns signing on where it was unset, leaves origin where t
 
 test("profile prints the repository's overlay under the levels, and says where it would live when there is none", () => {
 	const overlay = "# acme/webapp\n\n## Merge method\n\n--squash\n";
-	const levels = describe("acme/webapp", profileFor(parseProfiles(SAMPLE_PROFILES), "acme/webapp"), "cfleet");
+	const levels = describe("acme/webapp", profileFor(parseProfiles(SAMPLE_PROFILES), "acme/webapp"));
 	const read = { "read /home/me/.config/harness/projects/acme/webapp.md": overlay, "read /root/host/projects/acme/webapp.md": "# the harness copy\n" };
 
 	assert.equal(
@@ -142,7 +142,7 @@ test("profile --apply registers the host Linear server for the checkout alone: c
 	assert.deepEqual(moved.calls.filter((c) => c[0] === "run").map((c) => c.slice(1, 5)), [["/r", "claude", "mcp", "remove"], ["/r", "claude", "mcp", "add"]]);
 
 	for (const [harness, dir, entry] of [
-		[HARNESSES.pi, ".pi", { url: "https://mcp.linear.app/mcp", auth: "oauth" }],
+		[SEATS.pi, ".pi", { url: "https://mcp.linear.app/mcp", auth: "oauth" }],
 	] as const) {
 		const context7 = { url: "https://mcp.context7.com/mcp" };
 		const io = checkout(HTTPS, WITH_PRIVATE, { ...PRIVATE_SET, [`read /r/${dir}/mcp.json`]: JSON.stringify({ mcpServers: { context7 } }) }, harness);

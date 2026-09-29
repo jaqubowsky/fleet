@@ -1,5 +1,5 @@
 import type { Io } from "../fleet/io.ts";
-import type { Harness, HarnessName } from "../harness.ts";
+import { type AgentName, CLI, KINDS } from "../harness.ts";
 import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 
 export type Seat = "host" | "container";
@@ -48,17 +48,17 @@ export function buildAgents(sources: Source[], exclude: string[]): string {
 		.join("\n");
 }
 
-export function seatSettings(io: Io, root: string, harness: Harness, template: string): string {
-	const own = `${root}/${harness.name}/profiles`;
+export function seatSettings(io: Io, root: string, agent: AgentName, template: string): string {
+	const own = `${root}/${agent}/profiles`;
 	const models = JSON.parse(io.read(`${own}/models.json`) ?? "{}") as Models;
-	const paths = { root, home: `${io.home}/${harness.home}` };
+	const paths = { root, home: `${io.home}/${KINDS[agent].home}` };
 	const base = JSON.parse(renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, paths));
 	const seat = JSON.parse(renderSettings(io.read(`${own}/${template}`) ?? "{}", models, paths));
 	return `${JSON.stringify({ ...base, ...seat }, null, 2)}\n`;
 }
 
-export function seatTokens(io: Io, root: string, harness: Harness): Record<string, string> {
-	const models = JSON.parse(io.read(`${root}/${harness.name}/profiles/models.json`) ?? "{}") as Models;
+export function seatTokens(io: Io, root: string, agent: AgentName): Record<string, string> {
+	const models = JSON.parse(io.read(`${root}/${agent}/profiles/models.json`) ?? "{}") as Models;
 	const tokens: Record<string, string> = {};
 	for (const [seat, entry] of Object.entries(models.seats ?? {})) {
 		const parts = qualified(seat, entry);
@@ -69,7 +69,7 @@ export function seatTokens(io: Io, root: string, harness: Harness): Record<strin
 	return tokens;
 }
 
-export type RenderInput = { root: string; harness: Harness; seat: Seat; out: string; placeholders?: string[]; seen?: Map<string, string> };
+export type RenderInput = { root: string; agent: AgentName; seat: Seat; out: string; placeholders?: string[]; seen?: Map<string, string> };
 
 class Renderer {
 	readonly input: RenderInput;
@@ -80,11 +80,11 @@ class Renderer {
 	constructor(input: RenderInput, io: Io) {
 		this.input = input;
 		this.io = io;
-		this.seats = seatTokens(io, input.root, input.harness);
+		this.seats = seatTokens(io, input.root, input.agent);
 	}
 
 	get own(): string {
-		return `${this.input.root}/${this.input.harness.name}`;
+		return `${this.input.root}/${this.input.agent}`;
 	}
 
 	source(path: string): string {
@@ -94,9 +94,10 @@ class Renderer {
 	}
 
 	text(path: string): string {
-		const { root, harness } = this.input;
+		const { root, agent } = this.input;
+		const kind = KINDS[agent];
 		const body = this.source(path);
-		const tokens: Record<string, string> = { ...harness.tokens, cli: harness.cli, harness: harness.name, cache: `~/${harness.home}/${harness.cache}/<repo>`, ...this.seats, root };
+		const tokens: Record<string, string> = { ...kind.tokens, cli: CLI, harness: agent, cache: `~/${kind.home}/${kind.cache}/<repo>`, ...this.seats, root };
 		for (const key of this.input.placeholders ?? []) tokens[key] = `<${key}>`;
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);
@@ -160,11 +161,11 @@ class Renderer {
 	}
 
 	settings(template: string): string {
-		return seatSettings(this.io, this.input.root, this.input.harness, template);
+		return seatSettings(this.io, this.input.root, this.input.agent, template);
 	}
 
 	context(): void {
-		const dockerfile = `${this.input.harness.name}/sbx/Dockerfile`;
+		const dockerfile = `${this.input.agent}/sbx/Dockerfile`;
 		const toolchain = this.source("sbx/container/toolchain.Dockerfile").trimEnd();
 		this.put("context/Dockerfile", renderText(this.source(dockerfile), { toolchain }, () => undefined, dockerfile));
 		this.extra([
@@ -186,7 +187,7 @@ class Renderer {
 
 function hostSettings(r: Renderer, servers: Record<string, string>): string {
 	const settings = r.settings("host.json");
-	if (r.input.harness.name !== "pi" || !Object.keys(servers).length) return settings;
+	if (r.input.agent !== "pi" || !Object.keys(servers).length) return settings;
 	const { packages = [] } = JSON.parse(r.settings("sbx.json")) as { packages?: string[] };
 	const own = JSON.parse(settings) as { packages?: string[] };
 	return `${JSON.stringify({ ...own, packages: [...(own.packages ?? []), ...packages.filter((p) => p.startsWith("npm:pi-mcp-adapter@"))] }, null, 2)}\n`;
@@ -273,15 +274,15 @@ function claude(r: Renderer): void {
 	]);
 }
 
-export const OWNED: Record<HarnessName, string[]> = {
+export const OWNED: Record<AgentName, string[]> = {
 	pi: ["skills", "agent/refs", "agent/agents", "agent/themes"],
 	claude: ["rules", "refs", "skills", "agents"],
 };
 
 export function render(input: RenderInput, io: Io): void {
-	if (input.seat === "host") for (const dir of OWNED[input.harness.name]) io.remove(`${input.out}/${dir}`);
+	if (input.seat === "host") for (const dir of OWNED[input.agent]) io.remove(`${input.out}/${dir}`);
 	const r = new Renderer(input, io);
-	if (input.harness.name === "pi") pi(r);
+	if (input.agent === "pi") pi(r);
 	else claude(r);
-	io.log(`${input.harness.name} ${input.seat} -> ${input.out}`);
+	io.log(`${input.agent} ${input.seat} -> ${input.out}`);
 }

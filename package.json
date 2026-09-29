@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "fleet": "bin/fleet",
-    "cfleet": "bin/cfleet"
+    "fleet": "bin/fleet"
   },
   "scripts": {
     "test": "node --test 'src/*/*.test.ts' && host/tests/run.sh && python3 claude/tests/align_test.py",

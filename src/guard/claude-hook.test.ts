@@ -88,9 +88,9 @@ test("the claude hook refuses a privileged command that is not bare on one line,
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) => answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
 
-	for (const command of ["npm test && git push", "cd .. ; cfleet up demo", "cfleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "git fetch origin && git log origin/main", "gh run view 7 --log-failed | tail", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
+	for (const command of ["npm test && git push", "cd .. ; fleet up demo", "fleet land\ngit status", "gh pr create --title t --body 'first\nsecond'", "git fetch origin && git log origin/main", "gh run view 7 --log-failed | tail", "(git push)"]) assert.match(ask(command), /bare, on one line/, command);
 	assert.match(ask("gh pr create --title 'a | b' --body 'c; d'"), /"permissionDecision":"allow"/);
-	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "cfleet down demo", "gh run list --commit abc", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
+	for (const command of ['gh pr view 12 --json title --jq ".title | length"', "fleet down demo", "gh run list --commit abc", "echo 'git push' | wc -c"]) assert.equal(ask(command), "", command);
 });
 
 test("the claude hook refuses every sandbox exclusion that is not bare, and names each one", () => {

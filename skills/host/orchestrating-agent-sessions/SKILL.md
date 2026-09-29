@@ -9,7 +9,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
-| put up a container for a task | `{{cli}} up <label> --repo <path> [--branch <name>] [--base <name>] [--model {{model.flag}}] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch, `<label>` without `--branch`, continues `origin/<name>` when origin has it, else starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise), and `up` prints which; {{harness}} waiting, no prompt sent |
+| put up a container for a task | `{{cli}} up <label> --repo <path> [--pi|--claude] [--branch <name>] [--base <name>] [--model {{model.flag}}] [--memory 8g] [--cpus 4]` | sandbox name, tab name, task directory; the branch, `<label>` without `--branch`, continues `origin/<name>` when origin has it, else starts at the freshest `origin/<base>` (`origin/HEAD`, `main`, `master` detected; `--base` when the repo names it otherwise), and `up` prints which; the container's agent waiting, this session's own without `--pi|--claude`, no prompt sent |
 | what is running | `{{cli}} ls` | one line per container: status, herdr state, branch, dirty count, `stalled` past 20 idle minutes short of `ready-for-host`, `paused` or `blocked`, time since its first prompt, cost so far; under a running one, its commits since origin's default branch and its pull request with CI; a sandbox that does not answer shows `failed` and its error, the rest list as usual |
 | what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | git status, log, diff --stat, install log, pane tail |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
@@ -20,7 +20,7 @@ One container per task: a private clone in an sbx sandbox, {{harness}} waiting i
 | bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | log and diff --stat of the branch; signing follows the profile's `host.sign`, `--sign` forces it, and it covers only what origin lacks and rewrites those commits, so of two branches stacked in one container land the top one |
 | what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
-| rebuild the image | `{{cli}} build` | the docker build output, and what the image now carries |
+| rebuild the image | `{{cli}} build [--pi|--claude]` | the docker build output, and what the image now carries |
 | switch models for new containers | `{{cli}} render` after editing `{{harness}}/profiles/models.json` in the harness repo, or `--model` on one `{{cli}} up` | containers take it after `{{cli}} build`, the host {{reload.models}} |
 
 ## Wording a steer

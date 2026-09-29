@@ -1,4 +1,5 @@
-import type { Io } from "./io.ts";
+import { CLI, KINDS, type AgentName } from "../harness.ts";
+import { type Io, seatOf } from "./io.ts";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE } from "../../extensions/session-handoff.ts";
 import { ACTIVITY, changes, fieldsOf, STATUS_LOG } from "../../extensions/status-history.ts";
@@ -18,6 +19,7 @@ import {
 	sandboxes,
 	type Agent,
 	type Row,
+	type Sandbox,
 } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
@@ -27,10 +29,10 @@ function agents(io: Io): Agent[] {
 	return io.herdr<Agents>(["agent", "list"]).result.agents;
 }
 
-export function resolveSandbox(name: string, io: Io): string {
+export function resolveSandbox(name: string, io: Io): Sandbox {
 	const all = sandboxes(io);
 	const hit = all.find((s) => s.name === name || agentName(s.name) === name);
-	if (hit) return hit.name;
+	if (hit) return hit;
 
 	throw new Error(
 		`no fleet container named ${name}; running: ${all.map((s) => s.name).join(", ") || "none"}`,
@@ -39,7 +41,7 @@ export function resolveSandbox(name: string, io: Io): string {
 
 const CONTAINER_USAGE = "/home/agent/fleet/src/fleet/usage.ts";
 
-export function activityNow(sandbox: string, task: string, io: Io): string {
+export function activityNow(sandbox: Sandbox, task: string, io: Io): string {
 	return projection(activityOf(io.read(`${task}/${ACTIVITY}`)), costSoFar(sandbox, task, io), io.now());
 }
 
@@ -56,10 +58,11 @@ export function blockedWork(task: string, io: Io): number {
 	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), justAfter(from)) : 0;
 }
 
-function costSoFar(sandbox: string, task: string, io: Io): number | undefined {
-	if (!io.harness.containerSessions) return sessionUsage(task, io)?.totals.cost;
+function costSoFar(sandbox: Sandbox, task: string, io: Io): number | undefined {
+	const sessions = sandbox.kind.containerSessions;
+	if (!sessions) return sessionUsage(task, io)?.totals.cost;
 	try {
-		const printed = io.sbx(["exec", sandbox, "node", CONTAINER_USAGE, io.harness.containerSessions], { quiet: true });
+		const printed = io.sbx(["exec", sandbox.name, "node", CONTAINER_USAGE, sessions], { quiet: true });
 		return printed ? Number(printed) : undefined;
 	} catch {
 		return undefined;
@@ -89,7 +92,7 @@ export function ls(io: Io): string {
 			dirty: checkout.dirty,
 			blocked: task ? blockedWork(task, io) : 0,
 			stalled: !facts?.running && !!last && idleStalled(agent, fieldsOf(io.read(`${task}/status.md`)).status, io.now().getTime() - new Date(last).getTime()),
-			activity: task && (running || !io.harness.containerSessions) ? activityNow(s.name, task, io) : undefined,
+			activity: task && (running || !s.kind.containerSessions) ? activityNow(s, task, io) : undefined,
 			facts: facts && `commits ${facts.commits}; pr ${facts.pr}`,
 		};
 	});
@@ -128,12 +131,13 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function steer(sandbox: string, text: string, io: Io, root?: string): void {
+export function steer({ name: sandbox, kind, workspaces }: Sandbox, text: string, io: Io, root?: string): void {
+	seatOf(io);
 	const agent = agentName(sandbox);
-	const stale = root ? staleImage(root, io) : undefined;
+	const stale = root ? staleImage(root, kind, io) : undefined;
 	if (stale) io.log(`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`);
 	logEvent(io, "steer", agent, text);
-	const handoff = text === io.harness.tokens["handoff.command"] ? statusOf(sandbox, io) : undefined;
+	const handoff = text === kind.tokens["handoff.command"] && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
 	const before = handoff?.();
 	try {
 		io.herdr([
@@ -155,20 +159,19 @@ export function steer(sandbox: string, text: string, io: Io, root?: string): voi
 			throw error;
 		if (!handoff)
 			throw new Error(
-				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${io.harness.cli} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
+				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${CLI} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
 				{ cause: error },
 			);
 	}
 	if (handoff && (before === COMPLETE || handoff() !== COMPLETE))
 		throw new Error(
-			`${text} sent, and status.md shows no context reset. Inspect ${io.harness.cli} peek ${sandbox}; do not steer again until you know whether the session was cleared.`,
+			`${text} sent, and status.md shows no context reset. Inspect ${CLI} peek ${sandbox}; do not steer again until you know whether the session was cleared.`,
 		);
 	io.log(`${agent}: steered`);
 }
 
-function statusOf(sandbox: string, io: Io): (() => string | undefined) | undefined {
-	const repo = sandboxes(io).find((s) => s.name === sandbox)?.workspaces[0];
-	return repo ? () => fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention : undefined;
+function statusOf(repo: string, sandbox: string, io: Io): () => string | undefined {
+	return () => fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention;
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
@@ -197,24 +200,18 @@ export function exec(sandbox: string, command: string[], io: Io): void {
 }
 
 export function renderHost(root: string, io: Io): void {
-	render(
-		{
-			root,
-			harness: io.harness,
-			seat: "host",
-			out: `${io.home}/${io.harness.home}`,
-		},
-		io,
-	);
+	const { name } = seatOf(io);
+	render({ root, agent: name, seat: "host", out: `${io.home}/${KINDS[name].home}` }, io);
 }
 
-export function build(root: string, io: Io): void {
-	const stage = `${io.tmp}/${io.harness.name}-sbx-stage-${io.now().getTime()}`;
-	render({ root, harness: io.harness, seat: "container", out: stage }, io);
-	const stamp = harnessStamp(root, io);
-	io.run(`${root}/sbx/build.sh`, [io.harness.name, io.harness.image, stage]);
-	io.mkdir(`${io.home}/${io.harness.home}/${io.harness.cache}`);
-	io.write(imageStampPath(io), `${stamp}\n`);
+export function build(root: string, name: AgentName | undefined, io: Io): void {
+	const kind = KINDS[name ?? seatOf(io).name];
+	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;
+	render({ root, agent: kind.name, seat: "container", out: stage }, io);
+	const stamp = harnessStamp(root, kind, io);
+	io.run(`${root}/sbx/build.sh`, [kind.name, kind.image, stage]);
+	io.mkdir(`${io.home}/${kind.home}/${kind.cache}`);
+	io.write(imageStampPath(kind, io), `${stamp}\n`);
 }
 
 export function copy(from: string, to: string, io: Io): void {
@@ -480,27 +477,27 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	}
 	if (!landed(sandbox, checkout.head, entry.workspaces[0], io) && !opts.force) {
 		throw new Error(
-			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${io.harness.cli} land first or pass --force to discard`,
+			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${CLI} land first or pass --force to discard`,
 		);
 	}
 	logEvent(io, "down", agentName(sandbox));
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
-	if (io.harness.containerSessions)
-		harvest(sandbox, task, io.harness.containerSessions, opts.force === true, io);
+	if (entry.kind.containerSessions)
+		harvest(sandbox, task, entry.kind.containerSessions, opts.force === true, io);
 	const summary = sessionUsage(task, io, checkout.branch, repo);
 	if (summary) {
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
 	} else {
 		io.log(
-			`${sandbox}: no session in ${task}/logs/sessions (${io.harness.agent} never ran)`,
+			`${sandbox}: no session in ${task}/logs/sessions (${entry.kind.name} never ran)`,
 		);
 	}
 	recordMemory(sandbox, task, io);
 	if (repo && io.list(artifactsDir(repo, io)).length)
 		io.log(
-			`${sandbox}: artifacts stay in ${task}, read them with ${io.harness.cli} artifacts --repo ${repo}`,
+			`${sandbox}: artifacts stay in ${task}, read them with ${CLI} artifacts --repo ${repo}`,
 		);
 	const agent = agentFor(agents(io), agentName(sandbox));
 	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);

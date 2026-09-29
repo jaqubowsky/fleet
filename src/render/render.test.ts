@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
-import { CONTINUE, HARNESSES } from "../harness.ts";
+import { CONTINUE, SEATS, KINDS } from "../harness.ts";
 import { PRIVATE_PROFILE, PRIVATE_REPO, SAMPLE_PROFILES, WITH_PRIVATE } from "../profile/fixture.ts";
 import { render, renderText } from "./render.ts";
 
@@ -44,7 +44,7 @@ test("a fragment is inlined without its trailing newline", () => {
 test("an image takes the shared toolchain between its own lines", () => {
 	const io = fakeIo(sources());
 
-	render({ root: "/root", harness: HARNESSES.pi, seat: "container", out: "/stage" }, io);
+	render({ root: "/root", agent: "pi", seat: "container", out: "/stage" }, io);
 
 	assert.equal(io.files["/stage/context/Dockerfile"], "FROM pi-base\n\nRUN install node\n\nCMD [\"pi\"]\n");
 });
@@ -54,8 +54,8 @@ test("pi carries its own theme and draws its status line itself", () => {
 	const themes = { ...file("pi/themes/ayu-mirage.json", "pi theme\n"), ...file("extensions/statusline.ts", "footer\n") };
 	const pi = fakeIo(sources(themes));
 
-	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
-	render({ root: "/root", harness: pi.harness, seat: "container", out: "/stage" }, pi);
+	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, pi);
+	render({ root: "/root", agent: "pi", seat: "container", out: "/stage" }, pi);
 
 	assert.equal(pi.files["/home/agent/themes/ayu-mirage.json"], "pi theme\n");
 	assert.equal(pi.files["/stage/home/agent/themes/ayu-mirage.json"], "pi theme\n");
@@ -66,8 +66,8 @@ test("a pi container carries the state relay for herdr's integration, and its ho
 	const relay = { "read /root/extensions/state-relay.ts": "relay\n", "stat /root/extensions/state-relay.ts": { size: 6, mtime: new Date(0), dir: false } };
 	const pi = fakeIo(sources(relay));
 
-	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
-	render({ root: "/root", harness: pi.harness, seat: "container", out: "/stage" }, pi);
+	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, pi);
+	render({ root: "/root", agent: "pi", seat: "container", out: "/stage" }, pi);
 
 	assert.equal(pi.files["/stage/home/agent/extensions/state-relay.ts"], "relay\n");
 	assert.equal(pi.files["/home/agent/extensions/state-relay.ts"], undefined);
@@ -76,11 +76,11 @@ test("a pi container carries the state relay for herdr's integration, and its ho
 test("every container carries status history beside each module that imports it, and no host does", () => {
 	const history = { "read /root/extensions/status-history.ts": "history\n", "stat /root/extensions/status-history.ts": { size: 8, mtime: new Date(0), dir: false } };
 	const pi = fakeIo(sources(history));
-	const claude = fakeIo(sources(history), HARNESSES.claude);
+	const claude = fakeIo(sources(history), SEATS.claude);
 
 	for (const io of [pi, claude]) {
-		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
-		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+		render({ root: "/root", agent: io.seat!.name, seat: "host", out: "/home" }, io);
+		render({ root: "/root", agent: io.seat!.name, seat: "container", out: "/stage" }, io);
 	}
 
 	assert.equal(pi.files["/stage/home/agent/extensions/status-history.ts"], "history\n");
@@ -96,11 +96,11 @@ test("every container carries the default-branch push guard with the modules it 
 		guard[`stat /root/${file}`] = { size: 1, mtime: new Date(0), dir: false };
 	}
 	const pi = fakeIo(sources(guard));
-	const claude = fakeIo(sources(guard), HARNESSES.claude);
+	const claude = fakeIo(sources(guard), SEATS.claude);
 
 	for (const io of [pi, claude]) {
-		render({ root: "/root", harness: io.harness, seat: "host", out: "/home" }, io);
-		render({ root: "/root", harness: io.harness, seat: "container", out: "/stage" }, io);
+		render({ root: "/root", agent: io.seat!.name, seat: "host", out: "/home" }, io);
+		render({ root: "/root", agent: io.seat!.name, seat: "container", out: "/stage" }, io);
 	}
 
 	for (const file of ["extensions/container-guard.ts", "src/guard/container.ts", "src/guard/argv.ts", "src/guard/translate.ts"])
@@ -112,8 +112,8 @@ test("every container carries the default-branch push guard with the modules it 
 test("pi folds the rules into one AGENTS.md and keeps host.md out of the container", () => {
 	const io = fakeIo(sources());
 
-	render({ root: "/root", harness: HARNESSES.pi, seat: "host", out: "/home" }, io);
-	render({ root: "/root", harness: HARNESSES.pi, seat: "container", out: "/stage" }, io);
+	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, io);
+	render({ root: "/root", agent: "pi", seat: "container", out: "/stage" }, io);
 
 	assert.equal(io.files["/home/agent/AGENTS.md"], "# Core\nask with ask_user_question\n\n# Host\nrun fleet steer\n");
 	assert.equal(io.files["/stage/home/agent/AGENTS.md"], "# Core\nask with ask_user_question\n\n# Container\nleaves at fleet land\n");
@@ -121,16 +121,16 @@ test("pi folds the rules into one AGENTS.md and keeps host.md out of the contain
 });
 
 test("claude keeps one file per rule, its own tool names and CLAUDE.md", () => {
-	const io = fakeIo(sources(), HARNESSES.claude);
+	const io = fakeIo(sources(), SEATS.claude);
 
-	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
-	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
+	render({ root: "/root", agent: "claude", seat: "host", out: "/home" }, io);
+	render({ root: "/root", agent: "claude", seat: "container", out: "/stage" }, io);
 
 	assert.equal(io.files["/home/rules/core.md"], "# Core\nask with AskUserQuestion\n");
-	assert.equal(io.files["/home/rules/host.md"], "# Host\nrun cfleet steer\n");
+	assert.equal(io.files["/home/rules/host.md"], "# Host\nrun fleet steer\n");
 	assert.equal(io.files["/home/agents/explorer.md"], "---\nname: explorer\ntools: Read, Grep\n---\n");
 	assert.equal(io.files["/home/CLAUDE.md"], "Rules live in rules/.\n");
-	assert.equal(io.files["/stage/home/rules/sandbox.md"], "# Container\nleaves at cfleet land\n");
+	assert.equal(io.files["/stage/home/rules/sandbox.md"], "# Container\nleaves at fleet land\n");
 	assert.equal(io.files["/stage/home/rules/host.md"], undefined);
 });
 
@@ -149,11 +149,11 @@ test("claude agents and container settings take their seat's model and effort", 
 			"read /root/claude/profiles/sbx.json":
 				'{"model":"{{models.sbx}}","effortLevel":"{{thinking.sbx}}"}',
 		}),
-		HARNESSES.claude,
+		SEATS.claude,
 	);
 
-	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
-	render({ root: "/root", harness: HARNESSES.claude, seat: "container", out: "/stage" }, io);
+	render({ root: "/root", agent: "claude", seat: "host", out: "/home" }, io);
+	render({ root: "/root", agent: "claude", seat: "container", out: "/stage" }, io);
 
 	assert.equal(
 		io.files["/home/agents/explorer.md"],
@@ -167,12 +167,12 @@ test("claude agents and container settings take their seat's model and effort", 
 });
 
 test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
-	const io = fakeIo(sources(), HARNESSES.claude);
+	const io = fakeIo(sources(), SEATS.claude);
 	io.files["/home/skills/retired/SKILL.md"] = "old";
 	io.files["/home/rules/env.md"] = "old";
 	io.files["/home/settings.json"] = "{}";
 
-	render({ root: "/root", harness: HARNESSES.claude, seat: "host", out: "/home" }, io);
+	render({ root: "/root", agent: "claude", seat: "host", out: "/home" }, io);
 
 	assert.equal(io.files["/home/skills/retired/SKILL.md"], undefined);
 	assert.equal(io.files["/home/rules/env.md"], undefined);
@@ -180,12 +180,12 @@ test("a skill, rule or agent gone from the sources is gone from the home after t
 	assert.equal(io.files["/home/rules/core.md"], "# Core\nask with AskUserQuestion\n");
 });
 
-function renderSeats(name: keyof typeof HARNESSES, read: (out: string) => void): void {
+function renderSeats(name: keyof typeof KINDS, read: (out: string) => void): void {
 	const out = mkdtempSync(join(tmpdir(), `render-${name}-`));
 	try {
-		const io = { ...realIo(out, HARNESSES[name]), log: () => {} };
-		render({ root, harness: HARNESSES[name], seat: "host", out: `${out}/host` }, io);
-		render({ root, harness: HARNESSES[name], seat: "container", out: `${out}/container` }, io);
+		const io = { ...realIo(out), log: () => {} };
+		render({ root, agent: name, seat: "host", out: `${out}/host` }, io);
+		render({ root, agent: name, seat: "container", out: `${out}/container` }, io);
 		read(out);
 	} finally {
 		rmSync(out, { recursive: true, force: true });
@@ -202,7 +202,7 @@ function rendered(out: string, seat: string, suffix: string): string {
 	return readFileSync(join(out, seat, file), "utf8");
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
 		renderSeats(name, (out) => {
 			const leftovers = (readdirSync(out, { recursive: true }) as string[])
@@ -217,7 +217,7 @@ test("the continue steer sends a fresh session to the frontier of issues/ and th
 	assert.match(CONTINUE, /the frontier of issues\/ and the last Log line/);
 });
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} renders no Next step and carries the continue steer`, () => {
 		renderSeats(name, (out) => {
 			const naming = (readdirSync(out, { recursive: true }) as string[])
@@ -229,10 +229,10 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} gives both seats the CI ref, and the skills that read CI point at it without a copy`, () => {
 		renderSeats(name, (out) => {
-			const pointer = HARNESSES[name].tokens["refs.ci"]!;
+			const pointer = KINDS[name].tokens["refs.ci"]!;
 
 			const refs = [rendered(out, "host", "refs/ci.md"), rendered(out, "container", "refs/ci.md")];
 			const skills = [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "babysit-pr/SKILL.md")];
@@ -249,10 +249,10 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} gives both seats the one ticket template, and to-tickets and the host point at it without a copy`, () => {
 		renderSeats(name, (out) => {
-			const pointer = HARNESSES[name].tokens["refs.ticket"]!;
+			const pointer = KINDS[name].tokens["refs.ticket"]!;
 
 			for (const seat of ["host", "container"]) assert.equal(rendered(out, seat, "refs/ticket.md"), readFileSync(join(root, "rules/refs/ticket.md"), "utf8"));
 			for (const skill of [rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"), rendered(out, "container", "to-tickets/SKILL.md")]) {
@@ -264,7 +264,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} tells the host which ticket of a wave goes up first, and both seats that one ordered ticket ends at ready-for-host`, () => {
 		renderSeats(name, (out) => {
 			const breakTables = (seat: string) =>
@@ -284,7 +284,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} seats branch on no permission level; the profile's description holds each level's sentence`, () => {
 		renderSeats(name, (out) => {
 			const branches = (readdirSync(out, { recursive: true }) as string[])
@@ -306,7 +306,7 @@ test("the claude host watches the containers its own pane put up or steered last
 			.map((file) => readFileSync(join(out, "host", file), "utf8"))
 			.join("\n");
 
-		assert.match(rules, /With no names it follows the containers whose latest `cfleet up` or `cfleet steer` came from this herdr pane/);
+		assert.match(rules, /With no names it follows the containers whose latest `fleet up` or `fleet steer` came from this herdr pane/);
 		assert.doesNotMatch(rules, /watches every `claude-` container/);
 	});
 });
@@ -329,7 +329,7 @@ test("a host Linear server any profile names leaves pi's machine-wide mcp.json, 
 	};
 	const pi = fakeIo(sources(profiles));
 
-	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
+	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, pi);
 
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/mcp.json"]).mcpServers, { context7 });
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"]);
@@ -340,13 +340,13 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 	const profiles = { "read /root/host/repos.json": JSON.stringify(silent) };
 	const pi = fakeIo(sources({ ...profiles, "read /root/pi/profiles/host.json": JSON.stringify({ packages: ["npm:pi-lens@4.1.3"] }) }));
 
-	render({ root: "/root", harness: pi.harness, seat: "host", out: "/home" }, pi);
+	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, pi);
 
 	assert.equal(pi.files["/home/agent/mcp.json"], undefined);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, ["npm:pi-lens@4.1.3"]);
 });
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} seats review by blast radius, and the image carries the ticket check the gate runs`, () => {
 		renderSeats(name, (out) => {
 			const promises = (readdirSync(out, { recursive: true }) as string[])
@@ -364,7 +364,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} verifies what a user sees the way project.md names, with no browser in the container rules`, () => {
 		renderSeats(name, (out) => {
 			const files = (readdirSync(out, { recursive: true }) as string[]).filter((file) => file.endsWith(".md"));
@@ -383,7 +383,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} container checkpoints, asks through attention, names host items and cuts small tickets`, () => {
 		renderSeats(name, (out) => {
 			const implement = rendered(out, "container", "implement/SKILL.md");
@@ -401,7 +401,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} reviewer opens review.md with PASS or FAIL and blocks only a proven break of an acceptance line`, () => {
 		renderSeats(name, (out) => {
 			const reviewer = rendered(out, "container", "agents/reviewer.md");
@@ -416,7 +416,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} records a decision a later change could undo as an ADR, on both seats`, () => {
 		renderSeats(name, (out) => {
 			for (const seat of ["host", "container"] as const) {
@@ -429,7 +429,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} babysit-pr waits on CI without holding the session`, () => {
 		renderSeats(name, (out) => {
 			const skill = rendered(out, "container", "babysit-pr/SKILL.md");
@@ -444,7 +444,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} host accepts on evidence it looked at, merges the overlay's way and keeps the plan in the tracker`, () => {
 		renderSeats(name, (out) => {
 			const skill = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
@@ -480,7 +480,7 @@ for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
 	});
 }
 
-for (const name of Object.keys(HARNESSES) as (keyof typeof HARNESSES)[]) {
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} updates a pull request body through the REST API and reads colours from computed styles`, () => {
 		renderSeats(name, (out) => {
 			assert.ok(rendered(out, "container", "babysit-pr/SKILL.md").includes("gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>"));

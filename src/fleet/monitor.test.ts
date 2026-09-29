@@ -3,12 +3,12 @@ import { test, type TestContext } from "node:test";
 import { EventEmitter } from "node:events";
 import net from "node:net";
 import fleetMonitor from "../../extensions/fleet-monitor.ts";
-import { HARNESSES } from "../harness.ts";
-import { eventsLog, logEvent } from "./events.ts";
+import { SEATS } from "../harness.ts";
+import { EVENTS_LOG, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import { idleStalled, STALL_MS, taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
 
-function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h.prefix}worker`, pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
+function monitorRuntime(t: TestContext, h = SEATS.pi, agents = [{ name: "pi-worker", pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	t.after(() => {
@@ -23,11 +23,11 @@ function monitorRuntime(t: TestContext, h = HARNESSES.pi, agents = [{ name: `${h
 		return socket as unknown as net.Socket;
 	});
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, workspaces: ["/w/repo"] })) },
+		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, agent: "pi", workspaces: ["/w/repo"] })) },
 		"herdr agent list": herdr,
 	}, h);
 	const events = (...lines: string[]) => {
-		io.files[`${io.home}/${eventsLog(h)}`] = `${lines.join("\n")}\n`;
+		io.files[`${io.home}/${EVENTS_LOG}`] = `${lines.join("\n")}\n`;
 	};
 	const start = (sessionId: string) => {
 		const handlers: Record<string, (...args: any[]) => any> = {};
@@ -72,7 +72,7 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")), []);
 });
 
-for (const h of [HARNESSES.pi]) {
+for (const h of [SEATS.pi]) {
 	test(`a fleet command the ${h.name} model runs carries the session that owns it`, (t) => {
 		const watcher = monitorRuntime(t, h).start("session-a");
 		const run = (command: string) => {
@@ -81,15 +81,15 @@ for (const h of [HARNESSES.pi]) {
 			return result?.input?.command ?? event.input.command;
 		};
 
-		assert.equal(run(`${h.cli} steer ${h.prefix}worker "go"`), `export ${h.sessionIdEnv}="session-a"; ${h.cli} steer ${h.prefix}worker "go"`);
-		assert.equal(run(`cd /w/repo && ${h.cli} up task`), `export ${h.sessionIdEnv}="session-a"; cd /w/repo && ${h.cli} up task`);
+		assert.equal(run('fleet steer pi-worker "go"'), `export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; fleet steer pi-worker "go"`);
+		assert.equal(run("cd /w/repo && fleet up task"), `export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; cd /w/repo && fleet up task`);
 		assert.equal(run("git status"), "git status");
-		assert.equal(run(`cat ~/${h.cli}-notes.md`), `cat ~/${h.cli}-notes.md`);
+		assert.equal(run("cat ~/fleet-notes.md"), "cat ~/fleet-notes.md");
 	});
 }
 
 test("a watcher that cannot reach herdr says so in the session once per trouble", async (t) => {
-	const runtime = monitorRuntime(t, HARNESSES.pi, [], new Error("herdr: connection refused"));
+	const runtime = monitorRuntime(t, SEATS.pi, [], new Error("herdr: connection refused"));
 	const watcher = runtime.start("session-a");
 
 	await watcher.tools.fleet_watch.execute("call", { agents: "" });
@@ -146,7 +146,7 @@ test("wake on settling, never on going back to work", () => {
 });
 
 test("the task directory follows from the agent's sandbox and its repo", () => {
-	const sandboxes = [{ name: "pi-webapp-web-1", workspaces: ["/Users/me/Work/webapp"] }];
+	const sandboxes = [{ name: "pi-webapp-web-1", agent: "pi", workspaces: ["/Users/me/Work/webapp"] }];
 	assert.equal(taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
 	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
 });

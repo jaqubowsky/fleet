@@ -23,7 +23,7 @@ The repository renders into two seats per harness. The host seat is the harness 
                 ┌─────────────────┴──────────────────┐
                 ▼                                    ▼
    host seat                            container seat
-   ./sync.sh --apply, <cli> render      <cli> build, then sbx/build.sh
+   ./sync.sh --apply, fleet render      fleet build, then sbx/build.sh
    ~/.pi  ~/.claude                     my-pi:v1  my-claude:v1
    rules/ with host.md                  rules/ without host.md, + sandbox.md
    skills/shared + skills/host          skills/shared + skills/container
@@ -37,11 +37,11 @@ At runtime the host and a container share one task directory and talk through he
  │ host session                   │  up, steer   │ agent in a herdr tab           │
  │ pi or claude                   │ ───────────▶ │ private clone, task branch     │
  │                                │              │ no SSH agent, no signing key   │
- │ <cli> watch                    │ herdr state  │                                │
+ │ fleet watch                    │ herdr state  │                                │
  │   herdr socket + status.md     │ ◀─────────── │ working, blocked, done         │
  │   = one [fleet] line per wake  │              │                                │
  │                                │  git remote  │                                │
- │ <cli> land --sign --push       │ ◀─────────── │ unsigned commits               │
+ │ fleet land --sign --push       │ ◀─────────── │ unsigned commits               │
  │   Touch ID signs, pushes ff    │ sandbox-<n>  │                                │
  └───────────────┬────────────────┘              └───────────────┬────────────────┘
                  │                                               │
@@ -50,7 +50,7 @@ At runtime the host and a container share one task directory and talk through he
                        status.md  analysis.md  review.md  logs/
 ```
 
-A task moves through the run order in `sbx/container/sandbox.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, except while its pull request's CI runs and it is neither `blocked` nor `paused`, and again when it works long without settling, sits idle long short of `ready-for-host`, `paused` or `blocked`, or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `cfleet ls` project.
+A task moves through the run order in `sbx/container/sandbox.md`, and `status.md` carries its state. The host wakes each time the container's agent settles, except while its pull request's CI runs and it is neither `blocked` nor `paused`, and again when it works long without settling, sits idle long short of `ready-for-host`, `paused` or `blocked`, or its tool calls keep failing; every tool call lands in `logs/activity.jsonl`, which each wake and `fleet ls` project.
 
 ```text
  up ─▶ steer ─▶ analyze-task ─▶ to-tickets ─▶ per ticket: implement + tdd, gate,
@@ -75,9 +75,9 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `skills/` | `shared/` renders into both seats, `host/` into the host seat, `container/` into the image |
 | `agents/` | read-only sub-agents `explorer`, `researcher`, `reviewer`; each harness adds their frontmatter as `fragments/agent-<name>.md` |
 | `fragments/` | text a harness can replace with its own `<harness>/fragments/<name>.md` |
-| `src/harness.ts` | every value that differs per harness |
+| `src/harness.ts` | every value that differs per harness: the seat, the host session running `fleet`, and the kind, the agent a container runs |
 | `src/render/` | renders rules, skills, agents and settings for one harness and seat |
-| `src/fleet/` | the fleet CLI behind `fleet` and `cfleet` |
+| `src/fleet/` | the fleet CLI behind `fleet` |
 | `src/guard/` | the tool-call policy both hosts enforce, tested against the case corpus in `host/tests/` |
 | `src/remote/` | the pi phone remote, see `extensions/pi-remote/README.md` |
 | `src/statusline/` | the status line pi and Claude draw: folder, branch, model, context bar toward the 250k handoff, usage limits |
@@ -87,7 +87,7 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `host/repos.json` | the `*` profile, the one a repository your own profiles omit gets (User config) |
 | `host/projects/template.md` | the headings of a per-repository overlay (User config) |
 | `pi/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
-| `bin/` | `fleet`, `cfleet`: one CLI, one harness each |
+| `bin/` | `fleet`, the one CLI both hosts run |
 | `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it; ends with what a new Mac lacks that it cannot set up, under `== set up by hand` |
 | `inventory.md` | what lives outside this repo: tokens, MCP servers, model logins, network policy |
 | `BOOTSTRAP.md` | setting this Mac up from nothing |
@@ -101,7 +101,7 @@ What names your own repositories lives outside this repository, in `~/.config/ha
 - `repos.json`: your repository permission profiles, the same shape as `host/repos.json`. An entry here wins over the harness's for the same match; a repository no entry matches gets the harness's `*`
 - `projects/<owner>/<repo>.md`: the overlay of one repository, holding only what the repository, the tracker and the profile do not say themselves. `up` writes it into the task directory as `project.md` and runs the one `sh` block under `## Setup` in the container after the dependency install. `host/projects/template.md` holds the headings
 
-Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `<cli> profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi in the checkout's `.pi/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
+Agents read both and the guard refuses them any write to either `repos.json`. A profile's `host.linearServer` reaches only the checkouts you register it in: `fleet profile <checkout> --apply` adds it for that directory alone, Claude through `claude mcp add --scope local`, pi in the checkout's `.pi/mcp.json`, kept out of git by `.git/info/exclude`. Run it once per harness you use there.
 
 Moving from the old paths, before you pull this change:
 
@@ -109,29 +109,29 @@ Moving from the old paths, before you pull this change:
 2. `jq 'del(.["*"])' host/repos.json > ~/.config/harness/repos.json`; keep `*` too if yours differs from the harness's
 3. `mv host/projects/*/ ~/.config/harness/projects/`, which leaves `template.md` behind
 4. `git checkout host/repos.json && git pull`, then `./sync.sh --apply`: the render and the settings aligner take every host Linear server out of `~/.<harness>/agent/mcp.json` and `managedMcpServers`
-5. `<cli> profile <checkout> --apply` in each checkout whose profile gives the host Linear, once per harness
+5. `fleet profile <checkout> --apply` in each checkout whose profile gives the host Linear, once per harness
 6. In each overlay whose tracker moves states on its own, name them under `## Tracker transitions`, for example: `Linear moves an issue to In Review when its pull request opens and to Done when it merges, linked by the branch name <team>-<n>-<slug>`
 7. Drop `## Standing decisions` from each overlay: a decision a later change could undo is an ADR in the project's `docs/adr/`
 
 ## Commands
 
-`fleet` drives pi containers, `cfleet` Claude ones. The verbs are the same on both and `<cli> --help` lists them with every flag. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
+`fleet` drives pi and Claude containers alike, from a pi or a Claude Code host session, and `fleet --help` lists its verbs with every flag. The host session names itself in `FLEET_SEAT`, which each harness sets: Claude Code through the `env` of its managed settings, pi through the fleet monitor. `up`, `steer`, `watch`, `render` and `profile --apply` refuse without it; the verbs that only read or take a container down run anywhere. `up --pi|--claude` and `build --pi|--claude` pick the container's agent, the seat's own without a flag; every later verb reads it from the `agent` field of `sbx ls --json`. Every seat writes `up`, `steer` and `down` to one log, `~/.sandboxes/fleet-events.log`, so a watch sees a container whichever seat took it down. The lifecycle is `up`, `steer`, `watch`, `land`, `down`. `peek`, `ls`, `exec`, `artifacts` and `history` inspect a running or finished task, and `profile` prints what each seat may do in a repository. `init` seeds a new project with `AGENTS.md` and `spec/vision.md`, from `templates/project/`, and never overwrites a file that exists.
 
-A pi host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `<cli> build`, and `up` warns when the image is older than the repository.
+A pi host picks up a new render after `/reload`. A Claude host reads its rules at the next session. A container picks up a change only after `fleet build --pi|--claude`, and `up` warns when the image is older than the repository.
 
 ## What differs per harness
 
 | Concern | pi | Claude Code | Why |
 | --- | --- | --- | --- |
-| Waking the host | `extensions/fleet-monitor.ts` runs `src/fleet/watch.ts` in process and triggers a turn per wake | `cfleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
-| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | the ones this herdr pane put up or steered last; more by name on `cfleet watch` | same as above |
+| Waking the host | `extensions/fleet-monitor.ts` runs `src/fleet/watch.ts` in process and triggers a turn per wake | `fleet watch` runs the same `watch.ts`, held with `Monitor` | Claude Code has no API for an extension to start a turn |
+| Which containers wake it | the ones this session put up or steered, by `PI_SESSION_ID`; more with `/fleet-watch` | the ones this herdr pane put up or steered last; more by name on `fleet watch` | same as above |
 | Agent state in herdr | `fleet relay` in the pane reports as `fleet:pi` | herdr reads Claude's screen | herdr's Claude integration reports only the session |
 | Guard | extension, pi tool names translated | `PreToolUse` hook in root-owned managed settings, fails closed | where each agent lets code intercept a tool call |
 | Session handoff | suggested in `status.md` at natural breaks; a `turn_end` note at 250k tokens and every 100k after; `/session-handoff` opens the fresh session | same suggestion; a `PostToolUse` hook at the same thresholds; `/clear` from the user or host, recorded by a `SessionStart` hook | Claude Code cannot replace a session from inside it |
 | Error handoff | `agent_end` with `stopReason: error` | `StopFailure` hook | each agent's own error event |
 | Status history into `logs/status.jsonl` | `tool_execution_end` | `PostToolUse`, `Stop` and `StopFailure` hooks | each agent's own after-tool event |
-| Transcripts in `logs/sessions/` | written as they happen | copied out by `cfleet down` | Claude Code has no session directory setting |
-| Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `cfleet down` |
+| Transcripts in `logs/sessions/` | written as they happen | copied out by `fleet down` | Claude Code has no session directory setting |
+| Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `fleet down` |
 | Cost in `logs/usage.json` | the session's own cost records | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |
 | Statusline | `extensions/statusline.ts` with `src/statusline/` | `claude/statusline.mjs` with `src/statusline/` | Claude Code runs a command |
 | Models | seats in `pi/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `inventory.md` |

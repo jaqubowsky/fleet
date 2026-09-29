@@ -3,10 +3,10 @@ import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { ACTIVITY, fieldsOf, logLines } from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
 import { activityNow, blockedWork, steer } from "./commands.ts";
-import { CONTINUE } from "../harness.ts";
+import { CLI, CONTINUE } from "../harness.ts";
 import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
-import { eventAgents, eventsLog, lifecycle, steersSince } from "./events.ts";
-import type { Io } from "./io.ts";
+import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
+import { type Io, seatOf } from "./io.ts";
 import {
 	FAILED_IN_A_ROW,
 	idleStalled,
@@ -57,7 +57,7 @@ export function fleetAgents(
 }
 
 export function paneScope(io: Io, named: string[]): () => string[] {
-	const events = `${io.home}/${eventsLog(io.harness)}`;
+	const events = `${io.home}/${EVENTS_LOG}`;
 	return () => [
 		...named,
 		...eventAgents(io.read(events) ?? "", {
@@ -87,7 +87,8 @@ export function watch(
 ): { refresh: () => void; stop: () => void } {
 	const socketPath =
 		process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
-	const events = `${io.home}/${eventsLog(io.harness)}`;
+	seatOf(io);
+	const events = `${io.home}/${EVENTS_LOG}`;
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<
 		string,
@@ -97,7 +98,7 @@ export function watch(
 	const woken = new Map<string, Woken>();
 	const deaths = new Map<string, string>();
 	const streaks = new Map<string, string>();
-	const dirs = new Map<string, { dir: string; sandbox: string; repo: string }>();
+	const dirs = new Map<string, { dir: string; sandbox: Sandbox; repo: string }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
@@ -107,7 +108,7 @@ export function watch(
 	const locate = (name: string, rows: Sandbox[]) => {
 		const dir = taskDirOf(io.home, rows, name);
 		const row = rows.find((s) => agentName(s.name) === name);
-		if (dir && row) dirs.set(name, { dir, sandbox: row.name, repo: row.workspaces[0] });
+		if (dir && row) dirs.set(name, { dir, sandbox: row, repo: row.workspaces[0] });
 		return dirs.get(name);
 	};
 
@@ -130,7 +131,7 @@ export function watch(
 	const factsOf = (name: string): { text: string; running: boolean } => {
 		const where = dirs.get(name);
 		if (!where) return { text: "commits: not counted\n\npr: not read", running: false };
-		const facts = branchFacts(io, where.sandbox, where.repo);
+		const facts = branchFacts(io, where.sandbox.name, where.repo);
 		return { text: `commits: ${facts.commits}\n\npr: ${facts.pr}`, running: facts.running };
 	};
 
@@ -166,7 +167,7 @@ export function watch(
 		)
 			return;
 		woken.set(name, { status, facts: facts.text, at: io.now().toISOString() });
-		onWake(wakeLines(name, dirs.get(name)?.sandbox ?? name, change, details(name, status, facts.text)));
+		onWake(wakeLines(name, dirs.get(name)?.sandbox.name ?? name, change, details(name, status, facts.text)));
 	};
 
 	const leave = (pane: string, entry: Tracked, rows: Sandbox[] | undefined, exited: boolean) => {
@@ -400,7 +401,7 @@ export function watch(
 	refresh();
 	if (!tracked.size)
 		io.log(
-			`[fleet] watching nothing yet; ${io.harness.cli} up adds containers within ${REFRESH_MS / 1000}s, and ${io.harness.cli} watch <sandbox> follows one this pane did not start`,
+			`[fleet] watching nothing yet; ${CLI} up adds containers within ${REFRESH_MS / 1000}s, and ${CLI} watch <sandbox> follows one this pane did not start`,
 		);
 	const timers = [
 		setInterval(refresh, REFRESH_MS),

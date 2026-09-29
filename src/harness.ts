@@ -1,14 +1,23 @@
-export type HarnessName = "pi" | "claude";
+export type AgentName = "pi" | "claude";
 
-export type Harness = {
-	name: HarnessName;
-	cli: string;
+export const CLI = "fleet";
+
+export type Seat = {
+	name: AgentName;
+	owner: "session" | "pane";
+	sessionIdEnv?: string;
+};
+
+export const SEATS: Record<AgentName, Seat> = {
+	pi: { name: "pi", owner: "session", sessionIdEnv: "PI_SESSION_ID" },
+	claude: { name: "claude", owner: "pane" },
+};
+
+export type Kind = {
+	name: AgentName;
 	home: string;
 	prefix: string;
-	agent: string;
 	image: string;
-	owner: "session" | "pane" | "none";
-	sessionIdEnv?: string;
 	sbxFlags: string[];
 	env: string[];
 	agentSpec(root: string): string;
@@ -35,16 +44,12 @@ const RELOAD_MODELS = "after `/reload`";
 export const CONTINUE = "Continue the previous task: read current durable artifacts, then take the work from the frontier of issues/ and the last Log line in status.md.";
 const continueInOneSteer = (cli: string) => `For an end-to-end task, approve and continue in one steer: \`${cli} steer <sandbox> "/session-handoff ${CONTINUE}"\`.`;
 
-export const HARNESSES: Record<HarnessName, Harness> = {
+export const KINDS: Record<AgentName, Kind> = {
 	pi: {
 		name: "pi",
-		cli: "fleet",
 		home: ".pi",
 		prefix: "pi-",
-		agent: "pi",
 		image: "my-pi:v1",
-		owner: "session",
-		sessionIdEnv: "PI_SESSION_ID",
 		sbxFlags: ["--skills=off"],
 		env: [],
 		agentSpec: (root) => `${root}/pi/kits/pi`,
@@ -74,12 +79,9 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 	},
 	claude: {
 		name: "claude",
-		cli: "cfleet",
 		home: ".claude",
 		prefix: "claude-",
-		agent: "claude",
 		image: "my-claude:v1",
-		owner: "none",
 		sbxFlags: ["-t", "my-claude:v1", "--skills=off"],
 		env: ["FORCE_COLOR=3"],
 		agentSpec: () => "claude",
@@ -96,21 +98,15 @@ export const HARNESSES: Record<HarnessName, Harness> = {
 			"refs.testing": "`~/.claude/refs/testing.md`",
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
-			"steer.result": "steered; claude takes it as its next message, and `cfleet watch` reports how it settles",
-			"watch.source": "Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `cfleet watch`, held with `Monitor` at `timeout_ms: 1800000`, its maximum. Start it before the first steer and keep one Monitor per session; its expiry notice, and a notice that it stopped with an earlier session, is the re-arm, before anything else. With no names it follows the containers whose latest `cfleet up` or `cfleet steer` came from this herdr pane, drops one at its `cfleet down`, and picks up new ones within 30 seconds; names add those sandboxes beside them, whoever put them up. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it. Before a long run, arm the limit resume as well: one more `cfleet watch` as a `Bash` call with `run_in_background: true`, which has no Monitor expiry, so it resumes containers the account limit stopped while that limit stops this session too.",
+			"steer.result": "steered; claude takes it as its next message, and `fleet watch` reports how it settles",
+			"watch.source": "Nothing watches a container by itself here: Claude Code has no extension that can start a turn, so the wake is `fleet watch`, held with `Monitor` at `timeout_ms: 1800000`, its maximum. Start it before the first steer and keep one Monitor per session; its expiry notice, and a notice that it stopped with an earlier session, is the re-arm, before anything else. With no names it follows the containers whose latest `fleet up` or `fleet steer` came from this herdr pane, drops one at its `fleet down`, and picks up new ones within 30 seconds; names add those sandboxes beside them, whoever put them up. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it. Before a long run, arm the limit resume as well: one more `fleet watch` as a `Bash` call with `run_in_background: true`, which has no Monitor expiry, so it resumes containers the account limit stopped while that limit stops this session too.",
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel": "\"Parallel\" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis",
 			"model.flag": "<opus|sonnet|model id>",
 			"handoff.command": "/clear",
 			"ci.wait": "Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
-			"handoff.continue": `For an end-to-end task, follow the approval with a second steer: \`cfleet steer <sandbox> "${CONTINUE}"\`; \`/clear\` takes no text.`,
+			"handoff.continue": `For an end-to-end task, follow the approval with a second steer: \`fleet steer <sandbox> "${CONTINUE}"\`; \`/clear\` takes no text.`,
 			"review.call": "One foreground `Agent` call with `subagent_type: \"reviewer\"`, so this turn waits for it; its final message is `review.md`, and you write it to the absolute path unchanged.",
 		},
 	},
 };
-
-export function harness(name: string | undefined): Harness {
-	const found = HARNESSES[(name ?? "pi") as HarnessName];
-	if (!found) throw new Error(`no harness named ${name}; known: ${Object.keys(HARNESSES).join(", ")}`);
-	return found;
-}

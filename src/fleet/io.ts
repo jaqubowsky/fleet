@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { Harness } from "../harness.ts";
+import type { Seat } from "../harness.ts";
 
 export type Io = {
 	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number; input?: string }): string;
@@ -23,7 +23,7 @@ export type Io = {
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
-	harness: Harness;
+	seat?: Seat;
 	tmp: string;
 	pane: string;
 	sessionId?: string;
@@ -48,7 +48,7 @@ function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: bo
 	return (result.stdout ?? "").trim();
 }
 
-export function realIo(home: string, harness: Harness): Io {
+export function realIo(home: string, seat?: Seat): Io {
 	return {
 		sbx: (args, opts) => shell("sbx", args, opts),
 		herdr: <T>(args: string[]) => {
@@ -104,10 +104,16 @@ export function realIo(home: string, harness: Harness): Io {
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,
-		harness,
+		seat,
 		tmp: process.env.TMPDIR ?? "/tmp",
 		pane: process.env.HERDR_PANE_ID ?? "-",
-		sessionId: harness.sessionIdEnv ? process.env[harness.sessionIdEnv] : undefined,
+		sessionId: seat?.sessionIdEnv ? process.env[seat.sessionIdEnv] : undefined,
 		env: (name) => process.env[name] || undefined,
 	};
+}
+
+export function seatOf(io: Io): Seat {
+	if (io.seat) return io.seat;
+	const set = io.env("FLEET_SEAT");
+	throw new Error(`FLEET_SEAT names the host session running fleet, pi or claude, and here it is ${set ? `${set}, neither` : "unset"}; the session's harness sets it`);
 }

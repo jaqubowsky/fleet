@@ -13,17 +13,18 @@ import {
 	steer,
 } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
-import { checkoutProbe, commitsProbe } from "./status.ts";
+import { checkoutProbe, commitsProbe, type Sandbox } from "./status.ts";
 import { agentName } from "./name.ts";
-import { HARNESSES } from "../harness.ts";
+import { KINDS, type Kind, SEATS } from "../harness.ts";
 
 const running = {
 	"sbx ls --json": {
-		sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }],
+		sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }],
 	},
 	"herdr agent list": { result: { agents: [] } },
 };
 const task = "/home/me/.sandboxes/r/pi-a";
+const row = (name: string, kind: Kind = KINDS.pi, workspaces = ["/r"]): Sandbox => ({ name, status: "running", workspaces, kind });
 const request = (at: string, cacheRead: number) =>
 	JSON.stringify({
 		type: "message",
@@ -72,8 +73,8 @@ const sessions = {
 
 test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
-	steer("pi-webapp-web-1", 'zrób analizę "x"', io);
-	assert.equal(io.calls[0][1], "/home/me/.pi/agent/fleet-events.log");
+	steer(row("pi-webapp-web-1"), 'zrób analizę "x"', io);
+	assert.equal(io.calls[0][1], "/home/me/.sandboxes/fleet-events.log");
 	assert.match(
 		io.calls[0][2],
 		/w1:host steer pi-webapp-web-1 session= "zrób analizę \\"x\\""/,
@@ -97,31 +98,28 @@ test("steer says when the image predates the harness, and still steers", () => {
 	const stale = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "31e3d51\n" });
 	const fresh = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "f7e7f1a\n" });
 
-	steer("pi-webapp-web-1", "go", stale, "/root");
-	steer("pi-webapp-web-1", "go", fresh, "/root");
+	steer(row("pi-webapp-web-1"), "go", stale, "/root");
+	steer(row("pi-webapp-web-1"), "go", fresh, "/root");
 
-	assert.match(stale.lines[0], /built from 31e3d51, and the harness is now f7e7f1a: run fleet build.*pi-webapp-web-1 keeps its image until it goes down and up again/);
+	assert.match(stale.lines[0], /built from 31e3d51, and the harness is now f7e7f1a: run fleet build --pi.*pi-webapp-web-1 keeps its image until it goes down and up again/);
 	assert.ok(stale.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
 	assert.deepEqual(fresh.lines, ["pi-webapp-web-1: steered"]);
 });
 
-for (const harness of Object.values(HARNESSES)) {
+for (const harness of Object.values(KINDS)) {
 	test(`${harness.name} steer takes a stalled handoff command as steered once status.md turns to handoff complete`, () => {
 		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
 		const agent = agentName(sandbox);
 		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
 		const command = harness.tokens["handoff.command"];
 		const steerAfter = (from: string, to: string) => {
-			const io = fakeIo(
-				{ "sbx ls --json": { sandboxes: [{ name: sandbox, status: "running", workspaces: ["/w/household-budget"] }] } },
-				harness,
-			);
+			const io = fakeIo({}, SEATS[harness.name]);
 			io.files[path] = `status: implementing\nattention: ${from}\n`;
 			io.herdr = () => {
 				io.files[path] = `status: implementing\nattention: ${to}\n`;
 				throw new Error("agent_prompt_stalled");
 			};
-			steer(sandbox, command, io);
+			steer(row(sandbox, harness, ["/w/household-budget"]), command, io);
 			return io.lines;
 		};
 		const suggested = `session handoff suggested; approve with ${command}`;
@@ -139,16 +137,13 @@ for (const harness of Object.values(HARNESSES)) {
 		const command = harness.tokens["handoff.command"];
 		const suggested = `session handoff suggested; approve with ${command}`;
 		const steerReaching = (to: string) => {
-			const io = fakeIo(
-				{ "sbx ls --json": { sandboxes: [{ name: sandbox, status: "running", workspaces: ["/w/household-budget"] }] } },
-				harness,
-			);
+			const io = fakeIo({}, SEATS[harness.name]);
 			io.files[path] = `status: implementing\nattention: ${suggested}\n`;
 			io.herdr = (() => {
 				io.files[path] = `status: implementing\nattention: ${to}\n`;
 				return {};
 			}) as typeof io.herdr;
-			steer(sandbox, command, io);
+			steer(row(sandbox, harness, ["/w/household-budget"]), command, io);
 			return io.lines;
 		};
 
@@ -166,16 +161,16 @@ for (const harness of Object.values(HARNESSES)) {
 				},
 				[`herdr agent read ${agent}`]: "different text",
 			},
-			harness,
+			SEATS[harness.name],
 		);
 
 		assert.throws(
-			() => steer(agent, "go", io),
+			() => steer(row(agent, harness), "go", io),
 			(error: Error) =>
 				error.message.includes(
 					"agent_prompt_stalled: Prompt submission uncertain",
 				) &&
-				error.message.includes(`${harness.cli} peek ${agent}`) &&
+				error.message.includes(`fleet peek ${agent}`) &&
 				error.message.includes("do not steer again"),
 		);
 		assert.deepEqual(
@@ -363,8 +358,8 @@ test("ls joins sbx, herdr and git state", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
-				{ name: "pi-webapp-web-1", status: "running", workspaces: ["/r"] },
-				{ name: "pi-cv-x", status: "stopped", workspaces: [] },
+				{ name: "pi-webapp-web-1", agent: "pi", status: "running", workspaces: ["/r"] },
+				{ name: "pi-cv-x", agent: "pi", status: "stopped", workspaces: [] },
 			],
 		},
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
@@ -384,7 +379,7 @@ test("ls joins sbx, herdr and git state", () => {
 
 test("ls shows a running container's commits and PR, and an idle one past the threshold without a finish as stalled", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
 		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
@@ -404,8 +399,8 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
-				{ name: "pi-broken", status: "running", workspaces: ["/r"] },
-				{ name: "pi-webapp-web-1", status: "running", workspaces: ["/r"] },
+				{ name: "pi-broken", agent: "pi", status: "running", workspaces: ["/r"] },
+				{ name: "pi-webapp-web-1", agent: "pi", status: "running", workspaces: ["/r"] },
 			],
 		},
 		[`sbx exec pi-broken sh -c ${checkoutProbe}`]: new Error(`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`),
@@ -438,7 +433,7 @@ function blockedTask(dir: string, status = "status: blocked\nattention: owner de
 
 test("ls marks a blocked container that keeps making tool calls, counted after the change where status.md turned blocked", () => {
 	const listing = {
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
 		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }] } },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 	};
@@ -450,7 +445,7 @@ test("ls marks a blocked container that keeps making tool calls, counted after t
 
 test("ls leaves an idle container unmarked while its PR's CI runs", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "running", workspaces: ["/r"] }] },
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
 		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t1\t0\t 1 file changed, 1 insertion(+)\tabc1234 add one",
@@ -483,7 +478,7 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 test("down probes a stopped container too, so its refusals still apply", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
-			sandboxes: [{ name: "pi-a", status: "stopped", workspaces: ["/r"] }],
+			sandboxes: [{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] }],
 		},
 		"herdr agent list": { result: { agents: [] } },
 		"sbx exec pi-a sh -c": "web-1\t1\tabc",
@@ -506,6 +501,7 @@ test("resolveSandbox accepts the container name or its agent name", () => {
 			sandboxes: [
 				{
 					name: "pi-webapp-frontend-ticket-123-fix-login-page",
+					agent: "pi",
 					status: "running",
 					workspaces: [],
 				},
@@ -514,11 +510,11 @@ test("resolveSandbox accepts the container name or its agent name", () => {
 	});
 
 	assert.equal(
-		resolveSandbox("pi-webapp-frontend-ticket-123-fix-login-page", io),
+		resolveSandbox("pi-webapp-frontend-ticket-123-fix-login-page", io).name,
 		"pi-webapp-frontend-ticket-123-fix-login-page",
 	);
 	assert.equal(
-		resolveSandbox("pi-webapp-frontend-tick-33301c6", io),
+		resolveSandbox("pi-webapp-frontend-tick-33301c6", io).name,
 		"pi-webapp-frontend-ticket-123-fix-login-page",
 	);
 });
@@ -610,7 +606,7 @@ test("build renders the container seat into a stage and hands it to the shared b
 		"git log -1 --format=%h": "31e3d51",
 		"git status --porcelain": "",
 	});
-	build("/root", io);
+	build("/root", undefined, io);
 
 	const [run, script, name, image, stage] =
 		io.calls.find((c) => c[0] === "run") ?? [];
@@ -632,7 +628,7 @@ test("exec streams what the container prints instead of swallowing it", () => {
 test("a name that matches no container says so, and names what is running", () => {
 	const io = fakeIo(running);
 
-	assert.equal(resolveSandbox("pi-a", io), "pi-a");
+	assert.equal(resolveSandbox("pi-a", io).name, "pi-a");
 	assert.throws(
 		() => resolveSandbox("envtest", io),
 		/no fleet container named envtest[\s\S]*pi-a/,
@@ -712,13 +708,13 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 test("ls reads a claude container's cost from its live transcripts, before down copies them out", () => {
 	const io = fakeIo(
 		{
-			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
+			"sbx ls --json": { sandboxes: [{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] }] },
 			"herdr agent list": { result: { agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }] } },
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects": "1.5",
 			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
 		},
-		HARNESSES.claude,
+		SEATS.claude,
 	);
 
 	assert.equal(ls(io), "claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
@@ -726,7 +722,7 @@ test("ls reads a claude container's cost from its live transcripts, before down 
 
 test("ls still prices a stopped pi container from the sessions it wrote", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", status: "stopped", workspaces: ["/r"] }] },
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] }] },
 		"herdr agent list": { result: { agents: [] } },
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`stat ${task}/logs/sessions/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
@@ -740,13 +736,13 @@ test("ls still prices a stopped pi container from the sessions it wrote", () => 
 test("ls keeps a claude container's activity when its image cannot price the transcripts", () => {
 	const io = fakeIo(
 		{
-			"sbx ls --json": { sandboxes: [{ name: "claude-a", status: "running", workspaces: ["/r"] }] },
+			"sbx ls --json": { sandboxes: [{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] }] },
 			"herdr agent list": { result: { agents: [] } },
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			"sbx exec claude-a node": new Error("sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'"),
 			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
 		},
-		HARNESSES.claude,
+		SEATS.claude,
 	);
 
 	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");

@@ -50,9 +50,9 @@ act() {
 harnesses() {
 	node --input-type=module -e '
 		const root = process.argv[1];
-		const { HARNESSES } = await import(`${root}/src/harness.ts`);
+		const { KINDS } = await import(`${root}/src/harness.ts`);
 		const { OWNED } = await import(`${root}/src/render/render.ts`);
-		for (const h of Object.values(HARNESSES)) console.log(h.name, h.cli, h.home, h.image, OWNED[h.name].join(","));
+		for (const h of Object.values(KINDS)) console.log(h.name, h.home, h.image, OWNED[h.name].join(","));
 	' "$ROOT"
 }
 
@@ -77,7 +77,7 @@ render_host() {
 		mkdir -p "$out/agent"
 		cp "$HOME/$home/agent/mcp.json" "$out/agent/mcp.json"
 	fi
-	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat host --out "$out" >/dev/null
+	FLEET_SEAT="$name" node "$ROOT/src/fleet/cli.ts" render --seat host --out "$out" >/dev/null
 }
 
 seat_hash() {
@@ -105,7 +105,7 @@ by_hand() {
 			const [cname, curl] = linearServer(container) ?? [];
 			if (cname) lines.add(`  not verified ${cname}, no check from this Mac lists sbx MCP servers: sbx mcp add ${cname} --url ${curl}`);
 			const [hname] = linearServer(host) ?? [];
-			if (hname) lines.add(`  not verified ${hname}, registered per checkout: <cli> profile <checkout> --apply in each checkout`);
+			if (hname) lines.add(`  not verified ${hname}, registered per checkout: fleet profile <checkout> --apply in each checkout`);
 		}
 		for (const line of lines) console.log(line);
 	' "$ROOT" "$HOME"
@@ -126,28 +126,25 @@ fi
 
 echo "== commands"
 [ -d "$HOME/.local/bin" ] || act mkdir -p "$HOME/.local/bin"
-while read -r name cli home image owned <&3; do
-	[ "$(readlink "$HOME/.local/bin/$cli" 2>/dev/null)" = "$ROOT/bin/$cli" ] || act ln -sfn "$ROOT/bin/$cli" "$HOME/.local/bin/$cli"
-done 3<<<"$HARNESS_ROWS"
+[ "$(readlink "$HOME/.local/bin/fleet" 2>/dev/null)" = "$ROOT/bin/fleet" ] || act ln -sfn "$ROOT/bin/fleet" "$HOME/.local/bin/fleet"
 [ "$(readlink "$HOME/.claude/statusline.mjs" 2>/dev/null)" = "$ROOT/claude/statusline.mjs" ] || act ln -sfn "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"
 
-while read -r name cli home image owned <&3; do
+while read -r name home image owned <&3; do
 	echo "== $name: host seat in ~/$home"
 	render_host "$name" "$home" "$WORK/$name"
 	stale="$(drift "$WORK/$name" "$HOME/$home" "$owned")"
 	if [ -n "$stale" ]; then
 		printf '%s\n' "$stale" | sed 's/^/    /'
-		act "$ROOT/bin/$cli" render
+		act env FLEET_SEAT="$name" "$ROOT/bin/fleet" render
 	fi
 done 3<<<"$HARNESS_ROWS"
 
 echo "== parity of the pi and claude renders"
 node --input-type=module -e '
 	const root = process.argv[1];
-	const { HARNESSES } = await import(`${root}/src/harness.ts`);
 	const { realIo } = await import(`${root}/src/fleet/io.ts`);
 	const { parity, parityReport } = await import(`${root}/src/render/parity.ts`);
-	for (const line of parityReport(parity(root, realIo(root, HARNESSES.pi)))) console.log(`    ${line}`);
+	for (const line of parityReport(parity(root, realIo(root)))) console.log(`    ${line}`);
 ' "$ROOT"
 
 echo "== claude settings, hooks and herdr config"
@@ -159,12 +156,12 @@ else
 	act python3 "$ROOT/claude/tools/align-settings.py" --apply
 fi
 
-while read -r name cli home image owned <&3; do
+while read -r name home image owned <&3; do
 	echo "== $name: image $image"
-	FLEET_HARNESS="$name" node "$ROOT/src/fleet/cli.ts" render --seat container --out "$WORK/$name-image" >/dev/null
+	FLEET_SEAT="$name" node "$ROOT/src/fleet/cli.ts" render --seat container --out "$WORK/$name-image" >/dev/null
 	want="$(seat_hash "$WORK/$name-image" "$ROOT/sbx/build.sh" "$(image_agent_version "$name")")"
 	if [ "$want" != "$(cat "$STAMPS/$name" 2>/dev/null || true)" ] || ! template_loaded "$image"; then
-		act "$ROOT/bin/$cli" build
+		act "$ROOT/bin/fleet" build "--$name"
 		if [ "$apply" = 1 ]; then
 			mkdir -p "$STAMPS"
 			printf '%s\n' "$want" >"$STAMPS/$name"
@@ -211,7 +208,7 @@ elif [ "$apply" = 0 ]; then
 	echo "$changes change(s) above. Re-run with --apply to make them."
 else
 	left=0
-	while read -r name cli home image owned <&3; do
+	while read -r name home image owned <&3; do
 		render_host "$name" "$home" "$WORK/$name-check"
 		stale="$(drift "$WORK/$name-check" "$HOME/$home" "$owned")"
 		if [ -n "$stale" ]; then

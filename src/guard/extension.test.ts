@@ -3,12 +3,12 @@ import { test } from "node:test";
 import { PRIVATE_REPO } from "../profile/fixture.ts";
 import { checkout, EMPTY_HOME, privateRoot } from "./checkouts.ts";
 import guard from "../../extensions/guard.ts";
-import { HARNESSES } from "../harness.ts";
+import { KINDS } from "../harness.ts";
 
 type Verdict = { block: boolean; reason: string } | undefined;
 type Handler = (event: { toolName: string; input?: Record<string, unknown> }, ctx: { cwd: string }) => Verdict;
 
-function handler(root?: string, harness = HARNESSES.pi): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
+function handler(root?: string, harness = KINDS.pi): (event: Parameters<Handler>[0], ctx?: { cwd: string }) => Verdict {
 	let captured: Handler | undefined;
 	guard(harness, root, EMPTY_HOME)({ on: (_event, fn) => { captured = fn as Handler; } });
 	assert.ok(captured, "the extension registered no tool_call handler");
@@ -82,7 +82,7 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 test("pi refuses an edit or a shell redirect into its own home, and leaves reads and the fleet cache alone", () => {
 	const home = "/Users/me";
 	let captured: Handler | undefined;
-	guard(HARNESSES.pi, undefined, home)({ on: (_event, fn) => { captured = fn as Handler; } });
+	guard(KINDS.pi, undefined, home)({ on: (_event, fn) => { captured = fn as Handler; } });
 	const ask = (toolName: string, input: Record<string, unknown>, cwd = "/Users/me/Work/app") => captured!({ toolName, input }, { cwd });
 
 	for (const [toolName, input, cwd] of [

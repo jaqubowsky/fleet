@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import type { Harness } from "../src/harness.ts";
+import type { Kind } from "../src/harness.ts";
 import { hostAt } from "../src/guard/host.ts";
 import { OWN_CONFIG, writesOwnConfig } from "../src/guard/own-config.ts";
 import { decide } from "../src/guard/policy.ts";
@@ -10,7 +10,7 @@ type GuardApi = {
 	on(event: "tool_call", handler: (event: ToolCallEvent, ctx: { cwd: string }) => unknown): void;
 };
 
-export default function guard(h: Harness, root?: string, home = homedir()) {
+export default function guard(h: Kind, root?: string, home = homedir()) {
 	const trusted = TRUSTED[h.name] ?? new Set<string>();
 	return (pi: GuardApi) => {
 		pi.on("tool_call", (event, ctx) => {

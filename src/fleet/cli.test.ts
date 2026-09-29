@@ -26,11 +26,11 @@ test("the usage names the two files init lays out", () => {
 	});
 });
 
-test("the up usage starts the seat's agent, whichever harness runs it", () => {
+test("the up usage starts the container's agent, the seat's own without a kind flag", () => {
 	assert.throws(() => flags(["--nope"], []), (error: Error) => {
 		const line = error.message.split("\n").find((row) => row.includes(" up <label>"));
 		assert.ok(line, "usage has an up line");
-		assert.match(line, /start the seat's agent in a herdr tab/);
+		assert.match(line, /start the container's agent in a herdr tab, the seat's own without --pi\|--claude/);
 		assert.doesNotMatch(line, /start pi/);
 		return true;
 	});

@@ -3,8 +3,8 @@ import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { describe, repoName, type Profile } from "../profile/profile.ts";
-import type { Harness } from "../harness.ts";
-import type { Io } from "./io.ts";
+import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
+import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
 import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
@@ -29,23 +29,23 @@ const IMAGE_SOURCES = [
 	"src",
 ];
 
-export function imageStampPath(io: Io): string {
-	return `${io.home}/${io.harness.home}/${io.harness.cache}/image-stamp`;
+export function imageStampPath(kind: Kind, io: Io): string {
+	return `${io.home}/${kind.home}/${kind.cache}/image-stamp`;
 }
 
-export function harnessStamp(root: string, io: Io): string {
-	const paths = [...IMAGE_SOURCES, io.harness.name];
+export function harnessStamp(root: string, kind: Kind, io: Io): string {
+	const paths = [...IMAGE_SOURCES, kind.name];
 	const commit = io.git(["log", "-1", "--format=%h", "--", ...paths], root);
 	return io.git(["status", "--porcelain", "--", ...paths], root)
 		? `${commit} with uncommitted changes`
 		: commit;
 }
 
-export function staleImage(root: string, io: Io): string | undefined {
-	const built = io.read(imageStampPath(io))?.trim();
-	const current = harnessStamp(root, io);
+export function staleImage(root: string, kind: Kind, io: Io): string | undefined {
+	const built = io.read(imageStampPath(kind, io))?.trim();
+	const current = harnessStamp(root, kind, io);
 	if (built === current) return undefined;
-	return `${io.harness.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${io.harness.cli} build so the container carries today's rules, skills and extensions`;
+	return `${kind.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${CLI} build --${kind.name} so the container carries today's rules, skills and extensions`;
 }
 
 const TASK_STATUS = "status: new\nattention: none\n\n## Log\n";
@@ -57,7 +57,7 @@ function layoutTask(dir: string, io: Io): void {
 }
 
 export function agentArgs(
-	h: Harness,
+	h: Kind,
 	model: string | undefined,
 	resume: boolean,
 ): string {
@@ -79,6 +79,7 @@ export type UpInput = {
 	memory?: string;
 	cpus?: string;
 	model?: string;
+	kind?: AgentName;
 	root: string;
 };
 type Workspace = { workspace_id: string; label: string };
@@ -98,28 +99,30 @@ export async function up(
 	input: UpInput,
 	io: Io,
 ): Promise<{ sandbox: string; agent: string; pane: string }> {
-	const stale = staleImage(input.root, io);
+	const seat = seatOf(io);
+	const kind = KINDS[input.kind ?? seat.name];
+	const stale = staleImage(input.root, kind, io);
 	if (stale) io.log(stale);
 	input = {
 		...input,
 		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
 	};
-	const sandbox = sandboxName(input.repo, input.label, io.harness.prefix);
+	const sandbox = sandboxName(input.repo, input.label, kind.prefix);
 	const agent = agentName(sandbox);
 	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
 	const profile = repoProfile(input.root, name, io);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
-	const found = findPane(io, basename(input.repo), agent);
+	const found = findPane(io, basename(input.repo), agent, kind);
 	const task = taskDir(input.repo, sandbox, io);
 	layoutTask(task, io);
 	if (!existing) {
 		const variable = sessionToken(profile);
 		if (variable && !io.env(variable))
 			throw new Error(
-				`${name} takes its container token from ${variable}, and this session has none: start ${io.harness.agent} with ${variable} set, as inventory.md (GitHub tokens) shows`,
+				`${name} takes its container token from ${variable}, and this session has none: start ${seat.name} with ${variable} set, as inventory.md (GitHub tokens) shows`,
 			);
 		const openai = !input.model || input.model.startsWith("openai-codex/");
-		if (io.harness.codex && openai && !/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? ""))
+		if (kind.codex && openai && !/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? ""))
 			throw new Error(
 				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
 			);
@@ -127,27 +130,27 @@ export async function up(
 		const base = input.base ?? baseBranch(input.repo, io).replace(/^origin\//, "");
 		if (isBase(base, branch))
 			throw new Error(`${branch} is the default branch, and a container never works on it: give the task its own label, or --branch <name>`);
-		create(input, sandbox, profile, io);
+		create(input, sandbox, profile, kind, io);
 		let locks: number;
 		try {
 			if (profile.container.push === "auto") refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
-			seedCache(io, input.repo, sandbox);
-			if (io.harness.projectConfig)
-				seedProjectConfig(io, input.repo, sandbox, io.harness.projectConfig);
-			if (io.harness.sbxGuidance)
+			seedCache(io, input.repo, sandbox, kind);
+			if (kind.projectConfig)
+				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
+			if (kind.sbxGuidance)
 				io.sbx(
-					["exec", sandbox, "sh", "-c", 'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"', "--", io.harness.sbxGuidance],
+					["exec", sandbox, "sh", "-c", 'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"', "--", kind.sbxGuidance],
 					{ quiet: true },
 				);
-			const integration = io.harness.herdrIntegration;
+			const integration = kind.herdrIntegration;
 			if (integration)
 				io.sbx(
 					[
 						"cp",
-						`${io.home}/${io.harness.home}/${integration}`,
-						`${sandbox}:/home/agent/${io.harness.home}/${integration}`,
+						`${io.home}/${kind.home}/${integration}`,
+						`${sandbox}:/home/agent/${kind.home}/${integration}`,
 					],
 					{ quiet: true },
 				);
@@ -188,7 +191,7 @@ export async function up(
 			);
 		}
 		const resources = { memory: input.memory ?? profile.resources.memory, cpus: input.cpus ?? profile.resources.cpus };
-		const allowed = describe(name, { ...profile, resources }, io.harness.cli);
+		const allowed = describe(name, { ...profile, resources });
 		io.write(`${task}/permissions.md`, allowed);
 		io.log(allowed);
 		const overlay = projectOverlay(name, io);
@@ -221,26 +224,26 @@ export async function up(
 	const { pane, running } = openPane(io, basename(input.repo), agent, found);
 	if (!running) {
 		const args = agentArgs(
-			io.harness,
+			kind,
 			input.model,
 			io.list(`${task}/logs/sessions`).length > 0 ||
-				(Boolean(existing) && Boolean(io.harness.containerSessions)),
+				(Boolean(existing) && Boolean(kind.containerSessions)),
 		);
-		const start = io.harness.herdrIntegration
-			? `${input.root}/bin/${io.harness.cli} relay ${sandbox} ${task}`
+		const start = kind.herdrIntegration
+			? `${input.root}/bin/${CLI} relay ${sandbox} ${task}`
 			: `sbx run --name ${sandbox}`;
 		io.herdr([
 			"pane",
 			"run",
 			pane,
-			`HERDR_AGENT=${io.harness.agent} ${start}${args ? ` -- ${args}` : ""}`,
+			`HERDR_AGENT=${kind.name} ${start}${args ? ` -- ${args}` : ""}`,
 		]);
 	}
-	await waitForAgent(io, pane, sandbox);
+	await waitForAgent(io, pane, sandbox, kind);
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
-		`${sandbox}: ${io.harness.agent} waiting in tab ${agent} (pane ${pane}); no prompt sent`,
+		`${sandbox}: ${kind.name} waiting in tab ${agent} (pane ${pane}); no prompt sent`,
 	);
 	return { sandbox, agent, pane };
 }
@@ -261,10 +264,9 @@ function refuseOtherPrivate(io: Io, sandbox: string, name: string): void {
 	);
 }
 
-function create(input: UpInput, sandbox: string, profile: Profile, io: Io): void {
-	const h = io.harness;
+function create(input: UpInput, sandbox: string, profile: Profile, h: Kind, io: Io): void {
 	const artifacts = artifactsDir(input.repo, io);
-	const cache = cacheDir(input.repo, io);
+	const cache = cacheDir(input.repo, h, io);
 	const knowledgeBase = `${io.home}/my-knowledge-base`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
@@ -327,8 +329,8 @@ function create(input: UpInput, sandbox: string, profile: Profile, io: Io): void
 	]);
 }
 
-export function cacheDir(repo: string, io: Io): string {
-	return `${io.home}/${io.harness.home}/${io.harness.cache}/${basename(repo)}`;
+export function cacheDir(repo: string, kind: Kind, io: Io): string {
+	return `${io.home}/${kind.home}/${kind.cache}/${basename(repo)}`;
 }
 
 function lockfiles(listing: string): number {
@@ -462,8 +464,8 @@ function cachePaths(repo: string, io: Io): string[] {
 		.map(([, path]) => path);
 }
 
-function seedCache(io: Io, repo: string, sandbox: string): void {
-	const cache = cacheDir(repo, io);
+function seedCache(io: Io, repo: string, sandbox: string, kind: Kind): void {
+	const cache = cacheDir(repo, kind, io);
 	const listed = io.read(`${cache}/paths`);
 	const paths = listed
 		? listed
@@ -577,18 +579,18 @@ function seedSubmodules(io: Io, repo: string, sandbox: string): void {
 
 type Found = { pane: string; running: boolean } | { workspace?: string };
 
-function findPane(io: Io, label: string, tab: string): Found {
+function findPane(io: Io, label: string, tab: string, kind: Kind): Found {
 	const named = agentFor(
 		io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents,
 		tab,
 	);
 	if (named?.pane_id) {
-		if (named.agent !== io.harness.agent)
+		if (named.agent !== kind.name)
 			throw new Error(
-				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${io.harness.agent}; rename it or pick another label`,
+				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${kind.name}; rename it or pick another label`,
 			);
 		io.log(
-			`${tab}: adopting the ${io.harness.agent} already running in pane ${named.pane_id}`,
+			`${tab}: adopting the ${kind.name} already running in pane ${named.pane_id}`,
 		);
 		return { pane: named.pane_id, running: true };
 	}
@@ -613,13 +615,13 @@ function findPane(io: Io, label: string, tab: string): Found {
 		])
 		.result.panes.find((p) => p.tab_id === existing.tab_id);
 	if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
-	if (pane.agent && pane.agent !== io.harness.agent)
+	if (pane.agent && pane.agent !== kind.name)
 		throw new Error(
 			`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
 		);
 	if (pane.agent)
 		io.log(
-			`${tab}: adopting the ${io.harness.agent} already running in pane ${pane.pane_id}`,
+			`${tab}: adopting the ${kind.name} already running in pane ${pane.pane_id}`,
 		);
 	return { pane: pane.pane_id, running: Boolean(pane.agent) };
 }
@@ -666,6 +668,7 @@ async function waitForAgent(
 	io: Io,
 	pane: string,
 	sandbox: string,
+	kind: Kind,
 ): Promise<void> {
 	const started = io.now().getTime();
 	let probeError: unknown;
@@ -677,14 +680,14 @@ async function waitForAgent(
 			if (KNOWN_STATUS.has(status)) {
 				let runs = false;
 				try {
-					runs = agentRuns(io, sandbox);
+					runs = agentRuns(io, sandbox, kind);
 				} catch (error) {
 					probeError = error;
 				}
 				if (runs) {
-					if (io.harness.agent !== "pi" && io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
+					if (kind.name !== "pi" && io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
 						throw new Error(
-							`${sandbox}: ${io.harness.agent} is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
+							`${sandbox}: ${kind.name} is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
 						);
 					return;
 				}
@@ -696,13 +699,13 @@ async function waitForAgent(
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`${io.harness.agent} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
+		`${kind.name} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
 	);
 }
 
-function agentRuns(io: Io, sandbox: string): boolean {
-	if (io.harness.agent !== "pi") {
-		io.sbx(["exec", sandbox, "pgrep", "-x", io.harness.agent], { quiet: true });
+function agentRuns(io: Io, sandbox: string, kind: Kind): boolean {
+	if (kind.name !== "pi") {
+		io.sbx(["exec", sandbox, "pgrep", "-x", kind.name], { quiet: true });
 		return true;
 	}
 	const tty = io.sbx(["exec", sandbox, "sh", "-c", 'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a'], { quiet: true });

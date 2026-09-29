@@ -1,7 +1,8 @@
 import { addedLines, fieldsOf, logLines } from "../../extensions/status-history.ts";
+import { type AgentName, type Kind, KINDS } from "../harness.ts";
 import type { Io } from "./io.ts";
 
-export type Sandbox = { name: string; status: string; workspaces: string[] };
+export type Sandbox = { name: string; status: string; workspaces: string[]; kind: Kind };
 export type Agent = {
 	pane_id: string;
 	tab_id?: string;
@@ -23,22 +24,15 @@ export type Row = {
 	facts?: string;
 };
 
-export function fleetSandboxes(
-	sbxLs: { sandboxes?: Sandbox[] },
-	prefix: string,
-): Sandbox[] {
-	return (sbxLs.sandboxes ?? []).filter((s) => s.name.startsWith(prefix));
-}
-
 export function sandboxes(io: Io): Sandbox[] {
 	const text = io.sbx(["ls", "--json"], { quiet: true, timeoutMs: 60_000 });
-	let listed: { sandboxes?: Sandbox[] };
+	let listed: { sandboxes?: (Omit<Sandbox, "kind"> & { agent?: string })[] };
 	try {
 		listed = JSON.parse(text);
 	} catch (cause) {
 		throw new Error("sbx ls returned invalid JSON", { cause });
 	}
-	return fleetSandboxes(listed, io.harness.prefix);
+	return (listed.sandboxes ?? []).flatMap(({ agent, ...s }) => (agent && Object.hasOwn(KINDS, agent) ? [{ ...s, kind: KINDS[agent as AgentName] }] : []));
 }
 
 export function agentFor(agents: Agent[], name: string): Agent | undefined {

@@ -1,2 +1,2 @@
 #!/bin/sh
-FLEET_HARNESS="${FLEET_HARNESS:-pi}" exec node "$(dirname "$(readlink -f "$0")")/../src/fleet/cli.ts" "$@"
+exec node "$(dirname "$(readlink -f "$0")")/../src/fleet/cli.ts" "$@"

@@ -11,24 +11,10 @@ import {
 	commitFacts,
 	commitsProbe,
 	elapsed,
-	fleetSandboxes,
 	formatRows,
 	parseCheckout,
 	wake,
 } from "./status.ts";
-
-test("only pi- sandboxes belong to the fleet", () => {
-	const all = {
-		sandboxes: [
-			{ name: "claude-x", status: "running", workspaces: [] },
-			{ name: "pi-webapp-a", status: "stopped", workspaces: ["/r"] },
-		],
-	};
-	assert.deepEqual(
-		fleetSandboxes(all, "pi-").map((s) => s.name),
-		["pi-webapp-a"],
-	);
-});
 
 test("checkout probe output parses branch, dirty count and head", () => {
 	assert.deepEqual(parseCheckout("web-1\t3\tabc"), {

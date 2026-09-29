@@ -1,4 +1,5 @@
 import type { Io } from "./io.ts";
+import { sandboxes } from "./status.ts";
 
 const READ_MS = 500;
 const SOCKET = "/tmp/herdr.sock";
@@ -16,7 +17,8 @@ function reportIn(text: string): Report | undefined {
 
 export async function relay(sandbox: string, task: string, args: string[], io: Io): Promise<number> {
 	const file = `${task}/logs/agent-state.json`;
-	const agent = io.harness.agent;
+	const agent = sandboxes(io).find((s) => s.name === sandbox)?.kind.name;
+	if (!agent) throw new Error(`no fleet container named ${sandbox}`);
 	io.remove(file);
 	let sent: string | undefined;
 	const forward = () => {

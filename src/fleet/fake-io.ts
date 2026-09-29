@@ -1,10 +1,9 @@
-import type { Harness } from "../harness.ts";
-import { HARNESSES } from "../harness.ts";
+import { SEATS, type Seat } from "../harness.ts";
 import type { Io } from "./io.ts";
 
 type Call = [string, ...string[]];
 
-export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness = HARNESSES.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] } {
+export function fakeIo(answers: Record<string, unknown> = {}, seat: Seat = SEATS.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] } {
 	const calls: Call[] = [];
 	const sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] = [];
 	const lines: string[] = [];
@@ -26,7 +25,7 @@ export function fakeIo(answers: Record<string, unknown> = {}, harness: Harness =
 		lines,
 		files,
 		home: "/home/me",
-		harness,
+		seat,
 		tmp: "/tmp",
 		pane: "w1:host",
 		env: (name) => answer(`env ${name}`) as string | undefined,

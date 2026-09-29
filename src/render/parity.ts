@@ -1,13 +1,13 @@
 import type { Io } from "../fleet/io.ts";
-import { HARNESSES, type HarnessName } from "../harness.ts";
+import { type AgentName, KINDS } from "../harness.ts";
 import { render, type Seat, seatTokens } from "./render.ts";
 
 export type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{ where: /^rules\/delegation\.md: 1\. "Parallel" =/, reason: "pi starts runs in the background, claude sends several background `Agent` calls in one message" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `cfleet watch`" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "claude has no follow-up delivery between tool calls, so a steer is its next message, and its watch is a held `cfleet watch`" },
+	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `fleet watch`" },
+	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "claude has no follow-up delivery between tool calls, so a steer is its next message, and its watch is a held `fleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/, reason: "claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json and managed settings, which `align-settings.py` merges, where pi `/reload`s a rendered file" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| approve \|/, reason: "claude's `/clear` takes no text, so the continue is a second steer" },
 	{ where: /^skills\/container\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/, reason: "claude's `Agent` call has no output file, so the caller writes review.md; pi's subagent call needs `async: false` to wait" },
@@ -33,26 +33,25 @@ const FRAGMENT = /^(?:([a-z]+)\/)?fragments\/(.+)$/;
 function normalise(text: string): string {
 	return text
 		.replace(/~?(\/home\/agent)?\/\.(pi|claude)\b/g, "<home>")
-		.replace(/\bc?fleet\b/g, "<cli>")
+		.replace(/\bfleet\b/g, "<cli>")
 		.replace(/\b(PI|CLAUDE)_/g, "<AGENT>_")
 		.replace(/\b(pi|claude|Pi|Claude)\b/g, "<agent>");
 }
 
-function rendered(root: string, name: HarnessName, seat: Seat, io: Io): Map<string, string> {
-	const harness = HARNESSES[name];
+function rendered(root: string, name: AgentName, seat: Seat, io: Io): Map<string, string> {
 	const seen = new Map<string, string>();
-	const quiet: Io = { ...io, harness, write() {}, copy() {}, mkdir() {}, remove() {}, log() {} };
-	const placeholders = [...VOCABULARY.map(([key]) => key), ...Object.keys(seatTokens(io, root, harness))];
-	render({ root, harness, seat, out: `${io.tmp}/parity`, placeholders, seen }, quiet);
+	const quiet: Io = { ...io, write() {}, copy() {}, mkdir() {}, remove() {}, log() {} };
+	const placeholders = [...VOCABULARY.map(([key]) => key), ...Object.keys(seatTokens(io, root, name))];
+	render({ root, agent: name, seat, out: `${io.tmp}/parity`, placeholders, seen }, quiet);
 	return new Map([...seen].map(([path, text]) => [path, normalise(text)]));
 }
 
 export type Parity = { unlisted: string[]; listed: Map<Divergence, number>; overrides: string[]; own: Map<string, number> };
 
 export function parity(root: string, io: Io): Parity {
-	const names = Object.keys(HARNESSES) as HarnessName[];
+	const names = Object.keys(KINDS) as AgentName[];
 	const result: Parity = { unlisted: [], listed: new Map(DIVERGENCES.map((d) => [d, 0])), overrides: [], own: new Map() };
-	const found = new Map<string, Set<HarnessName>>();
+	const found = new Map<string, Set<AgentName>>();
 	const fragments = new Map<string, Map<string, string>>();
 	for (const seat of ["host", "container"] as Seat[]) {
 		const texts = new Map(names.map((name) => [name, rendered(root, name, seat, io)]));
@@ -67,7 +66,7 @@ export function parity(root: string, io: Io): Parity {
 		for (const [name, sources] of fragments) {
 			if (io.read(`${root}/fragments/${name}`) !== undefined) continue;
 			for (const [path, text] of sources) {
-				const harness = path.match(FRAGMENT)?.[1] as HarnessName;
+				const harness = path.match(FRAGMENT)?.[1] as AgentName;
 				for (const line of text.split("\n")) own.get(harness)?.add(line);
 				result.own.set(path, text.split("\n").length);
 			}

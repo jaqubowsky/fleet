@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
-import { HARNESSES } from "../harness.ts";
+import { KINDS } from "../harness.ts";
 import { argvsOf } from "./argv.ts";
 import { within } from "./host.ts";
 
-const HOMES = [HARNESSES.pi];
+const HOMES = [KINDS.pi];
 const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|echo|printf|test|\[|cd|pushd)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;

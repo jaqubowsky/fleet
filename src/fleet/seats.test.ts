@@ -1,0 +1,157 @@
+import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import net from "node:net";
+import { test, type TestContext } from "node:test";
+import fleetMonitor from "../../extensions/fleet-monitor.ts";
+import { KINDS, SEATS } from "../harness.ts";
+import { SAMPLE_PROFILES } from "../profile/fixture.ts";
+import { artifacts, copy, down, exec, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
+import { EVENTS_LOG } from "./events.ts";
+import { fakeIo } from "./fake-io.ts";
+import { land } from "./land.ts";
+import { permissions } from "./permissions.ts";
+import { up } from "./up.ts";
+import { paneScope, watch } from "./watch.ts";
+
+const log = `/home/me/${EVENTS_LOG}`;
+const listed = (name: string, agent: string) => ({
+	"sbx ls --json": { sandboxes: [{ name, status: "running", workspaces: ["/r"], agent }] },
+	"herdr agent list": { result: { agents: [{ name, pane_id: "w1:p2", tab_id: "w1:t2", agent_status: "working" }] } },
+});
+for (const seat of Object.values(SEATS))
+	for (const kind of Object.values(KINDS)) {
+		test(`a ${seat.name} seat steers a ${kind.name} container, clearing it with the ${kind.name} command`, () => {
+			const name = `${kind.prefix}a`;
+			const command = kind.tokens["handoff.command"];
+			const status = `/home/me/.sandboxes/r/${name}/status.md`;
+			const io = fakeIo(listed(name, kind.name), seat);
+			io.files[status] = `status: implementing\nattention: session handoff suggested; approve with ${command}\n`;
+			const herdr = io.herdr;
+			io.herdr = ((args: string[]) => {
+				if (args[1] === "prompt") io.files[status] = "status: implementing\nattention: session handoff complete; fresh session idle\n";
+				return herdr(args);
+			}) as typeof io.herdr;
+
+			steer(resolveSandbox(name, io), command, io);
+
+			assert.ok(io.calls.some((c) => c.join(" ").startsWith(`herdr agent prompt ${name} ${command}`)));
+			assert.deepEqual(io.lines, [`${name}: steered`]);
+			assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === log && c[2].includes(` steer ${name} `)));
+		});
+
+		test(`a ${seat.name} seat lists and takes down a ${kind.name} container`, () => {
+			const name = `${kind.prefix}a`;
+			const io = fakeIo({ ...listed(name, kind.name), [`sbx exec ${name} sh -c`]: "task\t0\t" }, seat);
+
+			assert.match(ls(io), new RegExp(`^${name} `));
+			down(name, {}, io);
+
+			assert.ok(io.calls.some((c) => c.join(" ") === `sbx rm -f ${name}`));
+			assert.ok(io.calls.some((c) => c[0] === "append" && c[1] === log && c[2].includes(` down ${name} `)));
+		});
+	}
+
+test("the kind comes from the agent sbx reports, whatever the name prefix says", () => {
+	const io = fakeIo({
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-runs-claude", status: "running", workspaces: ["/r"], agent: "claude" },
+				{ name: "claude-legacy", status: "running", workspaces: ["/r"], agent: "claude" },
+				{ name: "claude-runs-pi", status: "running", workspaces: ["/r"], agent: "pi" },
+				{ name: "pi-codex", status: "running", workspaces: ["/r"], agent: "codex" },
+			],
+		},
+	});
+
+	assert.equal(resolveSandbox("pi-runs-claude", io).kind, KINDS.claude);
+	assert.equal(resolveSandbox("claude-legacy", io).kind, KINDS.claude);
+	assert.equal(resolveSandbox("claude-runs-pi", io).kind, KINDS.pi);
+	assert.throws(() => resolveSandbox("pi-codex", io), /no fleet container named pi-codex/);
+});
+
+test("a claude- container an earlier fleet put up is listed, steered and taken down from a pi seat", () => {
+	const name = "claude-expenses-old";
+	const io = fakeIo({ ...listed(name, "claude"), [`sbx exec ${name} sh -c`]: "task\t0\t" }, SEATS.pi);
+
+	assert.match(ls(io), new RegExp(`^${name} `));
+	steer(resolveSandbox(name, io), "go", io);
+	down(name, {}, io);
+
+	assert.ok(io.calls.some((c) => c.join(" ") === `sbx cp ${name}:${KINDS.claude.containerSessions} /home/me/.sandboxes/r/${name}/logs/sessions/projects`));
+	assert.ok(io.calls.some((c) => c.join(" ") === `sbx rm -f ${name}`));
+});
+
+const seatless = (answers: Record<string, unknown> = {}) => Object.assign(fakeIo(answers), { seat: undefined });
+
+test("up, steer, watch, render and profile --apply refuse without FLEET_SEAT and name it", async () => {
+	const io = seatless({ ...listed("pi-a", "pi"), "read /root/host/repos.json": SAMPLE_PROFILES, "stat /r": { size: 0, mtime: new Date(0), dir: true }, "git remote get-url origin": "git@github.com:acme/webapp.git" });
+
+	await assert.rejects(up({ repo: "/w/webapp", label: "web-1", root: "/root" }, io), /FLEET_SEAT/);
+	assert.throws(() => steer(resolveSandbox("pi-a", io), "go", io), /FLEET_SEAT/);
+	assert.throws(() => watch(paneScope(io, []), io), /FLEET_SEAT/);
+	assert.throws(() => renderHost("/root", io), /FLEET_SEAT/);
+	assert.throws(() => permissions({ root: "/root", repo: "/r", apply: true }, io), /FLEET_SEAT/);
+	assert.ok(!io.calls.some((c) => c[0] === "append" || c[0] === "remove" || c[1] === "run" || c[2] === "prompt" || c.includes("config")));
+});
+
+test("ls, peek, history, exec, copy, artifacts, land and down run without FLEET_SEAT", () => {
+	const io = seatless({ ...listed("pi-a", "pi"), "read /root/host/repos.json": SAMPLE_PROFILES, "sbx exec pi-a sh -c": "task\t0\t", "git rev-parse --show-toplevel": "/r" });
+
+	ls(io);
+	peek("pi-a", io);
+	history("pi-a", "/r", io);
+	exec("pi-a", ["true"], io);
+	copy("pi-a:/x", "/y", io);
+	artifacts("/r", io);
+	land({ sandbox: "pi-a", repo: "/r", root: "/root" }, io);
+	down("pi-a", {}, io);
+
+	assert.ok(io.calls.some((c) => c.join(" ") === "sbx rm -f pi-a"));
+});
+
+function herdrSocket(t: TestContext) {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	t.mock.method(globalThis, "setInterval", (() => 1) as unknown as typeof setInterval);
+	const sockets: EventEmitter[] = [];
+	t.mock.method(net, "createConnection", () => {
+		const socket = Object.assign(new EventEmitter(), { destroyed: false, write() {}, destroy() {} });
+		sockets.push(socket);
+		return socket as unknown as net.Socket;
+	});
+	return () => {
+		for (const socket of sockets) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: "w1:p2", agent_status: "idle" } })}\n`));
+		t.mock.timers.tick(1100);
+	};
+}
+
+test("a claude seat's pane-owned watch wakes on a pi container it put up", (t) => {
+	const settle = herdrSocket(t);
+	const io = fakeIo(listed("pi-a", "pi"), SEATS.claude);
+	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up pi-a session=";
+	const wakes: string[] = [];
+
+	watch(paneScope(io, []), io, (text) => wakes.push(text));
+	settle();
+
+	assert.match(wakes[0] ?? "", /^\[fleet\] pi-a:/);
+});
+
+test("a pi seat's session-owned watch wakes on a claude container it put up", (t) => {
+	const settle = herdrSocket(t);
+	const io = fakeIo(listed("claude-a", "claude"), SEATS.pi);
+	io.files[log] = "2026-09-16T10:00:00.000Z w9:other up claude-a session=session-a";
+	const handlers: Record<string, (...args: any[]) => any> = {};
+	const messages: string[] = [];
+	fleetMonitor(SEATS.pi, io)({
+		on: (name: string, fn: any) => { handlers[name] = fn; },
+		registerTool() {},
+		registerCommand() {},
+		sendMessage: (message: { content: string }) => messages.push(message.content),
+	});
+	t.after(() => handlers.session_shutdown());
+
+	handlers.session_start({}, { sessionManager: { getSessionId: () => "session-a" } });
+	settle();
+
+	assert.match(messages[0] ?? "", /^\[fleet\] claude-a:/);
+});

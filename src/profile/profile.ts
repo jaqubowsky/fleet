@@ -1,3 +1,4 @@
+import { CLI } from "../harness.ts";
 type Level = "none" | "human" | "auto";
 type LinearLevel = "none" | "read" | "write";
 export type Host = { sign: Level; push: Level; pr: Level; merge: Level; down: Level; linear: LinearLevel; linearServer?: string };
@@ -109,8 +110,8 @@ const WRITES = { container: "write only what you were told to", host: "move stat
 const linear = (entry: Host | Container, seat: keyof typeof WRITES): string =>
 	entry.linear === "none" ? "no Linear server" : `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : `; ${WRITES[seat]}, and say what you posted`}`;
 
-function says(cli: string): Record<string, Record<string, Record<string, string>>> {
-	const resync = `then \`${cli} steer <sandbox> "resync and open the PR"\`; the resync comes first because signing rewrote its commits`;
+function says(): Record<string, Record<string, Record<string, string>>> {
+	const resync = `then \`${CLI} steer <sandbox> "resync and open the PR"\`; the resync comes first because signing rewrote its commits`;
 	return {
 		container: {
 			push: {
@@ -121,22 +122,22 @@ function says(cli: string): Record<string, Record<string, Record<string, string>
 			pr: { none: "no credential here opens a pull request", human: "draft the pull request and ask under `attention:`; the person opens it", auto: "open and update the pull request of your own branch once the branch is on GitHub" },
 		},
 		host: {
-			sign: { none: `commits stay unsigned; \`${cli} land\` signs only with --sign`, human: `\`${cli} land\` signs every commit origin lacks, one Touch ID tap each`, auto: `\`${cli} land\` signs every commit origin lacks, with a key that asks nobody` },
-			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${cli} land --push\`; the person confirms it with Touch ID`, auto: `push with \`git push\`, never forced; the guard allows it, and \`${cli} profile --apply\` keeps the origin on HTTPS with no branch tracking` },
+			sign: { none: `commits stay unsigned; \`${CLI} land\` signs only with --sign`, human: `\`${CLI} land\` signs every commit origin lacks, one Touch ID tap each`, auto: `\`${CLI} land\` signs every commit origin lacks, with a key that asks nobody` },
+			push: { none: "nothing on the host pushes this repository; the guard refuses `git push`", human: `start the push with \`git push\` or \`${CLI} land --push\`; the person confirms it with Touch ID`, auto: `push with \`git push\`, never forced; the guard allows it, and \`${CLI} profile --apply\` keeps the origin on HTTPS with no branch tracking` },
 			pr: { none: "the host opens no pull request; the guard refuses `gh pr create`", human: "prepare the pull request and hand its command to the person; the guard refuses `gh pr create`", auto: "open the pull request with `gh pr create`; the guard allows it" },
 			merge: { none: "the host merges nothing; the guard refuses `gh pr merge`", human: "accept or reject the pull request, then hand the merge to the person; the guard refuses `gh pr merge`", auto: "merge an accepted pull request with `gh pr merge`; the guard allows it" },
-			down: { none: `the host takes no container down; the person runs \`${cli} down\`, and nothing refuses it, so this line is the rule`, human: `\`${cli} down <sandbox>\` on the person's word, every time; the task directory stays, and nothing refuses it, so this line is the rule`, auto: `\`${cli} down <sandbox>\` once its pull request is merged; the task directory stays` },
+			down: { none: `the host takes no container down; the person runs \`${CLI} down\`, and nothing refuses it, so this line is the rule`, human: `\`${CLI} down <sandbox>\` on the person's word, every time; the task directory stays, and nothing refuses it, so this line is the rule`, auto: `\`${CLI} down <sandbox>\` once its pull request is merged; the task directory stays` },
 			land: {
-				host: `\`${cli} land --sign --push <sandbox>\` puts the container's branch on GitHub, ${resync}`,
-				person: `\`${cli} land --sign <sandbox>\` brings the container's branch here and the person pushes it from their own shell, ${resync}`,
+				host: `\`${CLI} land --sign --push <sandbox>\` puts the container's branch on GitHub, ${resync}`,
+				person: `\`${CLI} land --sign <sandbox>\` brings the container's branch here and the person pushes it from their own shell, ${resync}`,
 				auto: "the container pushes its own branch and opens its pull request; no landing takes them to GitHub",
 			},
 		},
 	};
 }
 
-export function describe(repo: string, profile: Profile, cli: string): string {
-	const say = says(cli);
+export function describe(repo: string, profile: Profile): string {
+	const say = says();
 	const line = (action: string, level: string, sentence: string) => `- ${action} \`${level}\`: ${sentence}`;
 	const { host, container, resources } = profile;
 	return [

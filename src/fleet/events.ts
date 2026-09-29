@@ -1,14 +1,11 @@
-import type { Harness } from "../harness.ts";
 import type { Io } from "./io.ts";
 
-export function eventsLog(h: Harness): string {
-	return h.owner === "none" ? `${h.home}/${h.cache}/fleet-events.log` : `${h.home}/agent/fleet-events.log`;
-}
+export const EVENTS_LOG = ".sandboxes/fleet-events.log";
 
 export function logEvent(io: Io, kind: "up" | "steer" | "down", agent: string, text?: string): void {
 	const fields = [io.now().toISOString(), io.pane, kind, agent, `session=${encodeURIComponent(io.sessionId ?? "")}`];
 	if (text !== undefined) fields.push(JSON.stringify(text));
-	io.append(`${io.home}/${eventsLog(io.harness)}`, fields.join(" "));
+	io.append(`${io.home}/${EVENTS_LOG}`, fields.join(" "));
 }
 
 export function eventAgents(log: string, owner: { sessionId?: string; pane?: string }): string[] {

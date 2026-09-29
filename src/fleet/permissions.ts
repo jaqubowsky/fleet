@@ -1,5 +1,5 @@
 import { describe, linearServer, loadProfiles, profileFor, repoName, USER_CONFIG, type Host, type Profile } from "../profile/profile.ts";
-import type { Io } from "./io.ts";
+import { type Io, seatOf } from "./io.ts";
 
 export function repoProfile(root: string, name: string, io: Io): Profile {
 	return profileFor(loadProfiles(io.read, root, io.home), name);
@@ -27,8 +27,9 @@ export function permissions(input: PermissionsInput, io: Io): string {
 	if (!checkout && !/^[^/\s]+\/[^/\s]+$/.test(input.repo)) throw new Error(`${input.repo} is neither a checkout nor owner/name`);
 	const name = checkout ? repoName(io.git(["remote", "get-url", "origin"], checkout)) : input.repo;
 	const profile = repoProfile(input.root, name, io);
-	const text = `${describe(name, profile, io.harness.cli)}\n${overlaySection(name, io)}`;
+	const text = `${describe(name, profile)}\n${overlaySection(name, io)}`;
 	if (!input.apply) return text;
+	seatOf(io);
 	if (!checkout) throw new Error(`--apply sets a checkout; give its path, not ${input.repo}`);
 	return `${text}\n${apply(checkout, name, profile, io).join("\n")}`;
 }
@@ -91,7 +92,7 @@ function registerLinear(checkout: string, host: Host, io: Io): string[] {
 	if (!server) return [];
 	const [name, url] = server;
 	const top = io.git(["rev-parse", "--show-toplevel"], checkout);
-	if (io.harness.name === "claude") {
+	if (seatOf(io).name === "claude") {
 		const projects = (JSON.parse(io.read(`${io.home}/.claude.json`) ?? "{}") as { projects?: Record<string, { mcpServers?: Record<string, { url?: string }> }> }).projects;
 		const registered = projects?.[top]?.mcpServers?.[name];
 		if (registered?.url === url) return [];

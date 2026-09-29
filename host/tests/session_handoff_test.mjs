@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fakeIo } from "../../src/fleet/fake-io.ts";
 import { seatSettings } from "../../src/render/render.ts";
-import { HARNESSES } from "../../src/harness.ts";
 
 const { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, createEditTool, SessionManager, SettingsManager } = await import(process.argv[2]);
 const root = join(import.meta.dirname, "../..");
@@ -19,7 +18,7 @@ for (const seat of ["host", "sbx"]) {
 	mkdirSync(agentDir);
 	mkdirSync(join(dir, "sbx/extensions"), { recursive: true });
 	for (const file of ["session-handoff.ts", "status-history.ts"]) copyFileSync(join(root, "extensions", file), join(dir, "sbx/extensions", file));
-	const settings = JSON.parse(seatSettings(io, "/root", HARNESSES.pi, seat === "host" ? "host.json" : "sbx.json"));
+	const settings = JSON.parse(seatSettings(io, "/root", "pi", seat === "host" ? "host.json" : "sbx.json"));
 	writeFileSync(join(agentDir, "settings.json"), JSON.stringify(settings));
 	process.env.PI_CODING_AGENT_DIR = agentDir;
 	process.env.FLEET_ARTIFACTS = dir;

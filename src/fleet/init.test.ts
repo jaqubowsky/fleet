@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { type TestContext, test } from "node:test";
-import { HARNESSES } from "../harness.ts";
+import { SEATS } from "../harness.ts";
 import { init } from "./init.ts";
 import { realIo } from "./io.ts";
 
@@ -18,7 +18,7 @@ function scratch(t: TestContext): { repo: string; io: ReturnType<typeof realIo>;
 	const repo = mkdtempSync(join(tmpdir(), "init-"));
 	t.after(() => rmSync(repo, { recursive: true, force: true }));
 	const lines: string[] = [];
-	return { repo, io: { ...realIo(repo, HARNESSES.claude), log: (line: string) => lines.push(line) }, lines };
+	return { repo, io: { ...realIo(repo, SEATS.claude), log: (line: string) => lines.push(line) }, lines };
 }
 
 test("init on an empty repository lays out the product seed and nothing else", (t) => {

@@ -1,23 +1,23 @@
 import { unwatchFile, watchFile } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
-import type { Harness } from "../src/harness.ts";
-import { eventAgents, eventsLog, lifecycle } from "../src/fleet/events.ts";
+import { CLI, type Seat } from "../src/harness.ts";
+import { EVENTS_LOG, eventAgents, lifecycle } from "../src/fleet/events.ts";
 import { type Io, realIo } from "../src/fleet/io.ts";
 import { wakeName, watch } from "../src/fleet/watch.ts";
 
 const LOG_POLL_MS = 2000;
 
-export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h)) {
+export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), seat)) {
 	return (pi: any) => {
-		const log = join(io.home, eventsLog(h));
+		const log = join(io.home, EVENTS_LOG);
 		let ui: any = pi.ui;
 		let sessionId: string | undefined;
 		let named: string[] = [];
 		let every = false;
 		let watcher: ReturnType<typeof watch> | undefined;
 
-		const owned = () => eventAgents(io.read(log) ?? "", h.owner === "session" ? { sessionId } : { pane: io.pane });
+		const owned = () => eventAgents(io.read(log) ?? "", seat.owner === "session" ? { sessionId } : { pane: io.pane });
 		const scope = () => (every ? undefined : [...named, ...owned()]);
 		let running = false;
 		const held: string[] = [];
@@ -45,7 +45,7 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			said.clear();
 			watcher = watch(scope, { ...io, log: say }, deliver);
 		};
-		const fleetCommand = new RegExp(`(^|[\\s;&|(])${h.cli}\\s`);
+		const fleetCommand = new RegExp(`(^|[\\s;&|(])${CLI}\\s`);
 		const refresh = () => watcher?.refresh();
 		const start = (args: string) => {
 			named = args.trim().split(/[\s,]+/).filter(Boolean);
@@ -73,14 +73,14 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 			name: "fleet_watch",
 			label: "Fleet watch",
 			description:
-				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone, taken down), working 20 minutes without settling, or idle 20 minutes short of ready-for-host, paused or blocked wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, the number of Log lines added since its previous wake), commit counts since origin's default branch, and the pull request with its CI; a settle with the pull request open and CI running wakes nothing unless status.md is blocked or paused. That turn is where you act on it. Pass the sandbox name from ${h.cli} ls; empty string = every container.`,
+				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone, taken down), working 20 minutes without settling, or idle 20 minutes short of ready-for-host, paused or blocked wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, the number of Log lines added since its previous wake), commit counts since origin's default branch, and the pull request with its CI; a settle with the pull request open and CI running wakes nothing unless status.md is blocked or paused. That turn is where you act on it. Pass the sandbox name from ${CLI} ls; empty string = every container.`,
 			promptSnippet: "watch containers; a settling one wakes this session with a [fleet] line",
 			parameters: {
 				type: "object",
 				properties: {
 					agents: {
 						type: "string",
-						description: `Space- or comma-separated sandbox names as ${h.cli} ls prints them (${h.prefix}<repo>-<label>). Empty string watches every container`,
+						description: `Space- or comma-separated sandbox names as ${CLI} ls prints them. Empty string watches every container`,
 					},
 				},
 				required: ["agents"],
@@ -100,15 +100,16 @@ export default function fleetMonitor(h: Harness, io: Io = realIo(os.homedir(), h
 		});
 		pi.on("session_start", (_event: unknown, ctx: any) => {
 			sessionId = ctx.sessionManager?.getSessionId?.();
-			if (sessionId && h.sessionIdEnv) process.env[h.sessionIdEnv] = sessionId;
+			process.env.FLEET_SEAT = seat.name;
+			if (sessionId && seat.sessionIdEnv) process.env[seat.sessionIdEnv] = sessionId;
 			ui = ctx.ui ?? ui;
 			restart();
 			watchFile(log, { interval: LOG_POLL_MS }, refresh);
 		});
 		pi.on("tool_call", (event: { toolName: string; input: { command?: unknown } }) => {
 			const command = event.input?.command;
-			if (event.toolName !== "bash" || !sessionId || !h.sessionIdEnv || typeof command !== "string" || !fleetCommand.test(command)) return;
-			event.input.command = `export ${h.sessionIdEnv}=${JSON.stringify(sessionId)}; ${command}`;
+			if (event.toolName !== "bash" || !sessionId || !seat.sessionIdEnv || typeof command !== "string" || !fleetCommand.test(command)) return;
+			event.input.command = `export FLEET_SEAT=${seat.name} ${seat.sessionIdEnv}=${JSON.stringify(sessionId)}; ${command}`;
 			return { input: event.input };
 		});
 		pi.on("agent_start", () => {
