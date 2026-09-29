@@ -3,13 +3,12 @@ import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, wri
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deathNote } from "../../extensions/handoff-on-error.ts";
-import { COMPLETE, contextNote, pointer, reminderLevel, suggested, withAttention } from "../../extensions/session-handoff.ts";
+import { COMPLETE, contextNote, pointer, reminderLevel, SUGGESTED, withAttention } from "../../extensions/session-handoff.ts";
 import { record, snapshot } from "../../extensions/status-history.ts";
 
 type Usage = { input_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
 type HookInput = { tool_name?: string; tool_input?: { command?: string }; cwd?: string; transcript_path?: string; error?: string; error_type?: string; source?: string; agent_id?: string };
 
-const SUGGESTED = `attention: ${suggested("/clear")}`;
 const THRESHOLD = Number(process.env.FLEET_HANDOFF_TOKENS ?? 250000);
 
 export function tail(path: string, bytes = 1 << 20): string {
@@ -41,7 +40,7 @@ export function contextTokens(transcript: string): number {
 }
 
 export function clearedNote(status: string): string | undefined {
-	if (!status.split("\n").includes(SUGGESTED)) return undefined;
+	if (!status.split("\n").includes(`attention: ${SUGGESTED}`)) return undefined;
 	return withAttention(status, COMPLETE);
 }
 

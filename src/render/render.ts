@@ -1,5 +1,5 @@
 import type { Io } from "../fleet/io.ts";
-import { type AgentName, CLI, KINDS } from "../harness.ts";
+import { type AgentName, CLI, CONTINUE, KINDS } from "../harness.ts";
 import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 
 export type Seat = "host" | "container";
@@ -97,7 +97,7 @@ class Renderer {
 		const { root, agent } = this.input;
 		const kind = KINDS[agent];
 		const body = this.source(path);
-		const tokens: Record<string, string> = { ...kind.tokens, cli: CLI, harness: agent, cache: `~/${kind.home}/${kind.cache}/<repo>`, ...this.seats, root };
+		const tokens: Record<string, string> = { ...kind.tokens, cli: CLI, continue: CONTINUE, ...this.seats, root };
 		for (const key of this.input.placeholders ?? []) tokens[key] = `<${key}>`;
 		const fragment = (name: string) => {
 			const where = [`${this.own}/fragments/${name}.md`, `${root}/fragments/${name}.md`].find((file) => this.io.read(file) !== undefined);

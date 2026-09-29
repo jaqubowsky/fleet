@@ -6,6 +6,7 @@ import {
 	down,
 	exec,
 	execScript,
+	handoff,
 	history,
 	ls,
 	peek,
@@ -107,48 +108,48 @@ test("steer says when the image predates the harness, and still steers", () => {
 });
 
 for (const harness of Object.values(KINDS)) {
-	test(`${harness.name} steer takes a stalled handoff command as steered once status.md turns to handoff complete`, () => {
+	test(`${harness.name} handoff takes a stalled command as steered once status.md turns to handoff complete`, async () => {
 		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
 		const agent = agentName(sandbox);
 		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
 		const command = harness.tokens["handoff.command"];
-		const steerAfter = (from: string, to: string) => {
+		const steerAfter = async (from: string, to: string) => {
 			const io = fakeIo({}, SEATS[harness.name]);
 			io.files[path] = `status: implementing\nattention: ${from}\n`;
 			io.herdr = () => {
 				io.files[path] = `status: implementing\nattention: ${to}\n`;
 				throw new Error("agent_prompt_stalled");
 			};
-			steer(row(sandbox, harness, ["/w/household-budget"]), command, io);
+			await handoff(row(sandbox, harness, ["/w/household-budget"]), io);
 			return io.lines;
 		};
-		const suggested = `session handoff suggested; approve with ${command}`;
+		const suggested = "session handoff suggested";
 		const complete = "session handoff complete; fresh session idle";
 
-		assert.deepEqual(steerAfter(suggested, complete), [`${agent}: steered`]);
-		assert.throws(() => steerAfter(suggested, suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
-		assert.throws(() => steerAfter(complete, complete), new RegExp(`${command} sent, and status.md shows no context reset`));
+		assert.deepEqual(await steerAfter(suggested, complete), [`${agent}: steered`]);
+		await assert.rejects(steerAfter(suggested, suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
+		await assert.rejects(steerAfter(complete, complete), new RegExp(`${command} sent, and status.md shows no context reset`));
 	});
 
-	test(`${harness.name} steer takes the handoff command as steered on the context reset, not on working`, () => {
+	test(`${harness.name} handoff takes its command as steered on the context reset, not on working`, async () => {
 		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
 		const agent = agentName(sandbox);
 		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
 		const command = harness.tokens["handoff.command"];
-		const suggested = `session handoff suggested; approve with ${command}`;
-		const steerReaching = (to: string) => {
+		const suggested = "session handoff suggested";
+		const steerReaching = async (to: string) => {
 			const io = fakeIo({}, SEATS[harness.name]);
 			io.files[path] = `status: implementing\nattention: ${suggested}\n`;
 			io.herdr = (() => {
 				io.files[path] = `status: implementing\nattention: ${to}\n`;
 				return {};
 			}) as typeof io.herdr;
-			steer(row(sandbox, harness, ["/w/household-budget"]), command, io);
+			await handoff(row(sandbox, harness, ["/w/household-budget"]), io);
 			return io.lines;
 		};
 
-		assert.deepEqual(steerReaching("session handoff complete; fresh session idle"), [`${agent}: steered`]);
-		assert.throws(() => steerReaching(suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
+		assert.deepEqual(await steerReaching("session handoff complete; fresh session idle"), [`${agent}: steered`]);
+		await assert.rejects(steerReaching(suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
 	});
 
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {

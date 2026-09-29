@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { type AgentName, CLI, SEATS } from "../harness.ts";
 import { render } from "../render/render.ts";
-import { artifacts, build, copy, down, exec, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
+import { artifacts, build, copy, down, exec, handoff, history, ls, peek, renderHost, resolveSandbox, steer } from "./commands.ts";
 import { init } from "./init.ts";
 import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
@@ -17,12 +17,13 @@ const seat = process.env.FLEET_SEAT;
 const io = realIo(home, seat && Object.hasOwn(SEATS, seat) ? SEATS[seat as AgentName] : undefined);
 
 const usage = `usage:
-  ${CLI} up <label> [--pi|--claude] [--branch <name>] [--base <name>] [--model <provider/id:thinking>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, on a branch named after <label> without --branch and never the default branch, bind what its profile allows, lay out the task directory with permissions.md and, when ~/.config/harness/projects holds an overlay, project.md, start the container's agent in a herdr tab, the seat's own without --pi|--claude, send nothing
+  ${CLI} up <label> [--pi|--claude] [--branch <name>] [--base <name>] [--model <model>] [--memory 8g] [--cpus 4]   clone the repo, continue the branch origin has or branch off the freshest remote base, on a branch named after <label> without --branch and never the default branch, bind what its profile allows, lay out the task directory with permissions.md and, when ~/.config/harness/projects holds an overlay, project.md, start the container's agent in a herdr tab, the seat's own without --pi|--claude, send nothing
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
   ${CLI} profile [<repo>] [--apply]                   what ~/.config/harness/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.config/harness/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and where the host reads Linear its server for this checkout alone
   ${CLI} ls                                           containers with herdr status, branch and dirty count
   ${CLI} peek <sandbox> [--lines 40]                  git status, log, diff --stat, install log and the pane tail
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
+  ${CLI} handoff <sandbox> [--continue]              approve the session handoff the container suggested: its fresh session starts from the task directory, and --continue sends it the stock continue once it is ready for it
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   ${CLI} history <sandbox> [--repo <path>]            every status.md change in order: status, attention, summary, the Log lines it added and any it removed
@@ -32,12 +33,12 @@ const usage = `usage:
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...]                         print a [fleet] line each time a container this pane put up or steered last, or one named, settles; hold it with Monitor
-  ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into a pi tab: run the container's agent here and hand herdr the state it reports
+  ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the tab of a kind that reports its state through a herdr extension: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory`;
 
-const BARE = new Set(["apply", "force", "push", "sign", "pi", "claude"]);
+const BARE = new Set(["apply", "continue", "force", "push", "sign", "pi", "claude"]);
 
 export function flags(args: string[], allowed: string[]): { opts: Record<string, string | true>; rest: string[] } {
 	const opts: Record<string, string | true> = {};
@@ -108,6 +109,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const { rest } = flags(args, []);
 		const [sandbox, ...text] = rest;
 		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io, root);
+	},
+	async handoff(args) {
+		const { opts, rest } = flags(args, ["continue"]);
+		await handoff(sandboxOf(rest[0]), io, { continue: opts.continue === true, root });
 	},
 	exec(args) {
 		const { rest } = flags(args, []);

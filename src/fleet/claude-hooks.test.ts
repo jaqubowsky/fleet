@@ -54,7 +54,7 @@ test("a turn that ends past the threshold leaves the handoff to the agent", (t) 
 });
 
 test("a clear that approves the suggestion records the fresh session", () => {
-	const suggested = status.replace("attention: none", "attention: session handoff suggested; approve with /clear");
+	const suggested = status.replace("attention: none", "attention: session handoff suggested");
 
 	assert.equal(clearedNote(suggested), status.replace("attention: none", "attention: session handoff complete; fresh session idle"));
 });

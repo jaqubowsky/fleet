@@ -1,4 +1,4 @@
-import { CLI, KINDS, type AgentName } from "../harness.ts";
+import { CLI, CONTINUE, KINDS, type AgentName } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE } from "../../extensions/session-handoff.ts";
@@ -7,7 +7,7 @@ import { activityOf, callsSince, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
-import { idleStalled } from "./monitor.ts";
+import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { artifactsDir, harnessStamp, imageStampPath, staleImage, taskDir } from "./up.ts";
 import {
@@ -131,13 +131,37 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function steer({ name: sandbox, kind, workspaces }: Sandbox, text: string, io: Io, root?: string): void {
+export function steer(sandbox: Sandbox, text: string, io: Io, root?: string): void {
+	prompt(sandbox, text, io, { root });
+}
+
+const IDLE_TIMEOUT_MS = 60_000;
+
+export async function handoff(sandbox: Sandbox, io: Io, options: { continue?: boolean; root?: string } = {}): Promise<void> {
+	const command = sandbox.kind.tokens["handoff.command"];
+	if (sandbox.kind.handoffTakesText) return prompt(sandbox, options.continue ? `${command} ${CONTINUE}` : command, io, { root: options.root, reset: true });
+	prompt(sandbox, command, io, { root: options.root, reset: true });
+	if (!options.continue) return;
+	await idle(sandbox.name, io);
+	prompt(sandbox, CONTINUE, io);
+}
+
+async function idle(sandbox: string, io: Io): Promise<void> {
+	const started = io.now().getTime();
+	while (io.now().getTime() - started < IDLE_TIMEOUT_MS) {
+		if (TERMINAL.has(agentFor(agents(io), agentName(sandbox))?.agent_status ?? "")) return;
+		await io.sleep(1000);
+	}
+	throw new Error(`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the continue was not sent. Inspect ${CLI} peek ${sandbox}, then steer the continue yourself.`);
+}
+
+function prompt({ name: sandbox, kind, workspaces }: Sandbox, text: string, io: Io, { root, reset }: { root?: string; reset?: boolean } = {}): void {
 	seatOf(io);
 	const agent = agentName(sandbox);
 	const stale = root ? staleImage(root, kind, io) : undefined;
 	if (stale) io.log(`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`);
 	logEvent(io, "steer", agent, text);
-	const handoff = text === kind.tokens["handoff.command"] && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
+	const handoff = reset && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
 	const before = handoff?.();
 	try {
 		io.herdr([
@@ -491,7 +515,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
 	} else {
 		io.log(
-			`${sandbox}: no session in ${task}/logs/sessions (${entry.kind.name} never ran)`,
+			`${sandbox}: no session in ${task}/logs/sessions (the container's agent never ran)`,
 		);
 	}
 	recordMemory(sandbox, task, io);

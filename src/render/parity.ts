@@ -6,18 +6,15 @@ export type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{ where: /^rules\/delegation\.md: 1\. "Parallel" =/, reason: "pi starts runs in the background, claude sends several background `Agent` calls in one message" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the <agent> session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `fleet watch`" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "claude has no follow-up delivery between tool calls, so a steer is its next message, and its watch is a held `fleet watch`" },
+	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the session that ran|Nothing watches a container by itself here)/, reason: "claude has no extension that can start a turn, so its watching is a held `fleet watch`" },
+	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/, reason: "a pi seat watches a steered container from its own session, a claude seat through a held `fleet watch`" },
 	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/, reason: "claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json and managed settings, which `align-settings.py` merges, where pi `/reload`s a rendered file" },
-	{ where: /^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| approve \|/, reason: "claude's `/clear` takes no text, so the continue is a second steer" },
 	{ where: /^skills\/container\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/, reason: "claude's `Agent` call has no output file, so the caller writes review.md; pi's subagent call needs `async: false` to wait" },
 	{ where: /^skills\/container\/babysit-pr\/SKILL\.md: (Run it as one `Bash` call|<agent> has no background shell)/, reason: "pi has no background shell that wakes the session, so it polls one read per tool call" },
 ];
 
 export const VOCABULARY: [string, string][] = [
 	["cli", "each harness names its own fleet command"],
-	["harness", "each harness names itself"],
-	["cache", "each harness keeps its build cache under its own home"],
 	["root", "the harness checkout sits at a different path per machine"],
 	["tool.ask", "each harness names its question tool"],
 	["skill.ingest", "pi prefixes a skill command with /skill:, claude does not"],
@@ -25,8 +22,7 @@ export const VOCABULARY: [string, string][] = [
 	["refs.testing", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.ci", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.ticket", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
-	["model.flag", "each harness spells a model in its own syntax"],
-	["handoff.command", "each harness clears a session with its own command; what that command takes is compared in the approve row"],
+	["handoff.command", "each kind clears a session with its own command"],
 ];
 const FRAGMENT = /^(?:([a-z]+)\/)?fragments\/(.+)$/;
 

@@ -57,7 +57,7 @@ A fresh session reads only `status.md`, the task files and git, so each unit of 
 
 Between natural breaks, work on, even after a context reminder. A ticket runs from its claim to its commit in one session: a review, when one runs, brings its own fresh context, and the fixes need the context that wrote the code.
 
-To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested; approve with {{handoff.command}}`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
+To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
 
 ## Finish
 

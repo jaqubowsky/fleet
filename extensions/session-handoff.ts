@@ -13,9 +13,7 @@ type Session = {
 export const COMPLETE = "session handoff complete; fresh session idle";
 const CANCELLED = "session handoff cancelled; still in the previous session";
 
-export function suggested(command: string): string {
-	return `session handoff suggested; approve with ${command}`;
-}
+export const SUGGESTED = "session handoff suggested";
 
 export function withAttention(status: string, text: string): string {
 	if (!/^attention: .*$/m.test(status)) throw new Error("status.md needs an attention line before handoff");

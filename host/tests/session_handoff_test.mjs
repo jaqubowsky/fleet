@@ -66,7 +66,7 @@ for (const seat of ["host", "sbx"]) {
 		} else {
 			assert.equal(extensions.some((extension) => extension.commands.has("session-handoff")), true);
 			assert.equal(extensions.some((extension) => extension.handlers.has("turn_end")), true);
-			await createEditTool(dir).execute("suggest", { path: "task/status.md", edits: [{ oldText: "attention: none", newText: "attention: session handoff suggested; approve with /session-handoff" }] });
+			await createEditTool(dir).execute("suggest", { path: "task/status.md", edits: [{ oldText: "attention: none", newText: "attention: session handoff suggested" }] });
 			assert.equal(runtime.session, old);
 			assert.equal(replacement, undefined);
 			await old.prompt("/session-handoff");

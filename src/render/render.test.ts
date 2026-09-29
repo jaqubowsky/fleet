@@ -488,3 +488,24 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 }
+
+const AGENT_NAME = /(?<![.\w/-])(pi|claude)(?![\w/-])/i;
+
+function agentNaming(text: string): string[] {
+	return text.split("\n").filter((line) => AGENT_NAME.test(line.replaceAll("--pi|--claude", "")) && !/\bbuild\b/.test(line));
+}
+
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`the ${name} host seat's rules, fleet skill and its fragments name no container agent`, () => {
+		const out = mkdtempSync(join(tmpdir(), `render-${name}-`));
+		const seen = new Map<string, string>();
+		try {
+			render({ root, agent: name, seat: "host", out, seen }, { ...realIo(out), log: () => {} });
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+		const texts = [...seen].filter(([path]) => path === "rules/host.md" || path.includes("orchestrating-agent-sessions/") || /(^|\/)fragments\/(session-handoff|watching|natural-breaks)\.md$/.test(path));
+		assert.ok(texts.length >= 4, texts.map(([path]) => path).join(", "));
+		assert.deepEqual(texts.flatMap(([path, text]) => agentNaming(text).map((line) => `${path}: ${line.slice(0, 90)}`)), []);
+	});
+}

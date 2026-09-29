@@ -35,3 +35,11 @@ test("the up usage starts the container's agent, the seat's own without a kind f
 		return true;
 	});
 });
+
+test("the usage names no container agent outside --pi|--claude and build", () => {
+	assert.throws(() => flags(["--nope"], []), (error: Error) => {
+		const naming = error.message.split("\n").filter((line) => /(?<![.\w/-])(pi|claude)(?![\w/-])/i.test(line.replaceAll("--pi|--claude", "")) && !/ build /.test(line));
+		assert.deepEqual(naming, []);
+		return true;
+	});
+});

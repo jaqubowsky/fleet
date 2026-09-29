@@ -926,7 +926,7 @@ test("up stops before creating anything when no sbx binding lets openai in, unle
 test("up of a claude container stops when claude in the new container is not logged in", async () => {
 	const io = fakeIo({ ...base, "herdr agent read w1:p9 --source visible": "Not logged in · Run /login" }, SEATS.claude);
 
-	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /claude is not logged in.*\/login in tab claude-webapp-web-1/);
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /the container's agent is not logged in.*\/login in tab claude-webapp-web-1/);
 });
 
 test("up says when the image predates the harness it would carry", async () => {

@@ -243,7 +243,7 @@ export async function up(
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
-		`${sandbox}: ${kind.name} waiting in tab ${agent} (pane ${pane}); no prompt sent`,
+		`${sandbox}: the container's agent waiting in tab ${agent} (pane ${pane}); no prompt sent`,
 	);
 	return { sandbox, agent, pane };
 }
@@ -590,7 +590,7 @@ function findPane(io: Io, label: string, tab: string, kind: Kind): Found {
 				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${kind.name}; rename it or pick another label`,
 			);
 		io.log(
-			`${tab}: adopting the ${kind.name} already running in pane ${named.pane_id}`,
+			`${tab}: adopting the container's agent already running in pane ${named.pane_id}`,
 		);
 		return { pane: named.pane_id, running: true };
 	}
@@ -621,7 +621,7 @@ function findPane(io: Io, label: string, tab: string, kind: Kind): Found {
 		);
 	if (pane.agent)
 		io.log(
-			`${tab}: adopting the ${kind.name} already running in pane ${pane.pane_id}`,
+			`${tab}: adopting the container's agent already running in pane ${pane.pane_id}`,
 		);
 	return { pane: pane.pane_id, running: Boolean(pane.agent) };
 }
@@ -687,7 +687,7 @@ async function waitForAgent(
 				if (runs) {
 					if (kind.name !== "pi" && io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
 						throw new Error(
-							`${sandbox}: ${kind.name} is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
+							`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
 						);
 					return;
 				}
@@ -699,7 +699,7 @@ async function waitForAgent(
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`${kind.name} did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
+		`the container's agent did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
 	);
 }
 
