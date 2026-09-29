@@ -32,6 +32,7 @@ Otherwise, ask: "What's the public interface, and which seams should we test?"
 ## Rules of the loop
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
+- **Every red leaves a log.** Save the right red's output to `logs/tdd-<ticket>/<test-name>.log` where your seat's rules keep outputs. It is the review's only evidence that the test can fail.
 - **A red test accuses the code, not itself.** Diagnose before editing and never weaken an assertion to reach green. The procedure is [red.md](red.md); it applies to every failure in the loop.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs after green, before the gate, not inside the red → green implementation cycle.

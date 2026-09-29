@@ -12,7 +12,7 @@ The task names the range (`<base>...<sha>`, or `<sha>..working tree` for uncommi
 
 ## Axis 1: correctness and fulfillment
 
-Against the ask, as `analysis.md`, `spec.md`, the tickets or the quoted prompt state it: what is missing or partial, what was built that nobody asked for, what looks implemented but wrong. Edge cases the diff reaches and leaves unhandled, regressions in code paths it touches, integration seams it crosses, tests it owes. Quote the requirement line for each finding.
+Against the ask, as `analysis.md`, `spec.md`, the tickets or the quoted prompt state it: what is missing or partial, what was built that nobody asked for, what looks implemented but wrong. Edge cases the diff reaches and leaves unhandled, regressions in code paths it touches, integration seams it crosses, tests it owes. A test that cannot fail is a finding: one in `red/missing.txt` of the evidence directory, or one whose expected value traces to no line of the ask. Quote the requirement line for each finding.
 
 ## Axis 2: engineering quality
 

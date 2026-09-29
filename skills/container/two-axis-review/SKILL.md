@@ -23,6 +23,7 @@ Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 - `commits.txt`: `git log <base>..<head> --oneline`; none for uncommitted work.
 - `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md). No detector is a line in `clones.txt` saying so.
 - The checks: the gate logs already written on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
+- `red/`: the red logs this work saved, copied in. A test file in `changed.txt` with none is a line in `red/missing.txt`.
 - A check log past 200 lines, repo-wide output such as a formatter's, gets its cut beside it here: `grep -F -f changed.txt <log> > <log>.changed`, the lines that name a changed file.
 
 ### 3. Name the standards

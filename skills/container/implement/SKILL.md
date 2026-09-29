@@ -39,7 +39,7 @@ Implement the ticket, spec or analysis you were handed.
 
 7. **Run the gate.** Run the step 4 check once on the finished tree and keep its output as a log.
 
-8. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 7 logs as its checks, when the diff reaches past its own feature:
+8. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 7 logs and the step 5 red logs as its checks, when the diff reaches past its own feature:
    - a shared seam other code calls
    - persisted data or its schema
    - security, credentials or permissions
