@@ -12,6 +12,8 @@ spec = importlib.util.spec_from_file_location("align_settings", TOOL)
 align = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(align)
 
+align.OVERLAY = Path(tempfile.mkdtemp()) / "none.json"
+
 failures = []
 passed = 0
 
