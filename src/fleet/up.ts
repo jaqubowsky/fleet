@@ -255,7 +255,7 @@ export async function up(
 		const variable = sessionToken(profile);
 		if (variable && !io.env(variable))
 			throw new Error(
-				`${name} takes its container token from ${variable}, and this session has none: start ${seat.name} with ${variable} set, as inventory.md (GitHub tokens) shows`,
+				`${name} takes its container token from ${variable}, and this session has none: start ${seat.name} with ${variable} set, as SETUP.md (5. GitHub tokens) shows`,
 			);
 		const openai = !input.model || input.model.startsWith("openai-codex/");
 		if (
@@ -264,7 +264,7 @@ export async function up(
 			!/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? "")
 		)
 			throw new Error(
-				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
+				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as SETUP.md (6. Model credentials in sandboxes) shows, then run up again`,
 			);
 		const branch = input.branch ?? slug(input.label);
 		const base =

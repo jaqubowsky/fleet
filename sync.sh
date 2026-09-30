@@ -89,10 +89,10 @@ image_agent_version() {
 
 by_hand() {
 	echo "== set up by hand"
-	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your repository profiles and overlays: README.md, User config"
-	command -v sbx >/dev/null || echo "  missing sbx on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
-	command -v herdr >/dev/null || echo "  missing herdr on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
-	command -v node >/dev/null || { echo "  missing node on PATH: BOOTSTRAP.md, step 2"; return; }
+	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: SETUP.md, step 3"
+	command -v sbx >/dev/null || echo "  missing sbx on PATH: SETUP.md, step 1"
+	command -v herdr >/dev/null || echo "  missing herdr on PATH: SETUP.md, step 1"
+	command -v node >/dev/null || { echo "  missing node on PATH: SETUP.md, requirements"; return; }
 	node --input-type=module -e '
 		const [root, home, op] = process.argv.slice(1);
 		const { readFileSync } = await import("node:fs");
@@ -101,7 +101,7 @@ by_hand() {
 		const lines = new Set();
 		const profiles = Object.values(loadProfiles(read, root, home));
 		if (!op && profiles.some(({ container }) => container.token.startsWith("op://")))
-			lines.add("  missing op on PATH, the 1Password CLI, which a profile names for its container token: BOOTSTRAP.md, step 2");
+			lines.add("  missing op on PATH, the 1Password CLI, which a profile names for its container token: SETUP.md, step 5");
 		for (const { container, host } of profiles) {
 			const [cname, curl] = linearServer(container) ?? [];
 			if (cname) lines.add(`  not verified ${cname}, no check from this Mac lists sbx MCP servers: sbx mcp add ${cname} --url ${curl}`);

@@ -91,8 +91,7 @@ A task moves through the run order in `sbx/container/sandbox.md`, and `status.md
 | `pi/`, `claude/` | per-harness profiles, model seats, themes, host extension entry or hooks, kit, image |
 | `bin/` | `fleet`, the one CLI both hosts run |
 | `sync.sh` | brings every home, link, image and setting in line with this repository; prints the plan, `--apply` makes it; ends with what a new Mac lacks that it cannot set up, under `== set up by hand` |
-| `inventory.md` | what lives outside this repo: tokens, MCP servers, model logins, network policy |
-| `BOOTSTRAP.md` | setting this Mac up from nothing |
+| `SETUP.md` | setting a Mac up from a fresh clone, written for an agent: tokens, model logins, network policy |
 
 The homes hold only rendered files and runtime state. Edit here and run `./sync.sh --apply`, never edit a home. Render replaces the directories listed in `OWNED` in `src/render/render.ts` whole, so a file removed here disappears there too.
 
@@ -136,7 +135,7 @@ A pi host picks up a new render after `/reload`. A Claude host reads its rules a
 | Activity in `logs/activity.jsonl`, cost so far in wakes and `ls` | `tool_execution_end`; cost from `logs/sessions` | `PostToolUse` and `PostToolUseFailure` hooks; cost from `src/fleet/usage.ts` run in the container over its transcripts | Claude transcripts stay in the container until `fleet down` |
 | Cost in `logs/usage.json` | the session's own cost records | computed from tokens with the price table in `src/fleet/usage.ts` | Claude transcripts carry tokens, not cost |
 | Statusline | `extensions/statusline.ts` with `src/statusline/` | `claude/statusline.mjs` with `src/statusline/` | Claude Code runs a command |
-| Models | seats in `pi/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `inventory.md` |
+| Models | seats in `pi/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `SETUP.md` |
 | Phone control | `extensions/pi-remote` | Remote Control, a product setting | Claude Code ships its own |
 | Host sandbox | none | macOS sandbox from root-owned managed settings | only Claude Code has one |
 
@@ -149,7 +148,7 @@ npm run check     # tsc --noEmit
 
 ## Trust model
 
-Every signature comes from this Mac. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch. Who pushes, opens and merges pull requests is each repository's profile in `~/.config/harness/repos.json`, or the `*` of `host/repos.json` for a repository it omits, which agents read and never write: where it gives a container push `auto`, the container pushes its own branch with a token `up` refuses if it sees any other private repository; everywhere else pushes come from this Mac at the host's `push` level: the key behind Touch ID at `human`, HTTPS with the token the host session holds in `GH_TOKEN` at `auto` (`inventory.md`, GitHub tokens).
+Every signature comes from this Mac. Containers get no SSH agent and no signing key. Credentials reach them through the sbx proxy only, and they commit unsigned on the task branch. Who pushes, opens and merges pull requests is each repository's profile in `~/.config/harness/repos.json`, or the `*` of `host/repos.json` for a repository it omits, which agents read and never write: where it gives a container push `auto`, the container pushes its own branch with a token `up` refuses if it sees any other private repository; everywhere else pushes come from this Mac at the host's `push` level: the key behind Touch ID at `human`, HTTPS with the token the host session holds in `GH_TOKEN` at `auto` (`SETUP.md`, GitHub tokens).
 
 `land` fetches every repository through the `sandbox-<name>` remote sbx registers, from the sandbox's git daemon, and preflights all of them before any host branch moves: a clean container on the recorded branch, history that descends from the saved base, and a branch checked out in no host worktree. Each host branch then fast-forwards, or takes what the container added since the last land re-created on top of it, and `refs/fleet/<sandbox>/<repo>/landed` records the landed container head. A branch an older fleet landed has no such ref; `land` then takes sbx's `refs/sandboxes/<sandbox>/<branch>` in its place, only while its tree equals the host branch's. Signing re-creates with `git commit-tree -S` only the commits origin lacks that are unsigned or sit above a re-created one, keeping tree, author and message, with no checkout and no hook, one Touch ID tap per commit. A declined tap or a refused push leaves every finished repository in place, and a rerun of the same command resumes where it stopped, never with a force push. Every exit prints each repository's container head, host branch, `origin/<branch>` and signature state. `--push` refuses anything that is not a fast-forward and runs on the user's word alone. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host. Merge stays with the person unless the profile gives the host merge `auto`; deploy and publishing stay with the person.
 
