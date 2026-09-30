@@ -17,12 +17,12 @@ const POLICY = new RegExp(`^(${POLICY_TOOLS.join("|")})$`);
 const EXCLUDED: string[] = (() => {
 	try {
 		return JSON.parse(
-			readFileSync(new URL("../managed-settings.json", import.meta.url), "utf8"),
+			readFileSync(new URL("../profiles/host.json", import.meta.url), "utf8"),
 		).sandbox.excludedCommands.map((pattern: string) =>
 			pattern.replace(/\*$/, ""),
 		);
 	} catch (cause) {
-		throw new Error("Invalid managed settings for the guard", { cause });
+		throw new Error("Invalid host settings for the guard", { cause });
 	}
 })();
 const SANDBOXED_READ = /^gh (pr (view|checks|list)|run list)$/;

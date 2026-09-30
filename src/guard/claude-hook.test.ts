@@ -63,12 +63,11 @@ test("the wrapper answers through node and refuses when the policy cannot run", 
 	assert.match(broken.stderr, /refused/);
 });
 
-test("the managed matcher sends the hook every tool the policy reads, and only those", () => {
-	const tool = readFileSync(
-		resolve(import.meta.dirname, "../../claude/tools/align-settings.py"),
-		"utf8",
-	);
-	const matcher = /^HOOK_MATCHER = "([^"]+)"$/m.exec(tool)?.[1] ?? "";
+const HOST_SETTINGS = resolve(import.meta.dirname, "../../claude/profiles/host.json");
+
+test("the host matcher sends the hook every tool the policy reads, and only those", () => {
+	const matcher: string = JSON.parse(readFileSync(HOST_SETTINGS, "utf8")).hooks
+		.PreToolUse[0].matcher;
 
 	assert.deepEqual(matcher.split("|").sort(), [...POLICY_TOOLS].sort());
 });
@@ -222,12 +221,8 @@ test("the claude hook refuses every sandbox exclusion that is not bare, and name
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) =>
 		answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
-	const excluded: string[] = JSON.parse(
-		readFileSync(
-			resolve(import.meta.dirname, "../../claude/managed-settings.json"),
-			"utf8",
-		),
-	).sandbox.excludedCommands;
+	const excluded: string[] = JSON.parse(readFileSync(HOST_SETTINGS, "utf8"))
+		.sandbox.excludedCommands;
 	const reads = ["gh pr view", "gh pr checks", "gh pr list", "gh run list"];
 
 	const refusal = ask("true && git push");

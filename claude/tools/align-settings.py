@@ -2,19 +2,16 @@
 import argparse
 import difflib
 import json
-import os
 import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 HOME = Path.home()
 REPO = Path(__file__).resolve().parents[2]
 USER_SETTINGS = HOME / ".claude" / "settings.json"
 HOST_SEAT = REPO / "claude" / "profiles" / "models.json"
-MANAGED_SETTINGS = Path("/Library/Application Support/ClaudeCode/managed-settings.json")
-REFERENCE = REPO / "claude" / "managed-settings.json"
+HOST_SETTINGS = REPO / "claude" / "profiles" / "host.json"
+OVERLAY = HOME / ".config" / "harness" / "claude-settings.json"
 HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
 HOOK_TARGET = HOME / ".claude" / "hooks" / "guard.sh"
 DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
@@ -24,8 +21,6 @@ HERDR_TARGET = HOME / ".config" / "herdr" / "config.toml"
 DETECTION_SOURCE = REPO / "host" / "agent-detection"
 DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
-ATTRIBUTION = {"sessionUrl": False, "commit": "", "pr": ""}
-HOOK_MATCHER = "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*"
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
 
 
@@ -48,6 +43,11 @@ def fix_user(data):
     changes = []
     data["$schema"] = "https://json.schemastore.org/claude-code-settings.json"
 
+    before = dump(data)
+    merge(data, desired_host())
+    if dump(data) != before:
+        changes.append(f"brought in line with {HOST_SETTINGS.relative_to(REPO)}")
+
     plugins = data.setdefault("enabledPlugins", {})
     if plugins.get(LSP_PLUGIN) is not True:
         plugins[LSP_PLUGIN] = True
@@ -58,56 +58,6 @@ def fix_user(data):
         if data.get(key) != value:
             data[key] = value
             changes.append(f"{key} set to {value} from the host seat")
-
-    return changes
-
-
-def registered(entries, script_name):
-    return any(
-        hook.get("command", "").endswith(script_name)
-        for entry in entries
-        for hook in entry.get("hooks", [])
-    )
-
-
-def fix_managed(data):
-    changes = []
-
-    if "disableBypassPermissionsMode" in data:
-        value = data.pop("disableBypassPermissionsMode")
-        data.setdefault("permissions", {})["disableBypassPermissionsMode"] = value
-        changes.append("disableBypassPermissionsMode moved under permissions, where it is actually read")
-
-    if data.get("attribution") != ATTRIBUTION:
-        data["attribution"] = dict(ATTRIBUTION)
-        changes.append("attribution aligned with the sbx template")
-
-    hooks = data.setdefault("hooks", {})
-
-    entries = hooks.setdefault("PreToolUse", [])
-
-    if not registered(entries, HOOK_TARGET.name):
-        entries.append({
-            "matcher": HOOK_MATCHER,
-            "hooks": [{"type": "command", "command": str(HOOK_TARGET), "timeout": 10}],
-        })
-        changes.append(f"PreToolUse hook registered on {HOOK_MATCHER}")
-
-    for entry in entries:
-        if not registered([entry], HOOK_TARGET.name):
-            continue
-        if entry.get("matcher") == HOOK_MATCHER:
-            continue
-
-        entry["matcher"] = HOOK_MATCHER
-        changes.append(f"PreToolUse matcher rewritten to {HOOK_MATCHER}")
-
-    starts = hooks.setdefault("SessionStart", [])
-    if not registered(starts, DRIFT_TARGET.name):
-        starts.append({
-            "hooks": [{"type": "command", "command": str(DRIFT_TARGET), "timeout": 15}],
-        })
-        changes.append("SessionStart hook registered for plugin drift")
 
     return changes
 
@@ -137,26 +87,15 @@ def report(path, before, after, changes):
 
 
 def write_plain(path, text):
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        print("  written")
+        return
     backup = path.with_suffix(path.suffix + ".bak")
     shutil.copy2(path, backup)
     path.write_text(text, encoding="utf-8")
     print(f"  written (backup: {backup})")
-
-
-def write_root(path, text):
-    handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8")
-    handle.write(text)
-    handle.close()
-    backup = f"{path}.bak"
-    if path.exists():
-        subprocess.run(["sudo", "cp", str(path), backup], check=True)
-    else:
-        subprocess.run(["sudo", "mkdir", "-p", str(path.parent)], check=True)
-    subprocess.run(["sudo", "cp", handle.name, str(path)], check=True)
-    subprocess.run(["sudo", "chown", "root:wheel", str(path)], check=True)
-    subprocess.run(["sudo", "chmod", "644", str(path)], check=True)
-    os.unlink(handle.name)
-    print(f"  written through sudo (backup: {backup})")
 
 
 def install_link(source, target, apply_changes, executable=True):
@@ -184,33 +123,40 @@ def install_link(source, target, apply_changes, executable=True):
     return True
 
 
-def desired_managed():
-    data = load(REFERENCE)
-    changes = fix_managed(data)
+def merge(base, over, extend=False):
+    for key, value in over.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            merge(base[key], value, extend)
+        elif extend and isinstance(value, list) and isinstance(base.get(key), list):
+            base[key] = base[key] + [item for item in value if item not in base[key]]
+        else:
+            base[key] = value
 
-    return dump(data), changes or [f"brought in line with {REFERENCE.relative_to(REPO)}"]
-
-
-def align_managed(apply_changes):
-    before = MANAGED_SETTINGS.read_text(encoding="utf-8") if MANAGED_SETTINGS.exists() else ""
-    after, changes = desired_managed()
-
-    if not report(MANAGED_SETTINGS, before, after, changes):
-        return False
-
-    if apply_changes:
-        write_root(MANAGED_SETTINGS, after)
-
-    return True
+    return base
 
 
-def process(path, fixer, apply_changes, root=False):
-    if not path.exists():
-        print(f"\n=== {path}\n  missing, skipped")
-        return False
+def expand(value):
+    if isinstance(value, dict):
+        return {key: expand(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [expand(item) for item in value]
+    if isinstance(value, str):
+        return value.replace("$HOME", str(HOME))
 
-    before = path.read_text(encoding="utf-8")
-    data = json.loads(before)
+    return value
+
+
+def desired_host():
+    data = load(HOST_SETTINGS)
+    if OVERLAY.exists():
+        merge(data, load(OVERLAY), extend=True)
+
+    return expand(data)
+
+
+def process(path, fixer, apply_changes):
+    before = path.read_text(encoding="utf-8") if path.exists() else ""
+    data = json.loads(before or "{}")
     changes = fixer(data)
     after = dump(data)
 
@@ -218,13 +164,13 @@ def process(path, fixer, apply_changes, root=False):
         return False
 
     if apply_changes:
-        write_root(path, after) if root else write_plain(path, after)
+        write_plain(path, after)
 
     return True
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Align the Claude Code settings files this repository owns.")
+    parser = argparse.ArgumentParser(description="Align the Claude Code user settings, hooks and herdr config with this repository.")
     parser.add_argument("--apply", action="store_true", help="write the changes (default: dry run)")
     args = parser.parse_args()
 
@@ -234,7 +180,6 @@ def main():
         install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
         install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),
         *(install_link(rules, DETECTION_TARGET / rules.name, args.apply, executable=False) for rules in sorted(DETECTION_SOURCE.glob("*.toml"))),
-        align_managed(args.apply),
     ]
 
     print()
@@ -243,10 +188,10 @@ def main():
         return 0
 
     if not args.apply:
-        print("Dry run. Re-run with --apply to write; the managed file will ask for sudo.")
+        print("Dry run. Re-run with --apply to write.")
         return 0
 
-    print("Done. Restart Claude Code so the managed settings and the hook are reloaded.")
+    print("Done. Restart Claude Code so the settings and the hook are reloaded.")
     return 0
 
 

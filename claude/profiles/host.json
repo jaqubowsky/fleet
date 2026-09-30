@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "disableClaudeAiConnectors": true,
+  "agentPushNotifEnabled": true,
+  "autoCompactEnabled": false,
+  "autoMemoryEnabled": false,
+  "remoteControlAtStartup": true,
+  "skipWorkflowUsageWarning": true,
+  "attribution": {
+    "sessionUrl": false,
+    "commit": "",
+    "pr": ""
+  },
+  "env": {
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "FLEET_SEAT": "claude"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node ~/.claude/statusline.mjs",
+    "padding": 0
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write|Grep|Glob|NotebookEdit|WebFetch|WebSearch|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/guard.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/plugin-drift.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "allowWrite": [
+        "$HOME/.claude/sandbox-transcripts",
+        "$HOME/.sandboxes",
+        "$HOME/.claude/fleet-cache"
+      ]
+    },
+    "network": {
+      "allowUnixSockets": [
+        "$HOME/.config/herdr/herdr.sock",
+        "$HOME/.config/herdr/herdr-client.sock",
+        "$HOME/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock"
+      ],
+      "allowedDomains": [
+        "login.docker.com",
+        "api.github.com"
+      ]
+    },
+    "enableWeakerNetworkIsolation": true,
+    "excludedCommands": [
+      "git push*",
+      "git fetch*",
+      "git pull*",
+      "git ls-remote*",
+      "git commit*",
+      "fleet up*",
+      "fleet build*",
+      "fleet land*",
+      "fleet down*",
+      "gh pr create*",
+      "gh pr merge*",
+      "gh pr view*",
+      "gh pr checks*",
+      "gh pr list*",
+      "gh run list*",
+      "gh run view*"
+    ]
+  },
+  "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "allow": [
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)"
+    ]
+  },
+  "syncClaudeAiSkills": false,
+  "syncClaudeAiPlugins": false
+}

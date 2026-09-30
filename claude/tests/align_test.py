@@ -3,6 +3,7 @@ import fnmatch
 import importlib.util
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parent.parent / "tools" / "align-settings.py"
@@ -24,32 +25,6 @@ def check(name, condition):
     print(f"FAIL  align  {name}")
 
 
-def managed(matcher):
-    entry = {"hooks": [{"type": "command", "command": str(align.HOOK_TARGET), "timeout": 10}]}
-    if matcher is not None:
-        entry["matcher"] = matcher
-
-    return {"hooks": {"PreToolUse": [entry]}}
-
-
-data = managed("Bash|Read|Edit|Write|Grep|Glob")
-changes = align.fix_managed(data)
-entry = data["hooks"]["PreToolUse"][0]
-
-check("stale matcher is rewritten", entry["matcher"] == align.HOOK_MATCHER)
-check("stale matcher is reported", any("matcher" in change for change in changes))
-
-data = managed(align.HOOK_MATCHER)
-changes = align.fix_managed(data)
-
-check("current matcher reports nothing", not [c for c in changes if "matcher" in c])
-
-data = {"hooks": {"PreToolUse": []}}
-align.fix_managed(data)
-entry = data["hooks"]["PreToolUse"][0]
-
-check("missing entry is registered on the full matcher", entry["matcher"] == align.HOOK_MATCHER)
-
 kept = {
     "language": "Polish",
     "statusLine": {"type": "command", "command": "node ~/.claude/statusline.mjs"},
@@ -63,15 +38,19 @@ check("host seat model reaches the user settings", data["model"] == model)
 check("host seat effort reaches the user settings", data["effortLevel"] == effort)
 check("both changes are reported", len([c for c in changes if "host seat" in c]) == 2)
 check("every other key survives", all(data[key] == value for key, value in kept.items()))
-check("nothing else is invented", set(data) == set(kept) | {"model", "effortLevel", "$schema"})
-check("an aligned file reports no seat change", not [c for c in align.fix_user(dict(data)) if "host seat" in c])
+check("nothing else is invented", set(data) == set(kept) | set(align.load(align.HOST_SETTINGS)) | {"model", "effortLevel", "$schema"})
+check("an aligned file reports no change", align.fix_user(json.loads(json.dumps(data))) == [])
 
-text, changes = align.desired_managed()
-desired = json.loads(text)
-source = align.load(align.REFERENCE)
+guard = data["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+check("the guard hook reaches the user settings at an absolute path under this HOME", guard == str(align.HOME / ".claude" / "hooks" / "guard.sh"))
+check("no $HOME is left unexpanded", "$HOME" not in json.dumps(data))
+check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": True}) != [])
+
+desired = align.desired_host()
+source = align.load(align.HOST_SETTINGS)
 excluded = desired["sandbox"]["excludedCommands"]
 
-check("the live file is the repo's file, so a host Linear server a profile names leaves the machine-wide config", desired == source and "managedMcpServers" not in desired)
+check("the host settings name no MCP server and no managed-only key", "managedMcpServers" not in desired and "allowManagedMcpServersOnly" not in desired)
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
 check("fleet up, build, land and down run outside the host sandbox", all(pattern in excluded for pattern in ("fleet up*", "fleet build*", "fleet land*", "fleet down*")))
 check("gh opens, reads and merges pull requests outside the host sandbox", all(pattern in excluded for pattern in ("gh pr create*", "gh pr merge*", "gh pr view*", "gh pr checks*")))
@@ -81,7 +60,16 @@ check("the host sandbox reaches the GitHub API and no other new host, so gh read
 check("the host sandbox lets gh verify TLS through trustd", desired["sandbox"].get("enableWeakerNetworkIsolation") is True)
 check("no excluded command is listed twice", len(excluded) == len(set(excluded)))
 check("gh opens and merges pull requests without the auto-mode classifier", all(rule in desired["permissions"]["allow"] for rule in ("Bash(gh pr create *)", "Bash(gh pr merge *)")))
-check("a change the repo file alone makes is still reported", align.desired_managed()[1] != [])
+with tempfile.TemporaryDirectory() as scratch:
+    overlay = Path(scratch) / "claude-settings.json"
+    overlay.write_text(json.dumps({"env": {"SSH_AUTH_SOCK": "$HOME/agent.sock"}, "sandbox": {"network": {"allowUnixSockets": ["$HOME/agent.sock"]}}}))
+    align.OVERLAY = overlay
+    mine = align.desired_host()
+    sockets = mine["sandbox"]["network"]["allowUnixSockets"]
+    own = str(align.HOME / "agent.sock")
+
+    check("the person's overlay adds a socket to the repo's list", sockets == desired["sandbox"]["network"]["allowUnixSockets"] + [own])
+    check("the person's overlay sets an env value beside the repo's", mine["env"]["SSH_AUTH_SOCK"] == own and mine["env"]["FLEET_SEAT"] == "claude")
 
 print(f"align-settings.py: {passed} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
