@@ -35,7 +35,6 @@ LEFTOVERS=(
 	"$HOME/.pi/node_modules"
 	"$HOME/.pi/artifacts"
 	"$HOME/.pi/.claude"
-	"$HOME/.claude/settings.json.bak"
 	"$HOME/sbx-kits"
 	"$HOME/.codex"
 )
