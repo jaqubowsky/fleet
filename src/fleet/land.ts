@@ -24,6 +24,7 @@ type Landing = {
 	entry: Entry;
 	branch: string;
 	signs: boolean;
+	pushes: boolean;
 	refs: string;
 	head?: string;
 };
@@ -93,24 +94,27 @@ export function land(input: LandInput, io: Io): void {
 		throw new Error(
 			`${input.sandbox} belongs to ${entries[0].repo}, not ${input.repo}`,
 		);
-	if (input.branch && entries.length > 1)
-		throw new Error(
-			"--branch names one repository's branch; a multi-repository land takes the branch recorded for each",
-		);
+	const several = entries.length > 1;
 	const landings: Landing[] = entries.map((entry) => {
 		const { host } = repoProfile(input.root, entry.name, io);
-		if (input.push && host.push === "none")
-			throw new Error(
-				`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.config/harness/repos.json or host/repos.json); the branch reaches GitHub another way`,
-			);
 		return {
 			entry,
-			branch: input.branch ?? entry.branch,
+			branch: several ? entry.branch : (input.branch ?? entry.branch),
 			signs: input.sign === true || host.sign !== "none",
+			pushes: host.push !== "none",
 			refs: landedRef(input.sandbox, entry).slice(0, -"/landed".length),
 		};
 	});
 	try {
+		if (input.branch && several)
+			throw new Error(
+				"--branch names one repository's branch; a multi-repository land takes the branch recorded for each",
+			);
+		for (const { entry, pushes } of landings)
+			if (input.push && !pushes)
+				throw new Error(
+					`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.config/harness/repos.json or host/repos.json); the branch reaches GitHub another way`,
+				);
 		io.sbx(["exec", input.sandbox, "true"], { quiet: true });
 		const url = io.git(
 			["remote", "get-url", `sandbox-${input.sandbox}`],

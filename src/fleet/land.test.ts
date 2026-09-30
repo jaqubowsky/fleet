@@ -473,6 +473,10 @@ test("--branch names one repository's branch and is refused for several", () => 
 		/--branch/,
 	);
 	assert.ok(!io.calls.some((call) => call[0] === "git" && call.includes("fetch")));
+	assert.deepEqual(
+		io.lines.filter((line) => /: container /.test(line)).map((line) => line.split(":")[0]),
+		["acme/fe", "acme/api"],
+	);
 });
 
 test("--push where a profile gives the host no push refuses before anything is fetched", () => {
@@ -493,4 +497,8 @@ test("--push where a profile gives the host no push refuses before anything is f
 	);
 	assert.ok(!io.calls.some((call) => call[0] === "git" && call.includes("fetch")));
 	assert.ok(!io.calls.some((call) => call[0] === "sbx"));
+	assert.deepEqual(
+		io.lines.filter((line) => /: container /.test(line)).map((line) => line.split(":")[0]),
+		["acme/fe", "acme/api"],
+	);
 });
