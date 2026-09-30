@@ -6,7 +6,7 @@ It is opinionated and not plug-and-play: both pi and Claude Code are required, i
 
 | | |
 | --- | --- |
-| Built in | 366 commits over two weeks, 16 to 30 September 2026 |
+| Built in | 369 commits over two weeks, 16 to 30 September 2026 |
 | Code | 7.8k lines of TypeScript in `src/`, 13.6k lines of tests |
 | Guard | 424 test cases of what the agents may and may not run |
 | Skills | 19, written once for both agents |
