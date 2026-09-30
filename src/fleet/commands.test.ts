@@ -485,6 +485,49 @@ test("ls joins sbx, herdr and git state", () => {
 	);
 });
 
+test("ls reads a one-entry manifest as the one-repository row it always printed", () => {
+	const io = fakeIo({
+		"sbx ls --json": {
+			sandboxes: [
+				{
+					name: "pi-webapp-web-1",
+					agent: "pi",
+					status: "running",
+					workspaces: ["/r"],
+				},
+			],
+		},
+		"read /home/me/.config/harness/fleet/pi-webapp-web-1.json": JSON.stringify({
+			version: 1,
+			task: "/home/me/.sandboxes/r/pi-webapp-web-1",
+			repositories: [
+				{
+					repo: "/r",
+					name: "acme/webapp",
+					base: "main",
+					baseSha: "1".repeat(40),
+					branch: "web-1",
+					workspace: "/r",
+					served: "",
+				},
+			],
+		}),
+		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
+		"herdr agent list": {
+			result: {
+				agents: [
+					{ pane_id: "w1:p2", name: "pi-webapp-web-1", agent_status: "working" },
+				],
+			},
+		},
+	});
+
+	assert.equal(
+		ls(io),
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+	);
+});
+
 test("ls and peek report both private repositories with their own heads", () => {
 	const apiWorkspace = "/tmp/fleet-repos/api";
 	const manifest = {

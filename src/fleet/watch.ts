@@ -24,7 +24,7 @@ import {
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { repositoryManifest, repositoryCheckout } from "./repositories.ts";
+import { groupManifest, repositoryCheckout } from "./repositories.ts";
 import {
 	type Agent,
 	branchFacts,
@@ -142,7 +142,7 @@ export function watch(
 		const where = dirs.get(name);
 		if (!where)
 			return { text: "commits: not counted\n\npr: not read", running: false };
-		const manifest = repositoryManifest(where.sandbox.name, io);
+		const manifest = groupManifest(where.sandbox.name, io);
 		if (manifest) {
 			const lines: string[] = [];
 			let running = false;

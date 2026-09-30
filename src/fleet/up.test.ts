@@ -36,6 +36,10 @@ const base = {
 	},
 	"sbx exec pi-webapp-web-1 sh -c stty": "-icanon -icrnl",
 	"sbx exec pi-cv-x sh -c stty": "-icanon -icrnl",
+	[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
+		"3".repeat(40),
+	[`sbx exec claude-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
+		"3".repeat(40),
 };
 
 test("up creates the container, switches the branch, starts the install in the background, opens a tab and sends no prompt", async () => {
@@ -80,11 +84,12 @@ test("up creates the container, switches the branch, starts the install in the b
 		"web-1",
 		"main",
 	]);
+	const install = execs.find((c) => c[5].startsWith("setsid nohup"))!;
 	assert.match(
-		execs[2][5],
+		install[5],
 		/^setsid nohup bash -c "\$1" >\/tmp\/fleet-install\.log/,
 	);
-	assert.match(execs[2][7], /yarn install --frozen-lockfile/);
+	assert.match(install[7], /yarn install --frozen-lockfile/);
 	assert.ok(
 		io.lines.some((l) => /1 lockfile\(s\) install in the background/.test(l)),
 	);
@@ -99,6 +104,32 @@ test("up creates the container, switches the branch, starts the install in the b
 		],
 	);
 	assert.ok(!io.calls.some((c) => c[1] === "agent" && c[2] === "prompt"));
+	assert.deepEqual(
+		JSON.parse(io.files["/home/me/.config/harness/fleet/pi-webapp-web-1.json"]),
+		{
+			version: 1,
+			task: "/home/me/.sandboxes/webapp/pi-webapp-web-1",
+			repositories: [
+				{
+					repo,
+					name: "acme/webapp",
+					base: "main",
+					baseSha: "3".repeat(40),
+					branch: "web-1",
+					workspace: repo,
+					served: "",
+				},
+			],
+		},
+	);
+	assert.equal(
+		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/repositories.json"],
+		undefined,
+	);
+	assert.doesNotMatch(
+		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/status.md"],
+		/## Repositories/,
+	);
 	assert.deepEqual(io.calls.at(-1), [
 		"herdr",
 		"agent",
@@ -766,6 +797,7 @@ test("up creates the workspace when the repo has none and names its root tab", a
 			},
 		},
 		"herdr agent get w2:p1": { result: { agent: { agent_status: "done" } } },
+		"sbx exec pi-cv-x git -C /r/cv rev-parse refs/fleet/base": "3".repeat(40),
 	});
 	const out = await up({ repo: "/r/cv", label: "x", root: "/root" }, io);
 	assert.equal(out.pane, "w2:p1");
@@ -1184,7 +1216,9 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 	});
 	await up({ repo, label: "web-1", root: "/root" }, again);
 	assert.deepEqual(
-		again.calls.filter((c) => c[0] === "write").map((c) => c[1]),
+		again.calls
+			.filter((c) => c[0] === "write" && c[1].startsWith(`${task}/`))
+			.map((c) => c[1]),
 		[`${task}/permissions.md`],
 	);
 });
@@ -1665,6 +1699,8 @@ const pushing = {
 	"herdr workspace list": {
 		result: { workspaces: [{ workspace_id: "w1", label: "private-app" }] },
 	},
+	"sbx exec claude-private-app-x git -C /r/private-app rev-parse refs/fleet/base":
+		"3".repeat(40),
 };
 const privateRepos = "sbx exec claude-private-app-x gh api /user/repos";
 const fromSession = JSON.stringify({

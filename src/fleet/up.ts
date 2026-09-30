@@ -275,7 +275,8 @@ export async function up(
 			throw new Error(
 				`${branch} is the default branch, and a container never works on it: give the task its own label, or --branch <name>`,
 			);
-		const plans = input.repos?.length ? planRepositories(input, branch, io) : [];
+		const plans = planRepositories(input, branch, io);
+		const group = plans.length > 1;
 		for (const plan of plans) {
 			if (plan.profile.container.token !== profile.container.token)
 				throw new Error(
@@ -292,10 +293,10 @@ export async function up(
 		create(input, sandbox, profile, kind, io, task);
 		let locks: number;
 		try {
-			if (!plans.length && profile.container.push === "auto")
+			if (!group && profile.container.push === "auto")
 				refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
-			seedEnv(io, input.repo, sandbox, plans.length > 0);
+			seedEnv(io, input.repo, sandbox, group);
 			seedCache(io, input.repo, sandbox, kind);
 			if (kind.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
@@ -329,7 +330,7 @@ export async function up(
 				.split("\n")
 				.filter(Boolean))
 				io.log(`${sandbox}: ${line}`);
-			if (plans.length) plans[0].baseSha = fetchedBase(plans[0], sandbox, io);
+			plans[0].baseSha = fetchedBase(plans[0], sandbox, io);
 			for (const plan of plans.slice(1)) {
 				cloneSecondary(plan, sandbox, task, io);
 				plan.baseSha = fetchedBase(plan, sandbox, io);
@@ -366,7 +367,7 @@ export async function up(
 				`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`,
 			);
 		}
-		if (plans.length) {
+		if (group) {
 			const runbook = `${dirname(task)}/runbook`;
 			io.mkdir(runbook);
 			if (io.read(`${runbook}/README.md`) === undefined)
@@ -384,7 +385,7 @@ export async function up(
 			memory: input.memory ?? profile.resources.memory,
 			cpus: input.cpus ?? profile.resources.cpus,
 		};
-		const allowed = plans.length
+		const allowed = group
 			? plans
 					.map((plan) =>
 						describe(plan.name, {
@@ -422,19 +423,19 @@ export async function up(
 				`${sandbox}: created; no lockfile in the repository, so nothing installs`,
 			);
 		}
-		if (plans.length) {
-			const repositories = plans.map(
-				({ repo, name, base, baseSha, branch, workspace, served }) => ({
-					repo,
-					name,
-					base,
-					baseSha,
-					branch,
-					workspace,
-					served,
-				}),
-			);
-			saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
+		const repositories = plans.map(
+			({ repo, name, base, baseSha, branch, workspace, served }) => ({
+				repo,
+				name,
+				base,
+				baseSha,
+				branch,
+				workspace,
+				served,
+			}),
+		);
+		saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
+		if (group) {
 			const status = io.read(`${task}/status.md`) ?? TASK_STATUS;
 			if (!status.includes("## Repositories")) {
 				const snapshots = plans

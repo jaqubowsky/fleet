@@ -15,6 +15,7 @@ import {
 	artifactsDir,
 	taskDir,
 	repositoryCheckout,
+	groupManifest,
 	repositoryManifest,
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
@@ -92,7 +93,7 @@ export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
 		const agent = agentFor(live, agentName(s.name))?.agent_status ?? "gone";
-		const manifest = repositoryManifest(s.name, io);
+		const manifest = groupManifest(s.name, io);
 		const canProbe =
 			s.status === "running" || (manifest !== undefined && s.status === "stopped");
 		let checkout = { branch: "?", dirty: 0, head: "" };
@@ -183,7 +184,7 @@ function lastLine(error: unknown): string {
 }
 
 export function peek(sandbox: string, io: Io, lines = 40): string {
-	const manifest = repositoryManifest(sandbox, io);
+	const manifest = groupManifest(sandbox, io);
 	const git = manifest
 		? manifest.repositories
 				.map((entry, index) => {
@@ -682,7 +683,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const checkout = parseCheckout(
 		io.sbx(["exec", sandbox, "sh", "-c", checkoutProbe], { quiet: true }),
 	);
-	const manifest = repositoryManifest(sandbox, io);
+	const manifest = groupManifest(sandbox, io);
 	if (manifest && !opts.force) {
 		for (const repo of manifest.repositories) {
 			const current = repositoryCheckout(io, sandbox, repo.workspace);

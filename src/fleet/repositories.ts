@@ -119,6 +119,14 @@ export function repositoryManifest(
 	return data as RepositoryManifest;
 }
 
+export function groupManifest(
+	sandbox: string,
+	io: Io,
+): RepositoryManifest | undefined {
+	const manifest = repositoryManifest(sandbox, io);
+	return manifest && manifest.repositories.length > 1 ? manifest : undefined;
+}
+
 export function saveRepositories(
 	sandbox: string,
 	task: string,
@@ -129,7 +137,8 @@ export function saveRepositories(
 	io.mkdir(dirname(path));
 	const text = `${JSON.stringify(manifest, null, 2)}\n`;
 	io.write(path, text);
-	io.write(`${task}/repositories.json`, text);
+	if (manifest.repositories.length > 1)
+		io.write(`${task}/repositories.json`, text);
 }
 
 export function repositoryCheckout(
