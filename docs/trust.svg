@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 448" width="880" height="448" role="img" aria-labelledby="title">
+<title id="title">Trust model: keys on the Mac, secrets in the sbx proxy, containers without either</title>
+<style>
+svg{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--line:#afb8c1;--box:#f6f8fa;--accent:#0969da;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700}
+@media (prefers-color-scheme: dark){svg{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#656c76;--box:#161b22;--accent:#4493f8;--ok:#3fb950;--bad:#f85149;--warn:#d29922}}
+.bg{fill:var(--bg)}
+.box{fill:var(--box);stroke:var(--line);stroke-width:1.5}
+.host{fill:var(--box);stroke:var(--accent);stroke-width:2}
+.t{fill:var(--fg);font:600 15px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.s{fill:var(--muted);font:13px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.m{fill:var(--fg);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.edge{fill:none;stroke:var(--line);stroke-width:1.8}
+.dash{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:5 5}
+.dot{fill:var(--accent)}
+.okf{fill:var(--ok)} .badf{fill:var(--bad)} .warnf{fill:var(--warn)}
+.ok{fill:var(--box);stroke:var(--ok);stroke-width:2} .bad{fill:var(--box);stroke:var(--bad);stroke-width:2} .warn{fill:var(--box);stroke:var(--warn);stroke-width:2}
+</style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--line)"/></marker></defs>
+<rect class="bg" width="880" height="448" rx="12"/>
+<text class="s" x="20" y="30" text-anchor="start">Who holds what: every key stays on the Mac, containers see placeholders</text>
+<rect class="host" x="20" y="56" width="260" height="270" rx="10"/>
+<text class="t" x="40" y="84" text-anchor="start">this Mac, host session</text>
+<text class="s" x="40" y="114" text-anchor="start">SSH key behind Touch ID</text>
+<text class="s" x="40" y="140" text-anchor="start">GH_TOKEN in the session</text>
+<text class="s" x="40" y="166" text-anchor="start">~/.config/harness/repos.json</text>
+<text class="s" x="40" y="192" text-anchor="start">signs at land, pushes</text>
+<text class="s" x="40" y="218" text-anchor="start">fast-forward only</text>
+<rect class="box" x="350" y="56" width="220" height="112" rx="10"/>
+<text class="t" x="460" y="84" text-anchor="middle">sbx proxy</text>
+<text class="s" x="460" y="108" text-anchor="middle">holds the tokens and logins</text>
+<text class="s" x="460" y="130" text-anchor="middle">adds them to requests</text>
+<text class="s" x="460" y="152" text-anchor="middle">one network allowlist</text>
+<rect class="box" x="350" y="214" width="220" height="112" rx="10"/>
+<text class="t" x="460" y="242" text-anchor="middle">container</text>
+<text class="s" x="460" y="266" text-anchor="middle">no SSH agent, no signing key</text>
+<text class="s" x="460" y="288" text-anchor="middle">placeholders, not secrets</text>
+<text class="s" x="460" y="310" text-anchor="middle">unsigned commits</text>
+<rect class="box" x="620" y="136" width="240" height="80" rx="10"/>
+<text class="t" x="740" y="168" text-anchor="middle">GitHub</text>
+<text class="s" x="740" y="192" text-anchor="middle">origin</text>
+<path class="edge" d="M460 214 V168" marker-end="url(#a)"/>
+<path class="edge" d="M570 112 C600 112 600 160 620 164" marker-end="url(#a)"/>
+<path class="edge" d="M350 270 H280" marker-end="url(#a)"/>
+<path class="dash" d="M280 100 H350" marker-end="url(#a)"/>
+<path class="edge" d="M150 326 C150 380 740 380 740 216" marker-end="url(#a)"/>
+<text class="s" x="315" y="90" text-anchor="middle">secrets</text>
+<text class="s" x="315" y="262" text-anchor="middle">land</text>
+<text class="s" x="472" y="196" text-anchor="start">request</text>
+<text class="s" x="450" y="372" text-anchor="middle">signed push, per profile</text>
+<circle class="dot" r="6"><animateMotion dur="3s" begin="0s" repeatCount="indefinite" path="M460 214 V168 M570 112 C600 112 600 160 620 164"/></circle>
+<circle class="dot" r="5"><animateMotion dur="4s" begin="-1s" repeatCount="indefinite" path="M150 326 C150 380 740 380 740 216"/></circle>
+<circle class="okf" r="5"><animateMotion dur="2s" begin="0s" repeatCount="indefinite" path="M350 270 H280"/></circle>
+<text class="s" x="20" y="410" text-anchor="start">Limits: the guard matches patterns; a project's .claude/settings.json can disable user-level hooks;</text>
+<text class="s" x="20" y="430" text-anchor="start">every container under one profile receives that profile's token.</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 408" width="880" height="408" role="img" aria-labelledby="title">
+<title id="title">How the guard decides a tool call on the host</title>
+<style>
+svg{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--line:#afb8c1;--box:#f6f8fa;--accent:#0969da;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700}
+@media (prefers-color-scheme: dark){svg{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#656c76;--box:#161b22;--accent:#4493f8;--ok:#3fb950;--bad:#f85149;--warn:#d29922}}
+.bg{fill:var(--bg)}
+.box{fill:var(--box);stroke:var(--line);stroke-width:1.5}
+.host{fill:var(--box);stroke:var(--accent);stroke-width:2}
+.t{fill:var(--fg);font:600 15px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.s{fill:var(--muted);font:13px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.m{fill:var(--fg);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.edge{fill:none;stroke:var(--line);stroke-width:1.8}
+.dash{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:5 5}
+.dot{fill:var(--accent)}
+.okf{fill:var(--ok)} .badf{fill:var(--bad)} .warnf{fill:var(--warn)}
+.ok{fill:var(--box);stroke:var(--ok);stroke-width:2} .bad{fill:var(--box);stroke:var(--bad);stroke-width:2} .warn{fill:var(--box);stroke:var(--warn);stroke-width:2}
+</style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--line)"/></marker></defs>
+<rect class="bg" width="880" height="408" rx="12"/>
+<text class="s" x="20" y="30" text-anchor="start">One policy, two hooks: pi's extension and Claude Code's PreToolUse hook, on this Mac</text>
+<rect class="box" x="20" y="168" width="150" height="64" rx="10"/>
+<text class="t" x="95" y="196" text-anchor="middle">tool call</text>
+<text class="s" x="95" y="218" text-anchor="middle">Bash, Edit, Write…</text>
+<rect class="box" x="220" y="50" width="260" height="64" rx="10"/>
+<text class="t" x="350" y="78" text-anchor="middle">writes a harness home?</text>
+<text class="s" x="350" y="100" text-anchor="middle">~/.pi, ~/.claude, runtime state exempt</text>
+<rect class="box" x="220" y="168" width="260" height="64" rx="10"/>
+<text class="t" x="350" y="196" text-anchor="middle">fleet land or down?</text>
+<text class="s" x="350" y="218" text-anchor="middle">the profile's sign, push, down</text>
+<rect class="box" x="220" y="286" width="260" height="64" rx="10"/>
+<text class="t" x="350" y="314" text-anchor="middle">policy</text>
+<text class="s" x="350" y="336" text-anchor="middle">secrets, force push, other repos</text>
+<rect class="bad" x="560" y="50" width="300" height="64" rx="10"/>
+<text class="t" x="710" y="78" text-anchor="middle">deny</text>
+<text class="s" x="710" y="100" text-anchor="middle">name the reads that pass</text>
+<rect class="warn" x="560" y="168" width="300" height="64" rx="10"/>
+<text class="t" x="710" y="196" text-anchor="middle">ask or deny</text>
+<text class="s" x="710" y="218" text-anchor="middle">the person confirms with the tap</text>
+<rect class="ok" x="560" y="286" width="300" height="64" rx="10"/>
+<text class="t" x="710" y="314" text-anchor="middle">allow or deny</text>
+<text class="s" x="710" y="336" text-anchor="middle">or leave it to the agent's own prompt</text>
+<path class="edge" d="M170 200 H196 V82 H220" marker-end="url(#a)"/>
+<path class="edge" d="M480 82 H560" marker-end="url(#a)"/>
+<path class="edge" d="M480 200 H560" marker-end="url(#a)"/>
+<path class="edge" d="M480 318 H560" marker-end="url(#a)"/>
+<path class="edge" d="M350 114 V168" marker-end="url(#a)"/>
+<path class="edge" d="M350 232 V286" marker-end="url(#a)"/>
+<text class="s" x="520" y="76" text-anchor="middle">yes</text>
+<text class="s" x="520" y="194" text-anchor="middle">yes</text>
+<text class="s" x="364" y="146" text-anchor="start">no</text>
+<text class="s" x="364" y="264" text-anchor="start">no</text>
+<circle class="badf" r="7" opacity="0"><animateMotion dur="12s" begin="0s" repeatCount="indefinite" path="M170 200 H196 V82 H480 L560 82" keyPoints="0;1;1;1" keyTimes="0;0.3;0.33;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" begin="0s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></circle>
+<text class="m" x="20" y="264" opacity="0">Edit ~/.claude/settings.json<animate attributeName="opacity" dur="12s" begin="0s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></text>
+<circle class="warnf" r="7" opacity="0"><animateMotion dur="12s" begin="4s" repeatCount="indefinite" path="M170 200 H196 V82 H350 V200 H560" keyPoints="0;1;1;1" keyTimes="0;0.3;0.33;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" begin="4s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></circle>
+<text class="m" x="20" y="264" opacity="0">fleet land pi-app-web-1 --push<animate attributeName="opacity" dur="12s" begin="4s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></text>
+<circle class="okf" r="7" opacity="0"><animateMotion dur="12s" begin="8s" repeatCount="indefinite" path="M170 200 H196 V82 H350 V318 H560" keyPoints="0;1;1;1" keyTimes="0;0.3;0.33;1" calcMode="linear"/><animate attributeName="opacity" dur="12s" begin="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></circle>
+<text class="m" x="20" y="264" opacity="0">git status<animate attributeName="opacity" dur="12s" begin="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.3;0.33;1"/></text>
+<text class="s" x="20" y="390" text-anchor="start">It matches patterns, not shell semantics: it stops mistakes and simple malice, not someone who has read the rule.</text>
+</svg>

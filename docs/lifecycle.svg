@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" width="880" height="360" role="img" aria-labelledby="title">
+<title id="title">A task's lifecycle from fleet up to fleet down</title>
+<style>
+svg{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--line:#afb8c1;--box:#f6f8fa;--accent:#0969da;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700}
+@media (prefers-color-scheme: dark){svg{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#656c76;--box:#161b22;--accent:#4493f8;--ok:#3fb950;--bad:#f85149;--warn:#d29922}}
+.bg{fill:var(--bg)}
+.box{fill:var(--box);stroke:var(--line);stroke-width:1.5}
+.host{fill:var(--box);stroke:var(--accent);stroke-width:2}
+.t{fill:var(--fg);font:600 15px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.s{fill:var(--muted);font:13px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.m{fill:var(--fg);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.edge{fill:none;stroke:var(--line);stroke-width:1.8}
+.dash{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:5 5}
+.dot{fill:var(--accent)}
+.okf{fill:var(--ok)} .badf{fill:var(--bad)} .warnf{fill:var(--warn)}
+.ok{fill:var(--box);stroke:var(--ok);stroke-width:2} .bad{fill:var(--box);stroke:var(--bad);stroke-width:2} .warn{fill:var(--box);stroke:var(--warn);stroke-width:2}
+</style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--line)"/></marker></defs>
+<rect class="bg" width="880" height="360" rx="12"/>
+<text class="s" x="20" y="32" text-anchor="start">A task's lifecycle: host steps outlined in blue, container steps in grey</text>
+<rect class="host" x="16" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="65" y="97" text-anchor="middle">up</text>
+<text class="s" x="65" y="136" text-anchor="middle">fleet up</text>
+<rect class="box" x="124" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="173" y="97" text-anchor="middle">analyzing</text>
+<text class="s" x="173" y="136" text-anchor="middle">analysis.md</text>
+<path class="edge" d="M114 92 L124 92" marker-end="url(#a)"/>
+<rect class="box" x="232" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="281" y="97" text-anchor="middle">implementing</text>
+<text class="s" x="281" y="136" text-anchor="middle">issues/, commits</text>
+<path class="edge" d="M222 92 L232 92" marker-end="url(#a)"/>
+<rect class="box" x="340" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="389" y="97" text-anchor="middle">reviewing</text>
+<text class="s" x="389" y="136" text-anchor="middle">review.md</text>
+<path class="edge" d="M330 92 L340 92" marker-end="url(#a)"/>
+<rect class="box" x="448" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="497" y="97" text-anchor="middle">testing</text>
+<text class="s" x="497" y="136" text-anchor="middle">browser/</text>
+<path class="edge" d="M438 92 L448 92" marker-end="url(#a)"/>
+<rect class="box" x="556" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="605" y="97" text-anchor="middle">ready-for-host</text>
+<text class="s" x="605" y="136" text-anchor="middle">status.md</text>
+<path class="edge" d="M546 92 L556 92" marker-end="url(#a)"/>
+<rect class="host" x="664" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="713" y="97" text-anchor="middle">land</text>
+<text class="s" x="713" y="136" text-anchor="middle">sign, push</text>
+<path class="edge" d="M654 92 L664 92" marker-end="url(#a)"/>
+<rect class="host" x="772" y="70" width="98" height="44" rx="10"/>
+<text class="m" x="821" y="97" text-anchor="middle">down</text>
+<text class="s" x="821" y="136" text-anchor="middle">logs stay</text>
+<path class="edge" d="M762 92 L772 92" marker-end="url(#a)"/>
+<rect x="12" y="66" width="106" height="52" rx="12" style="fill:none;stroke:var(--ok);stroke-width:3"><animate attributeName="x" values="12;120;228;336;444;552;660;768" dur="12s" repeatCount="indefinite" calcMode="discrete"/></rect>
+<path class="edge" d="M389 146 C389 176 281 176 281 146" marker-end="url(#a)"/>
+<text class="s" x="335.0" y="196" text-anchor="middle">per ticket: failing test, gate, review by blast radius, one commit</text>
+<path class="dash" d="M134 216 H536 M134 208 V216 M536 208 V216 M335.0 216 V248"/>
+<rect class="warn" x="185.0" y="248" width="300" height="40" rx="10"/>
+<text class="m" x="335.0" y="273" text-anchor="middle">blocked</text>
+<text class="s" x="335.0" y="308" text-anchor="middle">any container step can stop here; attention: names what the person decides</text>
+<text class="s" x="20" y="340" text-anchor="start">The host wakes when the container settles; status.md carries the state, the task directory outlives the container.</text>
+</svg>
