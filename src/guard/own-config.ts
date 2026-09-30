@@ -1,21 +1,22 @@
 import { resolve } from "node:path";
-import { KINDS } from "../harness.ts";
+import { type AgentName, KINDS } from "../harness.ts";
 import { argvsOf } from "./argv.ts";
 import { within } from "./host.ts";
 
-const HOMES = [KINDS.pi];
+const HOMES = Object.values(KINDS);
+const RUNTIME: Record<AgentName, string[]> = { pi: [], claude: ["projects", "todos", "sandbox-transcripts"] };
 const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|echo|printf|test|\[|cd|pushd)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 
-export const OWN_CONFIG = "~/.pi holds the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home.";
+export const OWN_CONFIG = "~/.pi and ~/.claude hold the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home.";
 
 function located(word: string, dir: string, home: string): string {
 	return resolve(dir, word.replace(/^(~|\$HOME|\$\{HOME\})(?=\/|$)/, home));
 }
 
 function own(path: string, home: string): boolean {
-	return HOMES.some((h) => within(path, `${home}/${h.home}`) && !within(path, `${home}/${h.home}/${h.cache}`));
+	return HOMES.some((h) => within(path, `${home}/${h.home}`) && ![h.cache, ...RUNTIME[h.name]].some((state) => within(path, `${home}/${h.home}/${state}`)));
 }
 
 function targets(argv: string[]): { redirected: string[]; named: string[] } {

@@ -1,0 +1,17 @@
+deny	Edit	~/.claude/settings.json
+deny	Write	~/.claude/hooks/guard.sh
+deny	Bash	sed -i s/a/b/ ~/.claude/settings.json
+deny	Write	/Users/alice/.claude/rules/core.md
+deny	Bash	echo x > $HOME/.claude/CLAUDE.md
+deny	Bash	cp guard.sh ~/.claude/hooks/guard.sh
+deny	Bash	echo '{}' | tee ~/.claude/settings.json
+deny	Bash	cd ~/.claude && echo x > hooks/guard.sh
+deny	Edit	~/.pi/agent/settings.json
+deny	Bash	echo x > ~/.pi/agent/AGENTS.md
+allow	Write	~/.claude/projects/-Users-alice-app/notes.md
+allow	Write	~/.claude/todos/list.json
+allow	Bash	echo x > ~/.claude/sandbox-transcripts/a.log
+allow	Bash	echo x > ~/.claude/fleet-cache/app/note
+allow	Bash	echo x > ~/.pi/cache/note
+allow	Read	~/.claude/settings.json
+allow	Bash	grep -r model ~/.claude/settings.json

@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../../src/guard/down.ts";
 import { landPermission } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
+import { OWN_CONFIG, writesOwnConfig } from "../../src/guard/own-config.ts";
 import { commandsOf } from "../../src/guard/argv.ts";
 import { type Decision, decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
 
@@ -47,7 +49,7 @@ function privilegedNotBare(command: string): boolean {
 export function answer(
 	input: HookInput,
 	root?: string,
-	home?: string,
+	home = homedir(),
 	level = (sandbox: string) => sandboxDownTarget(sandbox, root, home),
 ): string {
 	const tool = input.tool_name ?? "";
@@ -73,10 +75,19 @@ export function answer(
 				},
 			});
 	}
+	const cwd = input.cwd ?? process.cwd();
+	if (writesOwnConfig(tool, input.tool_input ?? {}, cwd, home))
+		return JSON.stringify({
+			hookSpecificOutput: {
+				hookEventName: "PreToolUse",
+				permissionDecision: "deny",
+				permissionDecisionReason: OWN_CONFIG,
+			},
+		});
 	const decided = decide(
 		tool,
 		input.tool_input ?? {},
-		hostAt(input.cwd ?? process.cwd(), root, home),
+		hostAt(cwd, root, home),
 	);
 	const verdict: Decision =
 		decided.decision === "allow" &&
