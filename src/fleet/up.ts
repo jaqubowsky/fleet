@@ -296,7 +296,7 @@ export async function up(
 			if (!group && profile.container.push === "auto")
 				refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
-			seedEnv(io, input.repo, sandbox, group);
+			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox, kind);
 			if (kind.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
@@ -335,7 +335,7 @@ export async function up(
 				cloneSecondary(plan, sandbox, task, io);
 				plan.baseSha = fetchedBase(plan, sandbox, io);
 				seedSubmodules(io, plan.repo, sandbox, plan.workspace);
-				seedEnv(io, plan.repo, sandbox, true, plan.workspace);
+				seedEnv(io, plan.repo, sandbox, plan.workspace);
 				if (kind.projectConfig)
 					seedProjectConfig(
 						io,
@@ -666,7 +666,6 @@ function seedEnv(
 	io: Io,
 	repo: string,
 	sandbox: string,
-	onlyTest = false,
 	guestWorkspace?: string,
 ): void {
 	const files = envFiles(
@@ -682,8 +681,6 @@ function seedEnv(
 			],
 			repo,
 		),
-	).filter(
-		(file) => !onlyTest || /^\.env\.(test|e2e)(\.|$)/.test(basename(file)),
 	);
 	if (!files.length) return;
 

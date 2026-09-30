@@ -151,7 +151,7 @@ test("up keeps two writable private clones with their own bases", async () => {
 			"3".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
 			"4".repeat(40),
-		"git ls-files --others --ignored": ".env.local\n.env.test\n",
+		"git ls-files --others --ignored": ".env\n.env.test\n",
 		'sbx exec pi-webapp-web-1 sh -c cd "$1" && shift && git ls-files':
 			"pnpm-lock.yaml",
 	});
@@ -227,12 +227,9 @@ test("up keeps two writable private clones with their own bases", async () => {
 	const copied = io.calls
 		.filter((call) => call[0] === "sbx" && call[1] === "cp")
 		.map((call) => call[2]);
-	assert.ok(
-		copied.includes(`${repo}/.env.test`) && copied.includes(`${api}/.env.test`),
-	);
-	assert.ok(
-		!copied.some((path) => path.endsWith("/.env.local")),
-		"production env must not seed an automated test",
+	assert.deepEqual(
+		copied.filter((path) => path.includes("/.env")),
+		[`${repo}/.env`, `${repo}/.env.test`, `${api}/.env`, `${api}/.env.test`],
 	);
 	const apiInstall = io.calls.find(
 		(call) =>
