@@ -93,22 +93,24 @@ by_hand() {
 	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your repository profiles and overlays: README.md, User config"
 	command -v sbx >/dev/null || echo "  missing sbx on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
 	command -v herdr >/dev/null || echo "  missing herdr on PATH: BOOTSTRAP.md, Before step 1, the Brewfile"
-	command -v op >/dev/null || echo "  missing op on PATH, the 1Password CLI: BOOTSTRAP.md, step 2"
 	command -v node >/dev/null || { echo "  missing node on PATH: BOOTSTRAP.md, step 2"; return; }
 	node --input-type=module -e '
-		const [root, home] = process.argv.slice(1);
+		const [root, home, op] = process.argv.slice(1);
 		const { readFileSync } = await import("node:fs");
 		const { loadProfiles, linearServer } = await import(`${root}/src/profile/profile.ts`);
 		const read = (path) => { try { return readFileSync(path, "utf8"); } catch { return undefined; } };
 		const lines = new Set();
-		for (const { container, host } of Object.values(loadProfiles(read, root, home))) {
+		const profiles = Object.values(loadProfiles(read, root, home));
+		if (!op && profiles.some(({ container }) => container.token.startsWith("op://")))
+			lines.add("  missing op on PATH, the 1Password CLI, which a profile names for its container token: BOOTSTRAP.md, step 2");
+		for (const { container, host } of profiles) {
 			const [cname, curl] = linearServer(container) ?? [];
 			if (cname) lines.add(`  not verified ${cname}, no check from this Mac lists sbx MCP servers: sbx mcp add ${cname} --url ${curl}`);
 			const [hname] = linearServer(host) ?? [];
 			if (hname) lines.add(`  not verified ${hname}, registered per checkout: fleet profile <checkout> --apply in each checkout`);
 		}
 		for (const line of lines) console.log(line);
-	' "$ROOT" "$HOME"
+	' "$ROOT" "$HOME" "$(command -v op || true)"
 }
 
 template_loaded() {
