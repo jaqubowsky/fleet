@@ -8,7 +8,7 @@ const task = "/home/me/.sandboxes/groups/a-b-c/pi-a";
 const manifest = {
 	version: 1,
 	task,
-	repositories: ["a", "b", "c"].map((name, index) => ({
+	repositories: ["a", "b", "c"].map((name) => ({
 		repo: `/${name}`,
 		name: `owner/${name}`,
 		base: "main",
@@ -16,8 +16,6 @@ const manifest = {
 		branch: "task",
 		workspace: `/${name}`,
 		served: "",
-		sourceSha: String(index + 2).repeat(40),
-		landedSha: String(index + 2).repeat(40),
 	})),
 };
 const path = "/home/me/.config/harness/fleet/pi-a.json";
@@ -120,11 +118,6 @@ test("down protects the third repository's dirty work", () => {
 		}
 		return result;
 	};
-	const git = io.git;
-	io.git = (args, repo) =>
-		args[0] === "for-each-ref"
-			? String("abc".indexOf(repo.slice(1)) + 2).repeat(40)
-			: git(args, repo);
 
 	assert.throws(() => down("pi-a", {}, io), /owner\/c: 1 uncommitted/);
 	assert.ok(!io.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
