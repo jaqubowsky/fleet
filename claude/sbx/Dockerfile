@@ -29,7 +29,4 @@ COPY --chmod=0755 container/ticket-check.sh /usr/local/bin/ticket-check
 
 COPY settings.json    /etc/claude-code/managed-settings.json
 
-COPY --from=claude-home --chown=agent:agent .gitconfig      /home/agent/.gitconfig
-COPY --from=claude-home --chown=agent:agent allowed_signers /home/agent/.config/git/allowed_signers
-COPY --from=claude-home --chown=agent:agent .gitconfig-work /home/agent/.gitconfig-work
-COPY --from=claude-home --chown=agent:agent .gitconfig-alice /home/agent/.gitconfig-alice
+COPY --from=claude-home --chown=agent:agent git/ /home/agent/

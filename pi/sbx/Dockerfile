@@ -28,10 +28,7 @@ RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map
  && npm install --prefix /home/agent/.pi/agent/npm --legacy-peer-deps $pkgs \
  && ls /home/agent/.pi/agent/npm/node_modules | grep -cE "^pi-|^@"
 
-COPY --from=pi-home --chown=agent:agent .gitconfig      /home/agent/.gitconfig
-COPY --from=pi-home --chown=agent:agent allowed_signers /home/agent/.config/git/allowed_signers
-COPY --from=pi-home --chown=agent:agent .gitconfig-work /home/agent/.gitconfig-work
-COPY --from=pi-home --chown=agent:agent .gitconfig-alice /home/agent/.gitconfig-alice
+COPY --from=pi-home --chown=agent:agent git/ /home/agent/
 
 LABEL com.docker.sandboxes.start-docker="true"
 LABEL com.docker.sandboxes.flavor="pi"
