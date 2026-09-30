@@ -215,47 +215,48 @@ for (const harness of Object.values(KINDS)) {
 const remoteRefs =
 	'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && git for-each-ref --contains abc';
 
+const twoRepositories = {
+	version: 1,
+	repositories: [
+		{
+			repo: "/r",
+			name: "acme/fe",
+			base: "main",
+			baseSha: "1".repeat(40),
+			branch: "task",
+			workspace: "/r",
+			served: "",
+		},
+		{
+			repo: "/api",
+			name: "acme/api",
+			base: "develop",
+			baseSha: "2".repeat(40),
+			branch: "task",
+			workspace: "/tmp/fleet-repos/api",
+			served: "",
+		},
+	],
+};
+const apiProbe =
+	'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api';
+const twoRepositoryAnswers = {
+	...running,
+	"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(twoRepositories),
+	[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
+	'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
+	[apiProbe]: `task\t1\t${"4".repeat(40)}`,
+};
+
 test("down keeps both clones when the API has dirty or unlanded work", () => {
-	const manifest = {
-		version: 1,
-		repositories: [
-			{
-				repo: "/r",
-				name: "acme/fe",
-				base: "main",
-				baseSha: "1".repeat(40),
-				branch: "task",
-				workspace: "/r",
-				served: "",
-			},
-			{
-				repo: "/api",
-				name: "acme/api",
-				base: "develop",
-				baseSha: "2".repeat(40),
-				branch: "task",
-				workspace: "/tmp/fleet-repos/api",
-				served: "",
-			},
-		],
-	};
-	const probe =
-		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api';
-	const answers = {
-		...running,
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(manifest),
-		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
-		'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
-		[probe]: `task\t1\t${"4".repeat(40)}`,
-	};
-	const dirty = fakeIo(answers);
+	const dirty = fakeIo(twoRepositoryAnswers);
 
 	assert.throws(() => down("pi-a", {}, dirty), /acme\/api.*1 uncommitted/);
 	assert.ok(!dirty.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
 
 	const unlanded = fakeIo({
-		...answers,
-		[probe]: `task\t0\t${"4".repeat(40)}`,
+		...twoRepositoryAnswers,
+		[apiProbe]: `task\t0\t${"4".repeat(40)}`,
 		[`git /api merge-base --is-ancestor ${"4".repeat(40)} refs/fleet/pi-a/api/landed`]:
 			new Error("exit 1"),
 	});
@@ -263,17 +264,21 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 	assert.ok(
 		!unlanded.calls.some((call) => call[0] === "sbx" && call[1] === "rm"),
 	);
+});
 
-	const landed = fakeIo({ ...answers, [probe]: `task\t0\t${"4".repeat(40)}` });
-	down("pi-a", {}, landed);
+test("down takes both clones once each head is under its landed anchor", () => {
+	const io = fakeIo({ ...twoRepositoryAnswers, [apiProbe]: `task\t0\t${"4".repeat(40)}` });
+
+	down("pi-a", {}, io);
+
 	assert.ok(
-		landed.calls.some(
+		io.calls.some(
 			(call) =>
 				call.join(" ") ===
 				`git /api merge-base --is-ancestor ${"4".repeat(40)} refs/fleet/pi-a/api/landed`,
 		),
 	);
-	assert.ok(landed.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
+	assert.ok(io.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
 });
 
 test("down refuses a dirty container without --force", () => {
