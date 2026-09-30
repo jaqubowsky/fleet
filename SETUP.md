@@ -71,7 +71,7 @@ Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints th
 
 ## 4. Sync
 
-`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet` and herdr's config, and builds both container images. Read the plan first:
+`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet` and herdr's config, and builds both container images. The render owns whole directories and replaces them on every run: `~/.claude/rules`, `refs`, `skills` and `agents`, and `~/.pi/skills`, `agent/refs`, `agent/agents` and `agent/themes`. Anything of the person's own there is deleted, and the dry run lists each such file as `remove`. Before the first `--apply`, show the person that list and copy what they want to keep. Read the plan first:
 
 ```bash
 ./sync.sh            # prints what it would change, changes nothing
