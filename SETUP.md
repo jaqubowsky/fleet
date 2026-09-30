@@ -65,7 +65,7 @@ Write `git/.gitconfig` with the person's name and email. Containers commit unsig
 
 Everything under `git/` lands in `/home/agent/` as it is: `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
 
-`sync.sh` writes the keys `claude/profiles/host.json` names into `~/.claude/settings.json`, with `$HOME` expanded, on every run: a list under such a key is replaced, and the previous file stays as `settings.json.bak`. Keys the repository does not name stay yours. Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so the SSH agent that signs on this Mac is set in that shell's profile.
+`sync.sh` writes the keys `claude/profiles/host.json` names into `~/.claude/settings.json`, with `$HOME` expanded, on every run. A list under such a key is replaced, except the hook lists under `hooks`: there your own entries, such as the one `herdr integration install claude` adds, stay, and the repository's hooks are added or brought up to date beside them. The previous file stays as `settings.json.bak`. Keys the repository does not name stay yours. Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so the SSH agent that signs on this Mac is set in that shell's profile.
 
 Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints the email, and `ls ~/.config/harness` lists `git`.
 
