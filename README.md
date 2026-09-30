@@ -80,7 +80,7 @@ What the guard stops on your Mac, one real case each from its test corpus:
 | Publishing files as gists | `gh gist create notes.md` |
 | Deleting your work | `rm -rf /Users/alice/Work` |
 
-`host/tests/` holds 424 cases the guard must allow or refuse, and `npm test` runs every one of them through the policy, and the home-write cases through both agents' hooks. Landing, signing and removing a sandbox ask you first, as the repository's permission profile says.
+`host/tests/` holds 421 cases the guard must allow or refuse, and `npm test` runs every one of them through the policy, and the home-write cases through both agents' hooks. Landing, signing and removing a sandbox ask you first, as the repository's permission profile says.
 
 ## Trust model
 
@@ -107,7 +107,7 @@ License: [MIT](LICENSE).
 <details>
 <summary>Numbers</summary>
 
-369 commits over two weeks, 16 to 30 September 2026; 7.8k lines of TypeScript in `src/`, 13.6k lines of tests; 424 guard cases; 19 skills written once for both agents.
+369 commits over two weeks, 16 to 30 September 2026; 7.8k lines of TypeScript in `src/`, 13.6k lines of tests; 421 guard cases; 19 skills written once for both agents.
 
 </details>
 
