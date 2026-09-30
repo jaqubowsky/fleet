@@ -439,6 +439,14 @@ test("signing runs no hook of the host repository", (t) => {
 	assert.ok(!existsSync(join(f.root, "hook-ran")));
 });
 
+test("a checkout whose directory name has a space lands into its branch", (t) => {
+	const f = fixture(t, ["my app"], { owner: "acme" });
+
+	land(f.input(), f.io);
+
+	assert.equal(f.tip(0), f.git(f.guests[0], "rev-parse", "HEAD"));
+});
+
 test("every exit prints one line per repository with its container head, host branch, origin branch and signature", (t) => {
 	const f = fixture(t, ["one", "two"]);
 

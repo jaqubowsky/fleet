@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { repoName } from "../profile/profile.ts";
 import type { Io } from "./io.ts";
+import { slug } from "./name.ts";
 import { repoProfile } from "./permissions.ts";
 import {
 	repositoryCheckout,
@@ -71,7 +72,7 @@ export function landRefusal(
 }
 
 export function landedRef(sandbox: string, entry: Entry): string {
-	return `refs/fleet/${sandbox}/${basename(entry.workspace)}/landed`;
+	return `refs/fleet/${sandbox}/${slug(basename(entry.workspace))}/landed`;
 }
 
 export function isAncestor(
