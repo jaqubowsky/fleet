@@ -470,6 +470,21 @@ const multi = {
 	],
 };
 
+test("--branch is refused once the repository has a landed anchor", (t) => {
+	const f = fixture(t, ["one"], { owner: "acme" });
+	land(f.input(), f.io);
+	const landed = f.landed(0);
+	f.git(f.guests[0], "switch", "--quiet", "-c", "other");
+	f.commit(f.guests[0], "other work");
+
+	assert.throws(
+		() => land(f.input({ branch: "other" }), f.io),
+		/acme\/one: .*refs\/fleet\/pi-a\/one\/landed.*recorded branch task/,
+	);
+	assert.equal(f.landed(0), landed);
+	assert.throws(() => f.git(f.repos[0].repo, "show-ref", "--verify", "refs/heads/other"));
+});
+
 test("--branch names one repository's branch and is refused for several", () => {
 	const io = fakeIo({
 		"read /root/host/repos.json": SAMPLE_PROFILES,

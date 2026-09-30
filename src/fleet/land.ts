@@ -116,6 +116,11 @@ export function land(input: LandInput, io: Io): void {
 				throw new Error(
 					`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.config/harness/repos.json or host/repos.json); the branch reaches GitHub another way`,
 				);
+		for (const { entry, refs } of landings)
+			if (input.branch && ref(entry.repo, `${refs}/landed`, io))
+				throw new Error(
+					`${entry.name}: ${refs}/landed already anchors the recorded branch ${entry.branch}; --branch would move that anchor, so land without it`,
+				);
 		io.sbx(["exec", input.sandbox, "true"], { quiet: true });
 		const url = io.git(
 			["remote", "get-url", `sandbox-${input.sandbox}`],
