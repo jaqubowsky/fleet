@@ -99,10 +99,6 @@ export function hostCommands(subject: string): string[] {
 	return segmentsOf(subject, false).map(({ text }) => text);
 }
 
-export function commandsOf(subject: string): string[] {
-	return hostCommands(scan(subject));
-}
-
 function words(text: string): string[] {
 	const found: string[] = [];
 	let word: string | undefined;
