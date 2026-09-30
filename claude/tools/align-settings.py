@@ -43,7 +43,10 @@ def fix_user(data):
     data["$schema"] = "https://json.schemastore.org/claude-code-settings.json"
 
     before = dump(data)
-    merge(data, desired_host())
+    desired = desired_host()
+    hooks = desired.pop("hooks", {})
+    merge(data, desired)
+    merge_hooks(data.setdefault("hooks", {}), hooks)
     if dump(data) != before:
         changes.append(f"brought in line with {HOST_SETTINGS.relative_to(REPO)}")
 
@@ -128,6 +131,15 @@ def merge(base, over):
             merge(base[key], value)
         else:
             base[key] = value
+
+    return base
+
+
+def merge_hooks(base, over):
+    for event, entries in over.items():
+        owned = {hook.get("command") for entry in entries for hook in entry.get("hooks", [])}
+        kept = [entry for entry in base.get(event, []) if not owned & {hook.get("command") for hook in entry.get("hooks", [])}]
+        base[event] = kept + entries
 
     return base
 

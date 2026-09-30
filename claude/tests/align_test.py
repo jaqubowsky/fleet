@@ -44,6 +44,20 @@ check("the guard hook reaches the user settings at an absolute path under this H
 check("no $HOME is left unexpanded", "$HOME" not in json.dumps(data))
 check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": True}) != [])
 
+herdr = {"matcher": "^(startup|resume|clear|compact|fork)$", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/herdr-agent-state.sh session"}]}
+stale = {"matcher": "Bash", "hooks": [{"type": "command", "command": str(align.HOME / ".claude" / "hooks" / "guard.sh"), "timeout": 10}]}
+mine = {"hooks": {"SessionStart": [herdr], "PreToolUse": [stale]}}
+align.fix_user(mine)
+twice = json.loads(json.dumps(mine))
+align.fix_user(twice)
+starts = mine["hooks"]["SessionStart"]
+guards = [entry for entry in mine["hooks"]["PreToolUse"] if entry["hooks"][0]["command"].endswith("guard.sh")]
+
+check("a hook the person added, such as herdr's, survives the sync", herdr in starts)
+check("the repo's own hook is added beside it", any(entry["hooks"][0]["command"].endswith("plugin-drift.sh") for entry in starts))
+check("the repo's hook replaces its own stale entry instead of doubling it", len(guards) == 1 and guards[0]["matcher"] != "Bash")
+check("a second sync changes nothing", twice == mine)
+
 desired = align.desired_host()
 source = align.load(align.HOST_SETTINGS)
 check("the host settings name no MCP server and no managed-only key", "managedMcpServers" not in desired and "allowManagedMcpServersOnly" not in desired)
