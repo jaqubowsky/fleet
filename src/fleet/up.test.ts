@@ -980,7 +980,7 @@ test("up attaches no Linear server where the profile gives none, and --memory an
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(!run.includes("--static-mcp"));
 	assert.deepEqual([run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]], ["16g", "8"]);
-	assert.equal(io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!.at(-1), "op://Dev/GitHub PAT Personal/credential");
+	assert.equal(io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!.at(-1), "op://Dev/GitHub PAT SELF/token");
 	assert.match(io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"], /^- resources: 16g memory, 8 cpus$/m);
 });
 

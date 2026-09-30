@@ -124,7 +124,7 @@ test("the harness's profile file holds only *, the profile an unknown repository
 	});
 	assert.equal(
 		profiles["*"].container.token,
-		"op://Dev/GitHub PAT Personal/credential",
+		"op://Dev/GitHub PAT SELF/token",
 	);
 });
 
