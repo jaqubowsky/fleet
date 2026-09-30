@@ -74,7 +74,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-After the code analysis, compare the person's recorded decisions with the proposal, cite wiki pages and their sources, report missing knowledge or access honestly. Wiki advice challenges the approach; it does not make a recommendation mandatory.
+After the code analysis, report missing knowledge or access honestly.
 
 The reply is the report: the headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
 

@@ -16,7 +16,7 @@ Against the ask, as `analysis.md`, `spec.md`, the tickets or the quoted prompt s
 
 ## Axis 2: engineering quality
 
-Against the repo's documented standards, then the wiki positions, then the smell baseline, in that precedence: fit with the surrounding architecture, complexity the task did not need, an abstraction where a literal would do, scope creep, and security or performance where the diff touches them. For each clone pair the task pasted: one piece of knowledge to extract, or two that merely look alike and stay copied, with the reason. Word every finding so it survives `ambiguous-architecture-terms.md`: a pro and a con, or a measurement, never a label standing alone.
+Against the repo's documented standards, then the questions the task lists, then the smell baseline, in that precedence: fit with the surrounding architecture, complexity the task did not need, an abstraction where a literal would do, scope creep, and security or performance where the diff touches them. For each clone pair the task pasted: one piece of knowledge to extract, or two that merely look alike and stay copied, with the reason. Word every finding as a pro and a con, or a measurement, never a label standing alone.
 
 ## Findings
 

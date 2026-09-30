@@ -60,9 +60,6 @@ The text the user appended after this skill holds a source and an optional desti
 6. If the destination is not writable (read-only mount, sandbox), say so and
    name the path that failed instead of silently picking another one.
 
-Destination inside `~/my-knowledge-base/raw/inbox/`: finish by reminding the
-user to run `{{skill.ingest}}` in that repo to fold the transcript into the wiki.
-
 ## Common mistakes
 
 | Mistake | Fix |

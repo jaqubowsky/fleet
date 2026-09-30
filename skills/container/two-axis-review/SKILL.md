@@ -28,16 +28,16 @@ Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 
 ### 3. Name the standards
 
-Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Then the wiki at `{{wiki}}/wiki/`: read `index.md` and pick the pages for the diff's area, plus the four that bear on every review:
+Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Then the four questions that bear on every review:
 
-| Page | What it decides |
+| Question | When |
 | --- | --- |
-| `dry-principle.md` | one piece of knowledge or two: share technical, copy domain, "can these change independently?" |
-| `ambiguous-architecture-terms.md` | the wording of findings: a pro and a con, or a measurement |
-| `code-deletability.md` | a diff that adds or grows a module: delete its folder, count the errors and the silent stumps |
-| `anti-requirements.md` | a diff that grows an entity or a type: invent a fake rule joining two attributes, see whether it sounds absurd |
+| one piece of knowledge or two: share technical, copy domain, "can these change independently?" | every duplication |
+| a pro and a con, or a measurement, never a label standing alone | the wording of every finding |
+| delete its folder, count the errors and the silent stumps | a diff that adds or grows a module |
+| invent a fake rule joining two attributes, see whether it sounds absurd | a diff that grows an entity or a type |
 
-Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this file, itself.
+Collect the repo paths. The reviewer reads them, and [smells.md](smells.md) beside this file, itself.
 
 ### 4. Run the reviewer
 
@@ -47,7 +47,7 @@ Collect paths. The reviewer reads them, and [smells.md](smells.md) beside this f
 2. the paths of the analysis, the spec and the tickets that set the task, those that exist; when none does, the prompt that set the task, quoted
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
-5. the standards paths from step 3 with their precedence (repo, wiki, baseline) and the path of `smells.md`
+5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline) and the path of `smells.md`
 6. `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
 
 Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.

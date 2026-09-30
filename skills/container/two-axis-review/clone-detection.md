@@ -20,7 +20,7 @@ rm "$REPORT/jscpd-report.json"
 ## Five rules bind this step
 
 - **Evidence, not verdict.** jscpd matches tokens; DRY is about knowledge. Two token-identical blocks living in two bounded contexts are two pieces of knowledge and stay copied. When that is the call, the finding says so, so the next review doesn't raise it again.
-- **Rule each pair with the recorded test**, in `{{wiki}}/wiki/dry-principle.md`: share technical code, copy domain code even when identical today, and ask whether the two sides can change independently. A pair that can is two pieces of knowledge. The page also names the unit that is safe to share: a policy or a calculator before a whole handler.
+- **Rule each pair with one test**: share technical code, copy domain code even when identical today, and ask whether the two sides can change independently. A pair that can is two pieces of knowledge. The unit that is safe to share is a policy or a calculator before a whole handler.
 - **At least one side in a changed hunk.** A clone pair outside the changed lines is pre-existing and out of scope, even inside a file the diff touched.
 - **Skip what a machine wrote.** Generated clients, fixtures, snapshots, migrations, lockfiles.
 - **No detector, no failure.** If jscpd isn't installed, `clones.txt` says so in one line and the reviewer judges duplication by reading.

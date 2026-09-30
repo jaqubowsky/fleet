@@ -249,21 +249,19 @@ test("claude keeps one file per rule, its own tool names and CLAUDE.md", () => {
 	assert.equal(io.files["/stage/home/rules/host.md"], undefined);
 });
 
-test("both harnesses name the wiki under the home of the Mac that renders", () => {
+test("both host seats name the wiki under the home of the Mac that renders", () => {
 	for (const agent of ["pi", "claude"] as const) {
 		const io = fakeIo(
-			sources({
-				"read /root/sbx/container/sandbox.md": "wiki at {{wiki}}\n",
-			}),
+			sources({ "read /root/rules/host.md": "wiki at {{wiki}}\n" }),
 			SEATS[agent],
 		);
 
-		render({ root: "/root", agent, seat: "container", out: "/stage" }, io);
+		render({ root: "/root", agent, seat: "host", out: "/home" }, io);
 
 		const rule =
 			agent === "claude"
-				? io.files["/stage/home/rules/sandbox.md"]
-				: io.files["/stage/home/agent/AGENTS.md"];
+				? io.files["/home/rules/host.md"]
+				: io.files["/home/agent/AGENTS.md"];
 		assert.match(rule ?? "", /^wiki at \/home\/me\/my-knowledge-base$/m, agent);
 	}
 });

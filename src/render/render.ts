@@ -1,5 +1,5 @@
 import type { Io } from "../fleet/io.ts";
-import { type AgentName, CLI, CONTINUE, KINDS, WIKI } from "../harness.ts";
+import { type AgentName, CLI, CONTINUE, KINDS } from "../harness.ts";
 import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 
 export type Seat = "host" | "container";
@@ -159,7 +159,7 @@ class Renderer {
 			continue: CONTINUE,
 			...this.seats,
 			root,
-			wiki: `${this.io.home}/${WIKI}`,
+			wiki: `${this.io.home}/my-knowledge-base`,
 		};
 		for (const key of this.input.placeholders ?? []) tokens[key] = `<${key}>`;
 		const fragment = (name: string) => {

@@ -1,10 +1,5 @@
 # Host
 
-## Second brain
-
-1. Second-brain topic -> skill `brain`. The wiki is a recorded position, not authority
-2. Read-only from outside that repo. Capture via skill `brain-dump` or `transcript`. Synthesis into pages via `{{skill.ingest}}` inside the repo
-
 ## Fleet
 
 Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only, which drives every container whichever agent runs in it.
