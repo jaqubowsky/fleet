@@ -139,14 +139,25 @@ test("up creates the container, switches the branch, starts the install in the b
 	]);
 });
 
+test("one-repository up takes its base from the container when the host never fetched it", async () => {
+	const io = fakeIo({
+		...base,
+		[containerLocks]: "yarn.lock",
+		[`git ${repo} rev-parse origin/release`]: new Error("fatal: ambiguous argument 'origin/release'"),
+	});
+
+	await up({ repo, label: "web-1", root: "/root", base: "release" }, io);
+
+	const manifest = JSON.parse(io.files[manifestPath("pi-webapp-web-1", io)]);
+	assert.equal(manifest.repositories[0].baseSha, "3".repeat(40));
+});
+
 test("up keeps two writable private clones with their own bases", async () => {
 	const api = "/Users/me/Work/api";
 	const io = fakeIo({
 		...base,
 		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
 		[`git ${api} rev-parse --abbrev-ref origin/HEAD`]: "origin/develop",
-		[`git ${api} rev-parse origin/develop`]: "2".repeat(40),
-		[`git ${repo} rev-parse origin/main`]: "1".repeat(40),
 		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 			"3".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
@@ -342,8 +353,6 @@ test("up applies one explicit base to both repositories", async () => {
 		...base,
 		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
 		[`git ${api} rev-parse --abbrev-ref origin/HEAD`]: "origin/main",
-		[`git ${repo} rev-parse origin/dev`]: "1".repeat(40),
-		[`git ${api} rev-parse origin/dev`]: "2".repeat(40),
 		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 			"1".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
@@ -368,8 +377,6 @@ test("up gives each repository its own explicit base", async () => {
 	const io = fakeIo({
 		...base,
 		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
-		[`git ${repo} rev-parse origin/main`]: "1".repeat(40),
-		[`git ${api} rev-parse origin/dev`]: "2".repeat(40),
 		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 			"1".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
@@ -394,8 +401,6 @@ test("up distinguishes two repositories with the same checkout basename", async 
 	const io = fakeIo({
 		...base,
 		[`git ${other} remote get-url origin`]: "git@github.com:acme/api.git",
-		[`git ${other} rev-parse origin/main`]: "2".repeat(40),
-		[`git ${repo} rev-parse origin/main`]: "1".repeat(40),
 		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 			"1".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/2-webapp rev-parse refs/fleet/base":
@@ -423,8 +428,6 @@ test("claude seeds each repository's ignored agent config into its private clone
 		{
 			...base,
 			[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
-			[`git ${api} rev-parse origin/main`]: "2".repeat(40),
-			[`git ${repo} rev-parse origin/main`]: "1".repeat(40),
 			[`sbx exec claude-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 				"1".repeat(40),
 			"sbx exec claude-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
@@ -1327,7 +1330,6 @@ test("a bundle builds a writable private API clone without changing the host che
 	const io = fakeIo({
 		...base,
 		[`git ${workspace} remote get-url origin`]: "git@github.com:acme/api.git",
-		[`git ${workspace} rev-parse origin/main`]: head,
 		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
 			"a".repeat(40),
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/workspace rev-parse refs/fleet/base":

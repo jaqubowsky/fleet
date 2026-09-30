@@ -136,7 +136,7 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 			name,
 			base,
 			branch,
-			baseSha: io.git(["rev-parse", `origin/${base}`], repo),
+			baseSha: "",
 			workspace,
 			served,
 			profile: repoProfile(input.root, name, io),
