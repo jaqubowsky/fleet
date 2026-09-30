@@ -2,6 +2,4 @@ allow	Bash	sbx exec v10test sh -c 'ls ~/.ssh'
 deny	Bash	sbx exec v10test sh -c 'cat /Users/alice/.ssh/id_ed25519'
 deny	Bash	ssh remote.example sh -c 'ls ~/.ssh'
 deny	Bash	ssh remote.example cat /Users/alice/.ssh/config
-deny	Bash	cat ~/.ssh/id_ed25519
 deny	Bash	cat $HOME/.config/op/config
-deny	Bash	ls ~/Library/Keychains

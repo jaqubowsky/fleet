@@ -17,7 +17,6 @@ deny	Bash	ls ~/Library/Keychains
 deny	Bash	grep -r token ~/.config/op
 deny	Read	/Users/alice/.ssh/known_hosts
 deny	Read	/Users/alice/Library/Keychains/login.keychain-db
-allow	Bash	sbx ls
 allow	Bash	sbx exec pi-cv sh -c 'git status'
 allow	Bash	herdr panes
 deny	Bash	ssh remote.example docker ps

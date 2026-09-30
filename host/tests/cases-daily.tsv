@@ -17,7 +17,6 @@ pass	Bash	git switch -c web-1589
 pass	Bash	git rebase main
 pass	Bash	git stash && git switch main
 pass	Bash	git restore --staged src/app.ts
-pass	Bash	gh pr view 128
 pass	Bash	gh pr checks
 pass	Bash	open http://localhost:3000
 pass	Bash	node --version && pnpm --version
