@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
@@ -1057,7 +1057,7 @@ test("a submodule of an extra repository lives under the git dir the clone repor
 });
 
 test("the seeding scripts leave a working submodule behind a separate git dir", async (t) => {
-	const root = mkdtempSync(join(tmpdir(), "up-submodule-"));
+	const root = realpathSync(mkdtempSync(join(tmpdir(), "up-submodule-")));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
 	const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" };
 	const git = (dir: string, ...args: string[]) =>
@@ -1278,7 +1278,7 @@ function originWithClone(t: TestContext): {
 	workspace: string;
 	git: (dir: string, ...args: string[]) => string;
 } {
-	const root = mkdtempSync(join(tmpdir(), "up-branch-"));
+	const root = realpathSync(mkdtempSync(join(tmpdir(), "up-branch-")));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
 	const git = (dir: string, ...args: string[]) =>
 		execFileSync(
