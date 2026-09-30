@@ -11,11 +11,11 @@ dependencies, links the CLIs, renders each harness's host seat (a file gone
 from here disappears there), prints where the two renders differ and
 whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
 config, rebuilds a container image whose rendered seat changed, and removes
-what nothing uses: leftovers of the old per-harness setup, npm packages pi no
-longer lists, task directories of removed containers that never started,
-settings backups and dangling links. It ends by naming what a new Mac lacks
-that it cannot set up itself, with the step that does. Without --apply it
-prints what it would change and changes nothing.
+what nothing uses: npm packages pi no longer lists, task directories of
+removed containers that never started, settings backups and dangling links.
+It ends by naming what a new Mac lacks that it cannot set up itself, with the
+step that does. Without --apply it prints what it would change and changes
+nothing.
 USAGE
 	exit 2
 }
@@ -31,13 +31,6 @@ ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/harness-sync.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 STAMPS="$HOME/.cache/harness/images"
-LEFTOVERS=(
-	"$HOME/.pi/node_modules"
-	"$HOME/.pi/artifacts"
-	"$HOME/.pi/.claude"
-	"$HOME/sbx-kits"
-	"$HOME/.codex"
-)
 changes=0
 
 act() {
@@ -171,9 +164,6 @@ while read -r name home image owned <&3; do
 done 3<<<"$HARNESS_ROWS"
 
 echo "== unused"
-for path in "${LEFTOVERS[@]}"; do
-	if [ -e "$path" ] || [ -L "$path" ]; then act rm -rf "$path"; fi
-done
 extensions="$HOME/.pi/agent/extensions"
 if [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
 for backup in "$ROOT"/claude/sbx/*.bak; do act rm -f "$backup"; done
