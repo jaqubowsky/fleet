@@ -11,7 +11,7 @@
 <defs><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" class="s"/></marker></defs>
         <g filter="url(#rough)"><circle cx="430" cy="150" r="78" class="soft"/></g>
         <text x="430" y="144" text-anchor="middle" class="t" style="font-size:24px">host</text>
-        <text x="430" y="170" text-anchor="middle" class="h">wakes when a sandbox…</text>
+        <text x="430" y="170" text-anchor="middle" class="h" style="font-size:13px">wakes when a sandbox…</text>
         <g class="s" marker-end="url(#arr)">
           <path d="M250 82 C300 82 330 96 360 116"/>
           <path d="M610 82 C560 82 530 96 500 116"/>
