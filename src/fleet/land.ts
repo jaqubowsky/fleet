@@ -185,7 +185,13 @@ function fetch(landing: Landing, url: string, pushes: boolean, io: Io): void {
 	} catch {}
 }
 
-type Move = { incoming: string; host: string; landed: string; forward: boolean };
+type Move = {
+	incoming: string;
+	host: string;
+	landed: string;
+	recorded: string;
+	forward: boolean;
+};
 
 function preflight(landing: Landing, input: LandInput, io: Io): Move {
 	const { entry, branch } = landing;
@@ -216,13 +222,29 @@ function preflight(landing: Landing, input: LandInput, io: Io): Move {
 			`${entry.name}: ${incoming} does not descend from the recorded base ${entry.baseSha}`,
 		);
 	const host = ref(entry.repo, `refs/heads/${branch}`, io);
-	const landed = ref(entry.repo, `${landing.refs}/landed`, io);
+	const recorded = ref(entry.repo, `${landing.refs}/landed`, io);
 	const forward = !host || isAncestor(entry.repo, host, incoming, io);
+	const landed =
+		recorded ||
+		(forward ? "" : mirrored(entry.repo, input.sandbox, branch, host, io));
 	if (!forward && !(landed && isAncestor(entry.repo, landed, incoming, io)))
 		throw new Error(
 			`${entry.name}: ${branch} in the container descends neither from ${branch} here nor from what was last landed, so importing it would drop what this repo already holds, signatures included; resync the container with git fetch origin && git reset --hard origin/${branch}, or delete ${branch} here when the container's history is the one you want`,
 		);
-	return { incoming, host, landed, forward };
+	return { incoming, host, landed, recorded, forward };
+}
+
+function mirrored(
+	repo: string,
+	sandbox: string,
+	branch: string,
+	host: string,
+	io: Io,
+): string {
+	const mirror = ref(repo, `refs/sandboxes/${sandbox}/${branch}`, io);
+	const tree = (commit: string) =>
+		io.git(["rev-parse", `${commit}^{tree}`], repo);
+	return mirror && tree(mirror) === tree(host) ? mirror : "";
 }
 
 function move(landing: Landing, plan: Move, sandbox: string, io: Io): void {
@@ -234,7 +256,7 @@ function move(landing: Landing, plan: Move, sandbox: string, io: Io): void {
 		input: [
 			"start",
 			`update refs/heads/${branch} ${target} ${plan.host || NO_REF}`,
-			`update ${landing.refs}/landed ${plan.incoming} ${plan.landed || NO_REF}`,
+			`update ${landing.refs}/landed ${plan.incoming} ${plan.recorded || NO_REF}`,
 			"prepare",
 			"commit",
 			"",

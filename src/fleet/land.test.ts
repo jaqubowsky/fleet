@@ -286,6 +286,36 @@ test("a container commit after a signed land is re-created alone on the signed b
 	assert.equal(f.verdict(0), "G\nG");
 });
 
+test("a container an older fleet landed with signing resumes from the sandbox mirror", (t) => {
+	const f = fixture(t, ["one"]);
+	land(f.input(), f.io);
+	const signed = f.tip(0);
+	const before = f.landed(0);
+	f.git(f.repos[0].repo, "update-ref", "-d", "refs/fleet/pi-a/one/landed");
+	f.git(f.repos[0].repo, "update-ref", "refs/sandboxes/pi-a/task", before);
+	const next = f.commit(f.guests[0], "more work in one");
+
+	land(f.input(), f.io);
+
+	assert.equal(f.git(f.repos[0].repo, "rev-parse", "refs/heads/task^"), signed);
+	assert.equal(f.landed(0), next);
+	assert.equal(f.verdict(0), "G\nG");
+});
+
+test("a sandbox mirror that moved past what was landed is no anchor", (t) => {
+	const f = fixture(t, ["one"]);
+	land(f.input(), f.io);
+	const signed = f.tip(0);
+	f.git(f.repos[0].repo, "update-ref", "-d", "refs/fleet/pi-a/one/landed");
+	const next = f.commit(f.guests[0], "more work in one");
+	f.git(f.repos[0].repo, "fetch", "--quiet", "sandbox-pi-a", `+task:refs/sandboxes/pi-a/task`);
+	f.commit(f.guests[0], "even more work in one");
+
+	assert.throws(() => land(f.input(), f.io), /descends neither/);
+	assert.equal(f.tip(0), signed);
+	assert.equal(f.git(f.repos[0].repo, "rev-parse", "refs/sandboxes/pi-a/task"), next);
+});
+
 test("a push refused on the second repository resumes on rerun, never forced", (t) => {
 	const f = fixture(t, ["one", "two"], { owner: "acme" });
 	const hook = join(f.root, "origin-two.git", "hooks", "pre-receive");
