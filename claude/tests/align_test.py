@@ -2,7 +2,6 @@
 import importlib.util
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parent.parent / "tools" / "align-settings.py"
@@ -10,8 +9,6 @@ TOOL = Path(__file__).resolve().parent.parent / "tools" / "align-settings.py"
 spec = importlib.util.spec_from_file_location("align_settings", TOOL)
 align = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(align)
-
-align.OVERLAY = Path(tempfile.mkdtemp()) / "none.json"
 
 failures = []
 passed = 0
@@ -53,17 +50,6 @@ check("the host settings name no MCP server and no managed-only key", "managedMc
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
 check("gh opens and merges pull requests without the auto-mode classifier", all(rule in desired["permissions"]["allow"] for rule in ("Bash(gh pr create *)", "Bash(gh pr merge *)")))
 check("the host runs without Claude Code's OS sandbox, as pi's does", "sandbox" not in desired)
-
-with tempfile.TemporaryDirectory() as scratch:
-    overlay = Path(scratch) / "claude-settings.json"
-    overlay.write_text(json.dumps({"env": {"SSH_AUTH_SOCK": "$HOME/agent.sock"}, "permissions": {"allow": ["Bash(make *)"]}}))
-    align.OVERLAY = overlay
-    mine = align.desired_host()
-    allowed = mine["permissions"]["allow"]
-    own = str(align.HOME / "agent.sock")
-
-    check("the person's overlay adds a rule to the repo's list", allowed == desired["permissions"]["allow"] + ["Bash(make *)"])
-    check("the person's overlay sets an env value beside the repo's", mine["env"]["SSH_AUTH_SOCK"] == own and mine["env"]["FLEET_SEAT"] == "claude")
 
 print(f"align-settings.py: {passed} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)

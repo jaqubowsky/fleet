@@ -11,7 +11,6 @@ REPO = Path(__file__).resolve().parents[2]
 USER_SETTINGS = HOME / ".claude" / "settings.json"
 HOST_SEAT = REPO / "claude" / "profiles" / "models.json"
 HOST_SETTINGS = REPO / "claude" / "profiles" / "host.json"
-OVERLAY = HOME / ".config" / "harness" / "claude-settings.json"
 HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
 HOOK_TARGET = HOME / ".claude" / "hooks" / "guard.sh"
 DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
@@ -123,12 +122,10 @@ def install_link(source, target, apply_changes, executable=True):
     return True
 
 
-def merge(base, over, extend=False):
+def merge(base, over):
     for key, value in over.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
-            merge(base[key], value, extend)
-        elif extend and isinstance(value, list) and isinstance(base.get(key), list):
-            base[key] = base[key] + [item for item in value if item not in base[key]]
+            merge(base[key], value)
         else:
             base[key] = value
 
@@ -147,11 +144,7 @@ def expand(value):
 
 
 def desired_host():
-    data = load(HOST_SETTINGS)
-    if OVERLAY.exists():
-        merge(data, load(OVERLAY), extend=True)
-
-    return expand(data)
+    return expand(load(HOST_SETTINGS))
 
 
 def process(path, fixer, apply_changes):

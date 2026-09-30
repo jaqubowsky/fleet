@@ -50,7 +50,6 @@ This repository holds no personal value. Everything that names you lives in `~/.
 | `git/` | yes | the git config every container image starts with, copied into the image home as it is |
 | `repos.json` | no | your repository permission profiles; without it every repository gets the `*` of `host/repos.json` |
 | `projects/<owner>/<repo>.md` | no | what an agent needs to know about one repository; headings in `host/projects/template.md` |
-| `claude-settings.json` | no | your additions to the Claude host settings, merged over `claude/profiles/host.json` |
 
 Write `git/.gitconfig` with the person's name and email. Containers commit unsigned and reach GitHub over HTTPS through the sbx proxy, so the file turns signing off and rewrites SSH remotes:
 
@@ -66,16 +65,7 @@ Write `git/.gitconfig` with the person's name and email. Containers commit unsig
 
 Everything under `git/` lands in `/home/agent/` as it is: `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
 
-`claude-settings.json` has the shape of Claude Code settings. Objects merge into the repository's, lists add to its lists. Its usual use is pointing Claude Code at the SSH agent that signs on this Mac, when the session would not inherit it, for example:
-
-```json
-{
-  "env": { "SSH_AUTH_SOCK": "$HOME/.ssh/agent.sock" },
-  "permissions": { "allow": ["Bash(make *)"] }
-}
-```
-
-`$HOME` expands to this Mac's home when `sync.sh` writes the settings. In `~/.claude/settings.json`, every key `claude/profiles/host.json` names is the repository's: a list there is replaced on each sync, so an entry of your own under such a key belongs in this overlay. `sync.sh` keeps the previous file as `settings.json.bak`. Keys the repository does not name stay yours.
+`sync.sh` writes the keys `claude/profiles/host.json` names into `~/.claude/settings.json`, with `$HOME` expanded, on every run: a list under such a key is replaced, and the previous file stays as `settings.json.bak`. Keys the repository does not name stay yours. Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so the SSH agent that signs on this Mac is set in that shell's profile.
 
 Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints the email, and `ls ~/.config/harness` lists `git`.
 
