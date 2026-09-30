@@ -140,7 +140,7 @@ const BASH_RULES: [RegExp, string][] = [
 	],
 	[
 		command(
-			String.raw`gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`,
+			String.raw`(\S*/)?gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`,
 		),
 		GH_WRITE,
 	],
@@ -159,7 +159,7 @@ const BASH_RULES: [RegExp, string][] = [
 const HOST_PUSH = new RegExp(PUSH_AT, "m");
 const OWN_PUSH =
 	/^\s*git\s+push(\s+(-u|--set-upstream))?(\s+origin(\s+[\w.][\w./-]*(:[\w.][\w./-]*)?)*)?\s*$/;
-const PR_WRITE = command(String.raw`gh\s+pr\s+(?<action>create|merge)\b`);
+const PR_WRITE = command(String.raw`(\S*/)?gh\s+pr\s+(?<action>create|merge)\b`);
 const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
 const OWN_PR: Record<string, RegExp> = {
 	create: new RegExp(
