@@ -1,15 +1,15 @@
 {
   "seats": {
     "host": {
-      "model": "openai-codex/gpt-6-sol",
+      "model": "openai-codex/gpt-6.1-sol",
       "thinking": "medium"
     },
     "sbx": {
-      "model": "openai-codex/gpt-6-sol",
-      "thinking": "medium"
+      "model": "openai-codex/gpt-6.1-sol",
+      "thinking": "high"
     },
     "reviewer": {
-      "model": "openai-codex/gpt-6-sol",
+      "model": "openai-codex/gpt-6.1-sol",
       "thinking": "xhigh"
     },
     "explorer": {
