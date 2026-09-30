@@ -113,6 +113,7 @@ const multiManifest = {
 			baseSha: "1".repeat(40),
 			branch: "task",
 			workspace: "/r",
+			served: "",
 		},
 		{
 			repo: "/api",
@@ -121,6 +122,7 @@ const multiManifest = {
 			baseSha: "2".repeat(40),
 			branch: "task",
 			workspace: "/tmp/fleet-repos/api",
+			served: "",
 		},
 	],
 };
@@ -149,6 +151,7 @@ test("land records three imports in the group task and resumes after the third r
 		baseSha: "5".repeat(40),
 		branch: "task",
 		workspace: "/tmp/fleet-repos/other",
+		served: "",
 	};
 	const answers = {
 		...multiAnswers,
@@ -211,6 +214,7 @@ test("one command imports, signs and pushes every repository, with signing befor
 				repo: "/third",
 				name: "acme/third",
 				workspace: "/third",
+				served: "",
 			},
 		].slice(0, count);
 		const io = fakeIo({
@@ -502,6 +506,7 @@ test("three Git bundles import fast-forward branches without changing host check
 			baseSha: git(host, "rev-parse", `origin/${base}`),
 			branch: "task",
 			workspace: guest,
+			served: "",
 		};
 	});
 	const io = fakeIo();

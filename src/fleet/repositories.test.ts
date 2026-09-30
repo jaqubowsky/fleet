@@ -15,6 +15,7 @@ const manifest = {
 		baseSha: "1".repeat(40),
 		branch: "task",
 		workspace: `/${name}`,
+		served: "",
 		sourceSha: String(index + 2).repeat(40),
 		landedSha: String(index + 2).repeat(40),
 	})),

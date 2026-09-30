@@ -96,6 +96,7 @@ type RepoPlan = {
 	baseSha: string;
 	branch: string;
 	workspace: string;
+	served: string;
 	profile: Profile;
 };
 
@@ -114,6 +115,7 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 		if (isBase(base, branch))
 			throw new Error(`${branch} is the base branch of ${repo}`);
 		let workspace = repo;
+		let served = "";
 		if (index > 0) {
 			const name = workspaceNames[index];
 			let checkout =
@@ -127,6 +129,7 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 				checkout = `${index + 1}-${checkout}`;
 			allocated.add(checkout);
 			workspace = `/tmp/fleet-repos/${checkout}`;
+			served = `/.git/fleet-repos/${checkout}.git`;
 		}
 		return {
 			repo,
@@ -135,6 +138,7 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 			branch,
 			baseSha: io.git(["rev-parse", `origin/${base}`], repo),
 			workspace,
+			served,
 			profile: repoProfile(input.root, name, io),
 		};
 	});
@@ -164,11 +168,12 @@ function cloneSecondary(
 			sandbox,
 			"sh",
 			"-c",
-			'mkdir -p "$(dirname "$2")" && git init --quiet "$2" && git -C "$2" fetch --quiet "$1" "refs/remotes/origin/*:refs/remotes/origin/*" "refs/heads/*:refs/heads/*" && git -C "$2" remote add origin "$3"',
+			'mkdir -p "$(dirname "$2")" "$WORKSPACE_DIR/.git/fleet-repos" && git init --quiet --separate-git-dir="$WORKSPACE_DIR/.git/fleet-repos/$4.git" "$2" && git -C "$2" fetch --quiet "$1" "refs/remotes/origin/*:refs/remotes/origin/*" "refs/heads/*:refs/heads/*" && git -C "$2" remote add origin "$3"',
 			"--",
 			guestBundle,
 			plan.workspace,
 			`https://github.com/${plan.name}.git`,
+			basename(plan.workspace),
 		],
 		{ quiet: true },
 	);
@@ -419,13 +424,14 @@ export async function up(
 		}
 		if (plans.length) {
 			const repositories = plans.map(
-				({ repo, name, base, baseSha, branch, workspace }) => ({
+				({ repo, name, base, baseSha, branch, workspace, served }) => ({
 					repo,
 					name,
 					base,
 					baseSha,
 					branch,
 					workspace,
+					served,
 				}),
 			);
 			saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
@@ -843,6 +849,10 @@ function seedSubmodules(
 		io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], {
 			quiet: true,
 		});
+	const gitDir = io.sbx(
+		["exec", sandbox, "git", "-C", workspace, "rev-parse", "--absolute-git-dir"],
+		{ quiet: true },
+	);
 	for (const module of modules) {
 		io.log(`${sandbox}: copying submodule ${module}`);
 		io.sbx(
@@ -854,7 +864,7 @@ function seedSubmodules(
 				'mkdir -p "$1" "$2"',
 				"--",
 				`${workspace}/${parentDir(module)}`,
-				`${workspace}/.git/modules/${parentDir(module)}`,
+				`${gitDir}/modules/${parentDir(module)}`,
 			],
 			{ quiet: true },
 		);
@@ -866,7 +876,7 @@ function seedSubmodules(
 			[
 				"cp",
 				`${repo}/.git/modules/${module}`,
-				`${sandbox}:${workspace}/.git/modules/${parentDir(module)}/`,
+				`${sandbox}:${gitDir}/modules/${parentDir(module)}/`,
 			],
 			{ quiet: true },
 		);
@@ -879,7 +889,7 @@ function seedSubmodules(
 				'sudo chown -R agent:agent "$1" "$2" && rm -rf "$1/node_modules"',
 				"--",
 				`${workspace}/${module}`,
-				`${workspace}/.git/modules/${module}`,
+				gitdirOf(gitDir, module),
 			],
 			{ quiet: true },
 		);
@@ -889,10 +899,10 @@ function seedSubmodules(
 				sandbox,
 				"sh",
 				"-c",
-				'printf "gitdir: %s\\n" "$1" > "$2"',
+				'printf "gitdir: %s\\n" "$1" > "$2/.git" && git config --file "$1/config" core.worktree "$2"',
 				"--",
-				gitdirOf(module),
-				`${workspace}/${module}/.git`,
+				gitdirOf(gitDir, module),
+				`${workspace}/${module}`,
 			],
 			{ quiet: true },
 		);

@@ -13,7 +13,6 @@ test("parent directory of a submodule path", () => {
 	assert.equal(parentDir("y"), ".");
 });
 
-test("a submodule's git file points back at the metadata the clone carries", () => {
-	assert.equal(gitdirOf("packages/pdf-generator"), "../../.git/modules/packages/pdf-generator");
-	assert.equal(gitdirOf("vendor"), "../.git/modules/vendor");
+test("a submodule's git dir sits under the modules of the git dir that holds it", () => {
+	assert.equal(gitdirOf("/w/.git/fleet-repos/api.git", "packages/pdf"), "/w/.git/fleet-repos/api.git/modules/packages/pdf");
 });

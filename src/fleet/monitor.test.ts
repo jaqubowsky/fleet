@@ -253,6 +253,7 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 				baseSha: "1".repeat(40),
 				branch: "task",
 				workspace: `/${name}`,
+				served: "",
 			})),
 		}),
 	});

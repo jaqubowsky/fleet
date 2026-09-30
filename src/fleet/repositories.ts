@@ -12,6 +12,7 @@ type Repository = {
 	baseSha: string;
 	branch: string;
 	workspace: string;
+	served: string;
 	sourceSha?: string;
 	landedSha?: string;
 	signedSha?: string;
@@ -102,7 +103,7 @@ export function repositoryManifest(
 			(entry: unknown) =>
 				entry &&
 				typeof entry === "object" &&
-				["repo", "name", "base", "baseSha", "branch", "workspace"].every(
+				["repo", "name", "base", "baseSha", "branch", "workspace", "served"].every(
 					(key) =>
 						key in entry &&
 						typeof (entry as Record<string, unknown>)[key] === "string",

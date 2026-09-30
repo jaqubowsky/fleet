@@ -92,6 +92,7 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 				baseSha: "1".repeat(40),
 				branch: "task",
 				workspace: entry.workspaces[0],
+				served: "",
 			})),
 		}),
 	);

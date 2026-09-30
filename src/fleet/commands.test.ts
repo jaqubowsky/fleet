@@ -226,6 +226,7 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 				baseSha: "1".repeat(40),
 				branch: "task",
 				workspace: "/r",
+				served: "",
 				sourceSha: "3".repeat(40),
 				landedSha: "3".repeat(40),
 			},
@@ -236,6 +237,7 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 				baseSha: "2".repeat(40),
 				branch: "task",
 				workspace: "/tmp/fleet-repos/api",
+				served: "",
 			},
 		],
 	};
@@ -495,6 +497,7 @@ test("ls and peek report both private repositories with their own heads", () => 
 				base: "main",
 				baseSha: "1".repeat(40),
 				workspace: "/r",
+				served: "",
 			},
 			{
 				repo: "/api",
@@ -503,6 +506,7 @@ test("ls and peek report both private repositories with their own heads", () => 
 				base: "develop",
 				baseSha: "2".repeat(40),
 				workspace: apiWorkspace,
+				served: "",
 			},
 		],
 	};
@@ -540,6 +544,7 @@ test("ls names the API when its checkout cannot be probed", () => {
 					baseSha: "1".repeat(40),
 					branch: "task",
 					workspace: "/r",
+					served: "",
 				},
 				{
 					repo: "/api",
@@ -548,6 +553,7 @@ test("ls names the API when its checkout cannot be probed", () => {
 					baseSha: "2".repeat(40),
 					branch: "task",
 					workspace: "/tmp/fleet-repos/api",
+					served: "",
 				},
 			],
 		}),
@@ -1123,6 +1129,7 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 					baseSha: "1".repeat(40),
 					branch: "task",
 					workspace: "/r",
+					served: "",
 				},
 				{
 					repo: "/api",
@@ -1131,6 +1138,7 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 					baseSha: "2".repeat(40),
 					branch: "task",
 					workspace: "/tmp/fleet-repos/api",
+					served: "",
 				},
 			],
 		}),

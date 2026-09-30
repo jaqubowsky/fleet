@@ -87,6 +87,7 @@ test("watch reads the group task and waits for CI on the third repository", (t) 
 				baseSha: "1".repeat(40),
 				branch: "task",
 				workspace: `/${name}`,
+				served: "",
 			})),
 		});
 	io.files[`${group}/status.md`] =

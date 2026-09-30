@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
@@ -521,6 +521,7 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 		...base,
 		"git submodule status": " 1495ab0 packages/pdf-generator (v1)\n",
 		"sbx exec pi-webapp-web-1 sh -c printf": repo,
+		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse --absolute-git-dir`]: `${repo}/.git`,
 		[containerLocks]: "yarn.lock",
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
@@ -972,6 +973,7 @@ test("a seeded submodule is registered so the clone sees it as a submodule", asy
 		...base,
 		"git submodule status": " 1495ab0 packages/pdf-generator (v1)\n",
 		"sbx exec pi-webapp-web-1 sh -c printf": repo,
+		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse --absolute-git-dir`]: `${repo}/.git`,
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
@@ -981,9 +983,109 @@ test("a seeded submodule is registered so the clone sees it as a submodule", asy
 	assert.ok(registered, "the submodule was never registered");
 	assert.deepEqual(registered.slice(6), [
 		"--",
-		"../../.git/modules/packages/pdf-generator",
-		`${repo}/packages/pdf-generator/.git`,
+		`${repo}/.git/modules/packages/pdf-generator`,
+		`${repo}/packages/pdf-generator`,
 	]);
+});
+
+test("a submodule of an extra repository lives under the git dir the clone reports", async () => {
+	const api = "/Users/me/Work/api";
+	const gitDir = `${repo}/.git/fleet-repos/api.git`;
+	const io = fakeIo({
+		...base,
+		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
+		[`git ${api} submodule status`]: " 1495ab0 libs/shared (v1)\n",
+		[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
+			"3".repeat(40),
+		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
+			"4".repeat(40),
+		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse --absolute-git-dir":
+			gitDir,
+	});
+
+	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
+
+	assert.ok(
+		io.calls.some(
+			(c) =>
+				c[0] === "sbx" &&
+				c[1] === "cp" &&
+				c[2] === `${api}/.git/modules/libs/shared` &&
+				c[3] === `pi-webapp-web-1:${gitDir}/modules/libs/`,
+		),
+	);
+	const registered = io.calls.find(
+		(c) => c[0] === "sbx" && String(c[5] ?? "").includes("gitdir:"),
+	)!;
+	assert.deepEqual(registered.slice(6), [
+		"--",
+		`${gitDir}/modules/libs/shared`,
+		"/tmp/fleet-repos/api/libs/shared",
+	]);
+});
+
+test("the seeding scripts leave a working submodule behind a separate git dir", async (t) => {
+	const root = mkdtempSync(join(tmpdir(), "up-submodule-"));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" };
+	const git = (dir: string, ...args: string[]) =>
+		execFileSync(
+			"git",
+			[
+				"-C",
+				dir,
+				"-c",
+				"user.name=t",
+				"-c",
+				"user.email=t@t",
+				"-c",
+				"protocol.file.allow=always",
+				...args,
+			],
+			{ encoding: "utf8", env },
+		).trim();
+	const lib = join(root, "lib");
+	const host = join(root, "host");
+	execFileSync("git", ["init", "--quiet", lib], { env });
+	git(lib, "commit", "--quiet", "--allow-empty", "-m", "lib");
+	execFileSync("git", ["init", "--quiet", host], { env });
+	git(host, "submodule", "--quiet", "add", lib, "libs/shared");
+	git(host, "commit", "--quiet", "-m", "with submodule");
+	const guest = join(root, "guest");
+	const gitDir = join(root, "primary", ".git", "fleet-repos", "api.git");
+	mkdirSync(dirname(gitDir), { recursive: true });
+	execFileSync("git", ["clone", "--quiet", "--separate-git-dir", gitDir, host, guest], { env });
+	const io = fakeIo({
+		...base,
+		"sbx exec pi-webapp-web-1 sh -c printf": guest,
+		"git submodule status": " 1495ab0 libs/shared (v1)\n",
+		[`sbx exec pi-webapp-web-1 git -C ${guest} rev-parse --absolute-git-dir`]: gitDir,
+	});
+	const fakeSbx = io.sbx;
+	io.sbx = (args, opts) => {
+		const printed = fakeSbx(args, opts);
+		if (args[0] === "cp" && args[2].startsWith("pi-webapp-web-1:") && args[1].startsWith(repo)) {
+			const from = args[1].replace(repo, host);
+			const to = args[2].slice("pi-webapp-web-1:".length);
+			execFileSync("cp", ["-R", from, to]);
+		}
+		if (
+			args[0] === "exec" &&
+			args[2] === "sh" &&
+			/^(mkdir -p "\$1" "\$2"$|printf "gitdir|cd "\$1" && git submodule init)/.test(args[4])
+		)
+			execFileSync("sh", ["-c", args[4], ...args.slice(5)], { env });
+		return printed;
+	};
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.match(git(join(guest, "libs/shared"), "status", "--porcelain=v1", "--branch"), /^## /);
+	assert.equal(
+		git(join(guest, "libs/shared"), "rev-parse", "--absolute-git-dir"),
+		join(gitDir, "modules/libs/shared"),
+	);
+	assert.match(git(guest, "submodule", "status"), /libs\/shared/);
 });
 
 test("a seeded submodule is registered in the clone, not left as untracked work", async () => {
@@ -1210,6 +1312,8 @@ test("a bundle builds a writable private API clone without changing the host che
 	git(workspace, "bundle", "create", bundle, ...bundleCall.slice(5));
 	const guestBundle = join(dirname(workspace), "inside.bundle");
 	const guest = join(dirname(workspace), "sandbox-api");
+	const primary = join(dirname(workspace), "primary");
+	execFileSync("git", ["init", "--quiet", primary]);
 	copyFileSync(bundle, guestBundle);
 	const clone = io.calls.find(
 		(call) =>
@@ -1217,7 +1321,11 @@ test("a bundle builds a writable private API clone without changing the host che
 			call[1] === "exec" &&
 			call[5]?.includes("git init --quiet"),
 	)!;
-	execFileSync("sh", ["-c", clone[5], "--", guestBundle, guest, origin]);
+	execFileSync(
+		"sh",
+		["-c", clone[5], "--", guestBundle, guest, origin, clone[10]],
+		{ env: { ...process.env, WORKSPACE_DIR: primary } },
+	);
 	const switchBranch = io.calls.find(
 		(call) =>
 			call[0] === "sbx" &&
@@ -1227,6 +1335,18 @@ test("a bundle builds a writable private API clone without changing the host che
 	execFileSync("sh", ["-c", switchBranch[5], "--", guest, "web-1", "main"]);
 
 	assert.equal(git(guest, "rev-parse", "HEAD"), head);
+	assert.equal(
+		git(guest, "rev-parse", "--absolute-git-dir"),
+		join(primary, ".git/fleet-repos/workspace.git"),
+	);
+	assert.equal(git(primary, "status", "--porcelain"), "");
+	const manifest = JSON.parse(
+		io.files["/home/me/.config/harness/fleet/pi-webapp-web-1.json"],
+	);
+	assert.deepEqual(
+		manifest.repositories.map((entry: { served: string }) => entry.served),
+		["", "/.git/fleet-repos/workspace.git"],
+	);
 	git(guest, "commit", "--quiet", "--allow-empty", "-m", "sandbox-only");
 	assert.notEqual(git(guest, "rev-parse", "HEAD"), head);
 	assert.equal(git(workspace, "rev-parse", "HEAD"), head);
