@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300" role="img" aria-labelledby="t">
 <title id="t">Trust: the sandbox holds no SSH key, no signing key and no secrets; they stay on your Mac</title>
 <style>
-.ink{fill:none;stroke:#1f2328;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.box{fill:#f6f8fa;stroke:#1f2328;stroke-width:2.4;stroke-linejoin:round}
-.acc{fill:none;stroke:#e8590c;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.accf{fill:#e8590c}
-.inkf{fill:#1f2328}
-.soft{fill:none;stroke:#6e7781;stroke-width:2;stroke-linecap:round;stroke-dasharray:2 7}
-.lbl{fill:#1f2328;font:600 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-.sub{fill:#6e7781;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-.code{fill:#1f2328;font:15px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ink{fill:none;stroke:#e6edf3;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.box{fill:#161b22;stroke:#e6edf3;stroke-width:2.4;stroke-linejoin:round}
+.acc{fill:none;stroke:#ff8a3d;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.accf{fill:#ff8a3d}
+.inkf{fill:#e6edf3}
+.soft{fill:none;stroke:#8b949e;stroke-width:2;stroke-linecap:round;stroke-dasharray:2 7}
+.lbl{fill:#e6edf3;font:600 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.sub{fill:#8b949e;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.code{fill:#e6edf3;font:15px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 
 </style>
 <defs><filter id="r" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.8"/></filter></defs>
-<rect width="880" height="300" rx="16" fill="#ffffff"/>
+<rect width="880" height="300" rx="16" fill="#0d1117"/>
 <g filter="url(#r)"><rect class="box" x="40" y="50" width="360" height="200" rx="30"/></g>
 <g filter="url(#r)"><circle class="ink" cx="86" cy="100" r="10"/><path class="ink" d="M96 100 H122 M114 100 V108 M122 100 V110"/><path class="acc" d="M74 78 L126 122"/></g><text class="lbl" x="150" y="106">no SSH key</text>
 <g filter="url(#r)"><path class="ink" d="M82 170 L112 140 L118 146 L88 176 Z M76 178 C90 166 100 186 120 178"/><path class="acc" d="M74 134 L126 178"/></g><text class="lbl" x="150" y="162">no signing key</text>

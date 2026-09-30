@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-labelledby="t">
+<title id="t">fleet: agents work in sandboxes on your Mac, and their branches come home signed with your fingerprint</title>
+<style>
+.ink{fill:none;stroke:#1f2328;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.box{fill:#f6f8fa;stroke:#1f2328;stroke-width:2.4;stroke-linejoin:round}
+.acc{fill:none;stroke:#e8590c;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.accf{fill:#e8590c}
+.inkf{fill:#1f2328}
+.soft{fill:none;stroke:#6e7781;stroke-width:2;stroke-linecap:round;stroke-dasharray:2 7}
+.lbl{fill:#1f2328;font:600 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.sub{fill:#6e7781;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.code{fill:#1f2328;font:15px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+@keyframes pop{0%,4%{transform:scale(0);opacity:0}14%,82%{transform:scale(1);opacity:1}92%,100%{transform:scale(0);opacity:0}}
+@keyframes type{0%,16%{transform:scaleX(0)}40%,82%{transform:scaleX(1)}92%,100%{transform:scaleX(0)}}
+@keyframes glow{0%,52%{opacity:0}58%{opacity:1}66%{opacity:1}74%,100%{opacity:0}}
+@keyframes land{0%,70%{opacity:0}76%,88%{opacity:1}94%,100%{opacity:0}}
+.sb{transform-box:fill-box;transform-origin:center;animation:pop 6s ease-in-out infinite}
+.ty{transform-box:fill-box;transform-origin:left center;animation:type 6s ease-in-out infinite}
+.fp{animation:glow 6s ease-in-out infinite}
+.home{animation:land 6s ease-in-out infinite}
+@keyframes go0{0%,42%{transform:translate(0,0);opacity:0}44%{transform:translate(0,0);opacity:1}58%{transform:translate(250px,36px);opacity:1}64%{transform:translate(250px,88px);opacity:1}66%,100%{transform:translate(250px,88px);opacity:0}}.go0{animation:go0 6s ease-in-out infinite}
+@keyframes go1{0%,46%{transform:translate(0,0);opacity:0}48%{transform:translate(0,0);opacity:1}62%{transform:translate(0px,76px);opacity:1}68%{transform:translate(0px,128px);opacity:1}70%,100%{transform:translate(0px,128px);opacity:0}}.go1{animation:go1 6s ease-in-out infinite}
+@keyframes go2{0%,50%{transform:translate(0,0);opacity:0}52%{transform:translate(0,0);opacity:1}66%{transform:translate(-250px,36px);opacity:1}72%{transform:translate(-250px,88px);opacity:1}74%,100%{transform:translate(-250px,88px);opacity:0}}.go2{animation:go2 6s ease-in-out infinite}
+
+</style>
+<defs><filter id="r" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.8"/></filter></defs>
+<rect width="800" height="400" rx="16" fill="#ffffff"/>
+<path class="soft" d="M150 150 L400 186"/>
+<g class="sb"><g filter="url(#r)"><rect class="box" x="75" y="74" width="150" height="76" rx="18"/><rect class="box" x="96" y="98" width="32" height="26" rx="8"/><circle class="inkf" cx="106" cy="110" r="2.6"/><circle class="inkf" cx="118" cy="110" r="2.6"/><path class="ink" d="M112 98 V90"/><circle class="accf" cx="112" cy="88" r="3"/><rect class="accf ty" x="138" y="98" width="58" height="6" rx="3"/><rect class="accf ty" x="138" y="112" width="44" height="6" rx="3"/><rect class="accf ty" x="138" y="126" width="52" height="6" rx="3"/></g><text class="lbl" x="150" y="64" text-anchor="middle">sandbox</text></g>
+<circle class="accf go0" cx="150" cy="150" r="7"/>
+<path class="soft" d="M400 110 L400 186"/>
+<g class="sb"><g filter="url(#r)"><rect class="box" x="325" y="34" width="150" height="76" rx="18"/><rect class="box" x="346" y="58" width="32" height="26" rx="8"/><circle class="inkf" cx="356" cy="70" r="2.6"/><circle class="inkf" cx="368" cy="70" r="2.6"/><path class="ink" d="M362 58 V50"/><circle class="accf" cx="362" cy="48" r="3"/><rect class="accf ty" x="388" y="58" width="58" height="6" rx="3"/><rect class="accf ty" x="388" y="72" width="44" height="6" rx="3"/><rect class="accf ty" x="388" y="86" width="52" height="6" rx="3"/></g><text class="lbl" x="400" y="24" text-anchor="middle">sandbox</text></g>
+<circle class="accf go1" cx="400" cy="110" r="7"/>
+<path class="soft" d="M650 150 L400 186"/>
+<g class="sb"><g filter="url(#r)"><rect class="box" x="575" y="74" width="150" height="76" rx="18"/><rect class="box" x="596" y="98" width="32" height="26" rx="8"/><circle class="inkf" cx="606" cy="110" r="2.6"/><circle class="inkf" cx="618" cy="110" r="2.6"/><path class="ink" d="M612 98 V90"/><circle class="accf" cx="612" cy="88" r="3"/><rect class="accf ty" x="638" y="98" width="58" height="6" rx="3"/><rect class="accf ty" x="638" y="112" width="44" height="6" rx="3"/><rect class="accf ty" x="638" y="126" width="52" height="6" rx="3"/></g><text class="lbl" x="650" y="64" text-anchor="middle">sandbox</text></g>
+<circle class="accf go2" cx="650" cy="150" r="7"/>
+<g filter="url(#r)"><rect class="box" x="305" y="218" width="190" height="118" rx="12"/><rect class="ink" x="320" y="231" width="160" height="92" rx="6"/><path class="box" d="M280 340 H520 L506 358 H294 Z"/></g>
+<g filter="url(#r)"><path class="ink" d="M394 188.1 A6 6 0 1 1 406 188.1"/><path class="ink" d="M388 190.2 A12 12 0 1 1 412 190.2"/><path class="ink" d="M382 192.3 A18 18 0 1 1 418 192.3"/></g><g class="fp"><path class="acc" d="M394 188.1 A6 6 0 1 1 406 188.1"/><path class="acc" d="M388 190.2 A12 12 0 1 1 412 190.2"/><path class="acc" d="M382 192.3 A18 18 0 1 1 418 192.3"/></g>
+<g class="home"><path class="acc" d="M378 280 l14 14 l30 -32"/></g>
+<text class="lbl" x="400" y="386" text-anchor="middle">your Mac</text><text class="sub" x="478" y="192" text-anchor="middle">Touch ID</text>
+</svg>

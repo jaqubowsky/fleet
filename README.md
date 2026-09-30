@@ -1,54 +1,117 @@
-# harness
+# fleet
 
-My agent setup, published as it runs on my Mac. Two coding agents, [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) and Claude Code, share one set of rules, skills and safety checks. I talk to one agent on my Mac, the host. It plans the work and hands each task to another agent in its own sandboxed container, watches it, and brings the finished branch home. Containers never hold my keys, so every commit that reaches GitHub is signed on my Mac.
+One Mac runs many coding agents, each in its own sandbox, and their finished branches come home signed with the owner's fingerprint.
 
-It is opinionated and not plug-and-play: both pi and Claude Code are required, it runs only on Apple Silicon Macs, and it encodes how I work. Read it for the ideas, or fork it and let your own agent adapt it with [SETUP.md](SETUP.md).
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.svg">
+  <img alt="Three sandboxes with an agent working in each; their branches travel back to the Mac through Touch ID" src="docs/hero.svg">
+</picture>
 
-| | |
-| --- | --- |
-| Built in | 369 commits over two weeks, 16 to 30 September 2026 |
-| Code | 7.8k lines of TypeScript in `src/`, 13.6k lines of tests |
-| Guard | 424 test cases of what the agents may and may not run |
-| Skills | 19, written once for both agents |
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![macOS on Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-lightgrey)
+![Works with Claude Code and pi](https://img.shields.io/badge/works%20with-Claude%20Code%20%7C%20pi-orange)
+
+## Quickstart
+
+Requirements: macOS 14+ on Apple Silicon, Homebrew, Node 22.19+, a Docker account, a GitHub token, and both [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) and Claude Code.
+
+```bash
+git clone https://github.com/jaqubowsky/fleet.git ~/harness
+cd ~/harness
+```
+
+Then start your agent there and tell it: **"read SETUP.md and set me up"**. [SETUP.md](SETUP.md) is written for the agent: it checks each requirement, runs each step with a check that proves it landed, and tells you what only you can do (logins, tokens, the fingerprint).
 
 ## How it works
 
-Everything is written once in this repository and rendered into two places per agent. The host seat is the agent's home on the Mac (`~/.pi`, `~/.claude`). The container seat is the image every task container starts from. A rule says `{{token}}` where the two agents need different words, such as their tool names, and render fills it in. My own values (which repositories I work on, what each seat may do there, my git identity for containers) live outside the repository in `~/.config/harness/`.
+You talk to one agent on your Mac. It hands each task to a fresh sandbox, where another agent does the work, tests it and has it reviewed. When the work is done, it comes back to your Mac, and only there does it get signed and pushed.
 
-![Architecture](docs/architecture.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/task-dark.svg">
+  <img alt="A task goes into a sandbox, where the agent works, tests and reviews; it comes home as a signed commit" src="docs/task.svg">
+</picture>
 
-A task runs in a container: a private clone of the repository in a [Docker Sandbox](https://docs.docker.com/ai/sandboxes/install/) (`sbx`), with its agent in a [herdr](https://github.com/herdrdev/herdr) tab. The host and the container share one task directory. The container writes its analysis, its tickets, its review and its state there; the host reads `status.md` and wakes each time the container's agent settles. When the work is done, the host lands the branch: it fetches it from the sandbox, signs it and pushes it, as far as the repository's profile allows.
+Under the hood the sandbox is a [Docker Sandbox](https://docs.docker.com/ai/sandboxes/install/) (`sbx`) holding a private clone of the repository, and the agent runs in a [herdr](https://github.com/herdrdev/herdr) tab. The host and the sandbox share a task directory: the sandbox writes its analysis, tickets, review and `status.md` there, and the host wakes each time the sandbox's agent settles.
 
-![A task's lifecycle](docs/lifecycle.svg)
+Every command the agent on your Mac wants to run passes a guard first. Ordinary work goes through; the few things that could hurt you, like rewriting history on GitHub or reading your keys, are stopped before they run.
 
-Inside the container the agent follows one order: analyze the task, split it into tickets of one commit each, build each ticket test first, review what needs a second pair of eyes, verify what a user would see, and stop at `ready-for-host`. When it needs a decision, it stops at `blocked` and says what it needs. The host plans across containers in the issue tracker a project names: one issue per container, the container's own tickets one commit each.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/guard-dark.svg">
+  <img alt="An agent sends three commands to a shield: an ordinary push passes, a force push and reading ~/.ssh are stopped" src="docs/guard.svg">
+</picture>
 
-Every tool call on the host passes the guard first. The same policy runs in pi's extension and in Claude Code's `PreToolUse` hook, and a test corpus in `host/tests/` holds the cases it must allow and refuse.
+The same policy runs in pi's extension and in Claude Code's `PreToolUse` hook, so both agents live by one rule set.
 
-![How the guard decides](docs/guard.svg)
+The sandboxes never hold your keys. They have no SSH key, no signing key and no secrets; a proxy on your Mac adds credentials to their requests, and the fingerprint that signs every commit stays on the Mac.
 
-Repeat `--repo <path>` on `fleet up` for a task spanning several repositories. The first is primary; each additional clone is built from a Git bundle inside the sandbox, never a writable host mount. `land` preflights every repository before any host branch moves, and an interrupted land resumes on a rerun without force.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/trust-dark.svg">
+  <img alt="The sandbox has no SSH key, no signing key and no secrets; they stay on the Mac" src="docs/trust.svg">
+</picture>
+
+Everything is written once and rendered for each agent: rules, skills, sub-agents, the guard and the `fleet` CLI. Your own values, such as which repositories you work on and what each agent may do there, live outside the repository in `~/.config/harness/`.
 
 ## Commands
 
-`fleet` drives pi and Claude containers alike, from either host agent. `fleet --help` lists every flag.
-
 | Command | What it does |
 | --- | --- |
-| `fleet up <label> [--repo <path>...] [--pi\|--claude]` | clone the repositories into a new sandbox, lay out the task directory, start the agent in a herdr tab |
-| `fleet steer <sandbox> <text>` | send the container's agent a message |
-| `fleet watch [<sandbox>...]` | print a line each time a container settles; pi's host does this in process |
-| `fleet ls`, `fleet peek <sandbox>` | every container with its state; one container's branch, diff and screen |
-| `fleet land <sandbox> [--sign] [--push]` | fetch the branch from the sandbox, sign it per profile, push fast-forward only |
-| `fleet down <sandbox>` | record usage and memory, close the tab, remove the container; the task directory stays |
-| `fleet build [--pi\|--claude]` | render the container seat and rebuild that agent's image |
-| `fleet render`, `./sync.sh [--apply]` | render the host seat; bring every home, link, setting and image in line with this repository |
-| `fleet profile [<repo>] [--apply]` | print what each seat may do in a repository; set a checkout up for it |
-| `fleet handoff`, `history`, `artifacts`, `exec`, `copy`, `init` | approve a session handoff, read a task's status history and files, run or copy into a container, seed a new project |
+| `fleet up <label> --repo <path>` | starts a new sandbox for a task and opens its agent in a tab |
+| `fleet steer <sandbox> <text>` | tells the sandbox's agent something |
+| `fleet watch` | reports each time a sandbox's agent finishes a step |
+| `fleet peek <sandbox>` | shows the sandbox's branch, changes and screen |
+| `fleet land <sandbox> --push` | brings the branch home, signs it with your fingerprint and pushes it |
+| `fleet down <sandbox>` | removes the sandbox and keeps its notes |
 
-The host session names itself in `FLEET_SEAT`: Claude Code through the `env` of its settings, pi through its fleet monitor. `up`, `steer`, `watch` and `render` refuse without it.
+`fleet --help` lists the rest: `ls`, `build`, `render`, `profile`, `handoff`, `history`, `artifacts`, `exec`, `copy`, `init`.
 
-## Permission profiles
+## The guard
+
+What the guard stops on your Mac, one real case each from its test corpus:
+
+| Blocked | Example |
+| --- | --- |
+| Rewriting history on GitHub | `git push -fu origin main` |
+| Reading keys and secrets | `cat ~/.ssh/id_ed25519` |
+| Reading the agents' credential stores | `cat ~/.pi/agent/auth.json` |
+| Writing its own config | `Edit ~/.claude/settings.json` |
+| Changing what agents are allowed to do | `Edit host/repos.json` |
+| Turning commit signing off | `git config --global commit.gpgsign false` |
+| Pull requests against someone else's repository | `gh pr create --repo someone/else --fill` |
+| Publishing files as gists | `gh gist create notes.md` |
+| Deleting your work | `rm -rf /Users/alice/Work` |
+
+`host/tests/` holds 424 cases the guard must allow or refuse, and `npm test` runs every one of them through the policy, and the home-write cases through both agents' hooks. Landing, signing and removing a sandbox ask you first, as the repository's permission profile says.
+
+## Trust model
+
+Every signature comes from your Mac. Sandboxes get no SSH agent and no signing key, commit unsigned on their own branch, and reach GitHub and the model providers only through the sbx proxy, which holds the tokens on the Mac. `fleet land` checks every repository before any branch moves, re-signs only the commits GitHub lacks, and pushes fast-forward only. Force, delete and mirror pushes and turning signing off stay your own commands.
+
+The limits, plainly:
+
+- The guard matches patterns, not shell semantics: `eval` and variable indirection get past it. It stops mistakes and simple malicious code, not someone who has read the rule.
+- The Claude guard is a user-level hook in `~/.claude/settings.json`. A repository's own `.claude/settings.json` can set `disableAllHooks` and turn it off, so open untrusted repositories in a sandbox, not in the host session.
+- Every sandbox a profile covers receives that profile's GitHub token. The default hands every sandbox the host session's `GH_TOKEN`, so scope that token to the repositories you work on.
+- Sandboxes run with `CI=true`: test runners run once instead of watching, and snapshots fail instead of updating.
+
+## This is my setup, fork it
+
+fleet is how I work, published as it runs on my Mac: opinionated, not plug-and-play, and it needs both pi and Claude Code. Take the ideas, or fork it and let your own agent adapt it through [SETUP.md](SETUP.md).
+
+Credits: the code smell list the reviewer works from is adapted from [mattpocock/skills](https://github.com/mattpocock/skills), MIT; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+License: [MIT](LICENSE).
+
+## Reference
+
+<details>
+<summary>Numbers</summary>
+
+369 commits over two weeks, 16 to 30 September 2026; 7.8k lines of TypeScript in `src/`, 13.6k lines of tests; 424 guard cases; 19 skills written once for both agents.
+
+</details>
+
+<details>
+<summary>Permission profiles</summary>
 
 What each seat may do in a repository is its profile: `~/.config/harness/repos.json`, matched by `owner/repo`, then `owner/*`, then the `*` of `host/repos.json`. Agents read profiles and the guard refuses them any write to one. `fleet profile <repo>` prints the one that applies.
 
@@ -65,7 +128,10 @@ What each seat may do in a repository is its profile: `~/.config/harness/repos.j
 
 `none` never, `human` after the person confirms, `auto` without asking. A host that signs at `human` cannot go with a container that pushes at `auto`: unsigned commits would reach GitHub first. The default `*` profile lets the container open pull requests and leaves signing, pushing and removing containers to the person.
 
-## Layout
+</details>
+
+<details>
+<summary>Repository layout</summary>
 
 | Path | What |
 | --- | --- |
@@ -94,7 +160,10 @@ What each seat may do in a repository is its profile: `~/.config/harness/repos.j
 
 The homes hold only rendered files and runtime state. Edit here and run `./sync.sh --apply`, never edit a home. Render replaces the directories listed in `OWNED` in `src/render/render.ts` whole, so a file removed here disappears there too.
 
-## pi and Claude Code side by side
+</details>
+
+<details>
+<summary>pi and Claude Code side by side</summary>
 
 | Concern | pi | Claude Code | Why |
 | --- | --- | --- | --- |
@@ -113,33 +182,14 @@ The homes hold only rendered files and runtime state. Edit here and run `./sync.
 | Phone control | `extensions/pi-remote` | Remote Control, a product setting | Claude Code ships its own |
 | Host sandbox | none | macOS sandbox from `claude/profiles/host.json` | only Claude Code has one |
 
-## Checks
+</details>
+
+<details>
+<summary>Checks</summary>
 
 ```bash
 npm test          # node --test over src/, the guard corpus, skills load, extension checks, the settings aligner
 npm run check     # tsc --noEmit
 ```
 
-## Trust model
-
-![Trust model](docs/trust.svg)
-
-Every signature comes from the Mac. Containers get no SSH agent and no signing key. Credentials reach them only through the sbx proxy, which holds the GitHub token and the model logins host-side and adds them to outgoing requests; the container sees placeholders. Containers commit unsigned on their task branch. Pushes come from the Mac at the host's `push` level, or from a container whose profile gives it `push: auto`, with a token `up` refuses if it sees any other private repository.
-
-`land` fetches every repository through the sandbox's git remote and checks each before any host branch moves: a clean container on the recorded branch, history that descends from the saved base, and a branch checked out in no host worktree. Signing re-creates only the commits origin lacks, keeping tree, author and message. `--push` refuses anything that is not a fast-forward. Force, delete and mirror pushes and turning signing off stay the person's own commands, and the guard refuses them on every host.
-
-The limits, plainly:
-
-- The guard matches patterns, not shell semantics: `eval` and variable indirection get past it. It stops mistakes and simple malicious code, not someone who has read the rule.
-- The Claude guard is a user-level hook in `~/.claude/settings.json`. Claude Code merges hooks across settings scopes, and a repository's own `.claude/settings.json` can set `disableAllHooks`, which turns user-level hooks off. Open an untrusted repository in the host session and its settings can switch the guard off. Managed settings would prevent that and need an admin install per Mac; this setup trades that for a clone-and-sync setup.
-- Every container a profile covers receives that profile's token. The default `*` profile hands every container the host session's `GH_TOKEN`, so scope it to the repositories you work on.
-- The guard refuses any write into `~/.pi` and `~/.claude` except the runtime state agents write there; reads pass only through the Read, Grep and Glob tools and a short list of read commands.
-- Every container runs with `CI=true`, so test runners run once instead of watching. Snapshots fail instead of updating.
-
-## Credits
-
-The code smell list the reviewer works from is adapted from [mattpocock/skills](https://github.com/mattpocock/skills), MIT; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## License
-
-[MIT](LICENSE)
+</details>
