@@ -22,19 +22,19 @@ You only talk to one agent, the host, on your Mac. It starts a sandbox per issue
 <h4><code>1</code> You say what to ship</h4>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/step-1-dark.svg">
-  <img alt="You tell the host agent: ship 12, 14 and 15" src="docs/step-1.svg">
+  <img alt="You tell the host agent: ship 12, 14 and 15" src="docs/step-1.svg" width="100%">
 </picture>
 <p>You talk to one agent on your Mac, the host. Say it in plain words, give it Linear issues, or hand it a markdown file.</p>
-<pre><code>you › ship #12, #14, #15</code></pre>
+<p><code>you › ship #12, #14, #15</code></p>
 </td>
 <td width="50%" valign="top">
 <h4><code>2</code> Each issue gets a sandbox</h4>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/step-2-dark.svg">
-  <img alt="The host starts three sandboxes, one per issue" src="docs/step-2.svg">
+  <img alt="The host starts three sandboxes, one per issue" src="docs/step-2.svg" width="100%">
 </picture>
 <p>Each sandbox is a private copy of the repo with its own agent. Sandboxes run side by side and can't touch each other or your checkout.</p>
-<pre><code>fleet up web-12 --repo ~/code/app</code></pre>
+<p><code>fleet up web-12 --repo ~/code/app</code></p>
 </td>
 </tr>
 <tr>
@@ -42,20 +42,19 @@ You only talk to one agent, the host, on your Mac. It starts a sandbox per issue
 <h4><code>3</code> It asks only when it has to</h4>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/step-3-dark.svg">
-  <img alt="Sandbox 14 asks which API to use; you answer v2" src="docs/step-3.svg">
+  <img alt="Sandbox 14 asks which API to use; you answer v2" src="docs/step-3.svg" width="100%">
 </picture>
 <p>The agents answer whatever the code or the tracker can answer. Everything else reaches you as one short question.</p>
-<pre><code>[fleet] claude-app-web-14: working -> blocked
-attention: which API, v1 or v2?</code></pre>
+<p><code>[fleet] claude-app-web-14: working -> blocked</code><br><code>attention: which API, v1 or v2?</code></p>
 </td>
 <td width="50%" valign="top">
 <h4><code>4</code> Pull requests come back</h4>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/step-4-dark.svg">
-  <img alt="Three pull requests, each with tests passed and review done" src="docs/step-4.svg">
+  <img alt="Three pull requests, each with tests passed and review done" src="docs/step-4.svg" width="100%">
 </picture>
 <p>Each one is tested and reviewed, and tried in the running app when it changes what users see. It lands when you say so, and the repository's profile decides who opens the pull request.</p>
-<pre><code>fleet land claude-app-web-12 --push</code></pre>
+<p><code>fleet land claude-app-web-12 --push</code></p>
 </td>
 </tr>
 </table>
