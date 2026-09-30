@@ -45,7 +45,7 @@ const usage = `usage:
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   ${CLI} history <sandbox> [--repo <path>]            every status.md change in order: status, attention, summary, the Log lines it added and any it removed
   ${CLI} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
-  ${CLI} land <sandbox> [--branch <name>] [--sign] [--push]   import one branch, or preflight and import all repos with a resumable receipt; --sign --push imports, signs every repo, then pushes, and a rerun resumes from the receipt; pushes stay fast-forward
+  ${CLI} land <sandbox> [--branch <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; --branch for one repo only
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>

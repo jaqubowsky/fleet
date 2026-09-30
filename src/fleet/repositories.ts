@@ -13,10 +13,6 @@ type Repository = {
 	branch: string;
 	workspace: string;
 	served: string;
-	sourceSha?: string;
-	landedSha?: string;
-	signedSha?: string;
-	pushedSha?: string;
 };
 
 export type RepositoryManifest = {

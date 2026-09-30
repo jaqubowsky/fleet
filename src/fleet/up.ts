@@ -378,7 +378,7 @@ export async function up(
 						.sort()
 						.join(
 							"\n",
-						)}\n\nRecord verified test startup commands in run.md and run.sh here. Each task's repositories.json supplies its checkout paths and commit receipts.\n`,
+						)}\n\nRecord verified test startup commands in run.md and run.sh here. Each task's repositories.json supplies its checkout paths, branches and base SHAs.\n`,
 				);
 		}
 		const resources = {

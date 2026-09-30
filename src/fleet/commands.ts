@@ -19,6 +19,7 @@ import {
 	repositoryManifest,
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
+import { isAncestor, landedRef } from "./land.ts";
 import { logEvent } from "./events.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
@@ -128,7 +129,7 @@ export function ls(io: Io): string {
 					? repositoryCheckout(io, s.name, entry.workspace)
 					: undefined;
 				checkouts.push(
-					`${entry.name} ${current?.branch ?? entry.branch} ${current?.dirty ?? "?"} dirty ${current?.head ?? entry.sourceSha ?? entry.baseSha}${canProbe ? "" : " (last known)"}`,
+					`${entry.name} ${current?.branch ?? entry.branch} ${current?.dirty ?? "?"} dirty ${current?.head ?? entry.baseSha}${canProbe ? "" : " (last known)"}`,
 				);
 				if (running) {
 					const facts = branchFacts(io, s.name, entry.repo, entry);
@@ -683,23 +684,17 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const checkout = parseCheckout(
 		io.sbx(["exec", sandbox, "sh", "-c", checkoutProbe], { quiet: true }),
 	);
-	const manifest = groupManifest(sandbox, io);
+	const manifest = repositoryManifest(sandbox, io);
 	if (manifest && !opts.force) {
-		for (const repo of manifest.repositories) {
+		for (const [index, repo] of manifest.repositories.entries()) {
 			const current = repositoryCheckout(io, sandbox, repo.workspace);
 			if (current.dirty)
 				throw new Error(
 					`${repo.name}: ${current.dirty} uncommitted file(s); commit them before closing ${sandbox}`,
 				);
-			const hostHead = io.git(
-				["for-each-ref", "--format=%(objectname)", `refs/heads/${repo.branch}`],
-				repo.repo,
-			);
 			if (
-				current.branch !== repo.branch ||
-				current.head !== repo.sourceSha ||
-				!repo.landedSha ||
-				hostHead !== repo.landedSha
+				!isAncestor(repo.repo, current.head, landedRef(sandbox, repo), io) &&
+				!(index === 0 && pushed(sandbox, current.head, io))
 			)
 				throw new Error(
 					`${repo.name}: ${current.head} is not landed on ${repo.branch}; run ${CLI} land first`,

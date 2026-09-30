@@ -172,9 +172,9 @@ test("pi asks separately for landing, signing and pushing a sandbox", async () =
 	});
 	assert.ok(captured);
 	for (const [command, action] of [
-		["fleet land pi-harness-demo", "import"],
-		["fleet land pi-harness-demo --sign", "sign"],
-		["fleet land pi-harness-demo --push", "push"],
+		["fleet land pi-harness-demo", "import, signing per profile"],
+		["fleet land pi-harness-demo --sign", "import and sign"],
+		["fleet land pi-harness-demo --push", "import and push, signing per profile"],
 		["fleet land --sign --push pi-harness-demo", "import, sign and push"],
 	]) {
 		let prompted = false;

@@ -227,8 +227,6 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 				branch: "task",
 				workspace: "/r",
 				served: "",
-				sourceSha: "3".repeat(40),
-				landedSha: "3".repeat(40),
 			},
 			{
 				repo: "/api",
@@ -248,7 +246,6 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(manifest),
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
 		'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
-		"git /r for-each-ref": "3".repeat(40),
 		[probe]: `task\t1\t${"4".repeat(40)}`,
 	};
 	const dirty = fakeIo(answers);
@@ -256,11 +253,27 @@ test("down keeps both clones when the API has dirty or unlanded work", () => {
 	assert.throws(() => down("pi-a", {}, dirty), /acme\/api.*1 uncommitted/);
 	assert.ok(!dirty.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
 
-	const unlanded = fakeIo({ ...answers, [probe]: `task\t0\t${"4".repeat(40)}` });
+	const unlanded = fakeIo({
+		...answers,
+		[probe]: `task\t0\t${"4".repeat(40)}`,
+		[`git /api merge-base --is-ancestor ${"4".repeat(40)} refs/fleet/pi-a/api/landed`]:
+			new Error("exit 1"),
+	});
 	assert.throws(() => down("pi-a", {}, unlanded), /acme\/api.*not landed/);
 	assert.ok(
 		!unlanded.calls.some((call) => call[0] === "sbx" && call[1] === "rm"),
 	);
+
+	const landed = fakeIo({ ...answers, [probe]: `task\t0\t${"4".repeat(40)}` });
+	down("pi-a", {}, landed);
+	assert.ok(
+		landed.calls.some(
+			(call) =>
+				call.join(" ") ===
+				`git /api merge-base --is-ancestor ${"4".repeat(40)} refs/fleet/pi-a/api/landed`,
+		),
+	);
+	assert.ok(landed.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
 });
 
 test("down refuses a dirty container without --force", () => {

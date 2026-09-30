@@ -7,7 +7,7 @@ export type Io = {
 	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number; input?: string }): string;
 	herdr<T = unknown>(args: string[]): T;
 	herdrText(args: string[]): string;
-	git(args: string[], cwd: string): string;
+	git(args: string[], cwd: string, opts?: { env?: Record<string, string>; input?: string }): string;
 	gh(args: string[], cwd: string): string;
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
@@ -30,9 +30,10 @@ export type Io = {
 	env(name: string): string | undefined;
 };
 
-function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string; timeoutMs?: number; input?: string } = {}): string {
+function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: boolean; cwd?: string; timeoutMs?: number; input?: string; env?: Record<string, string> } = {}): string {
 	const result = spawnSync(cmd, args, {
 		cwd: opts.cwd,
+		env: opts.env && { ...process.env, ...opts.env },
 		input: opts.input ?? "",
 		encoding: "utf8",
 		stdio: ["pipe", opts.stream ? "inherit" : "pipe", opts.quiet ? "pipe" : "inherit"],
@@ -60,7 +61,7 @@ export function realIo(home: string, seat?: Seat): Io {
 			}
 		},
 		herdrText: (args) => shell("herdr", args, { quiet: true }),
-		git: (args, cwd) => shell("git", args, { cwd, quiet: true }),
+		git: (args, cwd, opts) => shell("git", args, { cwd, quiet: true, ...opts }),
 		gh: (args, cwd) => shell("gh", args, { cwd, quiet: true, timeoutMs: 30_000 }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),

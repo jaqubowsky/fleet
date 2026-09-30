@@ -4,7 +4,11 @@ type LandPermission = {
 	decision: "ask" | "deny";
 	reason: string;
 	sandbox?: string;
-	action?: "import" | "sign" | "push" | "import, sign and push";
+	action?:
+		| "import, signing per profile"
+		| "import and sign"
+		| "import and push, signing per profile"
+		| "import, sign and push";
 };
 
 const BARE =
@@ -33,10 +37,10 @@ export function landPermission(command: string): LandPermission | undefined {
 		signs && pushes
 			? "import, sign and push"
 			: pushes
-				? "push"
+				? "import and push, signing per profile"
 				: signs
-					? "sign"
-					: "import";
+					? "import and sign"
+					: "import, signing per profile";
 	return {
 		decision: "ask",
 		reason: `Ask the person before the ${action} for ${sandbox}.`,
