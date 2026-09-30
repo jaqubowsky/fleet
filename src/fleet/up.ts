@@ -640,7 +640,7 @@ function create(
 		input.repo,
 		artifacts,
 		cache,
-		`${knowledgeBase}:ro`,
+		...(io.stat(knowledgeBase) ? [`${knowledgeBase}:ro`] : []),
 		...(h.agentArgs.length ? ["--", ...h.agentArgs] : []),
 	]);
 }
