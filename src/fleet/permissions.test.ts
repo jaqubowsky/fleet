@@ -102,7 +102,7 @@ test("profile --apply signs by the profile, moves origin to HTTPS and stops bran
 
 test("profile --apply keeps a host push on HTTPS against the person's own url rewrites, with the session's GH_TOKEN as its only credential", () => {
 	const io = checkout(
-		"git@github.com-personal:alice/private-app.git",
+		"git@github.com-alice:alice/private-app.git",
 		WITH_PRIVATE,
 		{
 			"git config --local --get commit.gpgsign": "false",
@@ -141,7 +141,7 @@ test("profile --apply fails where origin still pushes somewhere other than HTTPS
 		WITH_PRIVATE,
 		{
 			"git remote get-url --push origin":
-				"git@github.com-personal:alice/private-app.git",
+				"git@github.com-alice:alice/private-app.git",
 		},
 	);
 

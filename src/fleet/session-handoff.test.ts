@@ -7,7 +7,7 @@ import handoff, { SUGGESTED } from "../../extensions/session-handoff.ts";
 import { changes } from "../../extensions/status-history.ts";
 import { fakeIo } from "./fake-io.ts";
 import { renderText, seatSettings } from "../render/render.ts";
-import { CLI, KINDS } from "../harness.ts";
+import { CLI, KINDS, WIKI } from "../harness.ts";
 
 async function runtime(t: TestContext, { settings = "{}", replaces = true } = {}) {
 	const dir = mkdtempSync(join(tmpdir(), "session-handoff-"));
@@ -197,7 +197,7 @@ test("a cancelled replacement reports that it stayed put", async (t) => {
 test("every kind's container rule suggests a handoff in the same words", () => {
 	const rule = readFileSync("sbx/container/sandbox.md", "utf8");
 
-	const rendered = Object.values(KINDS).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: CLI }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
+	const rendered = Object.values(KINDS).map((harness) => ({ harness, text: renderText(rule, { ...harness.tokens, cli: CLI, wiki: WIKI }, (name) => readFileSync(`fragments/${name}.md`, "utf8"), "sandbox.md") }));
 
 	for (const { harness, text } of rendered) assert.ok(text.includes(`attention: ${SUGGESTED}\``), harness.name);
 });

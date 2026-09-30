@@ -590,7 +590,7 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 
 test("up names the branch after the label as a ref git takes, and refuses the default branch before any container exists", async () => {
 	const named = fakeIo(base);
-	await up({ repo, label: "FLO 1", root: "/root" }, named);
+	await up({ repo, label: "WEB 1", root: "/root" }, named);
 	const switched = named.calls.find(
 		(c) => c[0] === "sbx" && c[1] === "exec" && c[5] === SWITCH_TO_BRANCH,
 	);

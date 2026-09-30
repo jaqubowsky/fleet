@@ -28,7 +28,7 @@ Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 
 ### 3. Name the standards
 
-Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Then the wiki at `/Users/alice/my-knowledge-base/wiki/`: read `index.md` and pick the pages for the diff's area, plus the four that bear on every review:
+Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Then the wiki at `{{wiki}}/wiki/`: read `index.md` and pick the pages for the diff's area, plus the four that bear on every review:
 
 | Page | What it decides |
 | --- | --- |

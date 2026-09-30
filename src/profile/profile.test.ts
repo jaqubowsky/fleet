@@ -41,7 +41,7 @@ test("the repository comes from any GitHub origin spelling, and nothing from ano
 		"acme/webapp",
 	);
 	assert.equal(
-		repoName("git@github.com-work:globex/x.git"),
+		repoName("git@github.com-bob:globex/x.git"),
 		"globex/x",
 	);
 	assert.equal(repoName("https://github.com/bob/y"), "bob/y");

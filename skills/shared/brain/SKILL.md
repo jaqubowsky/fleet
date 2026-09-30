@@ -4,11 +4,11 @@ description: 'Answer a question from the personal knowledge base (LLM wiki) at ~
 ---
 
 Answer the question using the personal knowledge base at
-`/Users/alice/my-knowledge-base`.
+`{{wiki}}`.
 
 Question: the text the user appended after this skill
 
-1. Read `/Users/alice/my-knowledge-base/wiki/index.md` and pick the
+1. Read `{{wiki}}/wiki/index.md` and pick the
    relevant pages; read only those (plus the `wiki/sources/` pages they cite
    if needed). Never bulk-load the whole wiki into context.
 2. Answer with citations: wiki page names and their `raw/` sources. If the

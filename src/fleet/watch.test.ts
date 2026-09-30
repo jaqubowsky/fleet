@@ -153,8 +153,8 @@ test("watch follows the harness's containers and nothing else in herdr", () => {
 test("a long sandbox name picks the agent herdr named after it", () => {
 	const sandbox = "pi-webapp-bug-ledger-repost-status-bar";
 	const agents = [
-		{ pane_id: "w:p1", name: "pi-webapp-bug-ledger-re-c7eb7c0" },
-		{ pane_id: "w:p2", name: "pi-webapp-web-1705-no-798572e" },
+		{ pane_id: "w:p1", name: "pi-webapp-bug-ledger-rep-87c8fb9" },
+		{ pane_id: "w:p2", name: "pi-webapp-web-1705-no-da-1dc5052" },
 	];
 	const sandboxes = [
 		sandbox,

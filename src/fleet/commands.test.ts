@@ -499,7 +499,7 @@ test("ls joins sbx, herdr and git state", () => {
 	});
 	assert.equal(
 		ls(io),
-		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x           stopped  gone     ?",
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x          stopped  gone     ?",
 	);
 });
 
@@ -708,7 +708,7 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 
 	assert.equal(
 		ls(io),
-		"pi-broken         failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"pi-broken        failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
 	);
 	assert.ok(
 		!io.calls.some(
@@ -891,7 +891,7 @@ test("resolveSandbox accepts the container name or its agent name", () => {
 		"pi-webapp-frontend-ticket-123-fix-login-page",
 	);
 	assert.equal(
-		resolveSandbox("pi-webapp-frontend-tick-33301c6", io).name,
+		resolveSandbox("pi-webapp-frontend-ticke-6ec8f90", io).name,
 		"pi-webapp-frontend-ticket-123-fix-login-page",
 	);
 });
@@ -952,13 +952,13 @@ test("artifacts shows each task's files flat and folds its folders into one line
 	assert.deepEqual(artifacts("/w/webapp", io).split("\n"), [
 		root,
 		"pi-webapp-web-1/",
-		"  status.md            200B  1m ago",
-		"  review.md              3K  30m ago",
-		"  analysis.md          800B  1h ago",
-		"  browser/           2 files  8.6M",
-		"  logs/              2 files  3.8M",
-		"runbook/           2 files  400B",
-		"plan.md                2K  5m ago",
+		"  status.md           200B  1m ago",
+		"  review.md             3K  30m ago",
+		"  analysis.md         800B  1h ago",
+		"  browser/          2 files  8.6M",
+		"  logs/             2 files  3.8M",
+		"runbook/          2 files  400B",
+		"plan.md               2K  5m ago",
 	]);
 });
 

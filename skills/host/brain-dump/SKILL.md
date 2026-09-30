@@ -5,7 +5,7 @@ compatibility: Requires defuddle, yt-dlp and pdftotext, plus write access to ~/m
 ---
 
 Capture a source into the second brain's inbox at
-`/Users/alice/my-knowledge-base/raw/inbox/`. One file per source, named
+`{{wiki}}/raw/inbox/`. One file per source, named
 `YYYY-MM-DD-<topic-slug>.md` (today's date, kebab-case slug). Every file
 starts with a short origin header: source (repo/conversation, URL, or video
 link), date, one-line context.
