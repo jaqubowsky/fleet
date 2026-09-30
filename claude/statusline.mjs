@@ -23,7 +23,7 @@ const status = (d) => {
 };
 
 const DEMO_PAYLOAD = (tok, fiveH) => ({
-  workspace: { current_dir: `${process.env.HOME}/my-knowledge-base` },
+  workspace: { current_dir: `${process.env.HOME}/project` },
   model: { display_name: "Opus 5 (1M context)" },
   effort: { level: "xhigh" },
   context_window: {
@@ -39,9 +39,9 @@ const DEMO_PAYLOAD = (tok, fiveH) => ({
 });
 
 const SCENARIOS = [
-  ["świeża", 82_000, 15],
+  ["fresh", 82_000, 15],
   ["watch 150k", 168_000, 62],
-  ["blisko 200k", 220_000, 81],
+  ["near 200k", 220_000, 81],
   ["dumb 250k", 270_000, 94],
 ];
 
