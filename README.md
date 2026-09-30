@@ -89,6 +89,7 @@ Every signature comes from your Mac. Sandboxes get no SSH agent and no signing k
 The limits, plainly:
 
 - The guard matches patterns, not shell semantics: `eval` and variable indirection get past it. It stops mistakes and simple malicious code, not someone who has read the rule.
+- Neither host agent runs in an OS sandbox. On the Mac the guard is the only check between an agent and a command; the sandboxes are where untrusted work belongs.
 - The Claude guard is a user-level hook in `~/.claude/settings.json`. A repository's own `.claude/settings.json` can set `disableAllHooks` and turn it off, so open untrusted repositories in a sandbox, not in the host session.
 - Every sandbox a profile covers receives that profile's GitHub token. The default hands every sandbox the host session's `GH_TOKEN`, so scope that token to the repositories you work on.
 - Sandboxes run with `CI=true`: test runners run once instead of watching, and snapshots fail instead of updating.
@@ -180,7 +181,6 @@ The homes hold only rendered files and runtime state. Edit here and run `./sync.
 | Statusline | `extensions/statusline.ts` with `src/statusline/` | `claude/statusline.mjs` with `src/statusline/` | Claude Code runs a command |
 | Models | seats in `pi/profiles/models.json` | seats in `claude/profiles/models.json`, `effort` per agent | `CLAUDE_CODE_SUBAGENT_MODEL` stays unset, see `SETUP.md` |
 | Phone control | `extensions/pi-remote` | Remote Control, a product setting | Claude Code ships its own |
-| Host sandbox | none | macOS sandbox from `claude/profiles/host.json` | only Claude Code has one |
 
 </details>
 

@@ -188,7 +188,7 @@ test("the claude hook refuses an edit or a shell write of the host's permissions
 	assert.equal(ask("Read", { file_path: "host/repos.json" }), "");
 });
 
-test("the claude hook refuses a privileged command that is not bare on one line, so the sandbox exclusion matches it", () => {
+test("the claude hook judges a chained privileged command by the policy alone, since the host runs no OS sandbox", () => {
 	const root = privateRoot();
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) =>
@@ -197,44 +197,17 @@ test("the claude hook refuses a privileged command that is not bare on one line,
 	for (const command of [
 		"npm test && git push",
 		"cd .. ; fleet up demo",
-		"fleet land\ngit status",
-		"gh pr create --title t --body 'first\nsecond'",
+		'git add -A && git commit -m "fix"',
 		"git fetch origin && git log origin/main",
 		"gh run view 7 --log-failed | tail",
-		"(git push)",
 	])
-		assert.match(ask(command), /bare, on one line/, command);
-	assert.match(
-		ask("gh pr create --title 'a | b' --body 'c; d'"),
-		/"permissionDecision":"allow"/,
-	);
+		assert.doesNotMatch(ask(command), /bare, on one line|"permissionDecision":"deny"/, command);
 	for (const command of [
-		'gh pr view 12 --json title --jq ".title | length"',
-		"gh run list --commit abc",
-		"echo 'git push' | wc -c",
+		"npm test && git push --force origin main",
+		"gh pr create --repo someone/else --fill | cat",
+		"bash -c 'fleet land pi-harness-demo'",
 	])
-		assert.equal(ask(command), "", command);
-});
-
-test("the claude hook refuses every sandbox exclusion that is not bare, and names each one", () => {
-	const root = privateRoot();
-	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
-	const ask = (command: string) =>
-		answer({ tool_name: "Bash", tool_input: { command }, cwd: own }, root);
-	const excluded: string[] = JSON.parse(readFileSync(HOST_SETTINGS, "utf8"))
-		.sandbox.excludedCommands;
-	const reads = ["gh pr view", "gh pr checks", "gh pr list", "gh run list"];
-
-	const refusal = ask("true && git push");
-	for (const command of excluded
-		.map((pattern) => pattern.replace(/\*$/, ""))
-		.filter((command) => !reads.includes(command))) {
-		assert.match(ask(`${command}\n`), /bare, on one line/, command);
-		assert.ok(refusal.includes(command), command);
-	}
-	for (const command of reads)
-		assert.equal(ask(`${command} | head`), "", command);
-	assert.match(ask('git add -A && git commit -m "fix"'), /bare, on one line/);
+		assert.match(ask(command), /"permissionDecision":"deny"/, command);
 });
 
 test("the claude hook follows the target sandbox's down level and asks in auto permission mode", () => {
@@ -285,7 +258,7 @@ test("the claude hook asks separately for landing, signing and pushing", () => {
 		assert.match(decide(command), /"permissionDecision":"deny"/, command);
 });
 
-test("the claude hook lets a GitHub read run in any shell form, since the sandbox reaches GitHub, and keeps writes bare", () => {
+test("the claude hook lets a GitHub read run in any shell form and refuses a pull request write the policy cannot place", () => {
 	const root = privateRoot();
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);
 	const ask = (command: string) =>

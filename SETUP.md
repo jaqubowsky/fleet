@@ -66,12 +66,12 @@ Write `git/.gitconfig` with the person's name and email. Containers commit unsig
 
 Everything under `git/` lands in `/home/agent/` as it is: `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
 
-`claude-settings.json` has the shape of Claude Code settings. Objects merge into the repository's, lists add to its lists. Its usual use is the SSH agent that signs on this Mac, for example:
+`claude-settings.json` has the shape of Claude Code settings. Objects merge into the repository's, lists add to its lists. Its usual use is pointing Claude Code at the SSH agent that signs on this Mac, when the session would not inherit it, for example:
 
 ```json
 {
   "env": { "SSH_AUTH_SOCK": "$HOME/.ssh/agent.sock" },
-  "sandbox": { "network": { "allowUnixSockets": ["$HOME/.ssh/agent.sock"] } }
+  "permissions": { "allow": ["Bash(make *)"] }
 }
 ```
 
@@ -90,6 +90,8 @@ herdr integration install claude
 herdr integration install pi
 npm test && npm run check
 ```
+
+Neither host agent runs in an OS sandbox: on this Mac the guard hook is the only check between the agent and a command, which is why the task work itself runs in sandboxes.
 
 The last section of `sync.sh`, `== set up by hand`, names what it found missing and cannot install itself.
 
