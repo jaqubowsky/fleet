@@ -9,7 +9,7 @@ Each file has one role. Git is the authority for commits, branches and dirty sta
 ```text
 status.md      current user-facing state: status, attention, log, and the summary at a hand-off
 permissions.md what each seat may do in each repository: one line per action and level; {{cli}} up writes it
-repositories.json  all clone paths, bases and import/push receipts for a multi-repository task; the host keeps the authoritative copy
+repositories.json  every clone's path, base, base SHA and branch for a multi-repository task; the host keeps the authoritative copy
 project.md     how the primary project does what the rules require, when ~/.config/harness/projects/<owner>/<repo>.md exists; {{cli}} up writes it
 projects/      additional repos' project overlays, named by their workspace basenames, when present
 ticket.md      the tracker issue this task delivers, copied at start by the host; Status and ticks are the container's

@@ -13,12 +13,12 @@ You run in an isolated container. Someone outside watches this session and gives
 4. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
 5. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one
 6. `sudo` works, so install any tool the repo does not declare, and name in your report what you added
-7. With one repo, its ignored env files are copied at creation. With multiple repos, only ignored `.env.test*` or `.env.e2e*` files are copied from each checkout. A missing test config stays missing: name it instead of using a production env as the test source
+7. Every repo's ignored `.env*` files, `node_modules` excluded, are copied from its host checkout at creation. A missing test config stays missing: name it instead of using a production env as the test source
 8. The host wiki at `/Users/alice/my-knowledge-base` is mounted read-only at the same path; use the `brain` skill for recorded decisions and do not write to it
 
 ## Task directory
 
-1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file, `status.md`, and `repositories.json` when present before your first command. The manifest names each clone's path, base SHA and branch; the host keeps its own authoritative copy
+1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file, `status.md`, and `repositories.json` when present before your first command. The manifest names each clone's path, base SHA and branch; the host keeps its own authoritative copy. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
 2. `project.md`, when present, says how the primary project works; when `repositories.json` exists, read each additional repo's overlay in `projects/<workspace basename>.md` when present and use the matching part of `permissions.md` for each repo
 3. `runbook/` at the root of `$FLEET_ARTIFACTS` may hold how this app starts and how its screens drive. The root is shared by tasks for the same repository set and read by the person; a new multi-repository task has its own group root, not the first repo's runbook
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`

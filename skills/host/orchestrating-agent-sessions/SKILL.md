@@ -9,7 +9,7 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
-| put up a container for a task | `{{cli}} up <label> --repo <path> [--repo <path> ...] [--pi | --claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]` | one repo keeps its existing setup; multiple repos use the first as primary and bring each additional repo into a private clone by Git bundle, never a writable host mount. Each has its own fetched origin base, branch, profile and install log. One `--base` applies to all, or supply one per repo in `--repo` order for different bases; `--branch` names one branch in each. Report every repo, task directory and waiting tab; no prompt is sent |
+| put up a container for a task | `{{cli}} up <label> --repo <path> [--repo <path> ...] [--pi | --claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]` | one repo keeps its existing setup; multiple repos use the first as primary and bring each additional repo into a private clone by Git bundle, never a writable host mount, with its git dir under the primary's `.git/fleet-repos/`; every repo gets its ignored `.env*` files. Each has its own fetched origin base, branch, profile and install log. One `--base` applies to all, or supply one per repo in `--repo` order for different bases; `--branch` names one branch in each. Report every repo, task directory and waiting tab; no prompt is sent |
 | what is running | `{{cli}} ls` | status and herdr state, then the branch, dirty count and full SHA of each repo; stalled, activity, cost and each repo's PR and CI. A repo whose checkout cannot be probed shows `failed` with its name and error; other containers still list |
 | what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | each repo's branch, dirty count, full SHA, status, log, diff and install log, then the pane tail |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
@@ -18,7 +18,7 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every change of `status.md` in order, with its time: status changes, attention, summary, the Log lines it added and any it removed |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
-| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | one repo keeps its existing landing. Multiple repos first preflight every dirty state, saved base SHA and fast-forward ancestry, then import with a resumable receipt in the task directory. Run import, `--sign` and `--push` as separate approved commands, or `--sign --push` as one, which signs every repo before the first push; a later refusal preserves earlier progress and records every completed operation. Never force |
+| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | the same flags for any number of repos: fetch each branch from the sandbox's git daemon, preflight every repo (clean container on the recorded branch, descends from the saved base, checked out in no host worktree) before any branch moves, then fast-forward or re-create what the container added since the `landed` ref. Bare `land` signs per profile, `--sign` forces it, `--push` also pushes, after every repo is signed. A declined signature or refused push keeps finished repos; rerun the same command. Never force. `--branch` is one-repo only |
 | what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build [--pi | --claude]` | the docker build output, and what the image now carries |
@@ -74,7 +74,7 @@ A `[fleet]` line or a question about a task starts at `status.md`, then the one 
 | --- | --- |
 | where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
 | what happened, in order | `## Log` in `status.md`; every change of the file with `{{cli}} history` |
-| which commits | `{{cli}} ls` for each repo's branch, dirty count and full SHA; `repositories.json` records bases and land/push receipts in a multi-repository task, and `git log <base>..<branch>` shows the host history after land |
+| which commits | `{{cli}} ls` for each repo's branch, dirty count and full SHA; `repositories.json` records each repo's base and branch, `refs/fleet/<sandbox>/<repo>/landed` in the host repo is the container head last landed, and `git log <base>..<branch>` shows the host history after land |
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
 | what is happening on the PR | `pr.md` |
@@ -85,7 +85,7 @@ A rule or skill change reaches a container through `{{cli}} build` and a new con
 
 How a container's branch and pull request reach GitHub is the land line of `{{cli}} profile <repo>`.
 
-Every repository is a private clone. `repositories.json` names all additional clones built from Git bundles inside the sandbox; no additional host checkout is mounted writable. Writes stay there until `{{cli}} land`; multi-repository container pushes are refused and require an approved host push. Configure each repo's own profile. The shared sandbox needs identical `container.token`, `container.linear` and `container.linearServer` bindings; the token must access every repo. Incompatible bindings refuse creation. Three host directories are mounted alongside it at the same absolute path inside as outside: `$FLEET_ARTIFACTS`, either `~/.sandboxes/<repo>` or the repository group's root, with one task directory per container and `runbook/`; `$FLEET_CACHE` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
+Every repository is a private clone. `repositories.json` names all additional clones built from Git bundles inside the sandbox, their git dirs under the primary's `.git/fleet-repos/`; no additional host checkout is mounted writable. Writes stay there until `{{cli}} land`; multi-repository container pushes are refused and require an approved host push. Configure each repo's own profile. The shared sandbox needs identical `container.token`, `container.linear` and `container.linearServer` bindings; the token must access every repo. Incompatible bindings refuse creation. Three host directories are mounted alongside it at the same absolute path inside as outside: `$FLEET_ARTIFACTS`, either `~/.sandboxes/<repo>` or the repository group's root, with one task directory per container and `runbook/`; `$FLEET_CACHE` for what is expensive to rebuild; and `~/my-knowledge-base` read-only for the personal wiki. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
 
 ## Pull request rounds
 
@@ -96,7 +96,7 @@ Where the land line of `{{cli}} profile <repo>` has this session push, a contain
 {{cli}} steer <sandbox> "pushed, run the next round"
 ```
 
-For multiple repositories, run `{{cli}} land <sandbox>`, `{{cli}} land <sandbox> --sign`, then `{{cli}} land <sandbox> --push` as separate approved commands, or `{{cli}} land <sandbox> --sign --push` as one. Read the per-repo receipt after each. A rejected later push keeps earlier GitHub commits and every host branch; show that partial state, then rerun the same command without forcing.
+For multiple repositories the same command lands every one, and its last lines give each repo's container head, host branch, `origin/<branch>` and signature state. A declined signature or a rejected later push keeps every finished repo on the host and on GitHub; show that partial state, then rerun the same command without forcing.
 
 - A rejected push means someone rewrote history. Show the user; forcing is their own command
 - Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. `pr.md` already holds them, and a line pasted into a thread opens with `[container / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing
@@ -137,7 +137,7 @@ This is the authority rule for session handoff; it grants no other permission.
 ## When it refuses
 
 - `{{cli}} down` refuses dirty or unlanded work in any private clone of a multi-repository task; in a one-repo task it refuses a dirty tree and commits that reached neither the host repo nor the container's origin. `{{cli}} peek` shows what would go, and `--force` discards either.
-- `{{cli}} land` refuses a container branch that no longer descends from the one here, which is what a signed landing leaves behind: the container resyncs to `origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
+- `{{cli}} land` refuses a container branch that descends neither from the one here nor from its `landed` ref: the container resyncs to `origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
 - `{{cli}} land <sandbox> --push` refuses anything that is not a fast-forward.
 - `{{cli}} handoff` fails when `status.md` shows no context reset after the approval, or when the fresh session never turns idle for `--continue`: `{{cli}} peek`, then steer the continue yourself once it is idle.
 - `{{cli}} steer` answers `agent_blocked` while a dialog waits in that tab: read the pane, ask the user, answer the dialog, then steer.
