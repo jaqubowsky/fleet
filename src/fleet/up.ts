@@ -3,7 +3,7 @@ import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { describe, repoName, type Profile } from "../profile/profile.ts";
-import { type AgentName, CLI, type Kind, KINDS, WIKI } from "../harness.ts";
+import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
 import { agentName, sandboxName, slug } from "./name.ts";
@@ -563,7 +563,6 @@ function create(
 ): void {
 	const artifacts = dirname(task);
 	const cache = cacheDir(input.repo, h, io);
-	const knowledgeBase = `${io.home}/${WIKI}`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
 	const variable = sessionToken(profile);
@@ -640,7 +639,6 @@ function create(
 		input.repo,
 		artifacts,
 		cache,
-		...(io.stat(knowledgeBase) ? [`${knowledgeBase}:ro`] : []),
 		...(h.agentArgs.length ? ["--", ...h.agentArgs] : []),
 	]);
 }

@@ -848,29 +848,8 @@ test("up refuses a directory that is not a repository", async () => {
 	);
 });
 
-test("up mounts the wiki read-only only where the person has one", async () => {
-	const without = fakeIo(base);
-	const withWiki = fakeIo({
-		...base,
-		"stat /home/me/my-knowledge-base": { size: 0, mtime: new Date(0), dir: true },
-	});
-
-	await up({ repo, label: "web-1", root: "/root" }, without);
-	await up({ repo, label: "web-1", root: "/root" }, withWiki);
-
-	const mounts = (io: typeof without) =>
-		io.calls
-			.find((c) => c[0] === "sbx" && c[1] === "run")!
-			.filter((arg) => arg.includes("my-knowledge-base"));
-	assert.deepEqual(mounts(without), []);
-	assert.deepEqual(mounts(withWiki), ["/home/me/my-knowledge-base:ro"]);
-});
-
 test("up mounts an artifacts and a cache directory and names both in the environment", async () => {
-	const io = fakeIo({
-		...base,
-		"stat /home/me/my-knowledge-base": { size: 0, mtime: new Date(0), dir: true },
-	});
+	const io = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 
@@ -879,11 +858,10 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 			run.includes("FLEET_ARTIFACTS=/home/me/.sandboxes/webapp"),
 	);
 	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
-	assert.deepEqual(run.slice(-8), [
+	assert.deepEqual(run.slice(-7), [
 		repo,
 		"/home/me/.sandboxes/webapp",
 		"/home/me/.pi/cache/webapp",
-		"/home/me/my-knowledge-base:ro",
 		"--",
 		"--approve",
 		"--no-autoformat",

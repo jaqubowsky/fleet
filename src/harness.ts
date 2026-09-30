@@ -2,8 +2,6 @@ export type AgentName = "pi" | "claude";
 
 export const CLI = "fleet";
 
-export const WIKI = "my-knowledge-base";
-
 export type Seat = {
 	name: AgentName;
 	owner: "session" | "pane";
