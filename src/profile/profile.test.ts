@@ -122,10 +122,7 @@ test("the harness's profile file holds only *, the profile an unknown repository
 		down: "human",
 		linear: "none",
 	});
-	assert.equal(
-		profiles["*"].container.token,
-		"op://Dev/GitHub PAT SELF/token",
-	);
+	assert.equal(profiles["*"].container.token, "env:GH_TOKEN");
 });
 
 test("an entry in the person's own file wins over the harness's for the same match, and the harness's * answers a repository that file omits", () => {

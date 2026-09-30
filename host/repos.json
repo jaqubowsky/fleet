@@ -12,7 +12,7 @@
       "push": "none",
       "pr": "auto",
       "linear": "none",
-      "token": "op://Dev/GitHub PAT SELF/token"
+      "token": "env:GH_TOKEN"
     },
     "resources": { "memory": "8g", "cpus": "4" }
   }

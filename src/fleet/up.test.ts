@@ -1689,6 +1689,7 @@ test("up attaches no Linear server where the profile gives none, and --memory an
 	const io = fakeIo({
 		...base,
 		"git remote get-url origin": "git@github.com:alice/cv.git",
+		"env GH_TOKEN": "github_pat_session",
 	});
 
 	await up(
@@ -1702,10 +1703,10 @@ test("up attaches no Linear server where the profile gives none, and --memory an
 		[run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]],
 		["16g", "8"],
 	);
-	assert.equal(
-		io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!.at(-1),
-		"op://Dev/GitHub PAT SELF/token",
-	);
+	const secret = io.calls
+		.filter((c) => c[0] === "sbx")
+		.findIndex((c) => c[1] === "secret");
+	assert.equal(io.sbxOpts[secret]?.input, "github_pat_session");
 	assert.match(
 		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"],
 		/^- resources: 16g memory, 8 cpus$/m,
