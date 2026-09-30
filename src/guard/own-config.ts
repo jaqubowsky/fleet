@@ -9,7 +9,7 @@ const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|echo|printf|test|\[|cd|pushd)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 
-export const OWN_CONFIG = "~/.pi and ~/.claude hold the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home.";
+export const OWN_CONFIG = "~/.pi and ~/.claude hold the settings, rules, refs, agents and skills the harness renders, so a session never writes there. Change the source in the harness repo; the person renders it home. To read there, use the Read, Grep and Glob tools, or cat, head, tail, less, wc, jq, grep, rg, diff, ls, stat or file; any other command naming a path there counts as a write.";
 
 function located(word: string, dir: string, home: string): string {
 	return resolve(dir, word.replace(/^(~|\$HOME|\$\{HOME\})(?=\/|$)/, home));

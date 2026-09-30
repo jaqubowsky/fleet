@@ -36,3 +36,8 @@ test("both hooks refuse a write into either harness home and leave reads and run
 test("the claude hook answers deny with the reason when it refuses a home write", () => {
 	assert.match(claude("Edit", "~/.claude/settings.json"), /"permissionDecision":"deny"/);
 });
+
+test("a refusal names the reads that pass", () => {
+	for (const reason of [claude("Bash", "find ~/.claude/skills -name SKILL.md"), pi("Bash", "sed -n 1p ~/.claude/settings.json")])
+		assert.match(reason, /Read, Grep and Glob tools.*cat.*ls/);
+});

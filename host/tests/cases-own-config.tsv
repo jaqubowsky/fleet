@@ -15,3 +15,11 @@ allow	Bash	echo x > ~/.claude/fleet-cache/app/note
 allow	Bash	echo x > ~/.pi/cache/note
 allow	Read	~/.claude/settings.json
 allow	Bash	grep -r model ~/.claude/settings.json
+allow	Bash	cat ~/.claude/settings.json
+allow	Bash	ls ~/.claude/skills
+allow	Bash	head -5 ~/.pi/agent/settings.json
+allow	Grep	~/.claude/rules
+allow	Glob	~/.pi/skills
+deny	Bash	sed -n 1p ~/.claude/settings.json
+deny	Bash	find ~/.claude/skills -name SKILL.md
+deny	Bash	git -C ~/.pi log
