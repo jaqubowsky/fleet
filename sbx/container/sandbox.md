@@ -4,7 +4,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Environment
 
-1. A docker daemon runs here and the proxy reaches the image registry. A test or a screen that refuses a service (`ECONNREFUSED`, a timeout on a port) means the service is yours to start: the start command from `$FLEET_ARTIFACTS/runbook/run.md`, or the repo's own compose file. One that still refuses ends the run `blocked` on its name, with the failed command in `attention:`. What you started stays up for the skills after yours; stop it at `ready-for-host`
+1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Set `status: blocked` and name the failed check and the needed image rebuild and fresh container in `attention:`. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services at `ready-for-host` and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
 2. Node and the package manager follow the repo's declared versions, and the image's own Node when the repo declares none
 3. Deps install in the background from every lockfile into `/tmp/fleet-install.log`. Wait for its last line:
    - `deps: ready`, which names the Node that ran the install: build once so workspace packages resolve, and report a skipped lockfile

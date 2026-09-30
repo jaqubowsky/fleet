@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
-FROM docker/sandbox-templates:claude-code
+FROM docker/sandbox-templates:claude-code-docker
+
+LABEL com.docker.sandboxes.start-docker="true"
 
 ENV GIT_TERMINAL_PROMPT=0
 
