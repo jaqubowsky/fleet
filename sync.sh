@@ -12,7 +12,7 @@ from here disappears there), prints where the two renders differ and
 whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
 config, rebuilds a container image whose rendered seat changed, and removes
 what nothing uses: npm packages pi no longer lists, task directories of
-removed containers that never started, settings backups and dangling links.
+removed containers that never started and dangling links.
 It ends by naming what a new Mac lacks that it cannot set up itself, with the
 step that does. Without --apply it prints what it would change and changes
 nothing.
@@ -166,7 +166,6 @@ done 3<<<"$HARNESS_ROWS"
 echo "== unused"
 extensions="$HOME/.pi/agent/extensions"
 if [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
-for backup in "$ROOT"/claude/sbx/*.bak; do act rm -f "$backup"; done
 if [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 	unused="$(node --input-type=module -e '
 		const { readFileSync } = await import("node:fs");
