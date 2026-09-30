@@ -80,6 +80,25 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 		level: "none",
 	});
 	assert.equal(sandboxDownTarget("pi-missing", root, root, list), undefined);
+	mkdirSync(join(root, ".config/harness/fleet"), { recursive: true });
+	writeFileSync(
+		join(root, ".config/harness/fleet/pi-auto.json"),
+		JSON.stringify({
+			version: 1,
+			repositories: [sandboxes[1], sandboxes[0], sandboxes[2]].map((entry) => ({
+				repo: entry.workspaces[0],
+				name: `alice/${entry.name.slice(3)}`,
+				base: "main",
+				baseSha: "1".repeat(40),
+				branch: "task",
+				workspace: entry.workspaces[0],
+			})),
+		}),
+	);
+	assert.deepEqual(sandboxDownTarget("pi-auto", root, root, list), {
+		sandbox: "pi-auto",
+		level: "none",
+	});
 	const longName = "pi-harness-a-long-container-name-that-herdr-shortens";
 	const shortened = agentName(longName);
 	assert.notEqual(shortened, longName);

@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../src/guard/down.ts";
+import { landPermission } from "../src/guard/land.ts";
 import type { Kind } from "../src/harness.ts";
 import { hostAt } from "../src/guard/host.ts";
 import { OWN_CONFIG, writesOwnConfig } from "../src/guard/own-config.ts";
@@ -31,7 +32,19 @@ export default function guard(
 			if (trusted.has(event.toolName)) return;
 
 			if (event.toolName === "bash") {
-				const down = downPermission(String(event.input?.command ?? ""), level);
+				const command = String(event.input?.command ?? "");
+				const landing = landPermission(command);
+				if (landing?.decision === "deny")
+					return { block: true, reason: landing.reason };
+				if (landing?.decision === "ask") {
+					if (!ctx.hasUI || !ctx.ui) return { block: true, reason: landing.reason };
+					return ctx.ui
+						.confirm("Land container?", `${landing.action} ${landing.sandbox}?`)
+						.then((approved) =>
+							approved ? undefined : { block: true, reason: landing.reason },
+						);
+				}
+				const down = downPermission(command, level);
 				if (down?.decision === "deny") return { block: true, reason: down.reason };
 				if (down?.decision === "ask") {
 					if (!ctx.hasUI || !ctx.ui) return { block: true, reason: down.reason };

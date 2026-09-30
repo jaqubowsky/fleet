@@ -149,6 +149,80 @@ test("pi asks the person before a human down, but lets auto choose and refuses n
 	);
 });
 
+test("pi asks separately for landing, signing and pushing a sandbox", async () => {
+	const root = privateRoot();
+	let captured:
+		| ((
+				event: { toolName: string; input: { command: string } },
+				ctx: {
+					cwd: string;
+					hasUI?: boolean;
+					ui?: { confirm(title: string, message: string): Promise<boolean> };
+				},
+		  ) => unknown)
+		| undefined;
+	guard(
+		KINDS.pi,
+		root,
+		EMPTY_HOME,
+	)({
+		on: (_event, fn) => {
+			captured = fn as typeof captured;
+		},
+	});
+	assert.ok(captured);
+	for (const [command, action] of [
+		["fleet land pi-harness-demo", "import"],
+		["fleet land pi-harness-demo --sign", "sign"],
+		["fleet land pi-harness-demo --push", "push"],
+		["fleet land --sign --push pi-harness-demo", "import, sign and push"],
+	]) {
+		let prompted = false;
+		assert.equal(
+			await captured(
+				{ toolName: "bash", input: { command } },
+				{
+					cwd: root,
+					hasUI: true,
+					ui: {
+						confirm: async (_title, message) => {
+							assert.match(message, new RegExp(action));
+							prompted = true;
+							return true;
+						},
+					},
+				},
+			),
+			undefined,
+		);
+		assert.ok(prompted, command);
+	}
+	assert.equal(
+		(
+			(await captured(
+				{
+					toolName: "bash",
+					input: { command: "fleet land pi-harness-demo --push" },
+				},
+				{ cwd: root },
+			)) as { block?: boolean } | undefined
+		)?.block,
+		true,
+	);
+	assert.equal(
+		(
+			(await captured(
+				{
+					toolName: "bash",
+					input: { command: "bash -c 'fleet land pi-harness-demo'" },
+				},
+				{ cwd: root },
+			)) as { block?: boolean } | undefined
+		)?.block,
+		true,
+	);
+});
+
 test("pi checks the raw down command before bash prepends input.cwd", () => {
 	const root = privateRoot();
 	let captured:

@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { Host as ProfileHost } from "../profile/profile.ts";
 import { agentName } from "../fleet/name.ts";
+import { repositoryManifest } from "../fleet/repositories.ts";
+import { realIo } from "../fleet/io.ts";
 import { argvsOf } from "./argv.ts";
 import { hostAt } from "./host.ts";
 
@@ -81,7 +83,16 @@ export function sandboxDownTarget(
 			item.name === sandbox || (item.name && agentName(item.name) === sandbox),
 	);
 	const workspace = entry?.workspaces?.[0];
-	return entry?.name && workspace
-		? { sandbox: entry.name, level: hostAt(workspace, root, home).levels().down }
-		: undefined;
+	if (!entry?.name || !workspace) return undefined;
+	const manifest = repositoryManifest(entry.name, realIo(home));
+	const repos = manifest?.repositories.map((repo) => repo.repo) ?? [workspace];
+	const levels = repos.map((repo) => hostAt(repo, root, home).levels().down);
+	return {
+		sandbox: entry.name,
+		level: levels.includes("none")
+			? "none"
+			: levels.includes("human")
+				? "human"
+				: "auto",
+	};
 }

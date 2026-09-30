@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { downPermission, sandboxDownTarget } from "../../src/guard/down.ts";
+import { landPermission } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
 import { commandsOf } from "../../src/guard/argv.ts";
 import { type Decision, decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
@@ -52,7 +53,17 @@ export function answer(
 	const tool = input.tool_name ?? "";
 	if (!POLICY.test(tool)) return "";
 	if (tool === "Bash") {
-		const down = downPermission(String(input.tool_input?.command ?? ""), level);
+		const command = String(input.tool_input?.command ?? "");
+		const landing = landPermission(command);
+		if (landing)
+			return JSON.stringify({
+				hookSpecificOutput: {
+					hookEventName: "PreToolUse",
+					permissionDecision: landing.decision,
+					permissionDecisionReason: landing.reason,
+				},
+			});
+		const down = downPermission(command, level);
 		if (down)
 			return JSON.stringify({
 				hookSpecificOutput: {

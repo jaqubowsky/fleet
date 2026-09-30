@@ -1,7 +1,8 @@
 # Browser check
 
 Status: passed | failed | blocked
-Commit: <sha7> on <branch>, base <base-branch>@<sha7>, working tree <clean | status and diff hash>
+Commit: <single repo only: sha7 on branch, base branch@sha7, working tree clean | status and diff hash>
+Repository set: <multiple repos only: every name from repositories.json@full SHA; branch, base SHA, dirty state and diff hash for each>
 Launch: `<command>` from `<working directory>`, answered at <URL>
 Source: <analysis, spec, tickets or diff the criteria came from>
 Runbook: <files edited and why, or none>

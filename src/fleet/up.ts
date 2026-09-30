@@ -1,4 +1,4 @@
-import { basename } from "node:path";
+import { basename, dirname } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
@@ -8,16 +8,14 @@ import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
 import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
+import {
+	taskDir,
+	repositoryCheckout,
+	repositoryManifest,
+	saveRepositories,
+} from "./repositories.ts";
 import { agentFor, sandboxes, type Agent } from "./status.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
-
-export function artifactsDir(repo: string, io: Io): string {
-	return `${io.home}/.sandboxes/${basename(repo)}`;
-}
-
-export function taskDir(repo: string, sandbox: string, io: Io): string {
-	return `${artifactsDir(repo, io)}/${sandbox}`;
-}
 
 const IMAGE_SOURCES = [
 	"rules",
@@ -41,7 +39,11 @@ export function harnessStamp(root: string, kind: Kind, io: Io): string {
 		: commit;
 }
 
-export function staleImage(root: string, kind: Kind, io: Io): string | undefined {
+export function staleImage(
+	root: string,
+	kind: Kind,
+	io: Io,
+): string | undefined {
 	const built = io.read(imageStampPath(kind, io))?.trim();
 	const current = harnessStamp(root, kind, io);
 	if (built === current) return undefined;
@@ -65,23 +67,147 @@ export function agentArgs(
 }
 
 export const SWITCH_TO_BRANCH = `cd "$WORKSPACE_DIR" || exit 1
-git fetch --quiet origin "$2" || echo "fetch of $2 failed, branching from the local base"
-git fetch --quiet origin "$1" 2>/dev/null || { git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; [ $? -eq 2 ] || echo "fetch of $1 failed, so a branch origin holds starts from the base"; }
-if git rev-parse --verify --quiet "origin/$1" >/dev/null; then git switch --quiet -C "$1" "origin/$1" && echo "$1 continues the existing branch origin/$1"
+git fetch --quiet origin "$2" || { echo "cannot refresh origin/$2; refusing stale base" >&2; exit 1; }
+base_sha="$(git rev-parse 'FETCH_HEAD^{commit}')" || exit 1
+git update-ref refs/fleet/base "$base_sha" || exit 1
+if git fetch --quiet origin "$1" 2>/dev/null; then remote_branch="$(git rev-parse 'FETCH_HEAD^{commit}')" || exit 1
+else git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; status=$?; [ "$status" -eq 2 ] || { echo "cannot check origin/$1; refusing stale branch" >&2; exit 1; }; remote_branch=""; fi
+if [ -n "$remote_branch" ]; then git switch --quiet -C "$1" "$remote_branch" && echo "$1 continues the existing branch origin/$1"
 elif git switch --quiet "$1" 2>/dev/null; then echo "$1 continues the local branch $1"
-else start="origin/$2"; git rev-parse --verify --quiet "$start" >/dev/null || start="$2"; git switch --quiet --no-track -c "$1" "$start" && echo "$1 is new from $start"; fi`;
+else git switch --quiet --no-track -c "$1" "$base_sha" && echo "$1 is new from origin/$2"; fi`;
 
 export type UpInput = {
 	repo: string;
+	repos?: string[];
 	label: string;
 	branch?: string;
 	base?: string;
+	bases?: string[];
 	memory?: string;
 	cpus?: string;
 	model?: string;
 	kind?: AgentName;
 	root: string;
 };
+type RepoPlan = {
+	repo: string;
+	name: string;
+	base: string;
+	baseSha: string;
+	branch: string;
+	workspace: string;
+	profile: Profile;
+};
+
+function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
+	const repos = [input.repo, ...(input.repos ?? [])];
+	if (new Set(repos).size !== repos.length)
+		throw new Error("fleet up needs distinct repository paths");
+	const workspaceNames = repos.map((repo) => slug(basename(repo)).slice(0, 100));
+	const allocated = new Set([workspaceNames[0]]);
+	return repos.map((repo, index) => {
+		const name = repoName(io.git(["remote", "get-url", "origin"], repo));
+		const base =
+			input.bases?.[index] ??
+			input.base ??
+			baseBranch(repo, io).replace(/^origin\//, "");
+		if (isBase(base, branch))
+			throw new Error(`${branch} is the base branch of ${repo}`);
+		let workspace = repo;
+		if (index > 0) {
+			const name = workspaceNames[index];
+			let checkout =
+				workspaceNames.filter((entry) => entry === name).length > 1
+					? `${index + 1}-${name}`
+					: name;
+			while (
+				allocated.has(checkout) ||
+				(checkout !== name && workspaceNames.includes(checkout))
+			)
+				checkout = `${index + 1}-${checkout}`;
+			allocated.add(checkout);
+			workspace = `/tmp/fleet-repos/${checkout}`;
+		}
+		return {
+			repo,
+			name,
+			base,
+			branch,
+			baseSha: io.git(["rev-parse", `origin/${base}`], repo),
+			workspace,
+			profile: repoProfile(input.root, name, io),
+		};
+	});
+}
+
+function cloneSecondary(
+	plan: RepoPlan,
+	sandbox: string,
+	task: string,
+	io: Io,
+): void {
+	const bundle = `${task}/${basename(plan.workspace)}.bundle`;
+	const guestBundle = `/tmp/${basename(plan.workspace)}.bundle`;
+	const refs = [`origin/${plan.base}`];
+	for (const ref of [
+		`refs/remotes/origin/${plan.branch}`,
+		`refs/heads/${plan.branch}`,
+	]) {
+		if (io.git(["for-each-ref", "--format=%(refname)", ref], plan.repo))
+			refs.push(ref);
+	}
+	io.git(["bundle", "create", bundle, ...refs], plan.repo);
+	io.sbx(["cp", bundle, `${sandbox}:${guestBundle}`], { quiet: true });
+	io.sbx(
+		[
+			"exec",
+			sandbox,
+			"sh",
+			"-c",
+			'mkdir -p "$(dirname "$2")" && git init --quiet "$2" && git -C "$2" fetch --quiet "$1" "refs/remotes/origin/*:refs/remotes/origin/*" "refs/heads/*:refs/heads/*" && git -C "$2" remote add origin "$3"',
+			"--",
+			guestBundle,
+			plan.workspace,
+			`https://github.com/${plan.name}.git`,
+		],
+		{ quiet: true },
+	);
+	io.sbx(
+		[
+			"exec",
+			sandbox,
+			"sh",
+			"-c",
+			`export WORKSPACE_DIR="$1"; shift\n${SWITCH_TO_BRANCH}`,
+			"--",
+			plan.workspace,
+			plan.branch,
+			plan.base,
+		],
+		{ quiet: true },
+	);
+}
+
+function fetchedBase(plan: RepoPlan, sandbox: string, io: Io): string {
+	const sha = io.sbx(
+		[
+			"exec",
+			sandbox,
+			"git",
+			"-C",
+			plan.workspace,
+			"rev-parse",
+			"refs/fleet/base",
+		],
+		{ quiet: true },
+	);
+	if (!/^[0-9a-f]{40,64}$/.test(sha))
+		throw new Error(
+			`${plan.name}: no verified origin/${plan.base} SHA from the sandbox`,
+		);
+	return sha;
+}
+
 type Workspace = { workspace_id: string; label: string };
 type Tab = { tab_id: string; label: string };
 type Pane = { pane_id: string; tab_id: string; agent?: string | null };
@@ -106,6 +232,9 @@ export async function up(
 	input = {
 		...input,
 		repo: io.git(["rev-parse", "--show-toplevel"], input.repo) || input.repo,
+		repos: input.repos?.map(
+			(repo) => io.git(["rev-parse", "--show-toplevel"], repo) || repo,
+		),
 	};
 	const sandbox = sandboxName(input.repo, input.label, kind.prefix);
 	const agent = agentName(sandbox);
@@ -113,8 +242,10 @@ export async function up(
 	const profile = repoProfile(input.root, name, io);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const found = findPane(io, basename(input.repo), agent, kind);
-	const task = taskDir(input.repo, sandbox, io);
+	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
 	layoutTask(task, io);
+	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
+		throw new Error(`${sandbox} already exists with different repositories`);
 	if (!existing) {
 		const variable = sessionToken(profile);
 		if (variable && !io.env(variable))
@@ -122,26 +253,58 @@ export async function up(
 				`${name} takes its container token from ${variable}, and this session has none: start ${seat.name} with ${variable} set, as inventory.md (GitHub tokens) shows`,
 			);
 		const openai = !input.model || input.model.startsWith("openai-codex/");
-		if (kind.codex && openai && !/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? ""))
+		if (
+			kind.codex &&
+			openai &&
+			!/\bopenai:/.test(io.read(`${io.home}/.config/sbx/credentials.yaml`) ?? "")
+		)
 			throw new Error(
 				`no sbx binding lets openai in, so every model call in ${sandbox} would be a 401: write ~/.config/sbx/credentials.yaml as inventory.md (Model credentials) shows, then run up again`,
 			);
 		const branch = input.branch ?? slug(input.label);
-		const base = input.base ?? baseBranch(input.repo, io).replace(/^origin\//, "");
+		const base =
+			input.bases?.[0] ??
+			input.base ??
+			baseBranch(input.repo, io).replace(/^origin\//, "");
 		if (isBase(base, branch))
-			throw new Error(`${branch} is the default branch, and a container never works on it: give the task its own label, or --branch <name>`);
-		create(input, sandbox, profile, kind, io);
+			throw new Error(
+				`${branch} is the default branch, and a container never works on it: give the task its own label, or --branch <name>`,
+			);
+		const plans = input.repos?.length ? planRepositories(input, branch, io) : [];
+		for (const plan of plans) {
+			if (plan.profile.container.token !== profile.container.token)
+				throw new Error(
+					`${plan.name}: a shared sandbox needs the same GitHub credential binding for every repository`,
+				);
+			if (
+				plan.profile.container.linear !== profile.container.linear ||
+				plan.profile.container.linearServer !== profile.container.linearServer
+			)
+				throw new Error(
+					`${plan.name}: a shared sandbox needs the same Linear binding for every repository`,
+				);
+		}
+		create(input, sandbox, profile, kind, io, task);
 		let locks: number;
 		try {
-			if (profile.container.push === "auto") refuseOtherPrivate(io, sandbox, name);
+			if (!plans.length && profile.container.push === "auto")
+				refuseOtherPrivate(io, sandbox, name);
 			seedSubmodules(io, input.repo, sandbox);
-			seedEnv(io, input.repo, sandbox);
+			seedEnv(io, input.repo, sandbox, plans.length > 0);
 			seedCache(io, input.repo, sandbox, kind);
 			if (kind.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
 			if (kind.sbxGuidance)
 				io.sbx(
-					["exec", sandbox, "sh", "-c", 'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"', "--", kind.sbxGuidance],
+					[
+						"exec",
+						sandbox,
+						"sh",
+						"-c",
+						'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"',
+						"--",
+						kind.sbxGuidance,
+					],
 					{ quiet: true },
 				);
 			const integration = kind.herdrIntegration;
@@ -154,20 +317,28 @@ export async function up(
 					],
 					{ quiet: true },
 				);
-			for (const line of io.sbx(
-				[
-					"exec",
-					sandbox,
-					"sh",
-					"-c",
-					SWITCH_TO_BRANCH,
-					"--",
-					branch,
-					base,
-				],
-				{ quiet: true },
-			).split("\n").filter(Boolean))
+			for (const line of io
+				.sbx(["exec", sandbox, "sh", "-c", SWITCH_TO_BRANCH, "--", branch, base], {
+					quiet: true,
+				})
+				.split("\n")
+				.filter(Boolean))
 				io.log(`${sandbox}: ${line}`);
+			if (plans.length) plans[0].baseSha = fetchedBase(plans[0], sandbox, io);
+			for (const plan of plans.slice(1)) {
+				cloneSecondary(plan, sandbox, task, io);
+				plan.baseSha = fetchedBase(plan, sandbox, io);
+				seedSubmodules(io, plan.repo, sandbox, plan.workspace);
+				seedEnv(io, plan.repo, sandbox, true, plan.workspace);
+				if (kind.projectConfig)
+					seedProjectConfig(
+						io,
+						plan.repo,
+						sandbox,
+						kind.projectConfig,
+						plan.workspace,
+					);
+			}
 			locks = lockfiles(
 				io.sbx(
 					[
@@ -190,8 +361,35 @@ export async function up(
 				`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`,
 			);
 		}
-		const resources = { memory: input.memory ?? profile.resources.memory, cpus: input.cpus ?? profile.resources.cpus };
-		const allowed = describe(name, { ...profile, resources });
+		if (plans.length) {
+			const runbook = `${dirname(task)}/runbook`;
+			io.mkdir(runbook);
+			if (io.read(`${runbook}/README.md`) === undefined)
+				io.write(
+					`${runbook}/README.md`,
+					`# Repository group\n\n${plans
+						.map((plan) => `- ${plan.name}`)
+						.sort()
+						.join(
+							"\n",
+						)}\n\nRecord verified test startup commands in run.md and run.sh here. Each task's repositories.json supplies its checkout paths and commit receipts.\n`,
+				);
+		}
+		const resources = {
+			memory: input.memory ?? profile.resources.memory,
+			cpus: input.cpus ?? profile.resources.cpus,
+		};
+		const allowed = plans.length
+			? plans
+					.map((plan) =>
+						describe(plan.name, {
+							...plan.profile,
+							container: { ...plan.profile.container, push: "none" },
+							resources,
+						}),
+					)
+					.join("\n\n")
+			: describe(name, { ...profile, resources });
 		io.write(`${task}/permissions.md`, allowed);
 		io.log(allowed);
 		const overlay = projectOverlay(name, io);
@@ -218,6 +416,76 @@ export async function up(
 			io.log(
 				`${sandbox}: created; no lockfile in the repository, so nothing installs`,
 			);
+		}
+		if (plans.length) {
+			const repositories = plans.map(
+				({ repo, name, base, baseSha, branch, workspace }) => ({
+					repo,
+					name,
+					base,
+					baseSha,
+					branch,
+					workspace,
+				}),
+			);
+			saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
+			const status = io.read(`${task}/status.md`) ?? TASK_STATUS;
+			if (!status.includes("## Repositories")) {
+				const snapshots = plans
+					.map((plan) => {
+						const current = repositoryCheckout(io, sandbox, plan.workspace);
+						return `- ${plan.name}: ${current.branch} dirty ${current.dirty} ${current.head} (base origin/${plan.base} ${plan.baseSha})`;
+					})
+					.join("\n");
+				io.write(
+					`${task}/status.md`,
+					status.replace("## Log", `## Repositories\n${snapshots}\n\n## Log`),
+				);
+			}
+			for (const plan of plans.slice(1)) {
+				const otherOverlay = projectOverlay(plan.name, io);
+				if (otherOverlay !== undefined) {
+					io.mkdir(`${task}/projects`);
+					io.write(`${task}/projects/${basename(plan.workspace)}.md`, otherOverlay);
+				}
+				const otherSetup = setupCommand(otherOverlay);
+				const otherLocks = lockfiles(
+					io.sbx(
+						[
+							"exec",
+							sandbox,
+							"sh",
+							"-c",
+							'cd "$1" && shift && git ls-files -- "$@"',
+							"--",
+							plan.workspace,
+							":(glob)**/yarn.lock",
+							":(glob)**/pnpm-lock.yaml",
+							":(glob)**/package-lock.json",
+						],
+						{ quiet: true },
+					),
+				);
+				if (otherLocks || otherSetup) {
+					const log = `${INSTALL_LOG.slice(0, -4)}-${basename(plan.workspace)}.log`;
+					io.sbx(
+						[
+							"exec",
+							sandbox,
+							"sh",
+							"-c",
+							`export WORKSPACE_DIR="$1"; shift; setsid nohup bash -c "$1" >${log} 2>&1 </dev/null &`,
+							"--",
+							plan.workspace,
+							installScript(otherSetup),
+						],
+						{ quiet: true },
+					);
+					io.log(
+						`${sandbox}: ${plan.name} installs ${otherLocks} lockfile(s) in the background, log ${log}`,
+					);
+				}
+			}
 		}
 	}
 
@@ -249,12 +517,26 @@ export async function up(
 }
 
 function sessionToken(profile: Profile): string | undefined {
-	return profile.container.token.startsWith("env:") ? profile.container.token.slice("env:".length) : undefined;
+	return profile.container.token.startsWith("env:")
+		? profile.container.token.slice("env:".length)
+		: undefined;
 }
 
 function refuseOtherPrivate(io: Io, sandbox: string, name: string): void {
 	const seen = io
-		.sbx(["exec", sandbox, "gh", "api", "/user/repos", "--paginate", "--jq", ".[] | select(.private) | .full_name"], { quiet: true })
+		.sbx(
+			[
+				"exec",
+				sandbox,
+				"gh",
+				"api",
+				"/user/repos",
+				"--paginate",
+				"--jq",
+				".[] | select(.private) | .full_name",
+			],
+			{ quiet: true },
+		)
 		.split("\n")
 		.map((line) => line.trim())
 		.filter(Boolean);
@@ -264,22 +546,48 @@ function refuseOtherPrivate(io: Io, sandbox: string, name: string): void {
 	);
 }
 
-function create(input: UpInput, sandbox: string, profile: Profile, h: Kind, io: Io): void {
-	const artifacts = artifactsDir(input.repo, io);
+function create(
+	input: UpInput,
+	sandbox: string,
+	profile: Profile,
+	h: Kind,
+	io: Io,
+	task: string,
+): void {
+	const artifacts = dirname(task);
 	const cache = cacheDir(input.repo, h, io);
 	const knowledgeBase = `${io.home}/my-knowledge-base`;
 	io.mkdir(artifacts);
 	io.mkdir(cache);
 	const variable = sessionToken(profile);
 	try {
-		if (variable) io.sbx(["secret", "set", "github", "--sandbox", sandbox], { quiet: true, input: io.env(variable) });
-		else io.sbx(["secret", "set", "github", "--sandbox", sandbox, "--ref", profile.container.token], { quiet: true });
+		if (variable)
+			io.sbx(["secret", "set", "github", "--sandbox", sandbox], {
+				quiet: true,
+				input: io.env(variable),
+			});
+		else
+			io.sbx(
+				[
+					"secret",
+					"set",
+					"github",
+					"--sandbox",
+					sandbox,
+					"--ref",
+					profile.container.token,
+				],
+				{ quiet: true },
+			);
 	} catch (error) {
 		io.log(
 			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${variable ? `printenv ${variable} | sbx secret set github --sandbox ${sandbox}` : `sbx secret set github --sandbox ${sandbox} --ref '${profile.container.token}'`}\``,
 		);
 	}
-	const linear = profile.container.linear === "none" ? undefined : profile.container.linearServer;
+	const linear =
+		profile.container.linear === "none"
+			? undefined
+			: profile.container.linearServer;
 	const codex = h.codex
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
@@ -298,6 +606,9 @@ function create(input: UpInput, sandbox: string, profile: Profile, h: Kind, io: 
 		"SSH_AUTH_SOCK_GATEWAY=",
 		"-e",
 		"CI=true",
+		...(input.repos?.length
+			? ["-e", `FLEET_REPOSITORIES=${input.repos.length + 1}`]
+			: []),
 		"-e",
 		`FLEET_ARTIFACTS=${artifacts}`,
 		"-e",
@@ -306,9 +617,7 @@ function create(input: UpInput, sandbox: string, profile: Profile, h: Kind, io: 
 		`npm_config_cache=${cache}/npm`,
 		...h.env.flatMap((entry) => ["-e", entry]),
 
-		...(h.sessionEnv
-			? ["-e", `${h.sessionEnv}=${taskDir(input.repo, sandbox, io)}/logs/sessions`]
-			: []),
+		...(h.sessionEnv ? ["-e", `${h.sessionEnv}=${task}/logs/sessions`] : []),
 		"--kit",
 		`${input.root}/host/kits/no-ssh-agent`,
 		...(codex && h.codex
@@ -346,7 +655,13 @@ export function envFiles(listing: string): string[] {
 		);
 }
 
-function seedEnv(io: Io, repo: string, sandbox: string): void {
+function seedEnv(
+	io: Io,
+	repo: string,
+	sandbox: string,
+	onlyTest = false,
+	guestWorkspace?: string,
+): void {
 	const files = envFiles(
 		io.git(
 			[
@@ -360,13 +675,16 @@ function seedEnv(io: Io, repo: string, sandbox: string): void {
 			],
 			repo,
 		),
+	).filter(
+		(file) => !onlyTest || /^\.env\.(test|e2e)(\.|$)/.test(basename(file)),
 	);
 	if (!files.length) return;
 
-	const workspace = io.sbx(
-		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
-		{ quiet: true },
-	);
+	const workspace =
+		guestWorkspace ??
+		io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], {
+			quiet: true,
+		});
 	for (const file of files) {
 		io.sbx(
 			[
@@ -385,7 +703,16 @@ function seedEnv(io: Io, repo: string, sandbox: string): void {
 		});
 	}
 	io.sbx(
-		["exec", sandbox, "sh", "-c", 'cd "$1" && shift && sudo chown "$(id -u):$(id -g)" -- "$@"', "--", workspace, ...files],
+		[
+			"exec",
+			sandbox,
+			"sh",
+			"-c",
+			'cd "$1" && shift && sudo chown "$(id -u):$(id -g)" -- "$@"',
+			"--",
+			workspace,
+			...files,
+		],
 		{ quiet: true },
 	);
 
@@ -406,6 +733,7 @@ function seedProjectConfig(
 	repo: string,
 	sandbox: string,
 	dir: string,
+	guestWorkspace?: string,
 ): void {
 	const paths = ignoredPaths(
 		io.git(
@@ -422,10 +750,11 @@ function seedProjectConfig(
 		),
 	);
 	if (!paths.length) return;
-	const workspace = io.sbx(
-		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
-		{ quiet: true },
-	);
+	const workspace =
+		guestWorkspace ??
+		io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], {
+			quiet: true,
+		});
 	for (const path of paths) {
 		io.sbx(
 			[
@@ -501,13 +830,19 @@ function seedCache(io: Io, repo: string, sandbox: string, kind: Kind): void {
 	io.log(`${sandbox}: ${paths.join(", ")} now live in ${cache}`);
 }
 
-function seedSubmodules(io: Io, repo: string, sandbox: string): void {
+function seedSubmodules(
+	io: Io,
+	repo: string,
+	sandbox: string,
+	guestWorkspace?: string,
+): void {
 	const modules = submodulePaths(io.git(["submodule", "status"], repo));
 	if (!modules.length) return;
-	const workspace = io.sbx(
-		["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'],
-		{ quiet: true },
-	);
+	const workspace =
+		guestWorkspace ??
+		io.sbx(["exec", sandbox, "sh", "-c", 'printf %s "$WORKSPACE_DIR"'], {
+			quiet: true,
+		});
 	for (const module of modules) {
 		io.log(`${sandbox}: copying submodule ${module}`);
 		io.sbx(
@@ -685,7 +1020,12 @@ async function waitForAgent(
 					probeError = error;
 				}
 				if (runs) {
-					if (kind.name !== "pi" && io.herdrText(["agent", "read", pane, "--source", "visible"]).includes("Not logged in"))
+					if (
+						kind.name !== "pi" &&
+						io
+							.herdrText(["agent", "read", pane, "--source", "visible"])
+							.includes("Not logged in")
+					)
 						throw new Error(
 							`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
 						);
@@ -708,6 +1048,15 @@ function agentRuns(io: Io, sandbox: string, kind: Kind): boolean {
 		io.sbx(["exec", sandbox, "pgrep", "-x", kind.name], { quiet: true });
 		return true;
 	}
-	const tty = io.sbx(["exec", sandbox, "sh", "-c", 'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a'], { quiet: true });
+	const tty = io.sbx(
+		[
+			"exec",
+			sandbox,
+			"sh",
+			"-c",
+			'stty -F "$(readlink /proc/$(pgrep -xo pi)/fd/0)" -a',
+		],
+		{ quiet: true },
+	);
 	return tty.includes("-icanon") && tty.includes("-icrnl");
 }

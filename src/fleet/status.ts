@@ -1,8 +1,17 @@
-import { addedLines, fieldsOf, logLines } from "../../extensions/status-history.ts";
+import {
+	addedLines,
+	fieldsOf,
+	logLines,
+} from "../../extensions/status-history.ts";
 import { type AgentName, type Kind, KINDS } from "../harness.ts";
 import type { Io } from "./io.ts";
 
-export type Sandbox = { name: string; status: string; workspaces: string[]; kind: Kind };
+export type Sandbox = {
+	name: string;
+	status: string;
+	workspaces: string[];
+	kind: Kind;
+};
 export type Agent = {
 	pane_id: string;
 	tab_id?: string;
@@ -32,7 +41,11 @@ export function sandboxes(io: Io): Sandbox[] {
 	} catch (cause) {
 		throw new Error("sbx ls returned invalid JSON", { cause });
 	}
-	return (listed.sandboxes ?? []).flatMap(({ agent, ...s }) => (agent && Object.hasOwn(KINDS, agent) ? [{ ...s, kind: KINDS[agent as AgentName] }] : []));
+	return (listed.sandboxes ?? []).flatMap(({ agent, ...s }) =>
+		agent && Object.hasOwn(KINDS, agent)
+			? [{ ...s, kind: KINDS[agent as AgentName] }]
+			: [],
+	);
 }
 
 export function agentFor(agents: Agent[], name: string): Agent | undefined {
@@ -74,7 +87,7 @@ export function formatRows(rows: Row[]): string {
 export const commitsProbe = [
 	'cd "$WORKSPACE_DIR" || exit 0',
 	'branch="$(git branch --show-current)"',
-	'base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null)" || { printf "%s" "$branch"; exit 0; }',
+	'base="${FLEET_BASE:-}"; if [ -z "$base" ]; then base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null)" || { printf "%s" "$branch"; exit 0; }; fi',
 	'from="$(git merge-base "$base" HEAD)" || { printf "%s\\t%s" "$branch" "$base"; exit 0; }',
 	'pushed="refs/remotes/origin/$branch"',
 	'git rev-parse -q --verify "$pushed" >/dev/null || pushed="$from"',
@@ -82,11 +95,19 @@ export const commitsProbe = [
 ].join("\n");
 
 export function commitFacts(probed: string): { branch?: string; line: string } {
-	const [branch, base, total, unpushed, shortstat = "", latest = ""] = probed.trim().split("\t");
-	if (!base) return { branch: branch || undefined, line: "not counted: this clone has no origin/HEAD" };
-	if (total === undefined) return { branch, line: `not counted: no merge base with ${base}` };
+	const [branch, base, total, unpushed, shortstat = "", latest = ""] = probed
+		.trim()
+		.split("\t");
+	if (!base)
+		return {
+			branch: branch || undefined,
+			line: "not counted: this clone has no origin/HEAD",
+		};
+	if (total === undefined)
+		return { branch, line: `not counted: no merge base with ${base}` };
 	if (total === "0") return { branch, line: `none since ${base}` };
-	const count = (word: string) => shortstat.match(new RegExp(`(\\d+) ${word}`))?.[1] ?? "0";
+	const count = (word: string) =>
+		shortstat.match(new RegExp(`(\\d+) ${word}`))?.[1] ?? "0";
 	const files = count("files? changed");
 	return {
 		branch,
@@ -94,16 +115,38 @@ export function commitFacts(probed: string): { branch?: string; line: string } {
 	};
 }
 
-type Check = { name?: string; context?: string; status?: string; conclusion?: string; state?: string };
+type Check = {
+	name?: string;
+	context?: string;
+	status?: string;
+	conclusion?: string;
+	state?: string;
+};
 
-const FAILED = new Set(["FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"]);
+const FAILED = new Set([
+	"FAILURE",
+	"ERROR",
+	"TIMED_OUT",
+	"CANCELLED",
+	"ACTION_REQUIRED",
+	"STARTUP_FAILURE",
+]);
 
-export function prFacts(json: string): { line: string; running: boolean } {
-	const pr: { number: number; state: string; statusCheckRollup?: Check[] } = JSON.parse(json);
+function prFacts(pr: {
+	number: number;
+	state: string;
+	statusCheckRollup?: Check[];
+}): { line: string; running: boolean } {
 	const state = pr.state.toLowerCase();
 	const checks = pr.statusCheckRollup ?? [];
-	const pending = checks.filter((c) => (c.status ? c.status !== "COMPLETED" : c.state === "PENDING" || c.state === "EXPECTED"));
-	const failed = checks.filter((c) => FAILED.has(c.conclusion || c.state || "")).map((c) => c.name ?? c.context);
+	const pending = checks.filter((c) =>
+		c.status
+			? c.status !== "COMPLETED"
+			: c.state === "PENDING" || c.state === "EXPECTED",
+	);
+	const failed = checks
+		.filter((c) => FAILED.has(c.conclusion || c.state || ""))
+		.map((c) => c.name ?? c.context);
 	const ci = !checks.length
 		? "no CI checks"
 		: pending.length
@@ -111,24 +154,64 @@ export function prFacts(json: string): { line: string; running: boolean } {
 			: failed.length
 				? `CI failed: ${bounded(failed.join(", "), 120)}`
 				: "CI passed";
-	return { line: `#${pr.number} ${state}, ${ci}`, running: state === "open" && pending.length > 0 };
+	return {
+		line: `#${pr.number} ${state}, ${ci}`,
+		running: state === "open" && pending.length > 0,
+	};
 }
 
-export function branchFacts(io: Io, sandbox: string, repo: string): { commits: string; pr: string; running: boolean } {
+export function branchFacts(
+	io: Io,
+	sandbox: string,
+	repo: string,
+	checkout?: { workspace: string; base: string },
+): { commits: string; pr: string; running: boolean } {
 	let commits: ReturnType<typeof commitFacts> = { line: "not counted" };
 	try {
-		commits = commitFacts(io.sbx(["exec", sandbox, "sh", "-c", commitsProbe], { quiet: true }));
+		commits = commitFacts(
+			io.sbx(
+				checkout
+					? [
+							"exec",
+							sandbox,
+							"sh",
+							"-c",
+							`export WORKSPACE_DIR="$1" FLEET_BASE="$2"\n${commitsProbe}`,
+							"--",
+							checkout.workspace,
+							`origin/${checkout.base}`,
+						]
+					: ["exec", sandbox, "sh", "-c", commitsProbe],
+				{ quiet: true },
+			),
+		);
 	} catch (error) {
 		commits.line = `not counted: ${bounded(String(error), 120)}`;
 	}
 	let pr = { line: "not read: no branch", running: false };
-	if (commits.branch && !/^\w[\w./-]*$/.test(commits.branch)) pr.line = `not read: branch ${bounded(commits.branch, 80)} is not a plain branch name`;
+	if (commits.branch && !/^\w[\w./-]*$/.test(commits.branch))
+		pr.line = `not read: branch ${bounded(commits.branch, 80)} is not a plain branch name`;
 	else if (commits.branch) {
 		try {
-			pr = prFacts(io.gh(["pr", "view", commits.branch, "--json", "number,state,statusCheckRollup"], repo));
+			pr = prFacts(
+				JSON.parse(
+					io.gh(
+						[
+							"pr",
+							"view",
+							commits.branch,
+							"--json",
+							"number,state,statusCheckRollup",
+						],
+						repo,
+					),
+				),
+			);
 		} catch (error) {
 			const message = String(error);
-			pr.line = /no pull requests found/.test(message) ? "none" : `not read: ${bounded(message.split("\n").at(-1) ?? message, 120)}`;
+			pr.line = /no pull requests found/.test(message)
+				? "none"
+				: `not read: ${bounded(message.split("\n").at(-1) ?? message, 120)}`;
 		}
 	}
 	return { commits: commits.line, pr: pr.line, running: pr.running };

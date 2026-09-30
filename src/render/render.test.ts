@@ -316,6 +316,34 @@ function renderSeats(
 	}
 }
 
+test("pi host, sandbox and reviewer select Sol 6.1 with a 1.05M catalog override", () => {
+	renderSeats("pi", (out) => {
+		const host = JSON.parse(
+			readFileSync(`${out}/host/agent/settings.json`, "utf8"),
+		);
+		const sbx = JSON.parse(
+			readFileSync(`${out}/container/context/agent-settings.json`, "utf8"),
+		);
+		const models = JSON.parse(
+			readFileSync(`${out}/host/agent/models.json`, "utf8"),
+		);
+
+		assert.equal(host.defaultProvider, "openai-codex");
+		assert.equal(host.defaultModel, "gpt-6.1-sol");
+		assert.equal(host.defaultThinkingLevel, "medium");
+		assert.equal(sbx.defaultModel, "gpt-6.1-sol");
+		assert.equal(sbx.defaultThinkingLevel, "high");
+		assert.deepEqual(host.subagents.agentOverrides.reviewer, {
+			model: "openai-codex/gpt-6.1-sol",
+			thinking: "xhigh",
+		});
+		assert.deepEqual(
+			models.providers["openai-codex"].modelOverrides["gpt-6.1-sol"],
+			{ contextWindow: 1050000, maxTokens: 128000 },
+		);
+	});
+});
+
 function containerRules(out: string): string[] {
 	return (
 		readdirSync(`${out}/container`, { recursive: true }) as string[]

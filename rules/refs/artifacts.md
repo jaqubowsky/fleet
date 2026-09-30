@@ -1,15 +1,17 @@
 # Task directory
 
-One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/` (`~/.sandboxes/<repo>/<sandbox>/` on the host). `{{cli}} up` creates it, `{{cli}} down` keeps it. It is the handoff between skills, between sessions and to the host: what the next reader needs is in a file here or in git.
+One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. A single repo uses `~/.sandboxes/<repo>/<sandbox>/`; a new multi-repository task uses `~/.sandboxes/groups/<repo-names>-<hash>/<sandbox>/`. The group hash comes from the sorted full GitHub repository names, not commits or argument order. Older tasks retain their recorded path or the primary repo's path when their manifest has none. `{{cli}} up` creates it, `{{cli}} down` keeps it. It is the handoff between skills, between sessions and to the host: what the next reader needs is in a file here or in git.
 
 ## Files
 
-Each file has one role. The commit, the branch and the dirty state live in git; the pull request lives on GitHub; neither is copied here.
+Each file has one role. Git is the authority for commits, branches and dirty state; the pull request lives on GitHub. A multi-repository `status.md` and an integration test report record snapshots with every full SHA so a later reader can identify what ran.
 
 ```text
 status.md      current user-facing state: status, attention, log, and the summary at a hand-off
-permissions.md what each seat may do in this repository: one line per action and level; {{cli}} up writes it
-project.md     how this project does what the rules require, when ~/.config/harness/projects/<owner>/<repo>.md exists; {{cli}} up writes it
+permissions.md what each seat may do in each repository: one line per action and level; {{cli}} up writes it
+repositories.json  all clone paths, bases and import/push receipts for a multi-repository task; the host keeps the authoritative copy
+project.md     how the primary project does what the rules require, when ~/.config/harness/projects/<owner>/<repo>.md exists; {{cli}} up writes it
+projects/      additional repos' project overlays, named by their workspace basenames, when present
 ticket.md      the tracker issue this task delivers, copied at start by the host; Status and ticks are the container's
 analysis.md    what was found: verdict, evidence, open questions
 spec.md        what will be built and why
@@ -41,6 +43,9 @@ attention: none | <one sentence of at most 300 characters naming the decision or
 ## Summary
 <2-5 sentences, at most 600 characters, for the host: what was delivered, missing verification or blocker, host actions, links to canonical artifacts>
 
+## Repositories
+<only when repositories.json exists: one line per repo with name, branch, dirty count and full HEAD SHA>
+
 ## Log
 - <turning point>; <file, log or commit that shows it>
 ```
@@ -64,7 +69,7 @@ At `ready-for-host`:
 
 The branch's pull request, its CI and its commit counts are facts `{{cli}}` prints beside this file, never a status the agent writes. The host reads this file and those facts to know where a task stands, and Fleet may show its projection directly to the user. That projection cuts each field at the length the template gives, so text past it never arrives. Write `## Summary` in terms of delivered behavior and current observable state. Keep skill names, tool calls, commands, test phases and other execution mechanics in their canonical artifact or under `logs/`.
 
-Write the file at each event below, before the next tool call: edit the fields the event names in place and append the Log line.
+Write the file at each event below, before the next tool call: edit the fields the event names in place and append the Log line. For a multi-repository task, probe each `repositories.json` workspace with `git -C <workspace> branch --show-current`, `status --porcelain` and `rev-parse HEAD`; replace the `## Repositories` snapshot on every status change. Before an integration test starts, put every full HEAD SHA and any dirty diff hashes in its report. If any repo changes after the run, those results no longer prove the new set.
 
 | Event | Edit |
 | --- | --- |

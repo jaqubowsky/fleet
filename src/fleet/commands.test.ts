@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
 	artifacts,
@@ -20,12 +21,18 @@ import { KINDS, type Kind, SEATS } from "../harness.ts";
 
 const running = {
 	"sbx ls --json": {
-		sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }],
+		sandboxes: [
+			{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+		],
 	},
 	"herdr agent list": { result: { agents: [] } },
 };
 const task = "/home/me/.sandboxes/r/pi-a";
-const row = (name: string, kind: Kind = KINDS.pi, workspaces = ["/r"]): Sandbox => ({ name, status: "running", workspaces, kind });
+const row = (
+	name: string,
+	kind: Kind = KINDS.pi,
+	workspaces = ["/r"],
+): Sandbox => ({ name, status: "running", workspaces, kind });
 const request = (at: string, cacheRead: number) =>
 	JSON.stringify({
 		type: "message",
@@ -96,13 +103,22 @@ test("steer logs the prompt before sending it", () => {
 });
 
 test("steer says when the image predates the harness, and still steers", () => {
-	const stale = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "31e3d51\n" });
-	const fresh = fakeIo({ "git log -1 --format=%h": "f7e7f1a", "read /home/me/.pi/cache/image-stamp": "f7e7f1a\n" });
+	const stale = fakeIo({
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.pi/cache/image-stamp": "31e3d51\n",
+	});
+	const fresh = fakeIo({
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.pi/cache/image-stamp": "f7e7f1a\n",
+	});
 
 	steer(row("pi-webapp-web-1"), "go", stale, "/root");
 	steer(row("pi-webapp-web-1"), "go", fresh, "/root");
 
-	assert.match(stale.lines[0], /built from 31e3d51, and the harness is now f7e7f1a: run fleet build --pi.*pi-webapp-web-1 keeps its image until it goes down and up again/);
+	assert.match(
+		stale.lines[0],
+		/built from 31e3d51, and the harness is now f7e7f1a: run fleet build --pi.*pi-webapp-web-1 keeps its image until it goes down and up again/,
+	);
 	assert.ok(stale.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
 	assert.deepEqual(fresh.lines, ["pi-webapp-web-1: steered"]);
 });
@@ -126,9 +142,17 @@ for (const harness of Object.values(KINDS)) {
 		const suggested = "session handoff suggested";
 		const complete = "session handoff complete; fresh session idle";
 
-		assert.deepEqual(await steerAfter(suggested, complete), [`${agent}: steered`]);
-		await assert.rejects(steerAfter(suggested, suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
-		await assert.rejects(steerAfter(complete, complete), new RegExp(`${command} sent, and status.md shows no context reset`));
+		assert.deepEqual(await steerAfter(suggested, complete), [
+			`${agent}: steered`,
+		]);
+		await assert.rejects(
+			steerAfter(suggested, suggested),
+			new RegExp(`${command} sent, and status.md shows no context reset`),
+		);
+		await assert.rejects(
+			steerAfter(complete, complete),
+			new RegExp(`${command} sent, and status.md shows no context reset`),
+		);
 	});
 
 	test(`${harness.name} handoff takes its command as steered on the context reset, not on working`, async () => {
@@ -148,8 +172,14 @@ for (const harness of Object.values(KINDS)) {
 			return io.lines;
 		};
 
-		assert.deepEqual(await steerReaching("session handoff complete; fresh session idle"), [`${agent}: steered`]);
-		await assert.rejects(steerReaching(suggested), new RegExp(`${command} sent, and status.md shows no context reset`));
+		assert.deepEqual(
+			await steerReaching("session handoff complete; fresh session idle"),
+			[`${agent}: steered`],
+		);
+		await assert.rejects(
+			steerReaching(suggested),
+			new RegExp(`${command} sent, and status.md shows no context reset`),
+		);
 	});
 
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {
@@ -182,7 +212,54 @@ for (const harness of Object.values(KINDS)) {
 	});
 }
 
-const remoteRefs = 'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && git for-each-ref --contains abc';
+const remoteRefs =
+	'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && git for-each-ref --contains abc';
+
+test("down keeps both clones when the API has dirty or unlanded work", () => {
+	const manifest = {
+		version: 1,
+		repositories: [
+			{
+				repo: "/r",
+				name: "acme/fe",
+				base: "main",
+				baseSha: "1".repeat(40),
+				branch: "task",
+				workspace: "/r",
+				sourceSha: "3".repeat(40),
+				landedSha: "3".repeat(40),
+			},
+			{
+				repo: "/api",
+				name: "acme/api",
+				base: "develop",
+				baseSha: "2".repeat(40),
+				branch: "task",
+				workspace: "/tmp/fleet-repos/api",
+			},
+		],
+	};
+	const probe =
+		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api';
+	const answers = {
+		...running,
+		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(manifest),
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
+		'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
+		"git /r for-each-ref": "3".repeat(40),
+		[probe]: `task\t1\t${"4".repeat(40)}`,
+	};
+	const dirty = fakeIo(answers);
+
+	assert.throws(() => down("pi-a", {}, dirty), /acme\/api.*1 uncommitted/);
+	assert.ok(!dirty.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
+
+	const unlanded = fakeIo({ ...answers, [probe]: `task\t0\t${"4".repeat(40)}` });
+	assert.throws(() => down("pi-a", {}, unlanded), /acme\/api.*not landed/);
+	assert.ok(
+		!unlanded.calls.some((call) => call[0] === "sbx" && call[1] === "rm"),
+	);
+});
 
 test("down refuses a dirty container without --force", () => {
 	const io = fakeIo({ ...running, "sbx exec pi-a sh -c": "web-1\t2\tabc" });
@@ -212,7 +289,9 @@ test("down passes a head the repo lacks once the container pushed it to its own 
 		"git cat-file -e abc^{commit}": new Error("missing"),
 		[remoteRefs]: "refs/remotes/origin/web-1",
 		"git rev-parse --verify --quiet refs/heads/web-1": new Error("exit 1"),
-		"git log --format=%h\t%cI --since=2026-09-21T12:02:02Z web-1": new Error("fatal: ambiguous argument 'web-1': unknown revision"),
+		"git log --format=%h\t%cI --since=2026-09-21T12:02:02Z web-1": new Error(
+			"fatal: ambiguous argument 'web-1': unknown revision",
+		),
 	});
 
 	down("pi-a", {}, io);
@@ -254,7 +333,10 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 });
 
 test("down says so when pi never wrote a session", () => {
-	const io = fakeIo({ ...running, [`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc" });
+	const io = fakeIo({
+		...running,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+	});
 	down("pi-a", {}, io);
 	assert.ok(
 		io.lines.some((l) => /pi-a: no session in .*pi-a\/logs\/sessions/.test(l)),
@@ -279,22 +361,35 @@ test("down records the guest's peak, anon memory and high and oom counts beside 
 		high: 17,
 		oom: 1,
 	});
-	assert.ok(io.lines.includes(`pi-a: memory peak 4.0 GiB -> ${task}/logs/memory.json`), io.lines.join("\n"));
+	assert.ok(
+		io.lines.includes(`pi-a: memory peak 4.0 GiB -> ${task}/logs/memory.json`),
+		io.lines.join("\n"),
+	);
 	const order = io.calls.map((c) => c.join(" "));
-	assert.ok(order.indexOf(`write ${task}/logs/memory.json`) < order.indexOf("sbx rm -f pi-a"));
+	assert.ok(
+		order.indexOf(`write ${task}/logs/memory.json`) <
+			order.indexOf("sbx rm -f pi-a"),
+	);
 });
 
 test("down goes on without the guest's memory files and says so", () => {
 	const io = fakeIo({
 		...running,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"sbx exec pi-a cat": new Error("sbx exec failed (1)\ncat: /sys/fs/cgroup/docker/memory.peak: No such file or directory"),
+		"sbx exec pi-a cat": new Error(
+			"sbx exec failed (1)\ncat: /sys/fs/cgroup/docker/memory.peak: No such file or directory",
+		),
 	});
 
 	down("pi-a", {}, io);
 
 	assert.equal(io.files[`${task}/logs/memory.json`], undefined);
-	assert.ok(io.lines.some((l) => /^pi-a: no memory recorded: cat: .*memory\.peak: No such file/.test(l)), io.lines.join("\n"));
+	assert.ok(
+		io.lines.some((l) =>
+			/^pi-a: no memory recorded: cat: .*memory\.peak: No such file/.test(l),
+		),
+		io.lines.join("\n"),
+	);
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-a"]);
 });
 
@@ -308,7 +403,12 @@ test("down records no memory when the guest prints something other than numbers"
 	down("pi-a", {}, io);
 
 	assert.equal(io.files[`${task}/logs/memory.json`], undefined);
-	assert.ok(io.lines.includes("pi-a: no memory recorded: peakBytes, anonBytes, high, oom unreadable in /sys/fs/cgroup/docker"), io.lines.join("\n"));
+	assert.ok(
+		io.lines.includes(
+			"pi-a: no memory recorded: peakBytes, anonBytes, high, oom unreadable in /sys/fs/cgroup/docker",
+		),
+		io.lines.join("\n"),
+	);
 });
 
 test("down treats a failed secret cleanup after removal as a warning, and a failed removal as an error", () => {
@@ -359,7 +459,12 @@ test("ls joins sbx, herdr and git state", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
-				{ name: "pi-webapp-web-1", agent: "pi", status: "running", workspaces: ["/r"] },
+				{
+					name: "pi-webapp-web-1",
+					agent: "pi",
+					status: "running",
+					workspaces: ["/r"],
+				},
 				{ name: "pi-cv-x", agent: "pi", status: "stopped", workspaces: [] },
 			],
 		},
@@ -378,22 +483,136 @@ test("ls joins sbx, herdr and git state", () => {
 	);
 });
 
+test("ls and peek report both private repositories with their own heads", () => {
+	const apiWorkspace = "/tmp/fleet-repos/api";
+	const manifest = {
+		version: 1,
+		repositories: [
+			{
+				repo: "/r",
+				name: "acme/fe",
+				branch: "task",
+				base: "main",
+				baseSha: "1".repeat(40),
+				workspace: "/r",
+			},
+			{
+				repo: "/api",
+				name: "acme/api",
+				branch: "task",
+				base: "develop",
+				baseSha: "2".repeat(40),
+				workspace: apiWorkspace,
+			},
+		],
+	};
+	const io = fakeIo({
+		...running,
+		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(manifest),
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
+		'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
+		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api': `task\t1\t${"4".repeat(40)}`,
+	});
+
+	const table = ls(io);
+	assert.match(table, /acme\/fe.*3{40}/);
+	assert.match(table, /acme\/api.*1 dirty.*4{40}/);
+	assert.ok(
+		io.calls.some(
+			(call) => call[0] === "sbx" && call.join(" ").includes(apiWorkspace),
+		),
+	);
+	const detail = peek("pi-a", io, 5);
+	assert.match(detail, /acme\/fe task 0 dirty 3{40}/);
+	assert.match(detail, /acme\/api task 1 dirty 4{40}/);
+});
+
+test("ls names the API when its checkout cannot be probed", () => {
+	const io = fakeIo({
+		...running,
+		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify({
+			version: 1,
+			repositories: [
+				{
+					repo: "/r",
+					name: "acme/fe",
+					base: "main",
+					baseSha: "1".repeat(40),
+					branch: "task",
+					workspace: "/r",
+				},
+				{
+					repo: "/api",
+					name: "acme/api",
+					base: "develop",
+					baseSha: "2".repeat(40),
+					branch: "task",
+					workspace: "/tmp/fleet-repos/api",
+				},
+			],
+		}),
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
+	});
+	const sbx = io.sbx;
+	io.sbx = (args, opts) => {
+		if (
+			args[0] === "exec" &&
+			args.at(-1) === "/tmp/fleet-repos/api" &&
+			args[4]?.startsWith('cd "$1" && printf')
+		)
+			throw new Error("API checkout missing");
+		return sbx(args, opts);
+	};
+
+	assert.match(ls(io), /pi-a\s+failed[\s\S]*acme\/api: API checkout missing/);
+});
+
 test("ls shows a running container's commits and PR, and an idle one past the threshold without a finish as stalled", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
-		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+			],
+		},
+		"herdr agent list": {
+			result: {
+				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }],
+			},
+		},
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
-		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
-		"gh pr view task --json number,state,statusCheckRollup": { number: 12, state: "OPEN", statusCheckRollup: [{ __typename: "CheckRun", name: "test", status: "COMPLETED", conclusion: "SUCCESS" }] },
+		[`sbx exec pi-a sh -c ${commitsProbe}`]:
+			"task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
+		"gh pr view task --json number,state,statusCheckRollup": {
+			number: 12,
+			state: "OPEN",
+			statusCheckRollup: [
+				{
+					__typename: "CheckRun",
+					name: "test",
+					status: "COMPLETED",
+					conclusion: "SUCCESS",
+				},
+			],
+		},
 		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
-		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "bash", ok: true, agent: "main" }),
+		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({
+			at: "2026-09-16T09:30:00Z",
+			tool: "bash",
+			ok: true,
+			agent: "main",
+		}),
 	});
 
 	assert.equal(
 		ls(io),
 		"pi-a  running  idle     task  stalled  up 30m, silent 30m, 1 tool call, last bash\n  commits 2 since origin/main, 2 pushed, 0 unpushed, 1 file +4 -1, latest abc1234 add two; pr #12 open, CI passed",
 	);
-	assert.ok(io.calls.some((c) => c.join(" ") === "gh /r pr view task --json number,state,statusCheckRollup"));
+	assert.ok(
+		io.calls.some(
+			(c) =>
+				c.join(" ") === "gh /r pr view task --json number,state,statusCheckRollup",
+		),
+	);
 });
 
 test("ls prints a container whose sandbox fails as failed with its error, and lists the rest", () => {
@@ -401,58 +620,143 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 		"sbx ls --json": {
 			sandboxes: [
 				{ name: "pi-broken", agent: "pi", status: "running", workspaces: ["/r"] },
-				{ name: "pi-webapp-web-1", agent: "pi", status: "running", workspaces: ["/r"] },
+				{
+					name: "pi-webapp-web-1",
+					agent: "pi",
+					status: "running",
+					workspaces: ["/r"],
+				},
 			],
 		},
-		[`sbx exec pi-broken sh -c ${checkoutProbe}`]: new Error(`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`),
+		[`sbx exec pi-broken sh -c ${checkoutProbe}`]: new Error(
+			`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`,
+		),
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"herdr agent list": { result: { agents: [{ pane_id: "w1:p2", name: "pi-broken", agent_status: "idle" }] } },
+		"herdr agent list": {
+			result: {
+				agents: [{ pane_id: "w1:p2", name: "pi-broken", agent_status: "idle" }],
+			},
+		},
 	});
 
 	assert.equal(
 		ls(io),
 		"pi-broken         failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
 	);
-	assert.ok(!io.calls.some((c) => c.join(" ").startsWith("sbx exec pi-broken") && !c.join(" ").includes("git branch --show-current")));
+	assert.ok(
+		!io.calls.some(
+			(c) =>
+				c.join(" ").startsWith("sbx exec pi-broken") &&
+				!c.join(" ").includes("git branch --show-current"),
+		),
+	);
 });
 
-const call = (at: string) => JSON.stringify({ at, tool: "bash", ok: true, agent: "main" });
-const change = (at: string, status: string, attention: string, added: string[] = [], removed: string[] = [], summary?: string) =>
-	JSON.stringify({ at, status, attention, summary, added, removed });
+const call = (at: string) =>
+	JSON.stringify({ at, tool: "bash", ok: true, agent: "main" });
+const change = (
+	at: string,
+	status: string,
+	attention: string,
+	added: string[] = [],
+	removed: string[] = [],
+	summary?: string,
+) => JSON.stringify({ at, status, attention, summary, added, removed });
 
-function blockedTask(dir: string, status = "status: blocked\nattention: owner decision\n"): Record<string, unknown> {
+function blockedTask(
+	dir: string,
+	status = "status: blocked\nattention: owner decision\n",
+): Record<string, unknown> {
 	return {
 		[`read ${dir}/status.md`]: status,
 		[`read ${dir}/logs/status.jsonl`]: [
 			change("2026-09-16T09:00:00.000Z", "implementing", "none"),
 			change("2026-09-16T09:30:00.400Z", "blocked", "owner decision"),
-			change("2026-09-16T09:40:00.000Z", "blocked", "owner decision", ["- waits on the owner"]),
+			change("2026-09-16T09:40:00.000Z", "blocked", "owner decision", [
+				"- waits on the owner",
+			]),
 		].join("\n"),
-		[`read ${dir}/logs/activity.jsonl`]: [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:30:00.400Z"), call("2026-09-16T09:35:00Z"), call("2026-09-16T09:45:00Z"), call("2026-09-16T09:50:00Z")].join("\n"),
+		[`read ${dir}/logs/activity.jsonl`]: [
+			call("2026-09-16T09:20:00Z"),
+			call("2026-09-16T09:30:00.400Z"),
+			call("2026-09-16T09:35:00Z"),
+			call("2026-09-16T09:45:00Z"),
+			call("2026-09-16T09:50:00Z"),
+		].join("\n"),
 	};
 }
 
 test("ls marks a blocked container that keeps making tool calls, counted after the change where status.md turned blocked", () => {
 	const listing = {
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
-		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }] } },
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+			],
+		},
+		"herdr agent list": {
+			result: {
+				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }],
+			},
+		},
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 	};
 
-	assert.match(ls(fakeIo({ ...listing, ...blockedTask(task) })), /^pi-a  running  working  task  3 tool calls since blocked  up 40m, silent 10m, 5 tool calls, last bash$/m);
-	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: implementing\nattention: none\n") })), /since blocked/);
-	assert.doesNotMatch(ls(fakeIo({ ...listing, ...blockedTask(task, "status: blocked\nattention: the agent stopped on an error: rate_limit\n") })), /since blocked/);
+	assert.match(
+		ls(fakeIo({ ...listing, ...blockedTask(task) })),
+		/^pi-a {2}running {2}working {2}task {2}3 tool calls since blocked {2}up 40m, silent 10m, 5 tool calls, last bash$/m,
+	);
+	assert.doesNotMatch(
+		ls(
+			fakeIo({
+				...listing,
+				...blockedTask(task, "status: implementing\nattention: none\n"),
+			}),
+		),
+		/since blocked/,
+	);
+	assert.doesNotMatch(
+		ls(
+			fakeIo({
+				...listing,
+				...blockedTask(
+					task,
+					"status: blocked\nattention: the agent stopped on an error: rate_limit\n",
+				),
+			}),
+		),
+		/since blocked/,
+	);
 });
 
 test("ls leaves an idle container unmarked while its PR's CI runs", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
-		"herdr agent list": { result: { agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }] } },
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+			],
+		},
+		"herdr agent list": {
+			result: {
+				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }],
+			},
+		},
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
-		[`sbx exec pi-a sh -c ${commitsProbe}`]: "task\torigin/main\t1\t0\t 1 file changed, 1 insertion(+)\tabc1234 add one",
-		"gh pr view task --json number,state,statusCheckRollup": { number: 12, state: "OPEN", statusCheckRollup: [{ __typename: "CheckRun", name: "test", status: "QUEUED", conclusion: "" }] },
+		[`sbx exec pi-a sh -c ${commitsProbe}`]:
+			"task\torigin/main\t1\t0\t 1 file changed, 1 insertion(+)\tabc1234 add one",
+		"gh pr view task --json number,state,statusCheckRollup": {
+			number: 12,
+			state: "OPEN",
+			statusCheckRollup: [
+				{ __typename: "CheckRun", name: "test", status: "QUEUED", conclusion: "" },
+			],
+		},
 		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
-		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "bash", ok: true, agent: "main" }),
+		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({
+			at: "2026-09-16T09:30:00Z",
+			tool: "bash",
+			ok: true,
+			agent: "main",
+		}),
 	});
 
 	assert.doesNotMatch(ls(io), /stalled/);
@@ -479,7 +783,9 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 test("down probes a stopped container too, so its refusals still apply", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
-			sandboxes: [{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] }],
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+			],
 		},
 		"herdr agent list": { result: { agents: [] } },
 		"sbx exec pi-a sh -c": "web-1\t1\tabc",
@@ -488,7 +794,10 @@ test("down probes a stopped container too, so its refusals still apply", () => {
 });
 
 test("down passes a container whose head is already in the repo", () => {
-	const io = fakeIo({ ...running, [`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc" });
+	const io = fakeIo({
+		...running,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+	});
 	down("pi-a", {}, io);
 	assert.deepEqual(
 		io.calls.find((c) => c[0] === "git"),
@@ -619,6 +928,25 @@ test("build renders the container seat into a stage and hands it to the shared b
 	assert.equal(io.files["/home/me/.pi/cache/image-stamp"], "31e3d51\n");
 });
 
+test("both agent Dockerfiles select Docker-capable bases and request nested Docker", () => {
+	const pi = readFileSync(
+		new URL("../../pi/sbx/Dockerfile", import.meta.url),
+		"utf8",
+	);
+	const claude = readFileSync(
+		new URL("../../claude/sbx/Dockerfile", import.meta.url),
+		"utf8",
+	);
+
+	assert.match(pi, /^FROM docker\/sandbox-templates:shell-docker$/m);
+	assert.match(claude, /^FROM docker\/sandbox-templates:claude-code-docker$/m);
+	for (const dockerfile of [pi, claude])
+		assert.match(
+			dockerfile,
+			/^LABEL com\.docker\.sandboxes\.start-docker="true"$/m,
+		);
+});
+
 test("exec streams what the container prints instead of swallowing it", () => {
 	const io = fakeIo({ ...running, "sbx exec pi-a": "" });
 	exec("pi-a", ["ls -la .env"], io);
@@ -695,38 +1023,81 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 			"git log --format=%h\t%cI --since=2026-09-16T09:30:00Z web-1 failed (128)\nfatal: ambiguous argument 'web-1': unknown revision or path not in the working tree.",
 		),
 		[`read ${task}/logs/activity.jsonl`]: [
-			JSON.stringify({ at: "2026-09-16T09:30:00Z", tool: "read", ok: true, agent: "main" }),
-			JSON.stringify({ at: "2026-09-16T09:52:00Z", tool: "bash", ok: false, agent: "main" }),
+			JSON.stringify({
+				at: "2026-09-16T09:30:00Z",
+				tool: "read",
+				ok: true,
+				agent: "main",
+			}),
+			JSON.stringify({
+				at: "2026-09-16T09:52:00Z",
+				tool: "bash",
+				ok: false,
+				agent: "main",
+			}),
 		].join("\n"),
 	});
 
 	const table = ls(io);
 
-	assert.equal(table, "pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
+	assert.equal(
+		table,
+		"pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+	);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
 });
 
 test("ls reads a claude container's cost from its live transcripts, before down copies them out", () => {
 	const io = fakeIo(
 		{
-			"sbx ls --json": { sandboxes: [{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] }] },
-			"herdr agent list": { result: { agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }] } },
+			"sbx ls --json": {
+				sandboxes: [
+					{
+						name: "claude-a",
+						agent: "claude",
+						status: "running",
+						workspaces: ["/r"],
+					},
+				],
+			},
+			"herdr agent list": {
+				result: {
+					agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }],
+				},
+			},
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects": "1.5",
-			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
+			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects":
+				"1.5",
+			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({
+				at: "2026-09-16T09:59:00Z",
+				tool: "Edit",
+				ok: true,
+				agent: "main",
+			}),
 		},
 		SEATS.claude,
 	);
 
-	assert.equal(ls(io), "claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
+	assert.equal(
+		ls(io),
+		"claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+	);
 });
 
 test("ls still prices a stopped pi container from the sessions it wrote", () => {
 	const io = fakeIo({
-		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] }] },
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+			],
+		},
 		"herdr agent list": { result: { agents: [] } },
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
-		[`stat ${task}/logs/sessions/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
+		[`stat ${task}/logs/sessions/s1.jsonl`]: {
+			size: 10,
+			mtime: new Date(0),
+			dir: false,
+		},
 		[`read ${task}/logs/sessions/s1.jsonl`]: request("2026-09-16T09:30:00Z", 0),
 	});
 
@@ -734,19 +1105,79 @@ test("ls still prices a stopped pi container from the sessions it wrote", () => 
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "exec"));
 });
 
+test("ls probes both heads and dirty counts even when a two-repo sandbox is stopped", () => {
+	const io = fakeIo({
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+			],
+		},
+		"herdr agent list": { result: { agents: [] } },
+		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify({
+			version: 1,
+			repositories: [
+				{
+					repo: "/r",
+					name: "acme/one",
+					base: "main",
+					baseSha: "1".repeat(40),
+					branch: "task",
+					workspace: "/r",
+				},
+				{
+					repo: "/api",
+					name: "acme/two",
+					base: "develop",
+					baseSha: "2".repeat(40),
+					branch: "task",
+					workspace: "/tmp/fleet-repos/api",
+				},
+			],
+		}),
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t1\t${"3".repeat(40)}`,
+		'sbx exec pi-a sh -c cd "$1" && printf': `task\t1\t${"3".repeat(40)}`,
+		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api': `task\t2\t${"4".repeat(40)}`,
+	});
+
+	const table = ls(io);
+	assert.match(table, /pi-a\s+stopped\s+gone\s+task.*1 uncommitted/);
+	assert.match(table, /acme\/one task 1 dirty 3{40}/);
+	assert.match(table, /acme\/two task 2 dirty 4{40}/);
+	assert.doesNotMatch(table, /last known|\? dirty/);
+});
+
 test("ls keeps a claude container's activity when its image cannot price the transcripts", () => {
 	const io = fakeIo(
 		{
-			"sbx ls --json": { sandboxes: [{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] }] },
+			"sbx ls --json": {
+				sandboxes: [
+					{
+						name: "claude-a",
+						agent: "claude",
+						status: "running",
+						workspaces: ["/r"],
+					},
+				],
+			},
 			"herdr agent list": { result: { agents: [] } },
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-			"sbx exec claude-a node": new Error("sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'"),
-			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({ at: "2026-09-16T09:59:00Z", tool: "Edit", ok: true, agent: "main" }),
+			"sbx exec claude-a node": new Error(
+				"sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'",
+			),
+			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({
+				at: "2026-09-16T09:59:00Z",
+				tool: "Edit",
+				ok: true,
+				agent: "main",
+			}),
 		},
 		SEATS.claude,
 	);
 
-	assert.equal(ls(io), "claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch");
+	assert.equal(
+		ls(io),
+		"claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+	);
 });
 
 test("history lists every status.md change in local time with what changed in it, the log lines it added and those it removed", (t) => {
@@ -760,9 +1191,23 @@ test("history lists every status.md change in local time with what changed in it
 	const io = fakeIo({
 		...running,
 		[`read ${task}/logs/status.jsonl`]: [
-			change("2026-09-23T20:40:13.000Z", "blocked", "choose the grid width", [], [], "WEB-1715 waits on the grid width."),
+			change(
+				"2026-09-23T20:40:13.000Z",
+				"blocked",
+				"choose the grid width",
+				[],
+				[],
+				"WEB-1715 waits on the grid width.",
+			),
 			change("2026-09-23T20:43:06.000Z", "implementing", "none", [decided]),
-			change("2026-09-23T20:43:58.000Z", "ready-for-host", "none", ["- Grid committed; abc1234"], [decided], "The preview is\n55% wide."),
+			change(
+				"2026-09-23T20:43:58.000Z",
+				"ready-for-host",
+				"none",
+				["- Grid committed; abc1234"],
+				[decided],
+				"The preview is\n55% wide.",
+			),
 		].join("\n"),
 	});
 

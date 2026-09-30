@@ -2,17 +2,37 @@ import { SEATS, type Seat } from "../harness.ts";
 import type { Io } from "./io.ts";
 
 type Call = [string, ...string[]];
+type FixtureAnswer =
+	| string
+	| number
+	| boolean
+	| null
+	| Error
+	| Record<string, unknown>
+	| unknown[]
+	| undefined;
 
-export function fakeIo(answers: Record<string, unknown> = {}, seat: Seat = SEATS.pi): Io & { calls: Call[]; lines: string[]; files: Record<string, string>; sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] } {
+export function fakeIo(
+	answers: Record<string, unknown> = {},
+	seat: Seat = SEATS.pi,
+): Io & {
+	calls: Call[];
+	lines: string[];
+	files: Record<string, string>;
+	sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[];
+} {
 	const calls: Call[] = [];
-	const sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[] = [];
+	const sbxOpts: (
+		| { quiet?: boolean; stream?: boolean; input?: string }
+		| undefined
+	)[] = [];
 	const lines: string[] = [];
 	const files: Record<string, string> = {};
-	const answer = (key: string): unknown => {
+	const answer = (key: string): FixtureAnswer => {
 		const hit = Object.keys(answers)
 			.filter((k) => key.startsWith(k) && !key.slice(k.length).startsWith("/"))
 			.sort((a, b) => b.length - a.length)[0];
-		return hit === undefined ? undefined : answers[hit];
+		return hit === undefined ? undefined : (answers[hit] as FixtureAnswer);
 	};
 	const text = (key: string): string => {
 		const a = answer(key);
@@ -47,7 +67,10 @@ export function fakeIo(answers: Record<string, unknown> = {}, seat: Seat = SEATS
 		},
 		git: (args, cwd) => {
 			calls.push(["git", cwd, ...args]);
-			return text(`git ${args.join(" ")}`);
+			const scoped = `git ${cwd} ${args.join(" ")}`;
+			return answer(scoped) === undefined
+				? text(`git ${args.join(" ")}`)
+				: text(scoped);
 		},
 		gh: (args, cwd) => {
 			calls.push(["gh", cwd, ...args]);
@@ -65,10 +88,14 @@ export function fakeIo(answers: Record<string, unknown> = {}, seat: Seat = SEATS
 		},
 		remove: (path) => {
 			calls.push(["remove", path]);
-			for (const file of Object.keys(files)) if (file === path || file.startsWith(`${path}/`)) delete files[file];
+			for (const file of Object.keys(files))
+				if (file === path || file.startsWith(`${path}/`)) delete files[file];
 		},
 		list: (dir) => (answer(`list ${dir}`) as string[] | undefined) ?? [],
-		stat: (path) => answer(`stat ${path}`) as { size: number; mtime: Date; dir: boolean } | undefined,
+		stat: (path) =>
+			answer(`stat ${path}`) as
+				| { size: number; mtime: Date; dir: boolean }
+				| undefined,
 		append: (path, line) => {
 			calls.push(["append", path, line]);
 		},

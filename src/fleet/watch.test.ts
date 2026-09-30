@@ -73,6 +73,70 @@ function herdr(
 	return { io, intervals, sockets, status };
 }
 
+test("watch reads the group task and waits for CI on the third repository", (t) => {
+	const group = "/home/me/.sandboxes/groups/a-b-c/claude-webapp-a";
+	const { io, status } = herdr(t, [agents[0]]);
+	io.files["/home/me/.config/harness/fleet/claude-webapp-a.json"] =
+		JSON.stringify({
+			version: 1,
+			task: group,
+			repositories: ["a", "b", "c"].map((name) => ({
+				repo: `/${name}`,
+				name: `owner/${name}`,
+				base: "dev",
+				baseSha: "1".repeat(40),
+				branch: "task",
+				workspace: `/${name}`,
+			})),
+		});
+	io.files[`${group}/status.md`] =
+		"status: working\nattention: none\n\n## Log\n";
+	const sbx = io.sbx;
+	io.sbx = (args, opts) => {
+		const result = sbx(args, opts);
+		if (args[4]?.includes("git rev-list")) return "task\torigin/dev\t0\t0\t\t";
+		if (args[4]?.startsWith('cd "$1" && printf'))
+			return `task\t0\t${"2".repeat(40)}`;
+		return result;
+	};
+	let pending = true;
+	const queried: string[] = [];
+	io.gh = (_args, repo) => {
+		queried.push(repo);
+		return JSON.stringify({
+			number: 1,
+			state: "OPEN",
+			statusCheckRollup: [
+				{
+					name: "test",
+					status: repo === "/c" && pending ? "IN_PROGRESS" : "COMPLETED",
+					conclusion: "SUCCESS",
+				},
+			],
+		});
+	};
+	const wakes: string[] = [];
+	const handle = watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
+	t.after(() => handle.stop());
+
+	status("w1:p1", "idle");
+	t.mock.timers.tick(1000);
+
+	assert.ok(queried.includes("/c"));
+	assert.equal(wakes.length, 0);
+	pending = false;
+	status("w1:p1", "working");
+	status("w1:p1", "idle");
+	t.mock.timers.tick(1000);
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /owner\/c.*2{40}/);
+	assert.match(wakes[0], /status: working/);
+});
+
 test("watch follows the harness's containers and nothing else in herdr", () => {
 	assert.deepEqual(
 		fleetAgents(agents, sandboxes, undefined).map((a) => a.name),
@@ -179,18 +243,33 @@ test("a transient idle between active turns does not wake the host", (t: TestCon
 test("a watch wake names the full sandbox beside herdr's shortened agent", (t: TestContext) => {
 	const sandbox = "claude-household-budget-t01-skeleton";
 	const agent = agentName(sandbox);
-	const { io, status } = herdr(t, [{ name: agent, pane_id: "t01:pane", agent_status: "working" }]);
+	const { io, status } = herdr(t, [
+		{ name: agent, pane_id: "t01:pane", agent_status: "working" },
+	]);
 	const sbx = io.sbx;
 	io.sbx = (args, opts) =>
-		args[0] === "ls" ? JSON.stringify({ sandboxes: [{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] }] }) : sbx(args, opts);
+		args[0] === "ls"
+			? JSON.stringify({
+					sandboxes: [
+						{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] },
+					],
+				})
+			: sbx(args, opts);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("t01:pane", "idle");
 	t.mock.timers.tick(1100);
 
 	assert.equal(wakes.length, 1);
-	assert.ok(wakes[0].startsWith(`[fleet] ${agent}: ${sandbox} working -> idle\n`), wakes[0]);
+	assert.ok(
+		wakes[0].startsWith(`[fleet] ${agent}: ${sandbox} working -> idle\n`),
+		wakes[0],
+	);
 });
 
 test("different containers wake independently while an identical transition stays deduplicated", (t: TestContext) => {
@@ -285,7 +364,11 @@ for (const h of Object.values(SEATS)) {
 		const { io, sockets } = herdr(
 			t,
 			[
-				{ name: `${KINDS[h.name].prefix}webapp-a`, pane_id: "w1:p1", agent_status: "working" },
+				{
+					name: `${KINDS[h.name].prefix}webapp-a`,
+					pane_id: "w1:p1",
+					agent_status: "working",
+				},
 			],
 			h,
 		);
@@ -387,7 +470,10 @@ test("a watched container whose sandbox leaves the list wakes once as taken down
 	);
 
 	const sbx = io.sbx;
-	io.sbx = (args, opts) => (args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts));
+	io.sbx = (args, opts) =>
+		args.join(" ") === "ls --json"
+			? JSON.stringify({ sandboxes: [] })
+			: sbx(args, opts);
 	intervals.get(30_000)?.();
 	intervals.get(30_000)?.();
 
@@ -431,7 +517,12 @@ test("a working container whose tool calls keep failing wakes the host once per 
 	const log = "/home/me/.sandboxes/webapp/claude-worker/logs/activity.jsonl";
 	const failures = (from: number, count: number) =>
 		Array.from({ length: count }, (_, i) =>
-			JSON.stringify({ at: `2026-09-16T09:${String(from + i).padStart(2, "0")}:00Z`, tool: "Bash", ok: false, agent: "main" }),
+			JSON.stringify({
+				at: `2026-09-16T09:${String(from + i).padStart(2, "0")}:00Z`,
+				tool: "Bash",
+				ok: false,
+				agent: "main",
+			}),
 		).join("\n");
 
 	io.files[log] = failures(50, 4);
@@ -443,15 +534,26 @@ test("a working container whose tool calls keep failing wakes the host once per 
 	const firstStreak = wakes.length;
 	io.files[log] = [
 		failures(50, 6),
-		JSON.stringify({ at: "2026-09-16T09:56:00Z", tool: "Bash", ok: true, agent: "main" }),
+		JSON.stringify({
+			at: "2026-09-16T09:56:00Z",
+			tool: "Bash",
+			ok: true,
+			agent: "main",
+		}),
 		failures(57, 5),
 	].join("\n");
 	intervals.get(60_000)?.();
 
 	assert.equal(firstStreak, 1);
 	assert.equal(wakes.length, 2);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: working, 5 tool calls failed in a row\n\n/);
-	assert.match(wakes[0], /\n\nactivity: up 10m, silent 6m, 5 tool calls, last Bash, 5 failed in a row$/);
+	assert.match(
+		wakes[0],
+		/^\[fleet\] claude-worker: working, 5 tool calls failed in a row\n\n/,
+	);
+	assert.match(
+		wakes[0],
+		/\n\nactivity: up 10m, silent 6m, 5 tool calls, last Bash, 5 failed in a row$/,
+	);
 });
 
 test("a refresh that keeps failing the same way logs it once", (t: TestContext) => {
@@ -477,10 +579,17 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 	const listed = io.sbx;
 	io.sbx = ((args: string[], opts) => {
-		if (args[0] === "ls") throw new Error("sbx ls --json failed (1)\ndocker daemon failed to start inside the sandbox");
+		if (args[0] === "ls")
+			throw new Error(
+				"sbx ls --json failed (1)\ndocker daemon failed to start inside the sandbox",
+			);
 		return listed(args, opts);
 	}) as typeof io.sbx;
 
@@ -489,17 +598,31 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 	status("worker:pane", "blocked");
 
 	assert.equal(wakes.length, 2);
-	assert.equal(io.lines.filter((line) => line.includes("docker daemon failed")).length, 1);
+	assert.equal(
+		io.lines.filter((line) => line.includes("docker daemon failed")).length,
+		1,
+	);
 });
 
-function limited(t: TestContext, pane: string, stoppedAt: Date, agent_status = "idle") {
-	const fixture = herdr(t, [{ name: "claude-worker", pane_id: "worker:pane", agent_status }]);
+function limited(
+	t: TestContext,
+	pane: string,
+	stoppedAt: Date,
+	agent_status = "idle",
+) {
+	const fixture = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status },
+	]);
 	const { io } = fixture;
 	const dir = "/home/me/.sandboxes/webapp/claude-worker";
 	const events = "/home/me/.sandboxes/fleet-events.log";
-	io.files[`${dir}/status.md`] = "status: blocked\nattention: the agent stopped on an error: rate_limit\n";
+	io.files[`${dir}/status.md`] =
+		"status: blocked\nattention: the agent stopped on an error: rate_limit\n";
 	const stat = io.stat;
-	io.stat = (path) => (path === `${dir}/status.md` ? { size: 1, mtime: stoppedAt, dir: false } : stat(path));
+	io.stat = (path) =>
+		path === `${dir}/status.md`
+			? { size: 1, mtime: stoppedAt, dir: false }
+			: stat(path);
 	const herdrText = io.herdrText;
 	io.herdrText = (args) => (args[1] === "read" ? pane : herdrText(args));
 	io.append = (path, line) => {
@@ -507,7 +630,10 @@ function limited(t: TestContext, pane: string, stoppedAt: Date, agent_status = "
 	};
 	let now = stoppedAt;
 	io.now = () => now;
-	const resumes = () => io.calls.filter((c) => c[0] === "herdr" && c[2] === "prompt" && c[4] === CONTINUE).length;
+	const resumes = () =>
+		io.calls.filter(
+			(c) => c[0] === "herdr" && c[2] === "prompt" && c[4] === CONTINUE,
+		).length;
 	const at = (minutes: number) => {
 		now = new Date(stoppedAt.getTime() + minutes * 60_000);
 		fixture.intervals.get(60_000)?.();
@@ -518,8 +644,16 @@ function limited(t: TestContext, pane: string, stoppedAt: Date, agent_status = "
 
 test("a container stopped by the account limit resumes with the stock continue at the reset time its message gives", (t: TestContext) => {
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);
-	const { io, at } = limited(t, "You've hit your session limit · resets 11:10pm", stoppedAt);
-	watch(() => undefined, io, () => {});
+	const { io, at } = limited(
+		t,
+		"You've hit your session limit · resets 11:10pm",
+		stoppedAt,
+	);
+	watch(
+		() => undefined,
+		io,
+		() => {},
+	);
 
 	assert.equal(at(89), 0);
 	assert.equal(at(90), 1);
@@ -530,7 +664,11 @@ test("with no reset time the watch retries the continue every 30 minutes and giv
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);
 	const { io, at } = limited(t, "API Error: rate_limit", stoppedAt);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	assert.equal(at(29), 0);
 	assert.equal(at(30), 1);
@@ -540,14 +678,26 @@ test("with no reset time the watch retries the continue every 30 minutes and giv
 	assert.equal(at(331), 10);
 	assert.equal(at(400), 10);
 	assert.equal(wakes.filter((w) => /account limit/.test(w)).length, 1);
-	assert.match(wakes.at(-1) ?? "", /^\[fleet\] claude-worker: stopped on the account limit, 10 resumes did not take/);
+	assert.match(
+		wakes.at(-1) ?? "",
+		/^\[fleet\] claude-worker: stopped on the account limit, 10 resumes did not take/,
+	);
 });
 
 test("the watch never sends the continue to a container that is working or waits on a dialog", async (t: TestContext) => {
 	for (const state of ["working", "blocked", "unknown"])
 		await t.test(state, (st: TestContext) => {
-			const { io, at } = limited(st, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40), state);
-			watch(() => undefined, io, () => {});
+			const { io, at } = limited(
+				st,
+				"API Error: rate_limit",
+				new Date(2026, 8, 16, 21, 40),
+				state,
+			);
+			watch(
+				() => undefined,
+				io,
+				() => {},
+			);
 			assert.equal(at(120), 0);
 		});
 });
@@ -556,10 +706,19 @@ test("a resume the container took, shown by a tool call after it, ends the retri
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);
 	const { io, at, dir } = limited(t, "API Error: rate_limit", stoppedAt);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	assert.equal(at(30), 1);
-	io.files[`${dir}/logs/activity.jsonl`] = JSON.stringify({ at: new Date(stoppedAt.getTime() + 31 * 60_000).toISOString(), tool: "Bash", ok: true, agent: "main" });
+	io.files[`${dir}/logs/activity.jsonl`] = JSON.stringify({
+		at: new Date(stoppedAt.getTime() + 31 * 60_000).toISOString(),
+		tool: "Bash",
+		ok: true,
+		agent: "main",
+	});
 	assert.equal(at(60), 1);
 	assert.equal(at(400), 1);
 	assert.deepEqual(wakes, []);
@@ -568,9 +727,14 @@ test("a resume the container took, shown by a tool call after it, ends the retri
 test("a restarted watch counts the resumes already sent", (t: TestContext) => {
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);
 	const { io, at, events } = limited(t, "API Error: rate_limit", stoppedAt);
-	const sent = (minutes: number) => `${new Date(stoppedAt.getTime() + minutes * 60_000).toISOString()} w1:host steer claude-worker session= ${JSON.stringify(CONTINUE)}`;
+	const sent = (minutes: number) =>
+		`${new Date(stoppedAt.getTime() + minutes * 60_000).toISOString()} w1:host steer claude-worker session= ${JSON.stringify(CONTINUE)}`;
 	io.files[events] = `${[sent(30), sent(60), sent(90)].join("\n")}\n`;
-	watch(() => undefined, io, () => {});
+	watch(
+		() => undefined,
+		io,
+		() => {},
+	);
 
 	assert.equal(at(119), 0);
 	assert.equal(at(120), 1);
@@ -581,17 +745,29 @@ test("a wake counts the tool calls a container made after status.md turned block
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
 	const dir = "/home/me/.sandboxes/webapp/claude-worker";
-	const call = (at: string) => JSON.stringify({ at, tool: "Bash", ok: true, agent: "main" });
+	const call = (at: string) =>
+		JSON.stringify({ at, tool: "Bash", ok: true, agent: "main" });
 	io.files[`${dir}/status.md`] = "status: blocked\nattention: owner decision\n";
-	io.files[`${dir}/logs/status.jsonl`] = `${JSON.stringify({ at: "2026-09-16T09:30:00.000Z", status: "blocked", attention: "owner decision", added: [], removed: [] })}\n`;
-	io.files[`${dir}/logs/activity.jsonl`] = [call("2026-09-16T09:20:00Z"), call("2026-09-16T09:45:00Z")].join("\n");
+	io.files[`${dir}/logs/status.jsonl`] =
+		`${JSON.stringify({ at: "2026-09-16T09:30:00.000Z", status: "blocked", attention: "owner decision", added: [], removed: [] })}\n`;
+	io.files[`${dir}/logs/activity.jsonl`] = [
+		call("2026-09-16T09:20:00Z"),
+		call("2026-09-16T09:45:00Z"),
+	].join("\n");
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "blocked");
 
 	assert.match(wakes[0], /\n\nstatus: blocked\n/);
-	assert.match(wakes[0], /\n\nstill working while blocked: 1 tool call since status\.md turned blocked(\n|$)/);
+	assert.match(
+		wakes[0],
+		/\n\nstill working while blocked: 1 tool call since status\.md turned blocked(\n|$)/,
+	);
 });
 
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
@@ -603,7 +779,10 @@ test("CLI watch follows the containers its pane owns, and named ones beside them
 	].join("\n");
 
 	assert.deepEqual(paneScope(io, [])(), ["claude-mine"]);
-	assert.deepEqual(paneScope(io, ["claude-named"])(), ["claude-named", "claude-mine"]);
+	assert.deepEqual(paneScope(io, ["claude-named"])(), [
+		"claude-named",
+		"claude-mine",
+	]);
 });
 
 test("a container steered from another pane leaves the watch without a wake", (t: TestContext) => {
@@ -615,7 +794,8 @@ test("a container steered from another pane leaves the watch without a wake", (t
 	const wakes: string[] = [];
 	watch(paneScope(io, []), io, (text) => wakes.push(text));
 
-	io.files[log] += '\n2026-09-16T10:01:00.000Z w2:other steer claude-worker session= "go"';
+	io.files[log] +=
+		'\n2026-09-16T10:01:00.000Z w2:other steer claude-worker session= "go"';
 	intervals.get(30_000)?.();
 
 	assert.deepEqual(wakes, []);
@@ -640,7 +820,11 @@ function onBranch(io: ReturnType<typeof fakeIo>, checks: unknown[]) {
 			: sbx(args, opts);
 	io.gh = (args, cwd) => {
 		io.calls.push(["gh", cwd, ...args]);
-		return JSON.stringify({ number: 12, state: "OPEN", statusCheckRollup: checks });
+		return JSON.stringify({
+			number: 12,
+			state: "OPEN",
+			statusCheckRollup: checks,
+		});
 	};
 }
 
@@ -648,19 +832,34 @@ test("a turn that ends with a PR open and CI running wakes nobody; the settle af
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: ready-for-host\nattention: none\n";
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+		"status: ready-for-host\nattention: none\n";
 	onBranch(io, [
-		{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" },
+		{
+			__typename: "CheckRun",
+			name: "test",
+			status: "IN_PROGRESS",
+			conclusion: "",
+		},
 		{ __typename: "StatusContext", context: "lint", state: "SUCCESS" },
 	]);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
 	const whileRunning = wakes.length;
 	onBranch(io, [
-		{ __typename: "CheckRun", name: "test", status: "COMPLETED", conclusion: "FAILURE" },
+		{
+			__typename: "CheckRun",
+			name: "test",
+			status: "COMPLETED",
+			conclusion: "FAILURE",
+		},
 		{ __typename: "StatusContext", context: "lint", state: "SUCCESS" },
 	]);
 	status("worker:pane", "working");
@@ -669,8 +868,13 @@ test("a turn that ends with a PR open and CI running wakes nobody; the settle af
 
 	assert.equal(whileRunning, 0);
 	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /\n\ncommits: 2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest abc1234 add two\n\npr: #12 open, CI failed: test/);
-	assert.ok(io.calls.some((call) => call.join(" ") === `gh /w/webapp ${PR_VIEW}`));
+	assert.match(
+		wakes[0],
+		/\n\ncommits: 2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest abc1234 add two\n\npr: #12 open, CI failed: test/,
+	);
+	assert.ok(
+		io.calls.some((call) => call.join(" ") === `gh /w/webapp ${PR_VIEW}`),
+	);
 });
 
 test("a branch with no pull request says so in its wake", (t: TestContext) => {
@@ -679,10 +883,16 @@ test("a branch with no pull request says so in its wake", (t: TestContext) => {
 	]);
 	onBranch(io, []);
 	io.gh = () => {
-		throw new Error('gh pr view task failed (1)\nno pull requests found for branch "task"');
+		throw new Error(
+			'gh pr view task failed (1)\nno pull requests found for branch "task"',
+		);
 	};
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
@@ -695,12 +905,18 @@ test("an idle container past the threshold without ready-for-host or blocked wak
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
 		{ name: "claude-done", pane_id: "done:pane", agent_status: "idle" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: implementing\nattention: none\n";
-	io.files["/home/me/.sandboxes/webapp/claude-done/status.md"] = "status: ready-for-host\nattention: none\n";
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+		"status: implementing\nattention: none\n";
+	io.files["/home/me/.sandboxes/webapp/claude-done/status.md"] =
+		"status: ready-for-host\nattention: none\n";
 	const start = Date.now();
 	const clock = t.mock.method(Date, "now", () => start);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	clock.mock.mockImplementation(() => start + 19 * 60_000);
 	intervals.get(60_000)?.();
@@ -712,17 +928,32 @@ test("an idle container past the threshold without ready-for-host or blocked wak
 
 	assert.equal(early, 0);
 	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: idle 21m at implementing, stalled\n\nstatus: implementing/);
+	assert.match(
+		wakes[0],
+		/^\[fleet\] claude-worker: idle 21m at implementing, stalled\n\nstatus: implementing/,
+	);
 });
 
 test("a blocked container wakes the host even while its PR's CI runs", (t: TestContext) => {
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: blocked\nattention: CI hangs past the wait\n";
-	onBranch(io, [{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" }]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+		"status: blocked\nattention: CI hangs past the wait\n";
+	onBranch(io, [
+		{
+			__typename: "CheckRun",
+			name: "test",
+			status: "IN_PROGRESS",
+			conclusion: "",
+		},
+	]);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
@@ -735,10 +966,22 @@ test("a container paused at its step's end wakes the host even while its PR's CI
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: paused\nattention: none\n";
-	onBranch(io, [{ __typename: "CheckRun", name: "test", status: "IN_PROGRESS", conclusion: "" }]);
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+		"status: paused\nattention: none\n";
+	onBranch(io, [
+		{
+			__typename: "CheckRun",
+			name: "test",
+			status: "IN_PROGRESS",
+			conclusion: "",
+		},
+	]);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
@@ -751,10 +994,15 @@ test("a settle with status.md unchanged but new branch facts wakes the host agai
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] = "status: implementing\nattention: none\n";
+	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+		"status: implementing\nattention: none\n";
 	onBranch(io, []);
 	const wakes: string[] = [];
-	watch(() => undefined, io, (text) => wakes.push(text));
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);

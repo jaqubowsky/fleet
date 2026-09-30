@@ -1,6 +1,10 @@
 import net from "node:net";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
-import { ACTIVITY, fieldsOf, logLines } from "../../extensions/status-history.ts";
+import {
+	ACTIVITY,
+	fieldsOf,
+	logLines,
+} from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
 import { activityNow, blockedWork, steer } from "./commands.ts";
 import { CLI, CONTINUE } from "../harness.ts";
@@ -20,6 +24,7 @@ import {
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
+import { repositoryManifest, repositoryCheckout } from "./repositories.ts";
 import {
 	type Agent,
 	branchFacts,
@@ -98,7 +103,10 @@ export function watch(
 	const woken = new Map<string, Woken>();
 	const deaths = new Map<string, string>();
 	const streaks = new Map<string, string>();
-	const dirs = new Map<string, { dir: string; sandbox: Sandbox; repo: string }>();
+	const dirs = new Map<
+		string,
+		{ dir: string; sandbox: Sandbox; repo: string }
+	>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
@@ -106,9 +114,10 @@ export function watch(
 	let failingLocate: string | undefined;
 
 	const locate = (name: string, rows: Sandbox[]) => {
-		const dir = taskDirOf(io.home, rows, name);
+		const dir = taskDirOf(io.home, rows, name, io);
 		const row = rows.find((s) => agentName(s.name) === name);
-		if (dir && row) dirs.set(name, { dir, sandbox: row, repo: row.workspaces[0] });
+		if (dir && row)
+			dirs.set(name, { dir, sandbox: row, repo: row.workspaces[0] });
 		return dirs.get(name);
 	};
 
@@ -118,7 +127,8 @@ export function watch(
 			failingLocate = undefined;
 			return rows;
 		} catch (error) {
-			if (String(error) !== failingLocate) io.log(`[fleet] watch: locate: ${String(error)}`);
+			if (String(error) !== failingLocate)
+				io.log(`[fleet] watch: locate: ${String(error)}`);
 			failingLocate = String(error);
 		}
 	};
@@ -130,12 +140,38 @@ export function watch(
 
 	const factsOf = (name: string): { text: string; running: boolean } => {
 		const where = dirs.get(name);
-		if (!where) return { text: "commits: not counted\n\npr: not read", running: false };
+		if (!where)
+			return { text: "commits: not counted\n\npr: not read", running: false };
+		const manifest = repositoryManifest(where.sandbox.name, io);
+		if (manifest) {
+			const lines: string[] = [];
+			let running = false;
+			for (const repo of manifest.repositories) {
+				try {
+					const current = repositoryCheckout(io, where.sandbox.name, repo.workspace);
+					const facts = branchFacts(io, where.sandbox.name, repo.repo, repo);
+					running ||= facts.running;
+					lines.push(
+						`${repo.name} ${current.branch} ${current.dirty} dirty ${current.head}\ncommits: ${facts.commits}\npr: ${facts.pr}`,
+					);
+				} catch (error) {
+					lines.push(`${repo.name}: failed: ${String(error).split("\n").at(-1)}`);
+				}
+			}
+			return { text: lines.join("\n\n"), running };
+		}
 		const facts = branchFacts(io, where.sandbox.name, where.repo);
-		return { text: `commits: ${facts.commits}\n\npr: ${facts.pr}`, running: facts.running };
+		return {
+			text: `commits: ${facts.commits}\n\npr: ${facts.pr}`,
+			running: facts.running,
+		};
 	};
 
-	const details = (name: string, status: string | undefined, facts: string): string => {
+	const details = (
+		name: string,
+		status: string | undefined,
+		facts: string,
+	): string => {
 		const where = dirs.get(name);
 		let activity = "";
 		try {
@@ -149,14 +185,23 @@ export function watch(
 		return `${text}${blocked ? `\n\nstill working while blocked: ${calls(blocked)} since status.md turned blocked` : ""}${activity ? `\n\nactivity: ${activity}` : ""}`;
 	};
 
-	const emit = (name: string, change: string, when: { settled?: boolean; unlessCi?: boolean; down?: boolean } = {}) => {
+	const emit = (
+		name: string,
+		change: string,
+		when: { settled?: boolean; unlessCi?: boolean; down?: boolean } = {},
+	) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name) && !when.down) return;
 		const rows = listed();
 		if (rows) locate(name, rows);
 		const status = statusOf(name);
 		const facts = factsOf(name);
-		if (when.unlessCi && facts.running && !WAITS_ON_HOST.has(fieldsOf(status).status ?? "")) return;
+		if (
+			when.unlessCi &&
+			facts.running &&
+			!WAITS_ON_HOST.has(fieldsOf(status).status ?? "")
+		)
+			return;
 		const last = woken.get(name);
 		if (
 			when.settled &&
@@ -167,11 +212,25 @@ export function watch(
 		)
 			return;
 		woken.set(name, { status, facts: facts.text, at: io.now().toISOString() });
-		onWake(wakeLines(name, dirs.get(name)?.sandbox.name ?? name, change, details(name, status, facts.text)));
+		onWake(
+			wakeLines(
+				name,
+				dirs.get(name)?.sandbox.name ?? name,
+				change,
+				details(name, status, facts.text),
+			),
+		);
 	};
 
-	const leave = (pane: string, entry: Tracked, rows: Sandbox[] | undefined, exited: boolean) => {
-		const down = lifecycle(io.read(events) ?? "").closed.has(entry.name) || (rows !== undefined && !rows.some((s) => agentName(s.name) === entry.name));
+	const leave = (
+		pane: string,
+		entry: Tracked,
+		rows: Sandbox[] | undefined,
+		exited: boolean,
+	) => {
+		const down =
+			lifecycle(io.read(events) ?? "").closed.has(entry.name) ||
+			(rows !== undefined && !rows.some((s) => agentName(s.name) === entry.name));
 		if (down) emit(entry.name, `${entry.status} -> taken down`, { down });
 		else if (exited) emit(entry.name, `${entry.status} -> gone`);
 		tracked.delete(pane);
@@ -273,8 +332,8 @@ export function watch(
 		let agents: Agent[];
 		let rows: Sandbox[];
 		try {
-			listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"])
-				.result.agents;
+			listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result
+				.agents;
 			rows = sandboxes(io);
 			agents = fleetAgents(listed, rows, wanted);
 			failing = undefined;
@@ -317,14 +376,22 @@ export function watch(
 			const where = dirs.get(t.name);
 			if (t.status !== "working" || !where) continue;
 			const activity = activityOf(io.read(`${where.dir}/${ACTIVITY}`));
-			if (!activity?.streakFrom || activity.streak < FAILED_IN_A_ROW || streaks.get(t.name) === activity.streakFrom) continue;
+			if (
+				!activity?.streakFrom ||
+				activity.streak < FAILED_IN_A_ROW ||
+				streaks.get(t.name) === activity.streakFrom
+			)
+				continue;
 			streaks.set(t.name, activity.streakFrom);
 			emit(t.name, `working, ${activity.streak} tool calls failed in a row`);
 		}
 	};
 
 	const noticeIdle = (now: number) => {
-		const quiet = [...tracked].filter(([, t]) => t.rang <= t.since && idleStalled(t.status, undefined, now - t.since));
+		const quiet = [...tracked].filter(
+			([, t]) =>
+				t.rang <= t.since && idleStalled(t.status, undefined, now - t.since),
+		);
 		if (!quiet.length) return;
 		const rows = listed();
 		if (!rows) return;
@@ -333,14 +400,20 @@ export function watch(
 			const status = fieldsOf(statusOf(t.name)).status;
 			tracked.set(pane, { ...t, rang: now });
 			if (!idleStalled(t.status, status, now - t.since)) continue;
-			emit(t.name, `${t.status} ${Math.round((now - t.since) / 60_000)}m at ${status ?? "no status"}, stalled`, { unlessCi: true });
+			emit(
+				t.name,
+				`${t.status} ${Math.round((now - t.since) / 60_000)}m at ${status ?? "no status"}, stalled`,
+				{ unlessCi: true },
+			);
 		}
 	};
 
 	const resets = new Map<string, Date | undefined>();
 
 	const noticeLimits = () => {
-		const idle = [...tracked.values()].filter((t) => t.status === "idle" || t.status === "done");
+		const idle = [...tracked.values()].filter(
+			(t) => t.status === "idle" || t.status === "done",
+		);
 		const rows = idle.some((t) => !dirs.has(t.name)) ? listed() : undefined;
 		for (const t of idle) {
 			const where = dirs.get(t.name) ?? (rows && locate(t.name, rows));
@@ -351,20 +424,37 @@ export function watch(
 			if (!resets.has(stop)) {
 				let pane = "";
 				try {
-					pane = io.herdrText(["agent", "read", t.name, "--source", "recent-unwrapped", "--lines", "40"]);
+					pane = io.herdrText([
+						"agent",
+						"read",
+						t.name,
+						"--source",
+						"recent-unwrapped",
+						"--lines",
+						"40",
+					]);
 				} catch (error) {
 					io.log(`[fleet] watch: limit: ${String(error)}`);
 				}
 				resets.set(stop, resetAt(pane, stoppedAt));
 			}
-			const resumes = steersSince(io.read(events) ?? "", t.name, CONTINUE, stoppedAt);
+			const resumes = steersSince(
+				io.read(events) ?? "",
+				t.name,
+				CONTINUE,
+				stoppedAt,
+			);
 			const last = resumes.at(-1);
 			const worked = activityOf(io.read(`${where.dir}/${ACTIVITY}`))?.last;
 			if (last && worked && new Date(worked) > last) continue;
 			const due = resumeDue(stoppedAt, resets.get(stop), resumes);
 			if (io.now() < due) continue;
 			if (resumes.length >= RETRIES) {
-				if (io.now().getTime() < due.getTime() + STALL_TICK_MS) emit(t.name, `stopped on the account limit, ${RETRIES} resumes did not take`);
+				if (io.now().getTime() < due.getTime() + STALL_TICK_MS)
+					emit(
+						t.name,
+						`stopped on the account limit, ${RETRIES} resumes did not take`,
+					);
 				continue;
 			}
 			try {

@@ -1,4 +1,6 @@
 import { basename } from "node:path";
+import type { Io } from "./io.ts";
+import { taskDir } from "./repositories.ts";
 import { agentName } from "./name.ts";
 import type { Sandbox } from "./status.ts";
 
@@ -9,7 +11,6 @@ export const FAILED_IN_A_ROW = 5;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
 const FINISHED = new Set(["ready-for-host", "paused", "blocked"]);
-
 
 export function shouldWake(prev: string | undefined, next: string): boolean {
 	if (next === "unknown") return prev === "working";
@@ -25,12 +26,23 @@ export function stalled(
 	ringMs: number,
 ): string[] {
 	return entries
-		.filter((e) => e.status === "working" && now - e.since >= stallMs && now - e.rang >= ringMs)
+		.filter(
+			(e) =>
+				e.status === "working" &&
+				now - e.since >= stallMs &&
+				now - e.rang >= ringMs,
+		)
 		.map((e) => e.pane);
 }
 
-export function idleStalled(agent: string, status: string | undefined, silentMs: number): boolean {
-	return TERMINAL.has(agent) && !FINISHED.has(status ?? "") && silentMs >= STALL_MS;
+export function idleStalled(
+	agent: string,
+	status: string | undefined,
+	silentMs: number,
+): boolean {
+	return (
+		TERMINAL.has(agent) && !FINISHED.has(status ?? "") && silentMs >= STALL_MS
+	);
 }
 
 export function transition(
@@ -45,8 +57,10 @@ export function taskDirOf(
 	home: string,
 	sandboxes: Pick<Sandbox, "name" | "workspaces">[],
 	agent: string,
+	io?: Io,
 ): string | undefined {
 	const hit = sandboxes.find((s) => agentName(s.name) === agent);
 	if (!hit?.workspaces[0]) return undefined;
+	if (io) return taskDir(hit.workspaces[0], hit.name, io);
 	return `${home}/.sandboxes/${basename(hit.workspaces[0])}/${hit.name}`;
 }

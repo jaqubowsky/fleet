@@ -6,9 +6,23 @@ import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { SEATS } from "../harness.ts";
 import { EVENTS_LOG, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
-import { idleStalled, STALL_MS, taskDirOf, shouldWake, stalled, transition } from "./monitor.ts";
+import {
+	idleStalled,
+	STALL_MS,
+	taskDirOf,
+	shouldWake,
+	stalled,
+	transition,
+} from "./monitor.ts";
 
-function monitorRuntime(t: TestContext, h = SEATS.pi, agents = [{ name: "pi-worker", pane_id: "worker:pane", agent_status: "working" }], herdr: unknown = { result: { agents } }) {
+function monitorRuntime(
+	t: TestContext,
+	h = SEATS.pi,
+	agents = [
+		{ name: "pi-worker", pane_id: "worker:pane", agent_status: "working" },
+	],
+	herdr: unknown = { result: { agents } },
+) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
 	t.after(() => {
@@ -18,38 +32,79 @@ function monitorRuntime(t: TestContext, h = SEATS.pi, agents = [{ name: "pi-work
 	});
 	const sockets: (EventEmitter & { destroyed: boolean })[] = [];
 	t.mock.method(net, "createConnection", () => {
-		const socket = Object.assign(new EventEmitter(), { destroyed: false, write() {}, destroy() { this.destroyed = true; } });
+		const socket = Object.assign(new EventEmitter(), {
+			destroyed: false,
+			write() {},
+			destroy() {
+				this.destroyed = true;
+			},
+		});
 		sockets.push(socket);
 		return socket as unknown as net.Socket;
 	});
-	const io = fakeIo({
-		"sbx ls --json": { sandboxes: agents.map((a) => ({ name: a.name, agent: "pi", workspaces: ["/w/repo"] })) },
-		"herdr agent list": herdr,
-	}, h);
+	const io = fakeIo(
+		{
+			"sbx ls --json": {
+				sandboxes: agents.map((a) => ({
+					name: a.name,
+					agent: "pi",
+					workspaces: ["/w/repo"],
+				})),
+			},
+			"herdr agent list": herdr,
+		},
+		h,
+	);
 	const events = (...lines: string[]) => {
 		io.files[`${io.home}/${EVENTS_LOG}`] = `${lines.join("\n")}\n`;
 	};
 	const start = (sessionId: string) => {
 		const handlers: Record<string, (...args: any[]) => any> = {};
 		const tools: Record<string, { execute: (...args: any[]) => any }> = {};
-		const messages: { message: { content: string }; options: { deliverAs: string; triggerTurn: boolean } }[] = [];
+		const messages: {
+			message: { content: string };
+			options: { deliverAs: string; triggerTurn: boolean };
+		}[] = [];
 		const notices: string[] = [];
-		fleetMonitor(h, io)({
-			on: (name: string, fn: any) => { handlers[name] = fn; },
-			registerTool: (tool: any) => { tools[tool.name] = tool; },
+		fleetMonitor(
+			h,
+			io,
+		)({
+			on: (name: string, fn: any) => {
+				handlers[name] = fn;
+			},
+			registerTool: (tool: any) => {
+				tools[tool.name] = tool;
+			},
 			registerCommand() {},
-			sendMessage: (message: any, options: any) => messages.push({ message, options }),
+			sendMessage: (message: any, options: any) =>
+				messages.push({ message, options }),
 			ui: { notify: (text: string) => notices.push(text) },
 		});
 		t.after(() => handlers.session_shutdown());
-		handlers.session_start({}, { sessionManager: { getSessionId: () => sessionId } });
+		handlers.session_start(
+			{},
+			{ sessionManager: { getSessionId: () => sessionId } },
+		);
 		return { handlers, tools, messages, notices };
 	};
 	const exit = (pane = "worker:pane") => {
-		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.exited", data: { pane_id: pane } })}\n`));
+		for (const socket of sockets.filter((s) => !s.destroyed))
+			socket.emit(
+				"data",
+				Buffer.from(
+					`${JSON.stringify({ event: "pane.exited", data: { pane_id: pane } })}\n`,
+				),
+			);
 	};
 	const settle = (pane = "worker:pane") => {
-		for (const socket of sockets.filter((s) => !s.destroyed)) socket.emit("data", Buffer.from(`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`));
+		for (const socket of sockets.filter((s) => !s.destroyed))
+			socket.emit(
+				"data",
+				Buffer.from(
+					`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`,
+				),
+			);
 		t.mock.timers.tick(1100);
 	};
 	return { events, exit, start, settle };
@@ -67,9 +122,15 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 
 	assert.equal(a.messages.length, 1);
 	assert.match(a.messages[0].message.content, /^\[fleet\] pi-worker:/);
-	assert.equal(a.notices.filter((n) => n.startsWith("[fleet] pi-worker:")).length, 1);
+	assert.equal(
+		a.notices.filter((n) => n.startsWith("[fleet] pi-worker:")).length,
+		1,
+	);
 	assert.deepEqual(b.messages, []);
-	assert.deepEqual(b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")), []);
+	assert.deepEqual(
+		b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")),
+		[],
+	);
 });
 
 for (const h of [SEATS.pi]) {
@@ -81,22 +142,36 @@ for (const h of [SEATS.pi]) {
 			return result?.input?.command ?? event.input.command;
 		};
 
-		assert.equal(run('fleet steer pi-worker "go"'), `export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; fleet steer pi-worker "go"`);
-		assert.equal(run("cd /w/repo && fleet up task"), `export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; cd /w/repo && fleet up task`);
+		assert.equal(
+			run('fleet steer pi-worker "go"'),
+			`export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; fleet steer pi-worker "go"`,
+		);
+		assert.equal(
+			run("cd /w/repo && fleet up task"),
+			`export FLEET_SEAT=pi ${h.sessionIdEnv}="session-a"; cd /w/repo && fleet up task`,
+		);
 		assert.equal(run("git status"), "git status");
 		assert.equal(run("cat ~/fleet-notes.md"), "cat ~/fleet-notes.md");
 	});
 }
 
 test("a watcher that cannot reach herdr says so in the session once per trouble", async (t) => {
-	const runtime = monitorRuntime(t, SEATS.pi, [], new Error("herdr: connection refused"));
+	const runtime = monitorRuntime(
+		t,
+		SEATS.pi,
+		[],
+		new Error("herdr: connection refused"),
+	);
 	const watcher = runtime.start("session-a");
 
 	await watcher.tools.fleet_watch.execute("call", { agents: "" });
 	t.mock.timers.tick(3100);
 	t.mock.timers.tick(3100);
 
-	assert.equal(watcher.notices.filter((n) => n.includes("connection refused")).length, 1);
+	assert.equal(
+		watcher.notices.filter((n) => n.includes("connection refused")).length,
+		1,
+	);
 });
 
 test("explicit fleet watch delivers a follow-up turn without waiting for user input", async (t) => {
@@ -107,7 +182,10 @@ test("explicit fleet watch delivers a follow-up turn without waiting for user in
 	runtime.settle();
 
 	assert.equal(watcher.messages.length, 1);
-	assert.deepEqual(watcher.messages[0].options, { deliverAs: "followUp", triggerTurn: true });
+	assert.deepEqual(watcher.messages[0].options, {
+		deliverAs: "followUp",
+		triggerTurn: true,
+	});
 });
 
 test("a container working past the stall window rings once, then again after the ring window", () => {
@@ -119,8 +197,14 @@ test("a container working past the stall window rings once, then again after the
 		{ pane: "w:p4", status: "working", since: 0, rang: 25 * minute },
 	];
 
-	assert.deepEqual(stalled(entries, 30 * minute, 20 * minute, 15 * minute), ["w:p1"]);
-	assert.deepEqual(stalled(entries, 40 * minute, 20 * minute, 15 * minute), ["w:p1", "w:p2", "w:p4"]);
+	assert.deepEqual(stalled(entries, 30 * minute, 20 * minute, 15 * minute), [
+		"w:p1",
+	]);
+	assert.deepEqual(stalled(entries, 40 * minute, 20 * minute, 15 * minute), [
+		"w:p1",
+		"w:p2",
+		"w:p4",
+	]);
 });
 
 test("an idle container paused at the stop its order named is not stalled, one idle mid-step is", () => {
@@ -146,9 +230,36 @@ test("wake on settling, never on going back to work", () => {
 });
 
 test("the task directory follows from the agent's sandbox and its repo", () => {
-	const sandboxes = [{ name: "pi-webapp-web-1", agent: "pi", workspaces: ["/Users/me/Work/webapp"] }];
-	assert.equal(taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"), "/home/me/.sandboxes/webapp/pi-webapp-web-1");
+	const sandboxes = [
+		{
+			name: "pi-webapp-web-1",
+			agent: "pi",
+			workspaces: ["/Users/me/Work/webapp"],
+		},
+	];
+	assert.equal(
+		taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"),
+		"/home/me/.sandboxes/webapp/pi-webapp-web-1",
+	);
 	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
+	const io = fakeIo({
+		"read /home/me/.config/harness/fleet/pi-webapp-web-1.json": JSON.stringify({
+			version: 1,
+			task: "/home/me/.sandboxes/groups/a-b-c/pi-webapp-web-1",
+			repositories: ["a", "b", "c"].map((name) => ({
+				repo: `/${name}`,
+				name: `owner/${name}`,
+				base: "main",
+				baseSha: "1".repeat(40),
+				branch: "task",
+				workspace: `/${name}`,
+			})),
+		}),
+	});
+	assert.equal(
+		taskDirOf(io.home, sandboxes, "pi-webapp-web-1", io),
+		"/home/me/.sandboxes/groups/a-b-c/pi-webapp-web-1",
+	);
 });
 
 test("a wake that lands while the host works waits for its turn to end", async (t) => {
@@ -163,7 +274,10 @@ test("a wake that lands while the host works waits for its turn to end", async (
 
 	assert.equal(during, 0);
 	assert.equal(watcher.messages.length, 1);
-	assert.match(watcher.messages[0].message.content, /^\[fleet\] pi-worker: working -> idle\n/);
+	assert.match(
+		watcher.messages[0].message.content,
+		/^\[fleet\] pi-worker: working -> idle\n/,
+	);
 });
 
 test("a container the host takes down mid-turn arrives after the turn as taken down, and its held settle never does", async (t) => {
@@ -173,10 +287,15 @@ test("a container the host takes down mid-turn arrives after the turn as taken d
 
 	watcher.handlers.agent_start();
 	runtime.settle();
-	runtime.events("2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a");
+	runtime.events(
+		"2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a",
+	);
 	runtime.exit();
 	watcher.handlers.agent_end();
 
 	assert.equal(watcher.messages.length, 1);
-	assert.match(watcher.messages[0].message.content, /^\[fleet\] pi-worker: idle -> taken down\n/);
+	assert.match(
+		watcher.messages[0].message.content,
+		/^\[fleet\] pi-worker: idle -> taken down\n/,
+	);
 });

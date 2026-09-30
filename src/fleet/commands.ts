@@ -1,15 +1,27 @@
+import { dirname } from "node:path";
 import { CLI, CONTINUE, KINDS, type AgentName } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 import { COMPLETE } from "../../extensions/session-handoff.ts";
-import { ACTIVITY, changes, fieldsOf, STATUS_LOG } from "../../extensions/status-history.ts";
+import {
+	ACTIVITY,
+	changes,
+	fieldsOf,
+	STATUS_LOG,
+} from "../../extensions/status-history.ts";
 import { activityOf, callsSince, projection } from "./activity.ts";
 import { render } from "../render/render.ts";
+import {
+	artifactsDir,
+	taskDir,
+	repositoryCheckout,
+	repositoryManifest,
+} from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { logEvent } from "./events.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { artifactsDir, harnessStamp, imageStampPath, staleImage, taskDir } from "./up.ts";
+import { harnessStamp, imageStampPath, staleImage } from "./up.ts";
 import {
 	agentFor,
 	branchFacts,
@@ -42,7 +54,11 @@ export function resolveSandbox(name: string, io: Io): Sandbox {
 const CONTAINER_USAGE = "/home/agent/fleet/src/fleet/usage.ts";
 
 export function activityNow(sandbox: Sandbox, task: string, io: Io): string {
-	return projection(activityOf(io.read(`${task}/${ACTIVITY}`)), costSoFar(sandbox, task, io), io.now());
+	return projection(
+		activityOf(io.read(`${task}/${ACTIVITY}`)),
+		costSoFar(sandbox, task, io),
+		io.now(),
+	);
 }
 
 const justAfter = (at: string) => new Date(Date.parse(at) + 1);
@@ -62,7 +78,10 @@ function costSoFar(sandbox: Sandbox, task: string, io: Io): number | undefined {
 	const sessions = sandbox.kind.containerSessions;
 	if (!sessions) return sessionUsage(task, io)?.totals.cost;
 	try {
-		const printed = io.sbx(["exec", sandbox.name, "node", CONTAINER_USAGE, sessions], { quiet: true });
+		const printed = io.sbx(
+			["exec", sandbox.name, "node", CONTAINER_USAGE, sessions],
+			{ quiet: true },
+		);
 		return printed ? Number(printed) : undefined;
 	} catch {
 		return undefined;
@@ -73,17 +92,59 @@ export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
 		const agent = agentFor(live, agentName(s.name))?.agent_status ?? "gone";
+		const manifest = repositoryManifest(s.name, io);
+		const canProbe =
+			s.status === "running" || (manifest !== undefined && s.status === "stopped");
 		let checkout = { branch: "?", dirty: 0, head: "" };
 		try {
-			if (s.status === "running") checkout = parseCheckout(io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }));
+			if (canProbe)
+				checkout = parseCheckout(
+					io.sbx(["exec", s.name, "sh", "-c", checkoutProbe], { quiet: true }),
+				);
 		} catch (error) {
-			return { sandbox: s.name, status: "failed", agent, branch: "?", dirty: 0, facts: lastLine(error) };
+			return {
+				sandbox: s.name,
+				status: "failed",
+				agent,
+				branch: "?",
+				dirty: 0,
+				facts: lastLine(error),
+			};
 		}
 		const running = s.status === "running";
 		const repo = s.workspaces[0];
 		const task = repo ? taskDir(repo, s.name, io) : undefined;
-		const last = task ? activityOf(io.read(`${task}/${ACTIVITY}`))?.last : undefined;
-		const facts = running && repo ? branchFacts(io, s.name, repo) : undefined;
+		const last = task
+			? activityOf(io.read(`${task}/${ACTIVITY}`))?.last
+			: undefined;
+		const facts =
+			running && repo && !manifest ? branchFacts(io, s.name, repo) : undefined;
+		let ciRunning = facts?.running ?? false;
+		const checkouts: string[] = [];
+		for (const entry of manifest?.repositories ?? []) {
+			try {
+				const current = canProbe
+					? repositoryCheckout(io, s.name, entry.workspace)
+					: undefined;
+				checkouts.push(
+					`${entry.name} ${current?.branch ?? entry.branch} ${current?.dirty ?? "?"} dirty ${current?.head ?? entry.sourceSha ?? entry.baseSha}${canProbe ? "" : " (last known)"}`,
+				);
+				if (running) {
+					const facts = branchFacts(io, s.name, entry.repo, entry);
+					ciRunning ||= facts.running;
+					checkouts.push(`commits ${facts.commits}; pr ${facts.pr}`);
+				}
+			} catch (error) {
+				return {
+					sandbox: s.name,
+					status: "failed",
+					agent,
+					branch: checkout.branch,
+					dirty: checkout.dirty,
+					facts: `${entry.name}: ${lastLine(error)}`,
+				};
+			}
+		}
 		return {
 			sandbox: s.name,
 			status: s.status,
@@ -91,29 +152,72 @@ export function ls(io: Io): string {
 			branch: checkout.branch,
 			dirty: checkout.dirty,
 			blocked: task ? blockedWork(task, io) : 0,
-			stalled: !facts?.running && !!last && idleStalled(agent, fieldsOf(io.read(`${task}/status.md`)).status, io.now().getTime() - new Date(last).getTime()),
-			activity: task && (running || !s.kind.containerSessions) ? activityNow(s, task, io) : undefined,
-			facts: facts && `commits ${facts.commits}; pr ${facts.pr}`,
+			stalled:
+				!ciRunning &&
+				!!last &&
+				idleStalled(
+					agent,
+					fieldsOf(io.read(`${task}/status.md`)).status,
+					io.now().getTime() - new Date(last).getTime(),
+				),
+			activity:
+				task && (running || !s.kind.containerSessions)
+					? activityNow(s, task, io)
+					: undefined,
+			facts:
+				[facts && `commits ${facts.commits}; pr ${facts.pr}`, ...(checkouts ?? [])]
+					.filter(Boolean)
+					.join("\n  ") || undefined,
 		};
 	});
 	return formatRows(rows);
 }
 
 function lastLine(error: unknown): string {
-	return (error instanceof Error ? error.message : String(error)).trim().split("\n").at(-1) ?? "";
+	return (
+		(error instanceof Error ? error.message : String(error))
+			.trim()
+			.split("\n")
+			.at(-1) ?? ""
+	);
 }
 
 export function peek(sandbox: string, io: Io, lines = 40): string {
-	const git = io.sbx(
-		[
-			"exec",
-			sandbox,
-			"sh",
-			"-c",
-			`cd "$WORKSPACE_DIR" && git status --short && echo --- && git log --oneline -8 && echo --- && git diff --stat HEAD && echo --- && (tail -3 ${INSTALL_LOG} 2>/dev/null || echo "deps: no install log")`,
-		],
-		{ quiet: true },
-	);
+	const manifest = repositoryManifest(sandbox, io);
+	const git = manifest
+		? manifest.repositories
+				.map((entry, index) => {
+					const log =
+						index === 0
+							? INSTALL_LOG
+							: `${INSTALL_LOG.slice(0, -4)}-${entry.workspace.split("/").at(-1)}.log`;
+					const checkout = repositoryCheckout(io, sandbox, entry.workspace);
+					const state = io.sbx(
+						[
+							"exec",
+							sandbox,
+							"sh",
+							"-c",
+							'cd "$1" && git status --short && echo --- && git log --oneline -8 && echo --- && git diff --stat HEAD && echo --- && (tail -3 "$2" 2>/dev/null || echo "deps: no install log")',
+							"--",
+							entry.workspace,
+							log,
+						],
+						{ quiet: true },
+					);
+					return `${entry.name} ${checkout.branch} ${checkout.dirty} dirty ${checkout.head} (${entry.workspace})\n${state}`;
+				})
+				.join("\n")
+		: io.sbx(
+				[
+					"exec",
+					sandbox,
+					"sh",
+					"-c",
+					`cd "$WORKSPACE_DIR" && git status --short && echo --- && git log --oneline -8 && echo --- && git diff --stat HEAD && echo --- && (tail -3 ${INSTALL_LOG} 2>/dev/null || echo "deps: no install log")`,
+				],
+				{ quiet: true },
+			);
 	let tail = "";
 	try {
 		tail = io.herdrText([
@@ -131,15 +235,30 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function steer(sandbox: Sandbox, text: string, io: Io, root?: string): void {
+export function steer(
+	sandbox: Sandbox,
+	text: string,
+	io: Io,
+	root?: string,
+): void {
 	prompt(sandbox, text, io, { root });
 }
 
 const IDLE_TIMEOUT_MS = 60_000;
 
-export async function handoff(sandbox: Sandbox, io: Io, options: { continue?: boolean; root?: string } = {}): Promise<void> {
+export async function handoff(
+	sandbox: Sandbox,
+	io: Io,
+	options: { continue?: boolean; root?: string } = {},
+): Promise<void> {
 	const command = sandbox.kind.tokens["handoff.command"];
-	if (sandbox.kind.handoffTakesText) return prompt(sandbox, options.continue ? `${command} ${CONTINUE}` : command, io, { root: options.root, reset: true });
+	if (sandbox.kind.handoffTakesText)
+		return prompt(
+			sandbox,
+			options.continue ? `${command} ${CONTINUE}` : command,
+			io,
+			{ root: options.root, reset: true },
+		);
 	prompt(sandbox, command, io, { root: options.root, reset: true });
 	if (!options.continue) return;
 	await idle(sandbox.name, io);
@@ -149,19 +268,33 @@ export async function handoff(sandbox: Sandbox, io: Io, options: { continue?: bo
 async function idle(sandbox: string, io: Io): Promise<void> {
 	const started = io.now().getTime();
 	while (io.now().getTime() - started < IDLE_TIMEOUT_MS) {
-		if (TERMINAL.has(agentFor(agents(io), agentName(sandbox))?.agent_status ?? "")) return;
+		if (
+			TERMINAL.has(agentFor(agents(io), agentName(sandbox))?.agent_status ?? "")
+		)
+			return;
 		await io.sleep(1000);
 	}
-	throw new Error(`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the continue was not sent. Inspect ${CLI} peek ${sandbox}, then steer the continue yourself.`);
+	throw new Error(
+		`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the continue was not sent. Inspect ${CLI} peek ${sandbox}, then steer the continue yourself.`,
+	);
 }
 
-function prompt({ name: sandbox, kind, workspaces }: Sandbox, text: string, io: Io, { root, reset }: { root?: string; reset?: boolean } = {}): void {
+function prompt(
+	{ name: sandbox, kind, workspaces }: Sandbox,
+	text: string,
+	io: Io,
+	{ root, reset }: { root?: string; reset?: boolean } = {},
+): void {
 	seatOf(io);
 	const agent = agentName(sandbox);
 	const stale = root ? staleImage(root, kind, io) : undefined;
-	if (stale) io.log(`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`);
+	if (stale)
+		io.log(
+			`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`,
+		);
 	logEvent(io, "steer", agent, text);
-	const handoff = reset && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
+	const handoff =
+		reset && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
 	const before = handoff?.();
 	try {
 		io.herdr([
@@ -194,8 +327,13 @@ function prompt({ name: sandbox, kind, workspaces }: Sandbox, text: string, io: 
 	io.log(`${agent}: steered`);
 }
 
-function statusOf(repo: string, sandbox: string, io: Io): () => string | undefined {
-	return () => fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention;
+function statusOf(
+	repo: string,
+	sandbox: string,
+	io: Io,
+): () => string | undefined {
+	return () =>
+		fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention;
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
@@ -225,7 +363,10 @@ export function exec(sandbox: string, command: string[], io: Io): void {
 
 export function renderHost(root: string, io: Io): void {
 	const { name } = seatOf(io);
-	render({ root, agent: name, seat: "host", out: `${io.home}/${KINDS[name].home}` }, io);
+	render(
+		{ root, agent: name, seat: "host", out: `${io.home}/${KINDS[name].home}` },
+		io,
+	);
 }
 
 export function build(root: string, name: AgentName | undefined, io: Io): void {
@@ -312,12 +453,29 @@ function isTask(dir: string, io: Io): boolean {
 }
 
 export function artifacts(repo: string, io: Io): string {
-	const root = artifactsDir(repo, io);
+	const roots = new Set([artifactsDir(repo, io)]);
+	for (const file of io.list(`${io.home}/.config/harness/fleet`)) {
+		if (!file.endsWith(".json")) continue;
+		const sandbox = file.slice(0, -5);
+		const manifest = repositoryManifest(sandbox, io);
+		if (manifest?.repositories.some((entry) => entry.repo === repo))
+			roots.add(dirname(taskDir(repo, sandbox, io)));
+	}
+	return [...roots].map((root) => artifactListing(root, io)).join("\n\n");
+}
+
+function artifactListing(root: string, io: Io): string {
 	const top = entries(root, io);
 	const tasks = top.dirs.filter((d) => isTask(`${root}/${d}`, io));
 	const lines: Line[] = [];
 	for (const task of tasks) {
-		lines.push({ indent: "", name: `${task}/`, detail: "" });
+		lines.push({
+			indent: "",
+			name: root.startsWith(`${io.home}/.sandboxes/groups/`)
+				? `${root}/${task}/`
+				: `${task}/`,
+			detail: "",
+		});
 		const inside = entries(`${root}/${task}`, io);
 		lines.push(
 			...inside.files.map((f) => fileLine("  ", f, io)),
@@ -422,7 +580,12 @@ function hasBranch(branch: string, repo: string, io: Io): boolean {
 	}
 }
 
-function landed(sandbox: string, head: string, repo: string | undefined, io: Io): boolean {
+function landed(
+	sandbox: string,
+	head: string,
+	repo: string | undefined,
+	io: Io,
+): boolean {
 	if (!head || !repo) return true;
 	try {
 		io.git(["cat-file", "-e", `${head}^{commit}`], repo);
@@ -433,9 +596,20 @@ function landed(sandbox: string, head: string, repo: string | undefined, io: Io)
 }
 
 function pushed(sandbox: string, head: string, io: Io): boolean {
-	return io
-		.sbx(["exec", sandbox, "sh", "-c", `cd "$WORKSPACE_DIR" && git for-each-ref --contains ${head} --format='%(refname)' refs/remotes`], { quiet: true })
-		.trim() !== "";
+	return (
+		io
+			.sbx(
+				[
+					"exec",
+					sandbox,
+					"sh",
+					"-c",
+					`cd "$WORKSPACE_DIR" && git for-each-ref --contains ${head} --format='%(refname)' refs/remotes`,
+				],
+				{ quiet: true },
+			)
+			.trim() !== ""
+	);
 }
 
 function harvest(
@@ -461,31 +635,45 @@ function harvest(
 }
 
 const GUEST_CGROUP = "/sys/fs/cgroup/docker";
-const GUEST_MEMORY_FILES = ["memory.peak", "memory.stat", "memory.events"].map((f) => `${GUEST_CGROUP}/${f}`);
+const GUEST_MEMORY_FILES = ["memory.peak", "memory.stat", "memory.events"].map(
+	(f) => `${GUEST_CGROUP}/${f}`,
+);
 
 function recordMemory(sandbox: string, task: string, io: Io): void {
 	let printed: string;
 	try {
-		printed = io.sbx(["exec", sandbox, "cat", ...GUEST_MEMORY_FILES], { quiet: true }).trim();
+		printed = io
+			.sbx(["exec", sandbox, "cat", ...GUEST_MEMORY_FILES], { quiet: true })
+			.trim();
 	} catch (error) {
-		io.log(`${sandbox}: no memory recorded: ${(error as Error).message.split("\n").slice(1).join(" ")}`);
+		io.log(
+			`${sandbox}: no memory recorded: ${(error as Error).message.split("\n").slice(1).join(" ")}`,
+		);
 		return;
 	}
 	const [peak, ...counters] = printed.split("\n");
-	const counter = new Map(counters.map((line) => line.split(" ") as [string, string]));
+	const counter = new Map(
+		counters.map((line) => line.split(" ") as [string, string]),
+	);
 	const memory = {
 		peakBytes: peak ? Number(peak) : Number.NaN,
 		anonBytes: Number(counter.get("anon")),
 		high: Number(counter.get("high")),
 		oom: Number(counter.get("oom")),
 	};
-	const unreadable = Object.entries(memory).filter(([, value]) => !Number.isInteger(value)).map(([key]) => key);
+	const unreadable = Object.entries(memory)
+		.filter(([, value]) => !Number.isInteger(value))
+		.map(([key]) => key);
 	if (unreadable.length) {
-		io.log(`${sandbox}: no memory recorded: ${unreadable.join(", ")} unreadable in ${GUEST_CGROUP}`);
+		io.log(
+			`${sandbox}: no memory recorded: ${unreadable.join(", ")} unreadable in ${GUEST_CGROUP}`,
+		);
 		return;
 	}
 	io.write(`${task}/logs/memory.json`, `${JSON.stringify(memory)}\n`);
-	io.log(`${sandbox}: memory peak ${(memory.peakBytes / 2 ** 30).toFixed(1)} GiB -> ${task}/logs/memory.json`);
+	io.log(
+		`${sandbox}: memory peak ${(memory.peakBytes / 2 ** 30).toFixed(1)} GiB -> ${task}/logs/memory.json`,
+	);
 }
 
 export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
@@ -494,12 +682,39 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	const checkout = parseCheckout(
 		io.sbx(["exec", sandbox, "sh", "-c", checkoutProbe], { quiet: true }),
 	);
-	if (checkout.dirty && !opts.force) {
+	const manifest = repositoryManifest(sandbox, io);
+	if (manifest && !opts.force) {
+		for (const repo of manifest.repositories) {
+			const current = repositoryCheckout(io, sandbox, repo.workspace);
+			if (current.dirty)
+				throw new Error(
+					`${repo.name}: ${current.dirty} uncommitted file(s); commit them before closing ${sandbox}`,
+				);
+			const hostHead = io.git(
+				["for-each-ref", "--format=%(objectname)", `refs/heads/${repo.branch}`],
+				repo.repo,
+			);
+			if (
+				current.branch !== repo.branch ||
+				current.head !== repo.sourceSha ||
+				!repo.landedSha ||
+				hostHead !== repo.landedSha
+			)
+				throw new Error(
+					`${repo.name}: ${current.head} is not landed on ${repo.branch}; run ${CLI} land first`,
+				);
+		}
+	}
+	if (!manifest && checkout.dirty && !opts.force) {
 		throw new Error(
 			`${sandbox} has ${checkout.dirty} uncommitted file(s) on ${checkout.branch}; commit them in the container or pass --force to discard`,
 		);
 	}
-	if (!landed(sandbox, checkout.head, entry.workspaces[0], io) && !opts.force) {
+	if (
+		!manifest &&
+		!landed(sandbox, checkout.head, entry.workspaces[0], io) &&
+		!opts.force
+	) {
 		throw new Error(
 			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${CLI} land first or pass --force to discard`,
 		);
@@ -519,7 +734,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		);
 	}
 	recordMemory(sandbox, task, io);
-	if (repo && io.list(artifactsDir(repo, io)).length)
+	if (repo && io.list(dirname(task)).length)
 		io.log(
 			`${sandbox}: artifacts stay in ${task}, read them with ${CLI} artifacts --repo ${repo}`,
 		);

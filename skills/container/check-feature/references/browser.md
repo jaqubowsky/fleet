@@ -4,7 +4,7 @@ Shared by every browser walk and replay.
 
 ## Prove the checkout
 
-Before startup record branch, commit, base branch, merge-base commit, `git status --porcelain` and a hash of the diff against `HEAD`. Record the launch command, its working directory and the URL that answered. A reachable URL whose process does not run from this checkout is a failed audit.
+Before startup record branch, full commit SHA, base branch, merge-base commit, `git status --porcelain` and a hash of the diff against `HEAD`. When `repositories.json` exists, do this in every listed workspace and pin each repository's name and full commit SHA in the report before starting services; a dirty tree needs its diff hash too. Name the test configuration for every service this run uses. If any service would fall back to a production env, stop rather than call that an automated test. Record the launch command, its working directory and the URL that answered. A reachable URL whose process does not run from these checkouts is a failed audit.
 
 Use only test identities the runbook names or credentials the sandbox already holds. Credential values never enter a report or a screenshot.
 
@@ -57,4 +57,4 @@ After cleanup, from the scratch log of this run and not from memory, in English:
 
 ## Cleanup
 
-`playwright-cli close`, then `run.sh stop`, then a request per port confirms nothing answers; the stop script's own report is not that confirmation. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it. Publication, pushes and merges stay with the person.
+`playwright-cli close`, then `run.sh stop`, then a request per port confirms nothing answers; the stop script's own report is not that confirmation. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it in every repository, and a multi-repository report still names the complete set of SHAs that actually ran. Publication, pushes and merges stay with the person.

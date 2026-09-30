@@ -274,6 +274,22 @@ test("the claude hook follows the target sandbox's down level and asks in auto p
 	);
 });
 
+test("the claude hook asks separately for landing, signing and pushing", () => {
+	const root = privateRoot();
+	const decide = (command: string) =>
+		answer({ tool_name: "Bash", tool_input: { command }, cwd: root }, root);
+
+	for (const command of [
+		"fleet land pi-harness-demo",
+		"fleet land pi-harness-demo --sign",
+		"fleet land pi-harness-demo --push",
+		"fleet land --sign --push pi-harness-demo",
+	])
+		assert.match(decide(command), /"permissionDecision":"ask"/, command);
+	for (const command of ["bash -c 'fleet land pi-harness-demo'"])
+		assert.match(decide(command), /"permissionDecision":"deny"/, command);
+});
+
 test("the claude hook lets a GitHub read run in any shell form, since the sandbox reaches GitHub, and keeps writes bare", () => {
 	const root = privateRoot();
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);

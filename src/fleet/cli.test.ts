@@ -12,6 +12,36 @@ test("flags: values, bare booleans, -- passthrough", () => {
 	);
 });
 
+test("up keeps both repository paths in their given order", () => {
+	assert.deepEqual(
+		flags(["task", "--repo", "/fe", "--repo", "/api"], ["repo"]),
+		{ opts: { repo: ["/fe", "/api"] }, rest: ["task"] },
+	);
+});
+
+test("up retains two bases in repository order", () => {
+	assert.deepEqual(
+		flags(
+			[
+				"task",
+				"--repo",
+				"/one",
+				"--base",
+				"main",
+				"--repo",
+				"/two",
+				"--base",
+				"dev",
+			],
+			["repo", "base"],
+		),
+		{
+			opts: { repo: ["/one", "/two"], base: ["main", "dev"] },
+			rest: ["task"],
+		},
+	);
+});
+
 test("a value flag without a value is an error, never true", () => {
 	assert.throws(
 		() => flags(["x", "--branch"], ["branch"]),
