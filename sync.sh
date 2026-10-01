@@ -85,6 +85,7 @@ by_hand() {
 	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
 	command -v sbx >/dev/null || echo "  missing sbx on PATH: docs/setup/01-tools.md"
 	command -v herdr >/dev/null || echo "  missing herdr on PATH: docs/setup/01-tools.md"
+	[ "$(zsh -ic 'type gh' 2>/dev/null | tail -1)" = "gh is $HOME/.local/bin/gh" ] || echo "  gh in a new shell is not ~/.local/bin/gh: put ~/.local/bin first on PATH and drop any gh function, such as the 1Password plugin's: docs/setup/04-github-tokens.md"
 	command -v node >/dev/null || { echo "  missing node on PATH: docs/setup/01-tools.md"; return; }
 	node --input-type=module -e '
 		const [root, home] = process.argv.slice(1);

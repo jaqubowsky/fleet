@@ -8,6 +8,8 @@ The render owns whole directories and replaces them on every run: `~/.claude/rul
 
 In `~/.claude/settings.json` it writes only the keys `claude/profiles/host.json` names, and keeps the person's own hook entries beside the repository's. The previous file stays as `settings.json.bak`.
 
+`fleet` and the `gh` wrapper land in `~/.local/bin`, which must come first on the person's `PATH`, ahead of Homebrew. If their `~/.zshrc` lacks it, propose `export PATH="$HOME/.local/bin:$PATH"` there.
+
 ## Run
 
 ```bash
@@ -26,4 +28,4 @@ A profile that gives the sandbox a Linear server needs it registered once by han
 
 ## Check
 
-A second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, and `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.
+A second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, `zsh -ic 'type gh'` ends with `gh is <home>/.local/bin/gh`, and `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.
