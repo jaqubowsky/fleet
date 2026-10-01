@@ -13,7 +13,7 @@ type Entry = {
 	message?: { role: string; model?: string; usage?: Usage; content?: ToolCall[] | string };
 };
 
-export type Commit = { sha: string; at: string };
+type Commit = { sha: string; at: string };
 
 export type Run = {
 	skill: string;
@@ -60,7 +60,7 @@ const CLAUDE_USD_PER_MTOK: Record<string, { input: number; output: number; cache
 	"claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1 },
 };
 
-export function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
+function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
 	const price = CLAUDE_USD_PER_MTOK[(model ?? "").replace(/\[.*\]$/, "")];
 	if (!price) return 0;
 	const written = usage.cache_creation_input_tokens ?? 0;

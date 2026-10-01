@@ -29,7 +29,7 @@ const checkout = (
 		harness,
 	);
 
-const USER_PROFILES = "read /home/me/.config/harness/repos.json";
+const USER_PROFILES = "read /home/me/.fleet/config/repos.json";
 const REGISTERED = {
 	"read /home/me/.claude.json": JSON.stringify({
 		projects: {
@@ -226,7 +226,7 @@ test("profile prints the repository's overlay under the levels, and says where i
 		profileFor(parseProfiles(SAMPLE_PROFILES), "acme/webapp"),
 	);
 	const read = {
-		"read /home/me/.config/harness/projects/acme/webapp.md": overlay,
+		"read /home/me/.fleet/config/projects/acme/webapp.md": overlay,
 		"read /root/host/projects/acme/webapp.md": "# the harness copy\n",
 	};
 
@@ -235,11 +235,11 @@ test("profile prints the repository's overlay under the levels, and says where i
 			{ root: "/root", repo: "acme/webapp" },
 			checkout("", SAMPLE_PROFILES, read),
 		),
-		`${levels}\nOverlay ~/.config/harness/projects/acme/webapp.md, which containers read as project.md:\n\n${overlay}`,
+		`${levels}\nOverlay ~/.fleet/config/projects/acme/webapp.md, which containers read as project.md:\n\n${overlay}`,
 	);
 	assert.equal(
 		permissions({ root: "/root", repo: "acme/webapp" }, checkout("")),
-		`${levels}\nNo overlay: ~/.config/harness/projects/acme/webapp.md does not exist`,
+		`${levels}\nNo overlay: ~/.fleet/config/projects/acme/webapp.md does not exist`,
 	);
 });
 
@@ -249,7 +249,7 @@ test("profile reads the person's own profile file over the harness's, and the ha
 
 	assert.match(
 		permissions({ root: "/root", repo: PRIVATE_REPO }, io),
-		/^Profile `alice\/private-app` of `~\/\.config\/harness\/repos\.json`\./m,
+		/^Profile `alice\/private-app` of `~\/\.fleet\/config\/repos\.json`\./m,
 	);
 	assert.match(
 		permissions({ root: "/root", repo: "someone/else" }, io),

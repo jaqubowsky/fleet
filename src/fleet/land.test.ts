@@ -162,7 +162,7 @@ exec ssh-keygen "$@"
 	io.home = root;
 	io.tmp = root;
 	if (manifest)
-		io.files[`${root}/.config/harness/fleet/pi-a.json`] = JSON.stringify({
+		io.files[`${root}/.fleet/config/fleet/pi-a.json`] = JSON.stringify({
 			version: 1,
 			repositories: repos,
 		});
@@ -518,7 +518,7 @@ test("--branch is refused once the repository has a landed anchor", (t) => {
 test("--branch names one repository's branch and is refused for several", () => {
 	const io = fakeIo({
 		"read /root/host/repos.json": SAMPLE_PROFILES,
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(multi),
+		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(multi),
 	});
 
 	assert.throws(
@@ -541,7 +541,7 @@ test("--push where a profile gives the host no push refuses before anything is f
 				host: { ...JSON.parse(SAMPLE_PROFILES)["acme/*"].host, push: "none" },
 			},
 		}),
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(multi),
+		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(multi),
 	});
 
 	assert.throws(

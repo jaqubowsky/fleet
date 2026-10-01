@@ -91,7 +91,7 @@ function handingOff(
 	seat: (typeof SEATS)[keyof typeof SEATS],
 	after = "idle",
 ) {
-	const status = `/home/me/.sandboxes/r/${name}/status.md`;
+	const status = `/home/me/.fleet/tasks/r/${name}/status.md`;
 	const io = fakeIo(
 		{
 			...listed(name, kind.name),
@@ -177,7 +177,7 @@ test("a handoff says when the container's image predates the harness, once", asy
 	Object.assign(io, {
 		read: (
 			(read) => (path: string) =>
-				path.endsWith("fleet-cache/image-stamp") ? "31e3d51\n" : read(path)
+				path.endsWith("cache/claude/image-stamp") ? "31e3d51\n" : read(path)
 		)(io.read),
 	});
 	const git = io.git;
@@ -276,7 +276,7 @@ test("a claude- container an earlier fleet put up is listed, steered and taken d
 		io.calls.some(
 			(c) =>
 				c.join(" ") ===
-				`sbx cp ${name}:${KINDS.claude.containerSessions} /home/me/.sandboxes/r/${name}/logs/sessions/projects`,
+				`sbx cp ${name}:${KINDS.claude.containerSessions} /home/me/.fleet/tasks/r/${name}/logs/sessions/projects`,
 		),
 	);
 	assert.ok(io.calls.some((c) => c.join(" ") === `sbx rm -f ${name}`));

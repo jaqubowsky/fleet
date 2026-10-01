@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export type Case = { want: "allow" | "deny"; tool: string; subject: string };
+type Case = { want: "allow" | "deny"; tool: string; subject: string };
 
 const CORPUS = join(import.meta.dirname, "../../host/tests");
 

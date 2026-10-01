@@ -3,7 +3,7 @@ import { calls, elapsed } from "./status.ts";
 type Call = { at: string; tool: string; ok: boolean; agent: string };
 type Streak = { length: number; from: string };
 
-export type Activity = { started: string; last: string; calls: number; lastTool: string; streak: number; streakFrom?: string };
+type Activity = { started: string; last: string; calls: number; lastTool: string; streak: number; streakFrom?: string };
 
 function callsOf(jsonl: string | undefined): Call[] {
 	return (jsonl ?? "").split("\n").flatMap((line): Call[] => {

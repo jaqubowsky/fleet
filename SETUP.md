@@ -12,19 +12,19 @@ This is for an agent. The person starts you in a fresh clone of this repository 
 
 ## Steps
 
-1. [Tools and logins](docs/setup/01-tools.md): requirements, sbx, herdr, Claude Code and pi, and their logins
-2. [Your config](docs/setup/02-your-config.md): the sandboxes' git config and the permissions per repository in `~/.config/harness/`
-3. [Sync](docs/setup/03-sync.md): install the harness for both agents and build the sandbox images
+1. [Tools and logins](docs/setup/01-tools.md): requirements, sbx, herdr, Claude Code or pi or both, and their logins
+2. [Your config](docs/setup/02-your-config.md): the sandboxes' git config and the permissions per repository in `~/.fleet/config/`
+3. [Sync](docs/setup/03-sync.md): install the harness for each installed agent and build its sandbox image
 4. [GitHub tokens](docs/setup/04-github-tokens.md): one token per group of repositories, stored in the macOS keychain
 5. [Model logins and network](docs/setup/05-models-and-network.md): how sandboxes reach the models, and which hosts they may reach
-6. [Smoke test](docs/setup/06-smoke-test.md): start and stop one sandbox per agent
+6. [Smoke test](docs/setup/06-smoke-test.md): start and stop one sandbox per installed agent
 7. [First session](docs/setup/07-first-session.md): the person's first task from a herdr tab
 
 ## Done
 
 1. A second `./sync.sh` prints `In sync: nothing to change.`
 2. `npm test` and `npm run check` exit 0
-3. Both smoke sandboxes came up, answered and went down
+3. Each installed agent's smoke sandbox came up, answered and went down
 4. The host session in herdr answered and listed the repository's pull requests
 
-Tell the person what stays theirs and where it lives: the logins (step 1), `~/.config/harness/` (step 2), the keychain tokens (step 4), and the sbx secrets and network policy (step 5).
+Tell the person what stays theirs and where it lives: the logins (step 1), `~/.fleet/config/` (step 2), the keychain tokens (step 4), and the sbx secrets and network policy (step 5).

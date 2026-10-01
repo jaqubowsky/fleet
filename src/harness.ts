@@ -29,7 +29,6 @@ export type Kind = {
 	projectConfig?: string;
 	sbxGuidance?: string;
 	containerSessions?: string;
-	cache: string;
 	handoffTakesText: boolean;
 	tokens: Record<string, string>;
 };
@@ -59,7 +58,6 @@ export const KINDS: Record<AgentName, Kind> = {
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
 		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "pi" },
-		cache: "cache",
 		handoffTakesText: true,
 		tokens: {
 			"tool.ask": "ask_user_question",
@@ -92,7 +90,6 @@ export const KINDS: Record<AgentName, Kind> = {
 		projectConfig: ".claude",
 		sbxGuidance: "CLAUDE.md",
 		containerSessions: "/home/agent/.claude/projects",
-		cache: "fleet-cache",
 		handoffTakesText: false,
 		tokens: {
 			"tool.ask": "AskUserQuestion",

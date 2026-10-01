@@ -10,7 +10,7 @@ import {
 } from "./repositories.ts";
 import { sandboxes } from "./status.ts";
 
-export type LandInput = {
+type LandInput = {
 	sandbox: string;
 	repo: string;
 	root: string;
@@ -114,7 +114,7 @@ export function land(input: LandInput, io: Io): void {
 		for (const { entry, pushes } of landings)
 			if (input.push && !pushes)
 				throw new Error(
-					`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.config/harness/repos.json or host/repos.json); the branch reaches GitHub another way`,
+					`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.fleet/config/repos.json or host/repos.json); the branch reaches GitHub another way`,
 				);
 		for (const { entry, refs } of landings)
 			if (input.branch && ref(entry.repo, `${refs}/landed`, io))

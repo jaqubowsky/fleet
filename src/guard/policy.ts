@@ -11,7 +11,7 @@ export type Host = {
 	reaches: (path: string) => boolean;
 };
 
-export type Decision = {
+type Decision = {
 	decision: "allow" | "deny";
 	reason: string;
 	explicit?: true;
@@ -100,7 +100,7 @@ const GIT = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*`;
 const GIT_AT = String.raw`${START}(\S*/)?${GIT}`;
 const PUSH_AT = String.raw`${GIT_AT}\s+push\b`;
 const IN_COMMAND = String.raw`(>&|&>|[^|;&\n])*`;
-const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
+const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|fleet|\.fleet|\.pi|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
 const GH_WRITE =
@@ -178,9 +178,9 @@ const OWN_PR: Record<string, RegExp> = {
 };
 
 const OWN_PROFILES =
-	"~/.config/harness/repos.json, and host/repos.json in the harness for a repository it omits, set what the host may do, so only the person changes them. Read them with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names either file passes only when every part of it is such a read, so run the read on its own.";
+	"~/.fleet/config/repos.json, and host/repos.json in the harness for a repository it omits, set what the host may do, so only the person changes them. Read them with cat, head, jq or grep, or run fleet profile, and ask the person for the change. A command that names either file passes only when every part of it is such a read, so run the read on its own.";
 const MAY_NAME_PROFILES =
-	"A $variable or glob in this command could expand to ~/.config/harness/repos.json or host/repos.json, which only the person changes, so the guard counts it as naming that file. Spell the paths out, or run any read of them on its own.";
+	"A $variable or glob in this command could expand to ~/.fleet/config/repos.json or host/repos.json, which only the person changes, so the guard counts it as naming that file. Spell the paths out, or run any read of them on its own.";
 const READS_PROFILES =
 	/^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)/;
 const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
@@ -296,7 +296,7 @@ export function decide(
 		const push = host.levels().push;
 		if (push === "none")
 			return deny(
-				"This repository's profile gives the host no push (host.push none in ~/.config/harness/repos.json or host/repos.json). The branch reaches GitHub another way, or the person changes the profile.",
+				"This repository's profile gives the host no push (host.push none in ~/.fleet/config/repos.json or host/repos.json). The branch reaches GitHub another way, or the person changes the profile.",
 			);
 		if (push === "auto" && OWN_PUSH.test(subject))
 			return granted("This repository's profile lets the host push.");

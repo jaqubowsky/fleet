@@ -21,6 +21,7 @@ import {
 import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef } from "./land.ts";
 import { logEvent } from "./events.ts";
+import { agentCache, FLEET } from "./home.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { harnessStamp, imageStampPath, staleImage } from "./up.ts";
@@ -377,7 +378,7 @@ export function build(root: string, name: AgentName | undefined, io: Io): void {
 	render({ root, agent: kind.name, seat: "container", out: stage }, io);
 	const stamp = harnessStamp(root, kind, io);
 	io.run(`${root}/sbx/build.sh`, [kind.name, kind.image, stage]);
-	io.mkdir(`${io.home}/${kind.home}/${kind.cache}`);
+	io.mkdir(`${io.home}/${agentCache(kind.name)}`);
 	io.write(imageStampPath(kind, io), `${stamp}\n`);
 }
 
@@ -456,7 +457,7 @@ function isTask(dir: string, io: Io): boolean {
 
 export function artifacts(repo: string, io: Io): string {
 	const roots = new Set([artifactsDir(repo, io)]);
-	for (const file of io.list(`${io.home}/.config/harness/fleet`)) {
+	for (const file of io.list(`${io.home}/${FLEET.config}/fleet`)) {
 		if (!file.endsWith(".json")) continue;
 		const sandbox = file.slice(0, -5);
 		const manifest = repositoryManifest(sandbox, io);
@@ -473,7 +474,7 @@ function artifactListing(root: string, io: Io): string {
 	for (const task of tasks) {
 		lines.push({
 			indent: "",
-			name: root.startsWith(`${io.home}/.sandboxes/groups/`)
+			name: root.startsWith(`${io.home}/${FLEET.tasks}/groups/`)
 				? `${root}/${task}/`
 				: `${task}/`,
 			detail: "",

@@ -5,7 +5,7 @@ import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 export type Seat = "host" | "container";
 export type SeatModel = { model: string; thinking: string };
 export type Models = { seats: Record<string, SeatModel> };
-export type Source = { name: string; body: string };
+type Source = { name: string; body: string };
 
 const HOST_ONLY_RULES = ["host.md"];
 const SKILL_SCOPES: Record<Seat, string[]> = {
@@ -122,7 +122,7 @@ export function seatTokens(
 	return tokens;
 }
 
-export type RenderInput = {
+type RenderInput = {
 	root: string;
 	agent: AgentName;
 	seat: Seat;

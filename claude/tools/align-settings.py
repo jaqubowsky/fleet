@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
 import difflib
+import io
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -15,10 +16,6 @@ HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
 HOOK_TARGET = HOME / ".claude" / "hooks" / "guard.sh"
 DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
 DRIFT_TARGET = HOME / ".claude" / "hooks" / "plugin-drift.sh"
-HERDR_SOURCE = REPO / "host" / "herdr.toml"
-HERDR_TARGET = HOME / ".config" / "herdr" / "config.toml"
-DETECTION_SOURCE = REPO / "host" / "agent-detection"
-DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
 
@@ -89,18 +86,12 @@ def report(path, before, after, changes):
 
 
 def write_plain(path, text):
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-        print("  written")
-        return
-    backup = path.with_suffix(path.suffix + ".bak")
-    shutil.copy2(path, backup)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-    print(f"  written (backup: {backup})")
+    print("  written")
 
 
-def install_link(source, target, apply_changes, executable=True):
+def install_link(source, target, apply_changes):
     print(f"\n=== {target}")
 
     if not source.exists():
@@ -115,15 +106,9 @@ def install_link(source, target, apply_changes, executable=True):
 
     if apply_changes:
         target.parent.mkdir(parents=True, exist_ok=True)
-        if target.is_symlink():
-            target.unlink()
-        elif target.exists():
-            backup = target.with_suffix(target.suffix + ".bak")
-            target.rename(backup)
-            print(f"  kept the replaced file as {backup}")
+        target.unlink(missing_ok=True)
         target.symlink_to(source)
-        if executable:
-            source.chmod(0o755)
+        source.chmod(0o755)
         print("  linked")
 
     return True
@@ -179,20 +164,26 @@ def process(path, fixer, apply_changes):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Align the Claude Code user settings, hooks and herdr config with this repository.")
+    parser = argparse.ArgumentParser(description="Align the Claude Code user settings and hooks with this repository.")
     parser.add_argument("--apply", action="store_true", help="write the changes (default: dry run)")
+    parser.add_argument("--targets", action="store_true", help="print only the paths --apply would change")
     args = parser.parse_args()
 
-    pending = [
-        process(USER_SETTINGS, fix_user, args.apply),
-        install_link(HOOK_SOURCE, HOOK_TARGET, args.apply),
-        install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
-        install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),
-        *(install_link(rules, DETECTION_TARGET / rules.name, args.apply, executable=False) for rules in sorted(DETECTION_SOURCE.glob("*.toml"))),
-    ]
+    with contextlib.redirect_stdout(io.StringIO() if args.targets else sys.stdout):
+        pending = {
+            USER_SETTINGS: process(USER_SETTINGS, fix_user, args.apply),
+            HOOK_TARGET: install_link(HOOK_SOURCE, HOOK_TARGET, args.apply),
+            DRIFT_TARGET: install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
+        }
+
+    if args.targets:
+        for target, changed in pending.items():
+            if changed:
+                print(target)
+        return 0
 
     print()
-    if not any(pending):
+    if not any(pending.values()):
         print("Everything already aligned.")
         return 0
 

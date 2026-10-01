@@ -80,9 +80,9 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 		level: "none",
 	});
 	assert.equal(sandboxDownTarget("pi-missing", root, root, list), undefined);
-	mkdirSync(join(root, ".config/harness/fleet"), { recursive: true });
+	mkdirSync(join(root, ".fleet/config/fleet"), { recursive: true });
 	writeFileSync(
-		join(root, ".config/harness/fleet/pi-auto.json"),
+		join(root, ".fleet/config/fleet/pi-auto.json"),
 		JSON.stringify({
 			version: 1,
 			repositories: [sandboxes[1], sandboxes[0], sandboxes[2]].map((entry) => ({

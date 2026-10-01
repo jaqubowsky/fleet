@@ -1,6 +1,6 @@
 import { SECRET_MATERIAL } from "../guard/policy.ts";
 
-export type TextBlock = { kind: "text"; text: string };
+type TextBlock = { kind: "text"; text: string };
 export type ToolBlock = {
 	kind: "tool";
 	id: string;
@@ -100,7 +100,7 @@ const SUMMARIES: Record<string, (args: Record<string, unknown>) => string> = {
 };
 const PREFERRED = ["command", "path", "pattern", "query", "url", "task"];
 
-export function summarize(name: string, args: Record<string, unknown>): string {
+function summarize(name: string, args: Record<string, unknown>): string {
 	const own = SUMMARIES[name]?.(args);
 	if (own) return text(own, SUMMARY_LIMIT);
 	const key = PREFERRED.find((field) => string(args[field]));

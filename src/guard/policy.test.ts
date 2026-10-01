@@ -141,7 +141,7 @@ test("a refusal says whether the command named the permissions file or only a va
 	assert.match(named.reason, /only the person changes them/);
 	assert.match(
 		expanded.reason,
-		/\$variable or glob in this command could expand to ~\/\.config\/harness\/repos\.json or host\/repos\.json/,
+		/\$variable or glob in this command could expand to ~\/\.fleet\/config\/repos\.json or host\/repos\.json/,
 	);
 });
 
@@ -177,11 +177,11 @@ test("every spelling of the path to the host's permissions reaches the same refu
 		"allow",
 	);
 	const mine = hostAt(root, root, EMPTY_HOME);
-	const own = join(EMPTY_HOME, ".config", "harness", "repos.json");
+	const own = join(EMPTY_HOME, ".fleet", "config", "repos.json");
 	for (const path of [
 		own,
-		"~/.config/harness/repos.json",
-		"$HOME/.config/harness/repos.json",
+		"~/.fleet/config/repos.json",
+		"$HOME/.fleet/config/repos.json",
 		relative(root, own),
 	]) {
 		for (const tool of ["Edit", "Write", "NotebookEdit"])
@@ -200,7 +200,7 @@ test("every spelling of the path to the host's permissions reaches the same refu
 		decide(
 			"Write",
 			{
-				file_path: join(EMPTY_HOME, ".config", "harness", "projects", "a", "b.md"),
+				file_path: join(EMPTY_HOME, ".fleet", "config", "projects", "a", "b.md"),
 			},
 			mine,
 		).decision,

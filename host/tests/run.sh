@@ -20,4 +20,6 @@ node "$dir/extension_syntax_test.mjs"; syntax=$?
 
 node "$dir/session_handoff_test.mjs" "$pi_root/dist/index.js"; handoff=$?
 
-[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ] && [ "$handoff" -eq 0 ]
+node "$dir/sync_test.mjs"; sync=$?
+
+[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ] && [ "$handoff" -eq 0 ] && [ "$sync" -eq 0 ]

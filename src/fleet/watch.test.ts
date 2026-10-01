@@ -74,9 +74,9 @@ function herdr(
 }
 
 test("watch reads the group task and waits for CI on the third repository", (t) => {
-	const group = "/home/me/.sandboxes/groups/a-b-c/claude-webapp-a";
+	const group = "/home/me/.fleet/tasks/groups/a-b-c/claude-webapp-a";
 	const { io, status } = herdr(t, [agents[0]]);
-	io.files["/home/me/.config/harness/fleet/claude-webapp-a.json"] =
+	io.files["/home/me/.fleet/config/fleet/claude-webapp-a.json"] =
 		JSON.stringify({
 			version: 1,
 			task: group,
@@ -300,7 +300,7 @@ test("each wake counts only the log lines added since its previous wake", (t: Te
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	const file = "/home/me/.sandboxes/webapp/claude-worker/status.md";
+	const file = "/home/me/.fleet/tasks/webapp/claude-worker/status.md";
 	const wakes: string[] = [];
 	watch(
 		() => undefined,
@@ -391,7 +391,7 @@ test("a turn that ends with status.md unchanged and no steer since the last wake
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: reviewing\nattention: none\n";
 	const wakes: string[] = [];
 	watch(
@@ -412,7 +412,7 @@ test("a steer since the last wake lets the next settle wake the host again", (t:
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: blocked\nattention: waiting\n";
 	const wakes: string[] = [];
 	watch(
@@ -423,7 +423,7 @@ test("a steer since the last wake lets the next settle wake the host again", (t:
 
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
-	io.files["/home/me/.sandboxes/fleet-events.log"] =
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
 		'2026-09-16T10:05:00.000Z w1:host steer claude-worker session= "go on"\n';
 	status("worker:pane", "working");
 	status("worker:pane", "idle");
@@ -443,7 +443,7 @@ test("a container a down closes wakes once as taken down, never with its last se
 		(text) => wakes.push(text),
 	);
 
-	io.files["/home/me/.sandboxes/fleet-events.log"] =
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
 		"2026-09-16T10:05:00.000Z w2:other down claude-worker session=\n";
 	status("worker:pane", "idle");
 	t.mock.timers.tick(1100);
@@ -493,7 +493,7 @@ test("a working container whose status.md says it stopped on an error wakes the 
 		(text) => wakes.push(text),
 	);
 
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: blocked\nattention: the agent stopped on an error: fetch failed\n";
 	intervals.get(30_000)?.();
 	intervals.get(30_000)?.();
@@ -515,7 +515,7 @@ test("a working container whose tool calls keep failing wakes the host once per 
 		io,
 		(text) => wakes.push(text),
 	);
-	const log = "/home/me/.sandboxes/webapp/claude-worker/logs/activity.jsonl";
+	const log = "/home/me/.fleet/tasks/webapp/claude-worker/logs/activity.jsonl";
 	const failures = (from: number, count: number) =>
 		Array.from({ length: count }, (_, i) =>
 			JSON.stringify({
@@ -615,8 +615,8 @@ function limited(
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status },
 	]);
 	const { io } = fixture;
-	const dir = "/home/me/.sandboxes/webapp/claude-worker";
-	const events = "/home/me/.sandboxes/fleet-events.log";
+	const dir = "/home/me/.fleet/tasks/webapp/claude-worker";
+	const events = "/home/me/.fleet/tasks/fleet-events.log";
 	io.files[`${dir}/status.md`] =
 		"status: blocked\nattention: the agent stopped on an error: rate_limit\n";
 	const stat = io.stat;
@@ -745,7 +745,7 @@ test("a wake counts the tool calls a container made after status.md turned block
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	const dir = "/home/me/.sandboxes/webapp/claude-worker";
+	const dir = "/home/me/.fleet/tasks/webapp/claude-worker";
 	const call = (at: string) =>
 		JSON.stringify({ at, tool: "Bash", ok: true, agent: "main" });
 	io.files[`${dir}/status.md`] = "status: blocked\nattention: owner decision\n";
@@ -773,7 +773,7 @@ test("a wake counts the tool calls a container made after status.md turned block
 
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
 	const io = fakeIo({}, SEATS.claude);
-	io.files["/home/me/.sandboxes/fleet-events.log"] = [
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] = [
 		"2026-09-16T10:00:00.000Z w1:host up claude-mine session=",
 		"2026-09-16T10:01:00.000Z w2:other up claude-theirs session=",
 		"2026-09-16T10:02:00.000Z w2:other up claude-named session=",
@@ -790,7 +790,7 @@ test("a container steered from another pane leaves the watch without a wake", (t
 	const { io, intervals } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	const log = "/home/me/.sandboxes/fleet-events.log";
+	const log = "/home/me/.fleet/tasks/fleet-events.log";
 	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up claude-worker session=";
 	const wakes: string[] = [];
 	watch(paneScope(io, []), io, (text) => wakes.push(text));
@@ -804,7 +804,7 @@ test("a container steered from another pane leaves the watch without a wake", (t
 
 test("CLI watch outside a herdr pane follows only the containers it names", () => {
 	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "-" });
-	io.files["/home/me/.sandboxes/fleet-events.log"] =
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
 		"2026-09-16T10:00:00.000Z - up claude-shell session=";
 
 	assert.deepEqual(paneScope(io, [])(), []);
@@ -833,7 +833,7 @@ test("a turn that ends with a PR open and CI running wakes nobody; the settle af
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: ready-for-host\nattention: none\n";
 	onBranch(io, [
 		{
@@ -906,9 +906,9 @@ test("an idle container past the threshold without ready-for-host or blocked wak
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
 		{ name: "claude-done", pane_id: "done:pane", agent_status: "idle" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: implementing\nattention: none\n";
-	io.files["/home/me/.sandboxes/webapp/claude-done/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-done/status.md"] =
 		"status: ready-for-host\nattention: none\n";
 	const start = Date.now();
 	const clock = t.mock.method(Date, "now", () => start);
@@ -939,7 +939,7 @@ test("a blocked container wakes the host even while its PR's CI runs", (t: TestC
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: blocked\nattention: CI hangs past the wait\n";
 	onBranch(io, [
 		{
@@ -967,7 +967,7 @@ test("a container paused at its step's end wakes the host even while its PR's CI
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: paused\nattention: none\n";
 	onBranch(io, [
 		{
@@ -995,7 +995,7 @@ test("a settle with status.md unchanged but new branch facts wakes the host agai
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
 	]);
-	io.files["/home/me/.sandboxes/webapp/claude-worker/status.md"] =
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
 		"status: implementing\nattention: none\n";
 	onBranch(io, []);
 	const wakes: string[] = [];

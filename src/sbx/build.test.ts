@@ -15,7 +15,7 @@ function tool(bin: string, name: string, body: string): void {
 test("the image home takes the person's git directory as it is", () => {
 	const root = mkdtempSync(join(tmpdir(), "build-"));
 	const home = join(root, "home");
-	const git = join(home, ".config/harness/git");
+	const git = join(home, ".fleet/config/git");
 	mkdirSync(join(git, ".config/git"), { recursive: true });
 	writeFileSync(join(git, ".gitconfig"), "[user]\n\tname = Alice\n");
 	writeFileSync(join(git, ".gitconfig-work"), "[user]\n\tname = Alice W\n");

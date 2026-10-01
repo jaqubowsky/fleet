@@ -605,7 +605,7 @@ test("the claude container turns the feedback survey off, so no survey sits in t
 test("a host Linear server any profile names leaves pi's machine-wide mcp.json, and the servers beside it stay", () => {
 	const context7 = { url: "https://mcp.context7.com/mcp" };
 	const profiles = {
-		"read /home/me/.config/harness/repos.json": JSON.stringify({
+		"read /home/me/.fleet/config/repos.json": JSON.stringify({
 			[PRIVATE_REPO]: PRIVATE_PROFILE,
 		}),
 		"read /home/agent/mcp.json": JSON.stringify({

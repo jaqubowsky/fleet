@@ -3,6 +3,7 @@ import { basename, dirname, isAbsolute } from "node:path";
 import { repoName } from "../profile/profile.ts";
 import { slug } from "./name.ts";
 import type { Io } from "./io.ts";
+import { FLEET } from "./home.ts";
 import { parseCheckout } from "./status.ts";
 
 type Repository = {
@@ -22,7 +23,7 @@ export type RepositoryManifest = {
 };
 
 export function artifactsDir(repo: string, io: Io): string {
-	return `${io.home}/.sandboxes/${basename(repo)}`;
+	return `${io.home}/${FLEET.tasks}/${basename(repo)}`;
 }
 
 function groupArtifactsDir(repos: string[], io: Io): string {
@@ -41,7 +42,7 @@ function groupArtifactsDir(repos: string[], io: Io): string {
 		.update(names.join("\0"))
 		.digest("hex")
 		.slice(0, 12);
-	return `${io.home}/.sandboxes/groups/${label}-${hash}`;
+	return `${io.home}/${FLEET.tasks}/groups/${label}-${hash}`;
 }
 
 export function taskDir(
@@ -72,7 +73,7 @@ export function taskDir(
 }
 
 export function manifestPath(sandbox: string, io: Io): string {
-	return `${io.home}/.config/harness/fleet/${sandbox}.json`;
+	return `${io.home}/${FLEET.config}/fleet/${sandbox}.json`;
 }
 
 export function repositoryManifest(

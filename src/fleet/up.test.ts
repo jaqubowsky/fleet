@@ -68,7 +68,7 @@ test("up creates the container, switches the branch, starts the install in the b
 		io.calls.some(
 			(c) =>
 				c[0] === "append" &&
-				c[1] === "/home/me/.sandboxes/fleet-events.log" &&
+				c[1] === "/home/me/.fleet/tasks/fleet-events.log" &&
 				/ up pi-webapp-web-1 session=$/.test(c[2]),
 		),
 	);
@@ -100,15 +100,15 @@ test("up creates the container, switches the branch, starts the install in the b
 			"pane",
 			"run",
 			"w1:p9",
-			"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
+			"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
 		],
 	);
 	assert.ok(!io.calls.some((c) => c[1] === "agent" && c[2] === "prompt"));
 	assert.deepEqual(
-		JSON.parse(io.files["/home/me/.config/harness/fleet/pi-webapp-web-1.json"]),
+		JSON.parse(io.files["/home/me/.fleet/config/fleet/pi-webapp-web-1.json"]),
 		{
 			version: 1,
-			task: "/home/me/.sandboxes/webapp/pi-webapp-web-1",
+			task: "/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
 			repositories: [
 				{
 					repo,
@@ -123,11 +123,11 @@ test("up creates the container, switches the branch, starts the install in the b
 		},
 	);
 	assert.equal(
-		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/repositories.json"],
+		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/repositories.json"],
 		undefined,
 	);
 	assert.doesNotMatch(
-		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/status.md"],
+		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/status.md"],
 		/## Repositories/,
 	);
 	assert.deepEqual(io.calls.at(-1), [
@@ -215,7 +215,7 @@ test("up keeps two writable private clones with their own bases", async () => {
 	const task = dirname(manifestFile);
 	assert.match(
 		task,
-		/^\/home\/me\/\.sandboxes\/groups\/[^/]+\/pi-webapp-web-1$/,
+		/^\/home\/me\/\.fleet\/tasks\/groups\/[^/]+\/pi-webapp-web-1$/,
 	);
 	assert.ok(run.includes(`FLEET_ARTIFACTS=${dirname(task)}`));
 	const listed = JSON.parse(io.files[manifestFile]);
@@ -282,7 +282,7 @@ test("up isolates colliding checkout names and shares an order-independent group
 	const manifest = JSON.parse(io.files[manifestPath("pi-webapp-web-1", io)]);
 	assert.match(
 		manifest.task,
-		/^\/home\/me\/\.sandboxes\/groups\/[^/]{1,180}\/pi-webapp-web-1$/,
+		/^\/home\/me\/\.fleet\/tasks\/groups\/[^/]{1,180}\/pi-webapp-web-1$/,
 	);
 	assert.equal(manifest.repositories.length, 4);
 	assert.equal(
@@ -315,7 +315,7 @@ test("up isolates colliding checkout names and shares an order-independent group
 	const reversed = {
 		...io,
 		read: (path: string) =>
-			path.includes("/.config/harness/fleet/") ? undefined : io.read(path),
+			path.includes("/.fleet/config/fleet/") ? undefined : io.read(path),
 	};
 	assert.equal(
 		dirname(taskDir(repos[2], "another", reversed, [repos[3], repos[1], repo])),
@@ -855,13 +855,13 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 
 	assert.ok(
 		run.includes("-e") &&
-			run.includes("FLEET_ARTIFACTS=/home/me/.sandboxes/webapp"),
+			run.includes("FLEET_ARTIFACTS=/home/me/.fleet/tasks/webapp"),
 	);
-	assert.ok(run.includes("FLEET_CACHE=/home/me/.pi/cache/webapp"));
+	assert.ok(run.includes("FLEET_CACHE=/home/me/.fleet/cache/pi/webapp"));
 	assert.deepEqual(run.slice(-7), [
 		repo,
-		"/home/me/.sandboxes/webapp",
-		"/home/me/.pi/cache/webapp",
+		"/home/me/.fleet/tasks/webapp",
+		"/home/me/.fleet/cache/pi/webapp",
 		"--",
 		"--approve",
 		"--no-autoformat",
@@ -869,12 +869,12 @@ test("up mounts an artifacts and a cache directory and names both in the environ
 	]);
 	assert.ok(
 		io.calls.some(
-			(c) => c[0] === "mkdir" && c[1] === "/home/me/.sandboxes/webapp",
+			(c) => c[0] === "mkdir" && c[1] === "/home/me/.fleet/tasks/webapp",
 		),
 	);
 	assert.ok(
 		io.calls.some(
-			(c) => c[0] === "mkdir" && c[1] === "/home/me/.pi/cache/webapp",
+			(c) => c[0] === "mkdir" && c[1] === "/home/me/.fleet/cache/pi/webapp",
 		),
 	);
 });
@@ -1176,13 +1176,13 @@ test("the build cache is linked by the fleet, not by whoever reads the rules", a
 		!run.some((a) => String(a).startsWith("YARN_CACHE_FOLDER")),
 		"the yarn cache was put on the shared mount",
 	);
-	assert.equal(io.files["/home/me/.pi/cache/webapp/paths"], ".turbo/cache\n");
+	assert.equal(io.files["/home/me/.fleet/cache/pi/webapp/paths"], ".turbo/cache\n");
 	const link = io.calls.find(
 		(c) => c[0] === "sbx" && String(c[5] ?? "").includes("ln -sfn"),
 	)!;
 	assert.deepEqual(link.slice(6), [
 		"--",
-		"/home/me/.pi/cache/webapp/.turbo-cache",
+		"/home/me/.fleet/cache/pi/webapp/.turbo-cache",
 		`${repo}/.turbo/cache`,
 	]);
 });
@@ -1196,7 +1196,7 @@ test("a cache path keeps one store whether or not it was written with a leading 
 test("up lays out the task directory once and points pi's sessions into it", async () => {
 	const io = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root", branch: "web-1" }, io);
-	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+	const task = "/home/me/.fleet/tasks/webapp/pi-webapp-web-1";
 
 	assert.ok(
 		io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`),
@@ -1223,7 +1223,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 });
 
 test("up hands --model to pi and resumes the last session when one is on disk", async () => {
-	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+	const task = "/home/me/.fleet/tasks/webapp/pi-webapp-web-1";
 	const fresh = fakeIo(base);
 	await up(
 		{
@@ -1236,7 +1236,7 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 	);
 	assert.equal(
 		fresh.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context --model openai-codex/gpt-5.6-luna:high",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context --model openai-codex/gpt-5.6-luna:high",
 	);
 
 	const resumed = fakeIo({
@@ -1246,7 +1246,7 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 	await up({ repo, label: "web-1", root: "/root" }, resumed);
 	assert.equal(
 		resumed.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context -c",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context -c",
 	);
 });
 
@@ -1373,7 +1373,7 @@ test("a bundle builds a writable private API clone without changing the host che
 	);
 	assert.equal(git(primary, "status", "--porcelain"), "");
 	const manifest = JSON.parse(
-		io.files["/home/me/.config/harness/fleet/pi-webapp-web-1.json"],
+		io.files["/home/me/.fleet/config/fleet/pi-webapp-web-1.json"],
 	);
 	assert.deepEqual(
 		manifest.repositories.map((entry: { served: string }) => entry.served),
@@ -1526,7 +1526,7 @@ for (const [h, integration, command] of [
 	[
 		SEATS.pi,
 		".pi/agent/extensions/herdr-agent-state.ts",
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.sandboxes/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
+		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve --no-autoformat --no-lens-context",
 	],
 ] as const) {
 	test(`up copies herdr's ${h.name} integration into a new container and starts ${h.name} through the relay`, async () => {
@@ -1617,12 +1617,12 @@ test("up says when the image predates the harness it would carry", async () => {
 	const stale = fakeIo({
 		...base,
 		"git log -1 --format=%h": "f7e7f1a",
-		"read /home/me/.pi/cache/image-stamp": "31e3d51\n",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
 	});
 	const fresh = fakeIo({
 		...base,
 		"git log -1 --format=%h": "f7e7f1a",
-		"read /home/me/.pi/cache/image-stamp": "f7e7f1a\n",
+		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
 	});
 
 	await up({ repo, label: "web-1", root: "/root" }, stale);
@@ -1647,7 +1647,7 @@ test("up binds the token, Linear server and resources of the repository's profil
 	const secret = io.calls.find((c) => c[0] === "sbx" && c[1] === "secret")!;
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	const permissions =
-		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"];
+		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/permissions.md"];
 	assert.equal(secret.at(-1), "security find-generic-password -s fleet-gh -a acme -w");
 	assert.equal(run[run.indexOf("--static-mcp") + 1], "linear-acme-readonly");
 	assert.deepEqual(
@@ -1686,7 +1686,7 @@ test("up attaches no Linear server where the profile gives none, and --memory an
 		.findIndex((c) => c[1] === "secret");
 	assert.equal(io.sbxOpts[secret]?.input, "github_pat_session");
 	assert.match(
-		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"],
+		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/permissions.md"],
 		/^- resources: 16g memory, 8 cpus$/m,
 	);
 });
@@ -1823,18 +1823,18 @@ test("where the container may push, up removes the container whose token sees an
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "claude-private-app-x"]);
 	assert.equal(
 		io.files[
-			"/home/me/.sandboxes/private-app/claude-private-app-x/permissions.md"
+			"/home/me/.fleet/tasks/private-app/claude-private-app-x/permissions.md"
 		],
 		undefined,
 	);
 });
 
 test("up writes the repository's overlay into the task directory as project.md, and none, not even an earlier one, when it has none", async () => {
-	const task = "/home/me/.sandboxes/webapp/pi-webapp-web-1";
+	const task = "/home/me/.fleet/tasks/webapp/pi-webapp-web-1";
 	const overlay = "# acme/webapp\n\n## Merge method\n\n--squash\n";
 	const io = fakeIo({
 		...base,
-		"read /home/me/.config/harness/projects/acme/webapp.md": overlay,
+		"read /home/me/.fleet/config/projects/acme/webapp.md": overlay,
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.equal(io.files[`${task}/project.md`], overlay);
@@ -1865,7 +1865,7 @@ test("up runs the overlay's Setup sh block after the install, and the plain inst
 
 	const script = await installOf({
 		...base,
-		"read /home/me/.config/harness/projects/acme/webapp.md": setupOverlay,
+		"read /home/me/.fleet/config/projects/acme/webapp.md": setupOverlay,
 	});
 	const install = script.indexOf("yarn install");
 	const setup = script.indexOf("npx playwright install chromium");
@@ -1882,7 +1882,7 @@ test("up runs the overlay's Setup sh block after the install, and the plain inst
 	assert.equal(
 		await installOf({
 			...base,
-			"read /home/me/.config/harness/projects/acme/webapp.md":
+			"read /home/me/.fleet/config/projects/acme/webapp.md":
 				"# acme/webapp\n\n## Setup\n\n## Merge method\n\n--squash\n",
 		}),
 		plain,
@@ -1892,7 +1892,7 @@ test("up runs the overlay's Setup sh block after the install, and the plain inst
 test("an overlay Setup block runs even where no lockfile installs", async () => {
 	const io = fakeIo({
 		...base,
-		"read /home/me/.config/harness/projects/acme/webapp.md":
+		"read /home/me/.fleet/config/projects/acme/webapp.md":
 			"## Setup\n\n```sh\nlefthook install\n```\n",
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
@@ -1927,7 +1927,7 @@ for (const seat of Object.values(SEATS))
 				io.calls.some(
 					(c) =>
 						c[0] === "append" &&
-						c[1] === "/home/me/.sandboxes/fleet-events.log" &&
+						c[1] === "/home/me/.fleet/tasks/fleet-events.log" &&
 						c[2].includes(` up ${out.sandbox} `),
 				),
 			);

@@ -27,7 +27,7 @@ const running = {
 	},
 	"herdr agent list": { result: { agents: [] } },
 };
-const task = "/home/me/.sandboxes/r/pi-a";
+const task = "/home/me/.fleet/tasks/r/pi-a";
 const row = (
 	name: string,
 	kind: Kind = KINDS.pi,
@@ -82,7 +82,7 @@ const sessions = {
 test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
 	steer(row("pi-webapp-web-1"), 'zrób analizę "x"', io);
-	assert.equal(io.calls[0][1], "/home/me/.sandboxes/fleet-events.log");
+	assert.equal(io.calls[0][1], "/home/me/.fleet/tasks/fleet-events.log");
 	assert.match(
 		io.calls[0][2],
 		/w1:host steer pi-webapp-web-1 session= "zrób analizę \\"x\\""/,
@@ -105,11 +105,11 @@ test("steer logs the prompt before sending it", () => {
 test("steer says when the image predates the harness, and still steers", () => {
 	const stale = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
-		"read /home/me/.pi/cache/image-stamp": "31e3d51\n",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
 	});
 	const fresh = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
-		"read /home/me/.pi/cache/image-stamp": "f7e7f1a\n",
+		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
 	});
 
 	steer(row("pi-webapp-web-1"), "go", stale, "/root");
@@ -127,7 +127,7 @@ for (const harness of Object.values(KINDS)) {
 	test(`${harness.name} handoff takes a stalled command as steered once status.md turns to handoff complete`, async () => {
 		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
 		const agent = agentName(sandbox);
-		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
+		const path = `/home/me/.fleet/tasks/household-budget/${sandbox}/status.md`;
 		const command = harness.tokens["handoff.command"];
 		const steerAfter = async (from: string, to: string) => {
 			const io = fakeIo({}, SEATS[harness.name]);
@@ -158,7 +158,7 @@ for (const harness of Object.values(KINDS)) {
 	test(`${harness.name} handoff takes its command as steered on the context reset, not on working`, async () => {
 		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
 		const agent = agentName(sandbox);
-		const path = `/home/me/.sandboxes/household-budget/${sandbox}/status.md`;
+		const path = `/home/me/.fleet/tasks/household-budget/${sandbox}/status.md`;
 		const command = harness.tokens["handoff.command"];
 		const suggested = "session handoff suggested";
 		const steerReaching = async (to: string) => {
@@ -242,7 +242,7 @@ const apiProbe =
 	'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api';
 const twoRepositoryAnswers = {
 	...running,
-	"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(twoRepositories),
+	"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(twoRepositories),
 	[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
 	'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
 	[apiProbe]: `task\t1\t${"4".repeat(40)}`,
@@ -515,9 +515,9 @@ test("ls reads a one-entry manifest as the one-repository row it always printed"
 				},
 			],
 		},
-		"read /home/me/.config/harness/fleet/pi-webapp-web-1.json": JSON.stringify({
+		"read /home/me/.fleet/config/fleet/pi-webapp-web-1.json": JSON.stringify({
 			version: 1,
-			task: "/home/me/.sandboxes/r/pi-webapp-web-1",
+			task: "/home/me/.fleet/tasks/r/pi-webapp-web-1",
 			repositories: [
 				{
 					repo: "/r",
@@ -573,7 +573,7 @@ test("ls and peek report both private repositories with their own heads", () => 
 	};
 	const io = fakeIo({
 		...running,
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify(manifest),
+		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(manifest),
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t0\t${"3".repeat(40)}`,
 		'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
 		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api': `task\t1\t${"4".repeat(40)}`,
@@ -595,7 +595,7 @@ test("ls and peek report both private repositories with their own heads", () => 
 test("ls names the API when its checkout cannot be probed", () => {
 	const io = fakeIo({
 		...running,
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify({
+		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,
 			repositories: [
 				{
@@ -913,7 +913,7 @@ test("exec runs a one-argument command line through the shell, argv untouched", 
 });
 
 test("artifacts shows each task's files flat and folds its folders into one line each", () => {
-	const root = "/home/me/.sandboxes/webapp";
+	const root = "/home/me/.fleet/tasks/webapp";
 	const t = `${root}/pi-webapp-web-1`;
 	const file = (size: number, minutesAgo: number) => ({
 		size,
@@ -992,7 +992,7 @@ test("build renders the container seat into a stage and hands it to the shared b
 		["run", "/root/sbx/build.sh", "pi", "my-pi:v1"],
 	);
 	assert.match(io.files[`${stage}/home/agent/AGENTS.md`] ?? "", /a fresh rule/);
-	assert.equal(io.files["/home/me/.pi/cache/image-stamp"], "31e3d51\n");
+	assert.equal(io.files["/home/me/.fleet/cache/pi/image-stamp"], "31e3d51\n");
 });
 
 test("both agent Dockerfiles select Docker-capable bases and request nested Docker", () => {
@@ -1032,7 +1032,7 @@ test("a name that matches no container says so, and names what is running", () =
 });
 
 test("artifacts live beside the repo name, so they read the same after the container is gone", () => {
-	const root = "/home/me/.sandboxes/webapp";
+	const root = "/home/me/.fleet/tasks/webapp";
 	const io = fakeIo({
 		[`stat ${root}/note.md`]: {
 			size: 12,
@@ -1042,7 +1042,7 @@ test("artifacts live beside the repo name, so they read the same after the conta
 		[`list ${root}`]: ["note.md"],
 	});
 
-	assert.match(artifacts("/w/webapp", io), /sandboxes\/webapp[\s\S]*note\.md/);
+	assert.match(artifacts("/w/webapp", io), /tasks\/webapp[\s\S]*note\.md/);
 });
 
 test("exec picks up the repo's own toolchain before running anything", () => {
@@ -1055,7 +1055,7 @@ test("exec picks up the repo's own toolchain before running anything", () => {
 });
 
 test("ls prints a container whose branch the host repo has never seen", () => {
-	const task = "/home/me/.sandboxes/r/pi-a";
+	const task = "/home/me/.fleet/tasks/r/pi-a";
 	const req = (at: string) =>
 		JSON.stringify({
 			type: "message",
@@ -1135,7 +1135,7 @@ test("ls reads a claude container's cost from its live transcripts, before down 
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects":
 				"1.5",
-			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({
+			"read /home/me/.fleet/tasks/r/claude-a/logs/activity.jsonl": JSON.stringify({
 				at: "2026-09-16T09:59:00Z",
 				tool: "Edit",
 				ok: true,
@@ -1180,7 +1180,7 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 			],
 		},
 		"herdr agent list": { result: { agents: [] } },
-		"read /home/me/.config/harness/fleet/pi-a.json": JSON.stringify({
+		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,
 			repositories: [
 				{
@@ -1233,7 +1233,7 @@ test("ls keeps a claude container's activity when its image cannot price the tra
 			"sbx exec claude-a node": new Error(
 				"sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'",
 			),
-			"read /home/me/.sandboxes/r/claude-a/logs/activity.jsonl": JSON.stringify({
+			"read /home/me/.fleet/tasks/r/claude-a/logs/activity.jsonl": JSON.stringify({
 				at: "2026-09-16T09:59:00Z",
 				tool: "Edit",
 				ok: true,
@@ -1304,6 +1304,6 @@ test("history of a container already down reads the task directory of the repo i
 
 	assert.equal(
 		history("pi-gone", "/w/webapp", io),
-		"/home/me/.sandboxes/webapp/pi-gone/logs/status.jsonl: no changes yet; the container adds a line each time status.md changes",
+		"/home/me/.fleet/tasks/webapp/pi-gone/logs/status.jsonl: no changes yet; the container adds a line each time status.md changes",
 	);
 });

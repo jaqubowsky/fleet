@@ -1,6 +1,6 @@
-# 2. Your config in `~/.config/harness/`
+# 2. Your config in `~/.fleet/config/`
 
-This repository holds nothing personal. What names the person lives in `~/.config/harness/`:
+This repository holds nothing personal. What names the person lives in `~/.fleet/config/`:
 
 | Path | Needed | Holds |
 | --- | --- | --- |
@@ -45,4 +45,4 @@ Otherwise write one entry per repository or owner (`owner/*`), in the shape of `
 
 ## Check
 
-`git config --file ~/.config/harness/git/.gitconfig user.email` prints the email, each chosen repository has a clone, and with a `repos.json`, `./bin/fleet profile <owner/repo>` prints its levels for one of them.
+`git config --file ~/.fleet/config/git/.gitconfig user.email` prints the email, each chosen repository has a clone, and with a `repos.json`, `./bin/fleet profile <owner/repo>` prints its levels for one of them.

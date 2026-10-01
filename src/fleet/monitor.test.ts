@@ -239,13 +239,13 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 	];
 	assert.equal(
 		taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"),
-		"/home/me/.sandboxes/webapp/pi-webapp-web-1",
+		"/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
 	);
 	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
 	const io = fakeIo({
-		"read /home/me/.config/harness/fleet/pi-webapp-web-1.json": JSON.stringify({
+		"read /home/me/.fleet/config/fleet/pi-webapp-web-1.json": JSON.stringify({
 			version: 1,
-			task: "/home/me/.sandboxes/groups/a-b-c/pi-webapp-web-1",
+			task: "/home/me/.fleet/tasks/groups/a-b-c/pi-webapp-web-1",
 			repositories: ["a", "b", "c"].map((name) => ({
 				repo: `/${name}`,
 				name: `owner/${name}`,
@@ -259,7 +259,7 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 	});
 	assert.equal(
 		taskDirOf(io.home, sandboxes, "pi-webapp-web-1", io),
-		"/home/me/.sandboxes/groups/a-b-c/pi-webapp-web-1",
+		"/home/me/.fleet/tasks/groups/a-b-c/pi-webapp-web-1",
 	);
 });
 

@@ -1,6 +1,6 @@
 import { STOPPED } from "../../extensions/handoff-on-error.ts";
 
-export const RETRY_MS = 30 * 60_000;
+const RETRY_MS = 30 * 60_000;
 export const RETRIES = 10;
 
 const LIMIT = /rate.?limit|session limit|usage limit/i;

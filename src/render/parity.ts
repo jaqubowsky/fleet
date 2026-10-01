@@ -2,7 +2,7 @@ import type { Io } from "../fleet/io.ts";
 import { type AgentName, KINDS } from "../harness.ts";
 import { render, type Seat, seatTokens } from "./render.ts";
 
-export type Divergence = { where: RegExp; reason: string };
+type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{
@@ -88,7 +88,7 @@ function rendered(
 	return new Map([...seen].map(([path, text]) => [path, normalise(text)]));
 }
 
-export type Parity = {
+type Parity = {
 	unlisted: string[];
 	listed: Map<Divergence, number>;
 	overrides: string[];
