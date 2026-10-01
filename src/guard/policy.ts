@@ -109,13 +109,13 @@ const GH_WRITE =
 const BASH_RULES: [RegExp, string][] = [
 	[
 		command(String.raw`op\s+(read|item|document|vault|whoami|signin|account)\b`),
-		"1Password is the human's. Secrets reach a sandbox as op:// references through sbx, never through the agent's shell.",
+		"1Password is the human's. Secrets reach a sandbox through sbx, never through the agent's shell.",
 	],
 	[
 		command(
 			String.raw`((\S*/)?gh\s+auth\s+(token|git-credential|status${IN_COMMAND}\s(--show-token|-[a-zA-Z]*t[a-zA-Z]*)(?![\w-]))|${GIT}\s+credential\s+(fill|get)|(\S*/)?fleet\s+tokens)\b`,
 		),
-		"A GitHub token is used through gh and git, never printed. The human copies tokens into the keychain with fleet tokens in their own terminal.",
+		"A GitHub token is used through gh and git, never printed. The human stores tokens in the keychain with fleet tokens set in their own terminal.",
 	],
 	[
 		command(
