@@ -78,11 +78,6 @@ function mount(frame) {
 function resize(frame) {
   frame.node.querySelector(".view").style.width = `${frame.w}px`;
   frame.node.querySelector(".view").style.height = `${frame.h}px`;
-  for (const handle of frame.node.querySelectorAll(".resize"))
-    Object.assign(handle.style, {
-      left: `${handle.dataset.corner.includes("e") ? frame.w : 0}px`,
-      top: `${handle.dataset.corner.includes("s") ? frame.h : 0}px`,
-    });
   const label = frame.node.querySelector(".strip span");
   label.textContent = label.title = `${frame.base} · ${frame.w}×${frame.h}`;
 }

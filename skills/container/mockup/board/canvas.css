@@ -65,11 +65,12 @@ body.dragging .frame:not(.selected)::before, body.dragging .title:not(.selected)
 .frame.live::before { opacity: 1; border-color: var(--live); border-width: calc(2px / var(--z)); }
 .frame.live .strip span { color: var(--live); }
 .resize {
-  position: absolute; width: calc(16px / var(--z)); height: calc(16px / var(--z));
+  position: absolute; width: calc(18px / var(--z)); height: calc(18px / var(--z));
   border: 0 solid var(--accent); cursor: nwse-resize; opacity: 0; z-index: 1;
+  --edge: calc(-8px / var(--z)); --stroke: calc(3px / var(--z)); --round: calc(6px / var(--z));
 }
-.resize.nw { border-width: calc(2px / var(--z)) 0 0 calc(2px / var(--z)); }
-.resize.ne { border-width: calc(2px / var(--z)) calc(2px / var(--z)) 0 0; transform: translateX(-100%); cursor: nesw-resize; }
-.resize.sw { border-width: 0 0 calc(2px / var(--z)) calc(2px / var(--z)); transform: translateY(-100%); cursor: nesw-resize; }
-.resize.se { border-width: 0 calc(2px / var(--z)) calc(2px / var(--z)) 0; transform: translate(-100%, -100%); }
+.resize.nw { left: var(--edge); top: calc(-38px / var(--z)); border-width: var(--stroke) 0 0 var(--stroke); border-top-left-radius: var(--round); }
+.resize.ne { right: var(--edge); top: calc(-38px / var(--z)); border-width: var(--stroke) var(--stroke) 0 0; border-top-right-radius: var(--round); cursor: nesw-resize; }
+.resize.sw { left: var(--edge); bottom: var(--edge); border-width: 0 0 var(--stroke) var(--stroke); border-bottom-left-radius: var(--round); cursor: nesw-resize; }
+.resize.se { right: var(--edge); bottom: var(--edge); border-width: 0 var(--stroke) var(--stroke) 0; border-bottom-right-radius: var(--round); }
 .frame:hover .resize, .frame.selected .resize, body.dragging .frame.selected .resize { opacity: 1; }
