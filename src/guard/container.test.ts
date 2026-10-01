@@ -16,6 +16,8 @@ function clone(branch: string, base = "main"): string {
 	git("init", "--quiet", "--initial-branch", base);
 	git(
 		"-c",
+		"commit.gpgsign=false",
+		"-c",
 		"user.name=t",
 		"-c",
 		"user.email=t@t",
