@@ -386,6 +386,7 @@ test("down says so when pi never wrote a session", () => {
 test("down records the guest's peak, anon memory and high and oom counts beside usage.json before removing", () => {
 	const io = fakeIo({
 		...running,
+		[`stat ${task}`]: { size: 0, mtime: new Date(0), dir: true },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat /sys/fs/cgroup/docker/memory.peak /sys/fs/cgroup/docker/memory.stat /sys/fs/cgroup/docker/memory.events":
 			"4241653760\nanon 3170893824\nfile 812646400\nanon_thp 0\nlow 0\nhigh 17\nmax 3\noom 1\noom_kill 1\noom_group_kill 0\n",
@@ -410,9 +411,23 @@ test("down records the guest's peak, anon memory and high and oom counts beside 
 	);
 });
 
+test("down removes a sandbox fleet never laid a task directory for, writing nothing", () => {
+	const io = fakeIo({
+		...running,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"sbx exec pi-a cat": "4241653760\nanon 3170893824\nhigh 17\noom 1\n",
+	});
+
+	down("pi-a", {}, io);
+
+	assert.ok(!io.calls.some((c) => c[0] === "write"), io.calls.join("\n"));
+	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-a"]);
+});
+
 test("down goes on without the guest's memory files and says so", () => {
 	const io = fakeIo({
 		...running,
+		[`stat ${task}`]: { size: 0, mtime: new Date(0), dir: true },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat": new Error(
 			"sbx exec failed (1)\ncat: /sys/fs/cgroup/docker/memory.peak: No such file or directory",
@@ -434,6 +449,7 @@ test("down goes on without the guest's memory files and says so", () => {
 test("down records no memory when the guest prints something other than numbers", () => {
 	const io = fakeIo({
 		...running,
+		[`stat ${task}`]: { size: 0, mtime: new Date(0), dir: true },
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"sbx exec pi-a cat": "max\n",
 	});

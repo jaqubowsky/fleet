@@ -696,7 +696,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 			`${sandbox}: no session in ${task}/logs/sessions (the container's agent never ran)`,
 		);
 	}
-	recordMemory(sandbox, task, io);
+	if (io.stat(task)?.dir) recordMemory(sandbox, task, io);
 	if (repo && io.list(dirname(task)).length)
 		io.log(
 			`${sandbox}: artifacts stay in ${task}, read them with ${CLI} artifacts --repo ${repo}`,
