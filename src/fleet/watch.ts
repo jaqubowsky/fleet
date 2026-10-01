@@ -114,7 +114,7 @@ export function watch(
 	let failingLocate: string | undefined;
 
 	const locate = (name: string, rows: Sandbox[]) => {
-		const dir = taskDirOf(io.home, rows, name, io);
+		const dir = taskDirOf(rows, name, io);
 		const row = rows.find((s) => agentName(s.name) === name);
 		if (dir && row)
 			dirs.set(name, { dir, sandbox: row, repo: row.workspaces[0] });

@@ -1,8 +1,6 @@
-import { basename } from "node:path";
 import type { Io } from "./io.ts";
 import { taskDir } from "./repositories.ts";
 import { agentName } from "./name.ts";
-import { FLEET } from "./home.ts";
 import type { Sandbox } from "./status.ts";
 
 export const SETTLE_MS = 1000;
@@ -55,13 +53,11 @@ export function transition(
 }
 
 export function taskDirOf(
-	home: string,
 	sandboxes: Pick<Sandbox, "name" | "workspaces">[],
 	agent: string,
-	io?: Io,
+	io: Io,
 ): string | undefined {
 	const hit = sandboxes.find((s) => agentName(s.name) === agent);
 	if (!hit?.workspaces[0]) return undefined;
-	if (io) return taskDir(hit.workspaces[0], hit.name, io);
-	return `${home}/${FLEET.tasks}/${basename(hit.workspaces[0])}/${hit.name}`;
+	return taskDir(hit.workspaces[0], hit.name, io);
 }

@@ -238,10 +238,10 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 		},
 	];
 	assert.equal(
-		taskDirOf("/home/me", sandboxes, "pi-webapp-web-1"),
+		taskDirOf(sandboxes, "pi-webapp-web-1", fakeIo({})),
 		"/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
 	);
-	assert.equal(taskDirOf("/home/me", sandboxes, "someone-else"), undefined);
+	assert.equal(taskDirOf(sandboxes, "someone-else", fakeIo({})), undefined);
 	const io = fakeIo({
 		"read /home/me/.fleet/config/fleet/pi-webapp-web-1.json": JSON.stringify({
 			version: 1,
@@ -258,7 +258,7 @@ test("the task directory follows from the agent's sandbox and its repo", () => {
 		}),
 	});
 	assert.equal(
-		taskDirOf(io.home, sandboxes, "pi-webapp-web-1", io),
+		taskDirOf(sandboxes, "pi-webapp-web-1", io),
 		"/home/me/.fleet/tasks/groups/a-b-c/pi-webapp-web-1",
 	);
 });
