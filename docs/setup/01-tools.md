@@ -15,16 +15,18 @@ Check all of them first and report the full list, passed and missing, in one mes
 
 ## Install
 
+Ask the person which agents they will use: Claude Code, pi, or both. Install at least one. `sync.sh` sets up only the agents whose CLI is on `PATH`, so an agent installed later is set up by the next sync.
+
 ```bash
 brew trust docker/tap && brew install docker/tap/sbx    # Docker Sandboxes, free locally
 brew install herdr                                      # terminal workspace the agents run in
-npm install -g @earendil-works/pi-coding-agent          # pi
-curl -fsSL https://claude.ai/install.sh | bash          # Claude Code, updates itself
+npm install -g @earendil-works/pi-coding-agent          # pi, if they use it
+curl -fsSL https://claude.ai/install.sh | bash          # Claude Code, if they use it; updates itself
 ```
 
 ## Logins
 
-Ask the person which model plans they pay for, then match the seats to them before anyone logs in. Each agent names one model per role in a seats file, as `"<seat>": { "model": "<provider>/<model>", "thinking": "<level>" }`:
+Only for the agents installed above. Ask the person which model plans they pay for, then match the seats to them before anyone logs in. Each agent names one model per role in a seats file, as `"<seat>": { "model": "<provider>/<model>", "thinking": "<level>" }`:
 
 - `claude/profiles/models.json` uses `anthropic/claude-opus-5-5[1m]` for the host and the sandboxes. A Claude plan without Opus or without the 1M context needs a model it has, such as the same id without `[1m]`
 - `pi/profiles/models.json` uses `openai-codex/…`, OpenAI through a ChatGPT login. With no ChatGPT plan, give every seat a model from a provider they have, in the same `<provider>/<model>` form
@@ -32,11 +34,12 @@ Ask the person which model plans they pay for, then match the seats to them befo
 Person:
 
 - create a Docker account if they have none, start `sbx` once and sign in with it
-- start `claude`, log in, and install the TypeScript LSP plugin from `claude-plugins-official` with `/plugin`. The Claude sandbox image copies it from `~/.claude/plugins/`, so building that image fails without it
-- start `pi` and run `/login` for the provider its seats name. It writes `~/.pi/agent/auth.json`, which never goes into git
+- with Claude Code: start `claude`, log in, and install the TypeScript LSP plugin from `claude-plugins-official` with `/plugin`. The Claude sandbox image copies it from `~/.claude/plugins/`, so building that image fails without it
+- with pi: start `pi` and run `/login` for the provider its seats name. It writes `~/.pi/agent/auth.json`, which never goes into git
 
 ## Check
 
-- `command -v sbx herdr pi claude` prints four paths
+- `command -v sbx herdr` prints two paths, and `command -v claude pi` prints the path of each agent the person chose
 - `sbx ls` answers without an authentication error; if not, the person signs in to sbx again
-- `test -f ~/.pi/agent/auth.json && test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`; if not, the matching login or plugin above is missing
+- with pi: `test -f ~/.pi/agent/auth.json && echo ok` prints `ok`; if not, the login above is missing
+- with Claude Code: `test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`; if not, the plugin above is missing

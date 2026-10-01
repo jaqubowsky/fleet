@@ -119,8 +119,8 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 
 | Command | What it does | What it changes |
 | --- | --- | --- |
-| `./sync.sh` | shows what `--apply` would change | nothing |
-| `./sync.sh --apply` | installs the harness for both agents and builds the sandbox images | replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}`; writes keys into `~/.claude/settings.json` (old copy kept as `.bak`); links `fleet` and a `gh` wrapper into `~/.local/bin` and the guard hook into `~/.claude/hooks` |
+| `./sync.sh` | shows what `--apply` would change for each agent whose CLI is on `PATH`, and names the backup archive it would write | nothing |
+| `./sync.sh --apply` | installs the harness for each agent whose CLI is on `PATH` and builds its sandbox image | first packs every file it will change into `~/.local/state/fleet/backups/<UTC timestamp>.tar.gz`; replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}` of the agents it sets up; writes keys into `~/.claude/settings.json` and links the guard hook into `~/.claude/hooks` with claude; links `fleet` and a `gh` wrapper into `~/.local/bin` and herdr's config |
 | `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a herdr tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.sandboxes/` |
 | `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
 | `fleet watch` | wakes the host when a sandbox needs it | nothing |
@@ -160,7 +160,7 @@ The guard matches patterns and doesn't understand the shell, so `eval` gets past
 
 ## Make it yours
 
-Rules, skills and the guard are written once in this repo and rendered for both Claude Code and pi. To add a skill, drop a `SKILL.md` into `skills/shared`, `skills/host` or `skills/container` and run sync. It reaches both agents, on your Mac, in the sandboxes or both. Edit or delete the bundled skills the same way. Keep them in the repo, because sync replaces `~/.claude/skills` on every run.
+Rules, skills and the guard are written once in this repo and rendered for both Claude Code and pi. To add a skill, drop a `SKILL.md` into `skills/shared`, `skills/host` or `skills/container` and run sync. It reaches each agent sync sets up, on your Mac, in the sandboxes or both. Edit or delete the bundled skills the same way. Keep them in the repo, because sync replaces `~/.claude/skills` on every run.
 
 ## This is my setup
 
