@@ -21,6 +21,10 @@ jobs:
       - run: npm ci
       - run: npm install -g @earendil-works/pi-coding-agent
       - run: |
+          npm install --prefix "$RUNNER_TEMP/pi-npm" --legacy-peer-deps \
+            $(jq -rs 'map(.packages[]) | unique | .[] | sub("^npm:"; "")' pi/profiles/host.json pi/profiles/sbx.json)
+          echo "PI_NPM_MODULES=$RUNNER_TEMP/pi-npm/node_modules" >> "$GITHUB_ENV"
+      - run: |
           git config --global user.name ci
           git config --global user.email ci@example.invalid
       - run: npm run check
