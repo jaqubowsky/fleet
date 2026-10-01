@@ -10,11 +10,11 @@ One question: does this change do what was asked, on the real screens of the run
 
 ## Process
 
-1. **Criteria.** From the task's analysis, spec and tickets and the diff against the base: one line per acceptance criterion a browser can observe. Split a compound one when its parts need different evidence; an implementation detail is never a criterion. Done when every criterion names the screen and the state that proves it.
+1. **Criteria.** From the task's analysis, spec and tickets and the diff against the base: one line per acceptance criterion a browser can observe. Split a compound one when its parts need different evidence; an implementation detail is never a criterion. A control the change adds or alters also gets a keyboard criterion: Tab reaches it in visual order with a visible focus, Enter or Space works it, and a dialog it opens closes on Escape. Done when every criterion names the screen and the state that proves it.
 
 2. **App.** Start it. Prove the checkout and claim a session: [browser.md](references/browser.md). The audit walks the screens of that app, logged in as the runbook says, through the API and the data the app has here; the sandbox is private, so "a synthetic status keeps the API and customer data out" argues for the running app, since only it shows the status arriving. A page built for the audit, whatever component it mounts, closes no criterion.
 
-3. **Walk.** Every criterion in turn, through the device (`click`, `fill`, `page.mouse`), never a state set from `eval`. A criterion passes on the change the page shows, never on a command reporting success. A colour is read from the element with `getComputedStyle` in `eval`, never from a cropped screenshot, whose pixels blend with antialiasing and whose crop needs a library the image lacks. Done when every criterion carries a verdict and a screenshot read against it. Verdicts:
+3. **Walk.** Every criterion in turn, through the device (`click`, `fill`, `press`, `page.mouse`), never a state set from `eval`. A criterion passes on the change the page shows, never on a command reporting success. A colour is read from the element with `getComputedStyle` in `eval`, never from a cropped screenshot, whose pixels blend with antialiasing and whose crop needs a library the image lacks. Done when every criterion carries a verdict and a screenshot read against it. Verdicts:
    - `passed`
    - `failed`, with expected, actual and evidence; it is recorded and the walk goes on, since only `blocked` stops it
    - `not-implemented`
