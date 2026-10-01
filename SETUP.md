@@ -100,7 +100,7 @@ Two forms:
 - `keychain:<name>`: an item in the macOS keychain that the person stores with `fleet tokens set <name>`. `up` has sbx read it from the keychain, so the value passes through no session. A name is lowercase letters, digits and hyphens, and several repositories may share one. Prefer this one
 - `env:<NAME>`: the value of that variable in the host session, which `up` refuses to start without. The token then sits in the session's environment, where any command the agent runs can print it
 
-The repository's own `*` profile in `host/repos.json` uses `env:GH_TOKEN`. To use the keychain instead, give your `~/.config/harness/repos.json` a `*` entry with a `keychain:<name>` token. A profile that still names an `op://` reference no longer loads: store that token with `fleet tokens set <name>` and write `keychain:<name>` in its place.
+The repository's own `*` profile in `host/repos.json` uses `env:GH_TOKEN`. To use the keychain instead, give your `~/.config/harness/repos.json` a `*` entry with a `keychain:<name>` token.
 
 Every container a profile covers gets the same token, so scope it. Person: create a fine-grained token limited to the repositories the agents work on, with contents read, and pull requests write where the profile gives the container `pr: auto`. Where `container.push` is `auto`, `up` refuses a token that sees any private repository but that one.
 
