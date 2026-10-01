@@ -165,6 +165,10 @@ export function repoName(origin: string): string {
 	);
 }
 
+export function keychainName(token: string): string | undefined {
+	return token.startsWith("keychain:") ? token.slice("keychain:".length) : undefined;
+}
+
 export function profileFor(profiles: Profiles, repo: string): Profile {
 	const name = repo.toLowerCase();
 	return profiles[name] ?? profiles[`${name.split("/")[0]}/*`] ?? profiles["*"];

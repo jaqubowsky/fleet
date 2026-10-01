@@ -2,7 +2,7 @@ import { basename, dirname } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
-import { describe, repoName, type Profile } from "../profile/profile.ts";
+import { describe, keychainName, repoName, type Profile } from "../profile/profile.ts";
 import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
@@ -15,6 +15,7 @@ import {
 	saveRepositories,
 } from "./repositories.ts";
 import { agentFor, sandboxes, type Agent } from "./status.ts";
+import { keychainRead } from "./tokens.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
 const IMAGE_SOURCES = [
@@ -566,28 +567,17 @@ function create(
 	io.mkdir(artifacts);
 	io.mkdir(cache);
 	const variable = sessionToken(profile);
+	const name = keychainName(profile.container.token);
+	const bind = ["secret", "set", "github", "--sandbox", sandbox];
+	const [flag, source] = name
+		? ["--command", keychainRead(name)]
+		: ["--ref", profile.container.token];
 	try {
-		if (variable)
-			io.sbx(["secret", "set", "github", "--sandbox", sandbox], {
-				quiet: true,
-				input: io.env(variable),
-			});
-		else
-			io.sbx(
-				[
-					"secret",
-					"set",
-					"github",
-					"--sandbox",
-					sandbox,
-					"--ref",
-					profile.container.token,
-				],
-				{ quiet: true },
-			);
+		if (variable) io.sbx(bind, { quiet: true, input: io.env(variable) });
+		else io.sbx([...bind, flag, source], { quiet: true });
 	} catch (error) {
 		io.log(
-			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${variable ? `printenv ${variable} | sbx secret set github --sandbox ${sandbox}` : `sbx secret set github --sandbox ${sandbox} --ref '${profile.container.token}'`}\``,
+			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${variable ? `printenv ${variable} | sbx ${bind.join(" ")}` : `sbx ${bind.join(" ")} ${flag} '${source}'`}\``,
 		);
 	}
 	const linear =

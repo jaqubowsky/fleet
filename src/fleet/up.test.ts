@@ -1737,6 +1737,39 @@ test("where the profile takes the container token from the session, up hands it 
 	assert.ok(!io.calls.some((c) => c.includes("--ref")));
 });
 
+test("where the profile names a keychain token, up has sbx read it from the keychain at use time", async () => {
+	const io = fakeIo(
+		{
+			...pushing,
+			"read /root/host/repos.json": JSON.stringify({
+				...JSON.parse(SAMPLE_PROFILES),
+				[PRIVATE_REPO]: {
+					...PRIVATE_PROFILE,
+					container: { ...PRIVATE_PROFILE.container, token: "keychain:private-app" },
+				},
+			}),
+			[privateRepos]: "alice/private-app",
+		},
+		SEATS.claude,
+	);
+
+	await up({ repo: "/r/private-app", label: "x", root: "/root" }, io);
+
+	const sbx = io.calls.filter((c) => c[0] === "sbx");
+	const secret = sbx.findIndex((c) => c[1] === "secret");
+	assert.deepEqual(sbx[secret], [
+		"sbx",
+		"secret",
+		"set",
+		"github",
+		"--sandbox",
+		"claude-private-app-x",
+		"--command",
+		"security find-generic-password -s fleet-gh -a private-app -w",
+	]);
+	assert.equal(io.sbxOpts[secret]?.input, undefined);
+});
+
 test("where the profile takes the container token from the session and the session has none, up stops before creating anything", async () => {
 	const io = fakeIo(
 		{ ...pushing, "read /root/host/repos.json": fromSession },

@@ -6,6 +6,8 @@ type Keychain = { read(ref: string): string | undefined; write(ref: string, valu
 
 const SERVICE = "fleet-gh";
 
+export const keychainRead = (name: string) => `security find-generic-password -s ${SERVICE} -a ${name} -w`;
+
 export const keychain: Keychain = {
 	read(ref) {
 		const found = spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", ref, "-w"], { encoding: "utf8" });
