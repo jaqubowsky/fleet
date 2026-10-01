@@ -68,11 +68,11 @@ body.dragging .frame:not(.selected)::before, body.dragging .title:not(.selected)
 .frame.live .strip .play:hover { color: #fff; filter: brightness(1.1); }
 .frame.live.narrow .strip .play { display: inline-block; }
 .resize {
-  position: absolute; width: calc(16px / var(--z)); height: calc(16px / var(--z)); transform: translate(-50%, -50%);
+  position: absolute; width: calc(16px / var(--z)); height: calc(16px / var(--z));
   border: 0 solid var(--accent); cursor: nwse-resize; opacity: 0; z-index: 1;
 }
-.resize.nw { border-width: calc(2px / var(--z)) 0 0 calc(2px / var(--z)); transform: translate(-40%, -40%); }
-.resize.ne { border-width: calc(2px / var(--z)) calc(2px / var(--z)) 0 0; transform: translate(-60%, -40%); cursor: nesw-resize; }
-.resize.sw { border-width: 0 0 calc(2px / var(--z)) calc(2px / var(--z)); transform: translate(-40%, -60%); cursor: nesw-resize; }
-.resize.se { border-width: 0 calc(2px / var(--z)) calc(2px / var(--z)) 0; transform: translate(-60%, -60%); }
+.resize.nw { border-width: calc(2px / var(--z)) 0 0 calc(2px / var(--z)); }
+.resize.ne { border-width: calc(2px / var(--z)) calc(2px / var(--z)) 0 0; transform: translateX(-100%); cursor: nesw-resize; }
+.resize.sw { border-width: 0 0 calc(2px / var(--z)) calc(2px / var(--z)); transform: translateY(-100%); cursor: nesw-resize; }
+.resize.se { border-width: 0 calc(2px / var(--z)) calc(2px / var(--z)) 0; transform: translate(-100%, -100%); }
 .frame:hover .resize, .frame.selected .resize, body.dragging .frame.selected .resize { opacity: 1; }
