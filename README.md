@@ -129,29 +129,42 @@ Every tool call an agent makes goes through a policy first. This is what an agen
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a tab |
-| `fleet steer <sandbox> "<text>"` | sends that agent its next instruction |
-| `fleet watch` | wakes the host when a sandbox needs it |
-| `fleet peek <sandbox>` | shows what it is doing right now |
-| `fleet land <sandbox> [--push]` | brings the finished branch home, and pushes it with `--push` |
-| `fleet down <sandbox>` | closes the sandbox; its notes and logs stay |
+The host agent runs these for you. Each one is listed with what it changes, so nothing happens that you can't look up.
 
-`fleet --help` lists every verb and flag.
+| Command | What it does | What it changes |
+| --- | --- | --- |
+| `./sync.sh` | shows what `--apply` would change | nothing |
+| `./sync.sh --apply` | installs the harness for both agents and builds the sandbox images | replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}`; writes keys into `~/.claude/settings.json` (old copy kept as `.bak`); links `fleet` and a `gh` wrapper into `~/.local/bin` and the guard hook into `~/.claude/hooks` |
+| `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a herdr tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.sandboxes/` |
+| `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
+| `fleet watch` | wakes the host when a sandbox needs it | nothing |
+| `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
+| `fleet history`, `fleet artifacts` | replay a task's status, list task folders | nothing |
+| `fleet exec <sandbox> -- <command>` | runs a command inside a sandbox | whatever that command changes there |
+| `fleet copy <src> <dst>` | copies a file in or out of a sandbox | the destination file |
+| `fleet handoff <sandbox>` | starts a fresh session in a sandbox that asked for one | the sandbox agent's session |
+| `fleet land <sandbox> [--push]` | brings the finished branch home | moves your local branch; signs commits per profile, which changes their SHAs; `--push` pushes to GitHub |
+| `fleet down <sandbox> [--force]` | closes the sandbox, keeping its task folder | removes the sandbox; refuses unlanded work, which `--force` throws away |
+| `fleet profile [<repo>] [--apply]` | shows who may push, open and merge pull requests, per repository | with `--apply`: the checkout's git config (signing, HTTPS origin, credential helper) and its Linear MCP registration. Every host session start runs this on its own checkout |
+| `fleet tokens` | copies the profiles' 1Password GitHub tokens into the macOS keychain | keychain items under `fleet-gh`. Run it yourself; the guard refuses it to agents |
+| `fleet build [--pi\|--claude]` | rebuilds a sandbox image | the local sbx image |
+| `fleet init <repo>` | lays out `AGENTS.md` and `spec/vision.md` | adds those files to the repository, never overwriting one |
+| `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
+
+`fleet --help` lists every flag.
 
 ## Also in the box
 
 - **Several repositories in one task.** Repeat `--repo`, and one `land` brings all of them home.
-- **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox, and every host session applies its repository's profile to the checkout as it starts.
+- **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox.
 - **Cost per task.** `fleet ls` shows what each sandbox has spent so far.
 - **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone, and `fleet history` replays how its status changed.
 - **A setup that audits itself.** `audit-harness` reads past transcripts and reports what held, what broke and what's missing, quoting each.
-- **Your phone as a remote.** Drive pi sessions from your phone over Tailscale.
+- **Your phone as a remote.** Drive pi sessions from your phone over Tailscale, set up as [extensions/pi-remote](extensions/pi-remote/README.md) describes.
 
 ## Trust model
 
-Sandboxes never hold your SSH or signing key, and their GitHub token reaches them only through the sandbox proxy. The host session takes each repository's token from the keychain one `gh` call at a time, so it never sits in the session's environment; the host agent can still use it within its scopes. A repository's ignored `.env` files are copied into its sandbox. Three things never happen without you:
+Sandboxes never hold your SSH or signing key, and their GitHub token reaches them only through the sandbox proxy. The host agent on your Mac gets a repository's token from the keychain only for the `gh` command that needs it. A repository's ignored `.env` files are copied into its sandbox. Three things never happen without you:
 
 - a force, delete or mirror push, from any seat;
 - a pull request opened or merged where the repository's profile doesn't give the host `auto`, since the guard refuses it;
@@ -167,4 +180,10 @@ Rules, skills and the guard are written once in this repo and rendered for both 
 
 > It is opinionated and built around how I work. Fork it and let your agent bend it to yours.
 
-Code smells list adapted from [mattpocock/skills](https://github.com/mattpocock/skills) (MIT). Licensed [MIT](LICENSE).
+## License and warranty
+
+[MIT](LICENSE). The software comes as is, without warranty of any kind, and the authors are not liable for anything it does.
+
+fleet runs AI agents that execute commands on your Mac and in sandboxes, with your GitHub tokens and, where a repository's profile allows, your permission to push and merge. The guard stops known mistakes, not every one (see the trust model above). Read `fleet profile` for each repository before its first task, scope every token to what that repository needs, and keep your own backups.
+
+Third-party code and its licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
