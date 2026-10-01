@@ -9,7 +9,7 @@ export function sandboxName(repo: string, label: string, prefix: string): string
 	const project = slug(basename(repo)) || "repo";
 	const suffix = slug(label);
 	if (!suffix) throw new Error("a container needs a label, for example the ticket id");
-	return `${prefix}${project}-${suffix}`.slice(0, 63);
+	return `${prefix}${project}-${suffix}`.slice(0, 63).replace(/[^a-z0-9]+$/, "");
 }
 
 export function agentName(sandbox: string): string {
