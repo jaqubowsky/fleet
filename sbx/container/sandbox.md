@@ -46,6 +46,8 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 
 The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 
+An order to see a change before it is built runs `mockup` before `implement` takes that ticket. It ends under `status: blocked`, `attention:` the question the mockup asks, Summary naming `mockup/index.html` and one line per variant with its real downside. The steer that answers it goes into `spec.md` or the ticket as `Decided: <variant>`, and the build follows it.
+
 An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
 
 ## Session handoff
