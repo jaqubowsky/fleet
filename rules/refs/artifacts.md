@@ -19,7 +19,7 @@ issues/        NN-<slug>.md, one ticket per commit
 review.md      verdict line, findings, checks read, shared seams
 pr.md          pull request rounds: threads answered, verdicts
 browser/       <run-id>/report.md, screenshots, a walkthrough video
-mockup/        <slug>/index.html: how a change will look before it is built, variants behind a switcher; its screenshots
+mockup/        index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots
 logs/          sessions/, status.jsonl, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; <skill>-<id>/ evidence
 ```
 

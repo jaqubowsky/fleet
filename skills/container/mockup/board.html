@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup board</title>
+<style>
+  :root {
+    --bg: #f4f4f2; --panel: #ffffff; --ink: #1b1d21; --muted: #6a6f78; --line: #dcdcd8;
+    --accent: #2f6fe4; --shadow: 0 1px 2px #0000000f, 0 4px 16px #00000010;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #131417; --panel: #1c1e22; --ink: #e8e9eb; --muted: #969ba4; --line: #2e3137; --accent: #6b9cff; --shadow: 0 1px 2px #0006, 0 4px 16px #0005; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+  header { padding: 20px 24px 4px; }
+  header h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  section { padding: 20px 0 8px; border-bottom: 1px solid var(--line); }
+  .head { padding: 0 24px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .head h2 { margin: 0; font-size: 18px; font-weight: 650; }
+  .kind { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .slug { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+  .question { padding: 2px 24px 0; margin: 0; color: var(--muted); }
+  .row { display: flex; align-items: flex-start; gap: 20px; overflow-x: auto; padding: 16px 24px 16px; }
+  .card { flex: none; display: flex; flex-direction: column; gap: 8px; }
+  .card-head { display: flex; align-items: baseline; gap: 8px; }
+  .card-head b { font-weight: 600; }
+  .card-head button, .bar button, .bar a { font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; cursor: pointer; text-decoration: none; }
+  .card-head button:hover, .bar button:hover, .bar a:hover { color: var(--ink); border-color: var(--muted); }
+  .note { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 46ch; }
+  .frames { display: flex; align-items: flex-start; gap: 12px; }
+  .frame { display: flex; flex-direction: column; gap: 4px; }
+  .frame small { color: var(--muted); font-size: 11px; }
+  .viewport { position: relative; overflow: hidden; border-radius: 8px; background: #fff; box-shadow: var(--shadow); outline: 1px solid var(--line); }
+  .viewport iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; background: #fff; }
+  .arrow { flex: none; align-self: center; color: var(--muted); font-size: 22px; }
+  .empty { padding: 40px 24px; color: var(--muted); }
+  #focus { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; }
+  #focus.open { display: flex; }
+  .bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .bar .title { font-weight: 600; margin-right: 8px; }
+  .bar .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 6px; }
+  .bar [aria-pressed="true"] { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .bar .spacer { flex: 1; }
+  .caption { padding: 8px 16px 0; color: var(--muted); min-height: 1.45em; }
+  .stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mockup board</h1>
+  <p>Every frame is the page itself, live: click and type inside it. Focus opens one page at full size.</p>
+</header>
+<main id="board"></main>
+<div id="focus" role="dialog" aria-modal="true" aria-label="Focused page">
+  <div class="bar" id="focus-bar"></div>
+  <p class="caption" id="focus-caption"></p>
+  <div class="stage" id="focus-stage"></div>
+</div>
+<script>
+  window.BOARD = [];
+  window.board = entry => window.BOARD.push(entry);
+</script>
+<script src="board.js"></script>
+<script>
+  const SIZES = { phone: { w: 390, h: 844, label: "phone" }, desktop: { w: 1440, h: 900, label: "desktop" } };
+  const KINDS = { variants: "pick one", flow: "flow", states: "states" };
+  const PREVIEW_H = 380;
+  const PREVIEW_W = 640;
+
+  const sizeOf = s => typeof s === "string" ? SIZES[s] : { label: s.label || `${s.w}×${s.h}`, ...s };
+  const sizesOf = (entry, page) => (page.sizes || entry.sizes || ["phone", "desktop"]).map(sizeOf);
+  const src = (entry, page) => `${entry.slug}/${page.file}`;
+  function el(tag, props = {}, ...kids) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids.flat(Infinity).filter(k => k != null && k !== false && k !== ""));
+    return node;
+  }
+
+  function viewport(url, size, scale, title) {
+    const frame = el("iframe", { src: url, title, loading: "lazy" });
+    frame.style.width = `${size.w}px`;
+    frame.style.height = `${size.h}px`;
+    frame.style.transform = `scale(${scale})`;
+    const box = el("div", { className: "viewport" }, frame);
+    box.style.width = `${Math.round(size.w * scale)}px`;
+    box.style.height = `${Math.round(size.h * scale)}px`;
+    return box;
+  }
+
+  function card(entry, page, index) {
+    const frames = sizesOf(entry, page).map(size => {
+      const scale = Math.min(1, PREVIEW_H / size.h, PREVIEW_W / size.w);
+      return el("div", { className: "frame" },
+        viewport(src(entry, page), size, scale, `${page.label || page.id}, ${size.label}`),
+        el("small", { textContent: `${size.label} · ${size.w}×${size.h}` }));
+    });
+    return el("div", { className: "card" },
+      el("div", { className: "card-head" },
+        el("b", { textContent: [page.id, page.label].filter(Boolean).join(" · ") }),
+        el("button", { type: "button", textContent: "Focus", onclick: () => openFocus(entry.slug, index, 0) })),
+      page.note && el("p", { className: "note", textContent: page.note }),
+      el("div", { className: "frames" }, frames));
+  }
+
+  function section(entry) {
+    const cards = entry.pages.flatMap((page, i) => {
+      const c = card(entry, page, i);
+      return entry.kind === "flow" && i > 0 ? [el("span", { className: "arrow", textContent: "→", ariaHidden: "true" }), c] : [c];
+    });
+    return el("section", { id: entry.slug },
+      el("div", { className: "head" },
+        el("h2", { textContent: entry.title || entry.slug }),
+        el("span", { className: "kind", textContent: KINDS[entry.kind] || entry.kind }),
+        el("span", { className: "slug", textContent: entry.slug })),
+      entry.question && el("p", { className: "question", textContent: entry.question }),
+      el("div", { className: "row" }, cards));
+  }
+
+  const focus = { slug: null, page: 0, size: 0 };
+  const focusEl = document.getElementById("focus");
+
+  function renderFocus() {
+    const entry = BOARD.find(e => e.slug === focus.slug);
+    if (!entry) return closeFocus();
+    focus.page = (focus.page + entry.pages.length) % entry.pages.length;
+    const page = entry.pages[focus.page];
+    const sizes = sizesOf(entry, page);
+    focus.size = Math.min(focus.size, sizes.length - 1);
+    const size = sizes[focus.size];
+    document.getElementById("focus-bar").replaceChildren(...[
+      el("span", { className: "title", textContent: entry.title || entry.slug }),
+      entry.pages.map((p, i) => el("button", { type: "button", textContent: p.id || i + 1, title: p.label || "", ariaPressed: String(i === focus.page), onclick: () => { focus.page = i; renderFocus(); } })),
+      el("span", { className: "sep" }),
+      sizes.map((s, i) => el("button", { type: "button", textContent: s.label, ariaPressed: String(i === focus.size), onclick: () => { focus.size = i; renderFocus(); } })),
+      el("span", { className: "spacer" }),
+      el("a", { href: src(entry, page), target: "_blank", textContent: "Open alone" }),
+      el("button", { type: "button", textContent: "Close", onclick: closeFocus })].flat());
+    document.getElementById("focus-caption").textContent = [page.label, page.note].filter(Boolean).join(" · ");
+    const stage = document.getElementById("focus-stage");
+    focusEl.classList.add("open");
+    const scale = Math.min(1, (stage.clientWidth - 32) / size.w, (stage.clientHeight - 32) / size.h);
+    stage.replaceChildren(viewport(src(entry, page), size, scale, `${page.label || page.id}, ${size.label}`));
+    history.replaceState(null, "", `#${entry.slug}/${page.id || focus.page + 1}/${size.label}`);
+  }
+
+  function openFocus(slug, page, size) {
+    Object.assign(focus, { slug, page, size });
+    renderFocus();
+  }
+
+  function closeFocus() {
+    focusEl.classList.remove("open");
+    focus.slug = null;
+    history.replaceState(null, "", location.pathname);
+  }
+
+  document.addEventListener("keydown", e => {
+    if (!focus.slug) return;
+    const entry = BOARD.find(x => x.slug === focus.slug);
+    if (e.key === "Escape") closeFocus();
+    else if (e.key === "ArrowRight") { focus.page++; renderFocus(); }
+    else if (e.key === "ArrowLeft") { focus.page--; renderFocus(); }
+    else if (/^[1-9]$/.test(e.key) && +e.key <= entry.pages.length) { focus.page = +e.key - 1; renderFocus(); }
+  });
+  addEventListener("resize", () => focus.slug && renderFocus());
+
+  const root = document.getElementById("board");
+  root.append(...(BOARD.length ? BOARD.map(section) : [el("p", { className: "empty", textContent: "board.js adds nothing yet." })]));
+
+  const [slug, pageId, sizeLabel] = decodeURIComponent(location.hash.slice(1)).split("/");
+  const fromHash = BOARD.find(e => e.slug === slug);
+  if (fromHash && pageId) {
+    const page = Math.max(0, fromHash.pages.findIndex((p, i) => (p.id || String(i + 1)) === pageId));
+    const size = Math.max(0, sizesOf(fromHash, fromHash.pages[page]).findIndex(s => s.label === sizeLabel));
+    openFocus(slug, page, size);
+  } else if (fromHash) {
+    document.getElementById(slug).scrollIntoView();
+  }
+</script>
+</body>
+</html>
