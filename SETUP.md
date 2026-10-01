@@ -65,13 +65,15 @@ Write `git/.gitconfig` with the person's name and email. Containers commit unsig
 
 Everything under `git/` lands in `/home/agent/` as it is: `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
 
-`sync.sh` writes the keys `claude/profiles/host.json` names into `~/.claude/settings.json`, with `$HOME` expanded, on every run. A list under such a key is replaced, except the hook lists under `hooks`: there your own entries, such as the one `herdr integration install claude` adds, stay, and the repository's hooks are added or brought up to date beside them. The previous file stays as `settings.json.bak`. Keys the repository does not name stay yours. Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so the SSH agent that signs on this Mac is set in that shell's profile.
-
 Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints the email, and `ls ~/.config/harness` lists `git`.
 
 ## 4. Sync
 
-`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet`, the `gh` wrapper and herdr's config, and builds both container images. The render owns whole directories and replaces them on every run: `~/.claude/rules`, `refs`, `skills` and `agents`, and `~/.pi/skills`, `agent/refs`, `agent/agents` and `agent/themes`. Anything of the person's own there is deleted, and the dry run lists each such file as `remove`. Before the first `--apply`, show the person that list and copy what they want to keep. Read the plan first:
+`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet`, the `gh` wrapper and herdr's config, and builds both container images. The render owns whole directories and replaces them on every run: `~/.claude/rules`, `refs`, `skills` and `agents`, and `~/.pi/skills`, `agent/refs`, `agent/agents` and `agent/themes`. Anything of the person's own there is deleted, and the dry run lists each such file as `remove`. Before the first `--apply`, show the person that list and copy what they want to keep.
+
+In `~/.claude/settings.json` it writes the keys `claude/profiles/host.json` names, with `$HOME` expanded. A list under such a key is replaced, except the hook lists under `hooks`: your own entries there, such as the one `herdr integration install claude` adds, stay beside the repository's. Keys the repository does not name stay yours, and the previous file stays as `settings.json.bak`.
+
+Read the plan first:
 
 ```bash
 ./sync.sh            # prints what it would change, changes nothing
@@ -85,7 +87,7 @@ Neither host agent runs in an OS sandbox: on this Mac the guard hook is the only
 
 The last section of `sync.sh`, `== set up by hand`, names what it found missing and cannot install itself.
 
-A profile that names a Linear server needs it registered once, which no check from this Mac can confirm. For a container seat: `sbx mcp add <name> --url https://mcp.linear.app/mcp/readonly`, or `https://mcp.linear.app/mcp` where the container writes. For the host seat, every host session start runs `fleet profile --apply --brief` in its checkout, which registers the server for both agents and prints only what it changed.
+Every host session start runs `fleet profile --apply --brief` in its checkout: it sets the checkout's git config the way the repository's profile says and registers the host's Linear server, printing only what it changed. A profile that gives the container a Linear server needs it registered once by hand, since `sync.sh` cannot check sbx for it: `sbx mcp add <name> --url https://mcp.linear.app/mcp/readonly`, or `https://mcp.linear.app/mcp` where the container writes.
 
 Check: a second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, and `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.
 
@@ -95,14 +97,20 @@ A container gets its GitHub token from the profile of the repository it works on
 
 Two forms:
 
-- `env:<NAME>`: the value of that variable in the host session. The `*` profile uses `env:GH_TOKEN`, so start the host session with it set. `up` refuses before creating anything when the variable is missing. The token then sits in the session's environment, where any command the agent runs can print it, so prefer `op://`
-- `op://<vault>/<item>/<field>`: a 1Password reference; `up` has sbx read it. `sync.sh` then asks for the `op` CLI
+- `op://<vault>/<item>/<field>`: a 1Password reference; `up` has sbx read it, and `sync.sh` asks for the `op` CLI. Prefer this one
+- `env:<NAME>`: the value of that variable in the host session, which `up` refuses to start without. The token then sits in the session's environment, where any command the agent runs can print it
+
+The repository's own `*` profile in `host/repos.json` uses `env:GH_TOKEN`. To use 1Password instead, give your `~/.config/harness/repos.json` a `*` entry with an `op://` token.
 
 Every container a profile covers gets the same token, so scope it. Person: create a fine-grained token limited to the repositories the agents work on, with contents read, and pull requests write where the profile gives the container `pr: auto`. Where `container.push` is `auto`, `up` refuses a token that sees any private repository but that one.
 
-The host session uses the same token without holding it. The `gh` that `sync.sh` links into `~/.local/bin`, ahead of the real one, picks the profile from `--repo` or the checkout's origin, reads its token from the macOS keychain and hands it to the real `gh` for that one process; git over HTTPS reaches it through `gh auth git-credential`. Person: after adding or rotating an `op://` token, run `fleet tokens` in your own terminal; one 1Password unlock copies every reference into the keychain under `fleet-gh`. An `env:` token, or a reference not yet copied, leaves `gh` to its own login. A shell function named `gh`, such as the 1Password shell plugin's, shadows the wrapper, so keep it out of agent sessions. An agent can still use a token within its scopes: scope each to what its repository's seats need.
+The host session uses the same token without holding it. `sync.sh` links a `gh` wrapper into `~/.local/bin`, ahead of the real `gh`. It picks the profile from `--repo` or the checkout's origin, reads that profile's token from the macOS keychain, and passes it to the real `gh` for that one command. Git over HTTPS asks `gh` for credentials, so a push goes the same way. An `env:` token, or a reference not yet in the keychain, leaves `gh` to its own login.
 
-Where a profile gives the host `push: auto`, the host session pushes over HTTPS through that `gh`: `fleet profile <checkout> --apply` sets the checkout up for it, and every host session start runs it with `--brief` on its own checkout. With `push: human` the person pushes with their own key, and with `sign: human` `fleet land` signs each commit through it, which needs `user.signingkey` in the person's git config. With no signing set up, give the profile `sign: none`.
+Person: after adding or rotating an `op://` token, run `fleet tokens` in your own terminal. One 1Password unlock copies every reference into the keychain under `fleet-gh`. If your shell defines a `gh` function, such as the 1Password shell plugin's, it hides the wrapper, so skip it in agent sessions.
+
+An agent can still use a token within its scopes, so give each token only what its repository's seats need.
+
+Where a profile gives the host `push: auto`, the host pushes over HTTPS through that `gh`. With `push: human` the person pushes with their own key. With `sign: human`, `fleet land` signs each commit with that key, which needs `user.signingkey` in the person's git config; Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so an SSH agent that signs must be set in that shell's profile. With no signing set up, give the profile `sign: none`.
 
 Check: `fleet profile <a checkout>` prints what each seat may do there, and the token line names the form you chose.
 
@@ -119,11 +127,11 @@ mkdir -p ~/.config/sbx
 printf 'bindings:\n  openai:\n    oauth:\n      domains:\n        - auth.openai.com\n        - chatgpt.com\n' > ~/.config/sbx/credentials.yaml
 ```
 
-Without `~/.config/sbx/credentials.yaml` every model call from a pi container is a 401, and `up` refuses to start one. `up` builds a JWT-shaped sentinel carrying the ChatGPT account id from `~/.pi/agent/auth.json` (`src/fleet/codex.ts`); the proxy swaps it for the real bearer on the way to `chatgpt.com`. Both providers' hosts are already allowed in `pi/kits/pi/spec.yaml`.
+Without `~/.config/sbx/credentials.yaml` every model call from a pi container is a 401, and `up` refuses to start one.
 
 Claude containers carry their own login: person, `/login` once in the tab of the first `fleet up --claude`, which stops with that instruction. sbx keeps the login for every later container.
 
-`CLAUDE_CODE_SUBAGENT_MODEL` stays unset. The docs say an agent definition's `model` wins over it, but anthropics/claude-code#10993 reports the variable overriding the frontmatter. Unset is the only state where both readings agree, and each rendered agent carries its seat as `model` and `effort` frontmatter.
+Leave `CLAUDE_CODE_SUBAGENT_MODEL` unset: each rendered agent names its own model, and the variable can override that (anthropics/claude-code#10993).
 
 Check: `test -f ~/.config/sbx/credentials.yaml && echo ok` prints `ok`.
 
@@ -135,7 +143,7 @@ Context7 gives agents library docs. A container never sees its key: a custom sbx
 sbx secret set-custom --host mcp.context7.com --env CONTEXT7_API_KEY --value '<key>'   # person
 ```
 
-pi containers read the placeholder from the environment. The Claude image carries it in `claude/profiles/sbx.json` under `managedMcpServers.context7`: put the placeholder the command printed there and run `fleet build --claude`. Rotating the key changes the placeholder, so repeat both. Without Context7, delete that entry.
+pi containers read the placeholder from the environment. The Claude image carries it in `claude/profiles/sbx.json` under `managedMcpServers.context7`: put the placeholder the command printed there and run `fleet build --claude`. The value there in a fresh clone is the author's and works on no other Mac. Rotating the key changes the placeholder, so repeat both. Without Context7, delete that entry.
 
 sbx keeps one network allowlist for every sandbox on this Mac, in its own state, not in this repository. `sbx policy inspect local-policy` prints it. Allow a host once with `sbx policy allow network <host>`; pi's `web_search` needs `mcp.exa.ai`. Which hosts every sandbox may reach is the person's call: name each one before adding it.
 
