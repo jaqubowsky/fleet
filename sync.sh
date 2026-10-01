@@ -89,18 +89,12 @@ by_hand() {
 	node --input-type=module -e '
 		const [root, home, op] = process.argv.slice(1);
 		const { readFileSync } = await import("node:fs");
-		const { loadProfiles, linearServer } = await import(`${root}/src/profile/profile.ts`);
+		const { loadProfiles } = await import(`${root}/src/profile/profile.ts`);
 		const read = (path) => { try { return readFileSync(path, "utf8"); } catch { return undefined; } };
 		const lines = new Set();
 		const profiles = Object.values(loadProfiles(read, root, home));
 		if (!op && profiles.some(({ container }) => container.token.startsWith("op://")))
 			lines.add("  missing op on PATH, the 1Password CLI, which a profile names for its container token: SETUP.md, step 5");
-		for (const { container, host } of profiles) {
-			const [cname, curl] = linearServer(container) ?? [];
-			if (cname) lines.add(`  not verified ${cname}, no check from this Mac lists sbx MCP servers: sbx mcp add ${cname} --url ${curl}`);
-			const [hname] = linearServer(host) ?? [];
-			if (hname) lines.add(`  not verified ${hname}, registered per checkout: fleet profile <checkout> --apply in each checkout`);
-		}
 		for (const line of lines) console.log(line);
 	' "$ROOT" "$HOME" "$(command -v op || true)"
 }
