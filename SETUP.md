@@ -15,7 +15,7 @@ Check all of them before step 1 and report the full list, passed and missing, in
 | git, jq, python3, gh | `command -v git jq python3 gh` prints four paths | `brew install jq gh`; git and python3 ship with the Xcode command line tools |
 | Node 22.19 or newer | `node --version` | pi's floor; this repository is tested on Node 24 |
 | A Docker account | the person has one | sbx signs in with it |
-| A GitHub token for containers | the person can create a fine-grained token | step 5 |
+| A GitHub token for containers | the person can create a fine-grained token | step 5 stores it in the macOS keychain |
 
 `sync.sh` names what it finds missing under `== set up by hand`. Missing items: propose the install command, and let the person run anything that asks for a password.
 
@@ -97,22 +97,22 @@ A container gets its GitHub token from the profile of the repository it works on
 
 Two forms:
 
-- `op://<vault>/<item>/<field>`: a 1Password reference; `up` has sbx read it, and `sync.sh` asks for the `op` CLI. Prefer this one
+- `keychain:<name>`: an item in the macOS keychain that the person stores with `fleet tokens set <name>`. `up` has sbx read it from the keychain, so the value passes through no session. A name is lowercase letters, digits and hyphens, and several repositories may share one. Prefer this one
 - `env:<NAME>`: the value of that variable in the host session, which `up` refuses to start without. The token then sits in the session's environment, where any command the agent runs can print it
 
-The repository's own `*` profile in `host/repos.json` uses `env:GH_TOKEN`. To use 1Password instead, give your `~/.config/harness/repos.json` a `*` entry with an `op://` token.
+The repository's own `*` profile in `host/repos.json` uses `env:GH_TOKEN`. To use the keychain instead, give your `~/.config/harness/repos.json` a `*` entry with a `keychain:<name>` token. A profile that still names an `op://` reference no longer loads: store that token with `fleet tokens set <name>` and write `keychain:<name>` in its place.
 
 Every container a profile covers gets the same token, so scope it. Person: create a fine-grained token limited to the repositories the agents work on, with contents read, and pull requests write where the profile gives the container `pr: auto`. Where `container.push` is `auto`, `up` refuses a token that sees any private repository but that one.
 
-The host session uses the same token without holding it. `sync.sh` links a `gh` wrapper into `~/.local/bin`, ahead of the real `gh`. It picks the profile from `--repo` or the checkout's origin, reads that profile's token from the macOS keychain, and passes it to the real `gh` for that one command. Git over HTTPS asks `gh` for credentials, so a push goes the same way. An `env:` token, or a reference not yet in the keychain, leaves `gh` to its own login.
+Person: run `fleet tokens set <name>` in your own terminal for each name your profiles use. It asks for the token without echoing it and stores it in the keychain, so the value ends up in no argument list and no shell history. After rotating a token, run it again with the same name. The guard refuses `fleet tokens` to agents.
 
-Person: after adding or rotating an `op://` token, run `fleet tokens` in your own terminal. One 1Password unlock copies every reference into the keychain under `fleet-gh`. If your shell defines a `gh` function, such as the 1Password shell plugin's, it hides the wrapper, so skip it in agent sessions.
+The host session uses the same token without holding it. `sync.sh` links a `gh` wrapper into `~/.local/bin`, ahead of the real `gh`. It picks the profile from `--repo` or the checkout's origin, reads that profile's `keychain:` token, and passes it to the real `gh` for that one command. Git over HTTPS asks `gh` for credentials, so a push goes the same way. An `env:` token, or a name not yet in the keychain, leaves `gh` to its own login. If your shell defines a `gh` function, it hides the wrapper, so skip it in agent sessions.
 
 An agent can still use a token within its scopes, so give each token only what its repository's seats need.
 
 Where a profile gives the host `push: auto`, the host pushes over HTTPS through that `gh`. With `push: human` the person pushes with their own key. With `sign: human`, `fleet land` signs each commit with that key, which needs `user.signingkey` in the person's git config; Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so an SSH agent that signs must be set in that shell's profile. With no signing set up, give the profile `sign: none`.
 
-Check: `fleet profile <a checkout>` prints what each seat may do there, and the token line names the form you chose.
+Check: `./sync.sh` names no `missing keychain token` under `== set up by hand`. Person: `fleet tokens` lists each `keychain:<name>` the profiles use, none marked missing. With only `env:` tokens it prints `no profile names a keychain:<name> token`.
 
 ## 6. Model credentials in sandboxes
 
@@ -163,4 +163,4 @@ Check: each agent answered in its tab, `fleet ls` lists no container afterwards,
 2. `npm test` and `npm run check` exit 0
 3. Both smoke containers came up, answered and went down
 
-Tell the person what stayed manual and where it lives: the logins (step 2), the tokens (step 5), the sbx secrets and policy (steps 6 and 7).
+Tell the person what stayed manual and where it lives: the logins (step 2), the keychain tokens stored with `fleet tokens set` (step 5), the sbx secrets and policy (steps 6 and 7).

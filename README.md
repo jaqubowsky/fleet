@@ -146,7 +146,7 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet land <sandbox> [--push]` | brings the finished branch home | moves your local branch; signs commits per profile, which changes their SHAs; `--push` pushes to GitHub |
 | `fleet down <sandbox> [--force]` | closes the sandbox, keeping its task folder | removes the sandbox; refuses unlanded work, which `--force` throws away |
 | `fleet profile [<repo>] [--apply]` | shows who may push, open and merge pull requests, per repository | with `--apply`: the checkout's git config (signing, HTTPS origin, credential helper) and its Linear MCP registration. Every host session start runs this on its own checkout |
-| `fleet tokens` | copies the profiles' 1Password GitHub tokens into the macOS keychain | keychain items under `fleet-gh`. Run it yourself; the guard refuses it to agents |
+| `fleet tokens [set <name>]` | lists the GitHub tokens the profiles name and marks the ones missing from the macOS keychain; `set` asks for one and stores it | with `set`: one keychain item under `fleet-gh`. Run it yourself; the guard refuses it to agents |
 | `fleet build [--pi\|--claude]` | rebuilds a sandbox image | the local sbx image |
 | `fleet init <repo>` | lays out `AGENTS.md` and `spec/vision.md` | adds those files to the repository, never overwriting one |
 | `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
