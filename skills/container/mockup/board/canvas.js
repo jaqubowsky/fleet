@@ -163,7 +163,6 @@ function build() {
         el("div", { className: "strip" },
           el("span"),
           el("a", { href: src, target: "_blank", textContent: "↗", title: "Open the page alone" })),
-        frame.note && el("p", { className: "caption", textContent: frame.note }),
         ["nw", "ne", "sw", "se"].map(corner => {
           const handle = el("div", { className: `resize ${corner}`, title: "Drag to resize the page" });
           handle.dataset.corner = corner;

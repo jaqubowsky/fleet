@@ -49,11 +49,6 @@ body.dragging iframe { pointer-events: none !important; }
 .frame:hover::before, .title:hover::before { opacity: .35; }
 .frame.selected::before, .title.selected::before { opacity: 1; }
 body.dragging .frame:not(.selected)::before, body.dragging .title:not(.selected)::before { opacity: 0; }
-.caption {
-  margin: 0; padding-top: calc(8px / var(--z)); width: 0; min-width: 100%;
-  font-size: calc(12.5px / var(--z)); color: var(--muted);
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
 
 .bar { position: fixed; top: 12px; display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow); z-index: 2; }
 .bar.right { right: 12px; }
