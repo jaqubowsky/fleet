@@ -115,8 +115,12 @@ def install_link(source, target, apply_changes, executable=True):
 
     if apply_changes:
         target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists() or target.is_symlink():
+        if target.is_symlink():
             target.unlink()
+        elif target.exists():
+            backup = target.with_suffix(target.suffix + ".bak")
+            target.rename(backup)
+            print(f"  kept the replaced file as {backup}")
         target.symlink_to(source)
         if executable:
             source.chmod(0o755)

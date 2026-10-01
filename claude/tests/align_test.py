@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import importlib.util
+import contextlib
+import io
 import json
+import tempfile
 import sys
 from pathlib import Path
 
@@ -64,6 +67,16 @@ check("the host settings name no MCP server and no managed-only key", "managedMc
 check("claude.ai skill and plugin sync stay off", desired.get("syncClaudeAiSkills") is False and desired.get("syncClaudeAiPlugins") is False)
 check("gh opens and merges pull requests without the auto-mode classifier", all(rule in desired["permissions"]["allow"] for rule in ("Bash(gh pr create *)", "Bash(gh pr merge *)")))
 check("the host runs without Claude Code's OS sandbox, as pi's does", "sandbox" not in desired)
+
+with tempfile.TemporaryDirectory() as tmp:
+    source = Path(tmp) / "herdr.toml"
+    source.write_text("theme = 'repo'\n")
+    target = Path(tmp) / "config" / "config.toml"
+    target.parent.mkdir()
+    target.write_text("theme = 'mine'\n")
+    with contextlib.redirect_stdout(io.StringIO()):
+        align.install_link(source, target, True, executable=False)
+    check("a person's own file the link replaces is kept beside it as .bak", target.is_symlink() and (target.parent / "config.toml.bak").read_text() == "theme = 'mine'\n")
 
 print(f"align-settings.py: {passed} passed, {len(failures)} failed")
 sys.exit(1 if failures else 0)
