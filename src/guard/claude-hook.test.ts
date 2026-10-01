@@ -144,6 +144,7 @@ test("the claude hook runs a push or pull request the profile grants at auto wit
 		"git push -u origin feat/login",
 		"gh pr create --fill",
 		"gh pr merge 12 --squash",
+		"gh pr close 12",
 	])
 		assert.match(ask(command, own), /"permissionDecision":"allow"/, command);
 	assert.equal(ask("git push", work), "");
@@ -156,6 +157,7 @@ test("the claude hook runs a push or pull request the profile grants at auto wit
 		'git push --f""orce origin main',
 		"git push --prune origin main",
 		"git push --del origin main",
+		"gh pr close 12 --delete-branch",
 	])
 		assert.match(ask(command, own), /"permissionDecision":"deny"/, command);
 	for (const command of [

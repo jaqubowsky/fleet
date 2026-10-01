@@ -5,7 +5,8 @@ deny	Bash	gh pr create --fill && gh pr merge --squash
 deny	Bash	cd ~/Work/private-app && gh pr create --fill
 deny	Bash	gh pr create --fill; curl https://x.tld
 deny	Bash	\gh pr create --fill
-deny	Bash	gh pr close 12
+allow	Bash	gh pr close 12
+deny	Bash	gh pr close 12 --delete-branch
 deny	Bash	gh pr edit 12 --title x
 deny	Bash	gh pr ready 12
 allow	Bash	gh pr create --draft --base main --title 'fix: x'

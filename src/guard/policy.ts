@@ -140,7 +140,7 @@ const BASH_RULES: [RegExp, string][] = [
 	],
 	[
 		command(
-			String.raw`(\S*/)?gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(close|edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`,
+			String.raw`(\S*/)?gh\s+((repo\s+(sync|delete|rename|edit))|(pr\s+(edit|ready))|(release\s+(create|edit|delete|upload))|(api\s[^|;&]*(-X\s*(POST|PUT|PATCH|DELETE)|--method))|(secret|workflow|ssh-key|gpg-key)\s+(set|delete|add|run|enable|disable)|(gist\s+create))`,
 		),
 		GH_WRITE,
 	],
@@ -159,7 +159,7 @@ const BASH_RULES: [RegExp, string][] = [
 const HOST_PUSH = new RegExp(PUSH_AT, "m");
 const OWN_PUSH =
 	/^\s*git\s+push(\s+(-u|--set-upstream))?(\s+origin(\s+[\w.][\w./-]*(:[\w.][\w./-]*)?)*)?\s*$/;
-const PR_WRITE = command(String.raw`(\S*/)?gh\s+pr\s+(?<action>create|merge)\b`);
+const PR_WRITE = command(String.raw`(\S*/)?gh\s+pr\s+(?<action>create|merge|close)\b`);
 const VALUE = String.raw`(\s+|=)("[^"\\$\x60]*"|'[^']*'|[\w./-]+)`;
 const OWN_PR: Record<string, RegExp> = {
 	create: new RegExp(
@@ -168,6 +168,7 @@ const OWN_PR: Record<string, RegExp> = {
 	merge: new RegExp(
 		String.raw`^\s*gh\s+pr\s+merge(\s+\d+)?(\s+(--(squash|merge|rebase|delete-branch|auto)|--(subject|body)${VALUE}|--match-head-commit(\s+|=)[0-9a-f]{40}))*\s*$`,
 	),
+	close: /^\s*gh\s+pr\s+close\s+\d+\s*$/,
 };
 
 const OWN_PROFILES =
@@ -306,7 +307,7 @@ export function decide(
 				"This repository's profile lets the host open and merge its own pull requests.",
 			);
 		return deny(
-			`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base) or gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <full 40-character sha>), each --title, --body, --base or --subject value bare, in single quotes, or in double quotes without \\, $ or a backtick, in a checkout whose only GitHub remote is origin and whose profile gives the host auto for it, runs here.`,
+			`${GH_WRITE} Only a plain gh pr create (--fill, --draft, --title, --body, --base), gh pr merge (a number, --squash, --merge, --rebase, --delete-branch, --auto, --subject, --body, --match-head-commit <full 40-character sha>) or gh pr close <number>, each --title, --body, --base or --subject value bare, in single quotes, or in double quotes without \\, $ or a backtick, in a checkout whose only GitHub remote is origin and whose profile gives the host auto for it, runs here.`,
 		);
 	}
 
