@@ -113,6 +113,12 @@ const BASH_RULES: [RegExp, string][] = [
 	],
 	[
 		command(
+			String.raw`((\S*/)?gh\s+auth\s+(token|git-credential|status${IN_COMMAND}\s(--show-token|-[a-zA-Z]*t[a-zA-Z]*)(?![\w-]))|${GIT}\s+credential\s+(fill|get)|(\S*/)?fleet\s+tokens)\b`,
+		),
+		"A GitHub token is used through gh and git, never printed. The human copies tokens into the keychain with fleet tokens in their own terminal.",
+	],
+	[
+		command(
 			String.raw`security\s+(find-(generic|internet)-password|export|dump-keychain)`,
 		),
 		"The keychain is read by the human only. Ask for the value instead of pulling it out of the store.",

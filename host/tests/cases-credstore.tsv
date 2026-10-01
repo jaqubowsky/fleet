@@ -5,3 +5,11 @@ deny	Bash	security find-generic-password -w -s ChatGPT
 deny	Bash	security dump-keychain
 pass	Bash	security list-keychains
 pass	Bash	cat ~/.pi/agent/settings.json
+deny	Bash	gh auth token
+deny	Bash	gh auth status --show-token
+deny	Bash	gh auth status -t
+pass	Bash	gh auth status
+deny	Bash	printf 'protocol=https\nhost=github.com\n\n' | git credential fill
+deny	Bash	gh auth git-credential get
+deny	Bash	fleet tokens
+pass	Bash	gh pr checks 1
