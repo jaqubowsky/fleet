@@ -1045,6 +1045,25 @@ test("artifacts live beside the repo name, so they read the same after the conta
 	assert.match(artifacts("/w/webapp", io), /tasks\/webapp[\s\S]*note\.md/);
 });
 
+test("artifacts skips a manifest it cannot read and names it, listing the rest", () => {
+	const root = "/home/me/.fleet/tasks/webapp";
+	const io = fakeIo({
+		"list /home/me/.fleet/config/fleet": ["pi-old.json"],
+		"read /home/me/.fleet/config/fleet/pi-old.json": '{"version":1,"repositories":[{"repo":"/w/webapp"}]}',
+		[`stat ${root}/note.md`]: {
+			size: 12,
+			mtime: new Date(Date.UTC(2026, 8, 16, 10, 0)),
+			dir: false,
+		},
+		[`list ${root}`]: ["note.md"],
+	});
+
+	const listing = artifacts("/w/webapp", io);
+
+	assert.match(listing, /note\.md/);
+	assert.match(io.lines.join("\n"), /skipped .*pi-old\.json is not a fleet repository manifest/);
+});
+
 test("exec picks up the repo's own toolchain before running anything", () => {
 	const io = fakeIo(running);
 	exec("pi-a", ["yarn build"], io);

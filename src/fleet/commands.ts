@@ -460,7 +460,13 @@ export function artifacts(repo: string, io: Io): string {
 	for (const file of io.list(`${io.home}/${FLEET.config}/fleet`)) {
 		if (!file.endsWith(".json")) continue;
 		const sandbox = file.slice(0, -5);
-		const manifest = repositoryManifest(sandbox, io);
+		let manifest;
+		try {
+			manifest = repositoryManifest(sandbox, io);
+		} catch (error) {
+			io.log(`fleet artifacts: skipped ${(error as Error).message}`);
+			continue;
+		}
 		if (manifest?.repositories.some((entry) => entry.repo === repo))
 			roots.add(dirname(taskDir(repo, sandbox, io)));
 	}
