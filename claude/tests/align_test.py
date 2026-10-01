@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory() as tmp:
     target.parent.mkdir()
     target.write_text("theme = 'mine'\n")
     with contextlib.redirect_stdout(io.StringIO()):
-        align.install_link(source, target, True, executable=False)
+        align.install_link(source, target, True)
     check("a person's own file the link replaces is kept beside it as .bak", target.is_symlink() and (target.parent / "config.toml.bak").read_text() == "theme = 'mine'\n")
 
 print(f"align-settings.py: {passed} passed, {len(failures)} failed")

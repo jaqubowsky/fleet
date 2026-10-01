@@ -6,11 +6,12 @@ usage() {
 	cat >&2 <<'USAGE'
 usage: sync.sh [--apply]
 
-Brings ~/.pi and ~/.claude in line with this repository: installs its
-dependencies, links the CLIs, renders each harness's host seat (a file gone
-from here disappears there), prints where the two renders differ and
-whether a listed reason covers it, aligns Claude's settings, hooks and the herdr
-config, rebuilds a container image whose rendered seat changed, and removes
+Brings the home of each agent whose CLI is on PATH, ~/.claude for claude and
+~/.pi for pi, in line with this repository: installs its dependencies, links
+the CLIs and the herdr config, renders each such harness's host seat (a file
+gone from here disappears there), prints where the two renders differ and
+whether a listed reason covers it, aligns Claude's settings and hooks, rebuilds
+a container image whose rendered seat changed, and removes
 what nothing uses: npm packages pi no longer lists, task directories of
 removed containers that never started and dangling links.
 It ends by naming what a new Mac lacks that it cannot set up itself, with the
@@ -32,6 +33,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/harness-sync.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 STAMPS="$HOME/.cache/harness/images"
 changes=0
+skipped=""
 
 act() {
 	changes=$((changes + 1))
@@ -80,8 +82,20 @@ image_agent_version() {
 	"$1" --version 2>/dev/null | tr -cd '0-9.' || true
 }
 
+link() {
+	[ "$(readlink "$2" 2>/dev/null)" = "$1" ] && return
+	if [ "$apply" = 1 ]; then mkdir -p "$(dirname "$2")"; fi
+	if [ -e "$2" ] && [ ! -L "$2" ]; then act mv "$2" "$2.bak"; fi
+	act ln -sfn "$1" "$2"
+}
+
+set_up() {
+	grep -q "^$1 " <<<"$HARNESS_ROWS"
+}
+
 by_hand() {
 	echo "== set up by hand"
+	for name in $skipped; do echo "  skipped $name: no $name on PATH, so its home and image stay as they are; install it to set it up: docs/setup/01-tools.md"; done
 	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
 	command -v sbx >/dev/null || echo "  missing sbx on PATH: docs/setup/01-tools.md"
 	command -v herdr >/dev/null || echo "  missing herdr on PATH: docs/setup/01-tools.md"
@@ -104,7 +118,14 @@ template_loaded() {
 }
 
 command -v node >/dev/null || { by_hand; exit 1; }
-HARNESS_ROWS="$(harnesses)"
+ALL_ROWS="$(harnesses)"
+HARNESS_ROWS="$(while read -r name rest; do if command -v "$name" >/dev/null; then echo "$name $rest"; fi; done <<<"$ALL_ROWS")"
+skipped="$(while read -r name rest; do if ! command -v "$name" >/dev/null; then echo "$name"; fi; done <<<"$ALL_ROWS")"
+if [ -z "$HARNESS_ROWS" ]; then
+	by_hand
+	echo "Neither claude nor pi is on PATH, so there is nothing to set up: install the agent you use, docs/setup/01-tools.md" >&2
+	exit 1
+fi
 
 echo "== dependencies"
 if [ ! -f "$ROOT/node_modules/.package-lock.json" ] || [ "$ROOT/package-lock.json" -nt "$ROOT/node_modules/.package-lock.json" ]; then
@@ -112,10 +133,11 @@ if [ ! -f "$ROOT/node_modules/.package-lock.json" ] || [ "$ROOT/package-lock.jso
 fi
 
 echo "== commands"
-[ -d "$HOME/.local/bin" ] || act mkdir -p "$HOME/.local/bin"
-[ "$(readlink "$HOME/.local/bin/fleet" 2>/dev/null)" = "$ROOT/bin/fleet" ] || act ln -sfn "$ROOT/bin/fleet" "$HOME/.local/bin/fleet"
-[ "$(readlink "$HOME/.local/bin/gh" 2>/dev/null)" = "$ROOT/bin/gh" ] || act ln -sfn "$ROOT/bin/gh" "$HOME/.local/bin/gh"
-[ "$(readlink "$HOME/.claude/statusline.mjs" 2>/dev/null)" = "$ROOT/claude/statusline.mjs" ] || act ln -sfn "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"
+link "$ROOT/bin/fleet" "$HOME/.local/bin/fleet"
+link "$ROOT/bin/gh" "$HOME/.local/bin/gh"
+link "$ROOT/host/herdr.toml" "$HOME/.config/herdr/config.toml"
+for rules in "$ROOT"/host/agent-detection/*.toml; do link "$rules" "$HOME/.config/herdr/agent-detection/$(basename "$rules")"; done
+if set_up claude; then link "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"; fi
 
 while read -r name home image owned <&3; do
 	echo "== $name: host seat in ~/$home"
@@ -135,13 +157,13 @@ node --input-type=module -e '
 	for (const line of parityReport(parity(root, realIo(root)))) console.log(`    ${line}`);
 ' "$ROOT"
 
-echo "== claude settings, hooks and herdr config"
-aligned="$(python3 "$ROOT/claude/tools/align-settings.py")"
-if printf '%s\n' "$aligned" | grep -q 'Everything already aligned'; then
-	:
-else
-	printf '%s\n' "$aligned" | sed 's/^/    /'
-	act python3 "$ROOT/claude/tools/align-settings.py" --apply
+if set_up claude; then
+	echo "== claude settings and hooks"
+	aligned="$(python3 "$ROOT/claude/tools/align-settings.py")"
+	if ! printf '%s\n' "$aligned" | grep -q 'Everything already aligned'; then
+		printf '%s\n' "$aligned" | sed 's/^/    /'
+		act python3 "$ROOT/claude/tools/align-settings.py" --apply
+	fi
 fi
 
 while read -r name home image owned <&3; do
@@ -159,8 +181,8 @@ done 3<<<"$HARNESS_ROWS"
 
 echo "== unused"
 extensions="$HOME/.pi/agent/extensions"
-if [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
-if [ -f "$HOME/.pi/agent/npm/package.json" ]; then
+if set_up pi && [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
+if set_up pi && [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 	unused="$(node --input-type=module -e '
 		const { readFileSync } = await import("node:fs");
 		const [npm, settings] = process.argv.slice(1);

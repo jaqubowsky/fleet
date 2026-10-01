@@ -15,10 +15,6 @@ HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
 HOOK_TARGET = HOME / ".claude" / "hooks" / "guard.sh"
 DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
 DRIFT_TARGET = HOME / ".claude" / "hooks" / "plugin-drift.sh"
-HERDR_SOURCE = REPO / "host" / "herdr.toml"
-HERDR_TARGET = HOME / ".config" / "herdr" / "config.toml"
-DETECTION_SOURCE = REPO / "host" / "agent-detection"
-DETECTION_TARGET = HOME / ".config" / "herdr" / "agent-detection"
 
 LSP_PLUGIN = "typescript-lsp@claude-plugins-official"
 
@@ -100,7 +96,7 @@ def write_plain(path, text):
     print(f"  written (backup: {backup})")
 
 
-def install_link(source, target, apply_changes, executable=True):
+def install_link(source, target, apply_changes):
     print(f"\n=== {target}")
 
     if not source.exists():
@@ -122,8 +118,7 @@ def install_link(source, target, apply_changes, executable=True):
             target.rename(backup)
             print(f"  kept the replaced file as {backup}")
         target.symlink_to(source)
-        if executable:
-            source.chmod(0o755)
+        source.chmod(0o755)
         print("  linked")
 
     return True
@@ -179,7 +174,7 @@ def process(path, fixer, apply_changes):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Align the Claude Code user settings, hooks and herdr config with this repository.")
+    parser = argparse.ArgumentParser(description="Align the Claude Code user settings and hooks with this repository.")
     parser.add_argument("--apply", action="store_true", help="write the changes (default: dry run)")
     args = parser.parse_args()
 
@@ -187,8 +182,6 @@ def main():
         process(USER_SETTINGS, fix_user, args.apply),
         install_link(HOOK_SOURCE, HOOK_TARGET, args.apply),
         install_link(DRIFT_SOURCE, DRIFT_TARGET, args.apply),
-        install_link(HERDR_SOURCE, HERDR_TARGET, args.apply, executable=False),
-        *(install_link(rules, DETECTION_TARGET / rules.name, args.apply, executable=False) for rules in sorted(DETECTION_SOURCE.glob("*.toml"))),
     ]
 
     print()
