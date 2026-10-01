@@ -1,8 +1,10 @@
 # Setup
 
-For an agent the reader starts in a fresh clone of this repository with "read SETUP.md and set me up". The person sits beside you. They do everything that needs a password, a browser, a fingerprint or a secret; you do the rest and say which is which before each step.
+This file is for an agent. The person starts you in a fresh clone of this repository with "read SETUP.md and set me up" and sits beside you. They do everything that needs a password, a browser, a fingerprint or a secret. You do the rest, and before each step you say which part is whose.
 
-Work in order. Each step ends with a check. Run it, read its output, and move on only when it passes. A failed check is the next thing to fix, not a note for later. Never write a secret into this repository, a shell history or a chat: secrets go into the store each step names.
+Work in order. Each step ends with a check. Run it, read its output, and move on only when it passes. A failed check is the next thing to fix, not a note for later. Never write a secret into this repository, a shell history or a chat. Secrets go into the store each step names.
+
+Some steps ask the person a question. Ask them in one message at the start of that step, each with the answer you recommend, and build on what they say.
 
 ## 0. Requirements
 
@@ -37,13 +39,15 @@ Check: `command -v sbx herdr pi claude` prints four paths, and `sbx ls` answers 
 Person:
 
 - Claude Code: start `claude` once and log in. Then, inside it, install the TypeScript LSP plugin from `claude-plugins-official` (`/plugin`). The Claude image copies that plugin from `~/.claude/plugins/`, so `fleet build --claude` fails without it
-- pi: start `pi` and run `/login` for the provider its seats name in `pi/profiles/models.json`. It writes `~/.pi/agent/auth.json`; that file never goes into git
+- pi: start `pi` and run `/login` for the provider its seats name in `pi/profiles/models.json`. It writes `~/.pi/agent/auth.json`, which never goes into git
+
+Ask first which model providers the person pays for. The pi seats in `pi/profiles/models.json` use OpenAI through a ChatGPT login, and step 6 binds the same login for pi containers. With no ChatGPT plan, change those seats to a provider they have, and log in to that one.
 
 Check: `test -f ~/.pi/agent/auth.json && test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`.
 
 ## 3. Your own config: `~/.config/harness/`
 
-This repository holds no personal value. Everything that names you lives in `~/.config/harness/`, which agents read and the guard refuses to write:
+This repository holds no personal value. Everything that names the person lives in `~/.config/harness/`. Agents read it, and once step 4 installs the guard, the guard refuses an agent's write there. Write these files now, before step 4. Later changes are the person's, so propose the exact content and let them save it.
 
 | Path | Needed | What it holds |
 | --- | --- | --- |
@@ -63,7 +67,16 @@ Write `git/.gitconfig` with the person's name and email. Containers commit unsig
 	insteadOf = git@github.com:
 ```
 
-Everything under `git/` lands in `/home/agent/` as it is: `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
+Everything under `git/` lands in `/home/agent/` as it is. `git/.config/git/allowed_signers` becomes `/home/agent/.config/git/allowed_signers`, and a second file such as `git/.gitconfig-work` works when `.gitconfig` includes it. No signing key goes there.
+
+Then write `repos.json`, one entry per repository or owner (`owner/*`), in the shape of `host/repos.json`. Ask the person, for each repository the agents will work on:
+
+- may the host push and merge on its own (`host.push`, `host.merge`: `auto`), or does the person do it (`human`)?
+- may the container push its branch and open the pull request (`container.push`, `container.pr`)?
+- are their commits signed? Most people start with `host.sign: none`; step 5 covers signing
+- which GitHub token covers it? Its `container.token` is `keychain:<name>`, stored in step 5
+
+`fleet profile <owner/repo>` prints what each level means for both seats. Read it to the person before they settle a repository.
 
 Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints the email, and `ls ~/.config/harness` lists `git`.
 
@@ -110,7 +123,9 @@ The host session uses the same token without holding it. `sync.sh` links a `gh` 
 
 An agent can still use a token within its scopes, so give each token only what its repository's seats need.
 
-Where a profile gives the host `push: auto`, the host pushes over HTTPS through that `gh`. With `push: human` the person pushes with their own key. With `sign: human`, `fleet land` signs each commit with that key, which needs `user.signingkey` in the person's git config; Claude Code takes `SSH_AUTH_SOCK` from the shell that starts it, so an SSH agent that signs must be set in that shell's profile. With no signing set up, give the profile `sign: none`.
+Where a profile gives the host `push: auto`, the host pushes over HTTPS through that `gh`. With `push: human` the person pushes with their own key.
+
+With `sign: human`, `fleet land` signs each commit with the person's key, one Touch ID tap each. That needs `user.signingkey` in their git config and an SSH agent that signs, set in the profile of the shell that starts Claude Code, since Claude Code takes `SSH_AUTH_SOCK` from it. A person with no signing set up keeps `sign: none`, and nothing else changes.
 
 Check: `./sync.sh` names no `missing keychain token` under `== set up by hand`. Person: `fleet tokens` lists each `keychain:<name>` the profiles use, none marked missing. With only `env:` tokens it prints `no profile names a keychain:<name> token`.
 
@@ -157,10 +172,23 @@ Person: before each `down`, open the herdr tab `up` created and send the agent o
 
 Check: each agent answered in its tab, `fleet ls` lists no container afterwards, and `ls ~/.sandboxes/<repo>/` still holds both task directories.
 
+## 9. The first real session
+
+The host agent works from a herdr tab. `fleet watch` follows the containers its own herdr pane put up or steered, so a host session outside herdr never wakes when a container needs it.
+
+Person:
+
+1. Start `herdr`, and open a tab in the checkout of a repository from step 3
+2. Run plain `claude` or `pi` in that tab, with no token in front. At start it runs `fleet profile --apply --brief` on the checkout and reports anything it changed
+3. Give it a task in plain words, a Linear issue, or a markdown file, as the README shows
+
+Check: the host answers, and `gh pr list` in that tab lists the repository's pull requests without asking for a login.
+
 ## Done
 
 1. A second `./sync.sh` prints `In sync: nothing to change.`
 2. `npm test` and `npm run check` exit 0
 3. Both smoke containers came up, answered and went down
+4. The host session in herdr answered and read the repository's pull requests
 
-Tell the person what stayed manual and where it lives: the logins (step 2), the keychain tokens stored with `fleet tokens set` (step 5), the sbx secrets and policy (steps 6 and 7).
+Tell the person what stayed manual and where it lives: the logins (step 2), the profiles in `~/.config/harness/repos.json` (step 3), the keychain tokens stored with `fleet tokens set` (step 5), and the sbx secrets and policy (steps 6 and 7).
