@@ -5,11 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
-const SIZES = {
-  phone: { w: 390, h: 844, label: "phone" },
-  tablet: { w: 834, h: 1194, label: "tablet" },
-  desktop: { w: 1440, h: 900, label: "desktop" }
-};
+const PAGE = { w: 1440, h: 900 };
 const SETTLE_MS = 600;
 const STEP_MS = 400;
 const NARROW = [320, 768];
@@ -45,7 +41,7 @@ function playwright() {
   fail("playwright-core not found next to playwright-cli");
 }
 
-const sizeOf = s => typeof s === "string" ? SIZES[s] : s && { label: `${s.w}x${s.h}`, ...s };
+const sizeOf = s => s && Number.isFinite(s.w) && Number.isFinite(s.h) && { label: `${s.w}x${s.h}`, ...s };
 
 async function act(page, step) {
   const [verb, arg] = Object.entries(step)[0];
@@ -97,9 +93,12 @@ const board = readBoard();
 const problems = [];
 for (const entry of board) {
   if (!entry.slug) problems.push("a board() call has no slug");
+  const framed = new Set();
   for (const frame of entry.frames || []) {
     if (!existsSync(join(root, entry.slug, frame.file))) problems.push(`${entry.slug}: ${frame.file} does not exist`);
-    if (frame.size && !sizeOf(frame.size)) problems.push(`${entry.slug}/${frame.file}: size ${JSON.stringify(frame.size)}; use phone, tablet, desktop or { w, h }`);
+    if (frame.size && !sizeOf(frame.size)) problems.push(`${entry.slug}/${frame.file}: size ${JSON.stringify(frame.size)}; use { w, h } in px`);
+    if (framed.has(frame.file)) problems.push(`${entry.slug}/${frame.file}: framed twice; keep one frame, the user drags its corners to any width and Look shoots it at ${NARROW.join(" and ")}px`);
+    framed.add(frame.file);
   }
   if (!(entry.frames || []).length) problems.push(`${entry.slug}: no frames`);
 }
@@ -113,7 +112,7 @@ for (const entry of board.filter(e => !only.length || only.includes(e.slug))) {
   mkdirSync(shots, { recursive: true });
   const narrowed = new Set();
   for (const frame of entry.frames) {
-    const size = sizeOf(frame.size || "desktop");
+    const size = sizeOf(frame.size || PAGE);
     const url = pathToFileURL(join(root, entry.slug, frame.file)).href;
     const stem = basename(frame.file, ".html");
     for (const run of [{ name: "", steps: [] }, ...(frame.play || [])])

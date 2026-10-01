@@ -1,8 +1,3 @@
-const SIZES = {
-  phone: { w: 390, h: 844, label: "phone" },
-  tablet: { w: 834, h: 1194, label: "tablet" },
-  desktop: { w: 1440, h: 900, label: "desktop" }
-};
 const GAP = 80, HEAD = 360, ROW_GAP = 520, MIN_Z = 0.03, MAX_Z = 4;
 const STORE = `mockup-board:${location.pathname}`;
 
@@ -19,7 +14,7 @@ function el(tag, props = {}, ...kids) {
   node.append(...kids.flat(Infinity).filter(k => k != null && k !== false && k !== ""));
   return node;
 }
-const sizeOf = s => typeof s === "string" ? SIZES[s] || SIZES.desktop : { label: `${s.w}x${s.h}`, ...s };
+const PAGE = { w: 1440, h: 900 };
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
 const saved = Object.assign({ frames: {}, titles: {} }, load());
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch {} };
@@ -154,7 +149,7 @@ function build() {
     titles.push(title);
     world.append(title.node);
     (entry.frames || []).forEach((frame, i) => {
-      const size = sizeOf(frame.size || "desktop");
+      const size = frame.size || PAGE;
       const src = `${entry.slug}/${frame.file}`;
       const base = [frame.id, frame.title || frame.file].filter(Boolean).join(" · ");
       const item = { frame: true, slug: entry.slug, key: `${src}@${size.w}x${size.h}#${i}`, src, name: base, base, w: size.w, h: size.h, declared: { w: size.w, h: size.h } };
