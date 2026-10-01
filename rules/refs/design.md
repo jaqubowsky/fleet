@@ -27,7 +27,7 @@ Applies to every screen, component and layout drawn or built, in a mockup or in 
 
 1. Production code shows real data or a visibly labelled placeholder: numbers, trend deltas, testimonials, customer logos, activity feed entries, team members, security and compliance claims. A delta names its comparison period. An empty section beats a fabricated one
 2. Empty form fields stay empty or carry a placeholder that says what goes there ("Your name", "email@example.com")
-3. Every control does what it shows; a nav item leads to a page or section that exists. Not built yet -> left out, or labelled "Coming soon"
+3. In production code every control does what it shows; a nav item leads to a page or section that exists. Not built yet -> left out, or labelled "Coming soon"
 4. A call to action names its action: "Export orders", "Start a trial". "Get started", "Learn more", "Explore", "Discover" name nothing
 5. Copy says what the product does: "AI-powered", "seamless", "next-generation", "revolutionary", "powerful" say nothing about it
 
