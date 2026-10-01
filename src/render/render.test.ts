@@ -352,7 +352,7 @@ test("pi host, sandbox and reviewer select Sol 6.1 with a 1.05M catalog override
 		assert.equal(sbx.defaultThinkingLevel, "medium");
 		assert.deepEqual(host.subagents.agentOverrides.reviewer, {
 			model: "openai-codex/gpt-6.1-sol",
-			thinking: "xhigh",
+			thinking: "high",
 		});
 		assert.deepEqual(
 			models.providers["openai-codex"].modelOverrides["gpt-6.1-sol"],

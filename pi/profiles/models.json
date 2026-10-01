@@ -10,11 +10,11 @@
     },
     "reviewer": {
       "model": "openai-codex/gpt-6.1-sol",
-      "thinking": "xhigh"
+      "thinking": "high"
     },
     "explorer": {
-      "model": "openai-codex/gpt-6-luna",
-      "thinking": "xhigh"
+      "model": "openai-codex/gpt-6-sol",
+      "thinking": "low"
     },
     "researcher": {
       "model": "openai-codex/gpt-6-luna",
