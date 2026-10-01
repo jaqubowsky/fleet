@@ -11,7 +11,7 @@ export type Host = {
 	reaches: (path: string) => boolean;
 };
 
-export type Decision = {
+type Decision = {
 	decision: "allow" | "deny";
 	reason: string;
 	explicit?: true;

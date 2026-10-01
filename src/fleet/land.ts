@@ -10,7 +10,7 @@ import {
 } from "./repositories.ts";
 import { sandboxes } from "./status.ts";
 
-export type LandInput = {
+type LandInput = {
 	sandbox: string;
 	repo: string;
 	root: string;

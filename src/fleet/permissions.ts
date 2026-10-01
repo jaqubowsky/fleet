@@ -29,7 +29,7 @@ function overlaySection(name: string, io: Io): string {
 		: `Overlay ${overlayPath(name)}, which containers read as project.md:\n\n${overlay}`;
 }
 
-export type PermissionsInput = { root: string; repo: string; apply?: boolean; brief?: boolean };
+type PermissionsInput = { root: string; repo: string; apply?: boolean; brief?: boolean };
 
 export function permissions(input: PermissionsInput, io: Io): string {
 	if (input.brief) {

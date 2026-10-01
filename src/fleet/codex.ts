@@ -1,4 +1,4 @@
-export type CodexArgs = { account: string; sentinel: string };
+type CodexArgs = { account: string; sentinel: string };
 
 export function codexArgs(authJson: string | undefined): CodexArgs {
 	const account = authJson ? (JSON.parse(authJson)?.["openai-codex"]?.accountId as string | undefined) : undefined;

@@ -1,6 +1,6 @@
 import type { AgentName } from "../harness.ts";
 
-export const FLEET_HOME = ".fleet";
+const FLEET_HOME = ".fleet";
 
 export const FLEET = {
 	config: `${FLEET_HOME}/config`,

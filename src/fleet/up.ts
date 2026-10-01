@@ -78,7 +78,7 @@ if [ -n "$remote_branch" ]; then git switch --quiet -C "$1" "$remote_branch" && 
 elif git switch --quiet "$1" 2>/dev/null; then echo "$1 continues the local branch $1"
 else git switch --quiet --no-track -c "$1" "$base_sha" && echo "$1 is new from origin/$2"; fi`;
 
-export type UpInput = {
+type UpInput = {
 	repo: string;
 	repos?: string[];
 	label: string;
@@ -711,7 +711,7 @@ function seedEnv(
 	);
 }
 
-export function ignoredPaths(listing: string): string[] {
+function ignoredPaths(listing: string): string[] {
 	return listing
 		.split("\n")
 		.map((line) => line.trim().replace(/\/$/, ""))

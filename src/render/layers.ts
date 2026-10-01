@@ -5,7 +5,7 @@ import { realIo } from "../fleet/io.ts";
 import { type AgentName, KINDS } from "../harness.ts";
 import { render } from "./render.ts";
 
-export type Misplaced = { at: string; names: string; owner: string };
+type Misplaced = { at: string; names: string; owner: string };
 
 const CONTAINER_OWNER = "sbx/container/sandbox.md";
 const HOST_OWNER = "skills/host/orchestrating-agent-sessions/SKILL.md";

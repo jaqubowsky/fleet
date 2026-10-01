@@ -4,7 +4,7 @@ import { join } from "node:path";
 export const STATUS_LOG = "logs/status.jsonl";
 export const ACTIVITY = "logs/activity.jsonl";
 
-export type StatusChange = { at: string; status?: string; attention?: string; summary?: string; added: string[]; removed: string[] };
+type StatusChange = { at: string; status?: string; attention?: string; summary?: string; added: string[]; removed: string[] };
 
 function sectionOf(statusMd: string | undefined, name: string): string | undefined {
 	return statusMd
