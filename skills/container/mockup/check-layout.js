@@ -39,7 +39,7 @@
 
     const clipsX = /hidden|clip/.test(s.overflowX) && node.scrollWidth > node.clientWidth + 1;
     const clipsY = /hidden|clip/.test(s.overflowY) && node.scrollHeight > node.clientHeight + 1;
-    if ((clipsX || clipsY) && text(node)) {
+    if ((clipsX || clipsY) && text(node) && !node.closest("[data-clip]")) {
       findings.push({ kind: "clipped", where: name(node), detail: `"${text(node)}" content ${node.scrollWidth}×${node.scrollHeight} in box ${node.clientWidth}×${node.clientHeight}` });
     }
 
@@ -48,7 +48,7 @@
     }
 
     const label = [...node.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join("").trim();
-    if (label && label.length <= 40 && !/^(h[1-6]|p|pre|code)$/.test(node.localName) && node.children.length === 0) {
+    if (label && label.length <= 40 && !node.closest("h1, h2, h3, h4, h5, h6, p, pre, code") && node.children.length === 0) {
       const range = document.createRange();
       range.selectNodeContents(node);
       const lines = new Set([...range.getClientRects()].filter(q => q.width > 0).map(q => Math.round(q.top)));
