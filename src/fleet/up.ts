@@ -251,7 +251,6 @@ export async function up(
 	const found = findPane(io, basename(input.repo), agent, kind);
 	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
 	layoutTask(task, io);
-	let restored = false;
 	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
 		throw new Error(`${sandbox} already exists with different repositories`);
 	if (!existing) {
@@ -304,7 +303,7 @@ export async function up(
 			if (kind.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
 			if (kind.containerSessions)
-				restored = restoreSessions(io, task, sandbox, kind);
+				linkSessions(io, sandbox, sessionsDir(task, kind, input.repo), kind.containerSessions, input.repo);
 			if (kind.sbxGuidance)
 				io.sbx(
 					[
@@ -506,9 +505,7 @@ export async function up(
 		const args = agentArgs(
 			kind,
 			input.model,
-			kind.containerSessions
-				? Boolean(existing) || restored
-				: io.list(`${task}/logs/sessions`).length > 0,
+			io.list(sessionsDir(task, kind, input.repo)).length > 0,
 		);
 		const start = kind.herdrIntegration
 			? `${input.root}/bin/${CLI} relay ${sandbox} ${task}`
@@ -772,28 +769,37 @@ function seedProjectConfig(
 	);
 }
 
-export function harvestedSessions(task: string, store: string): string {
-	return `${task}/logs/sessions/${basename(store)}`;
+function sessionsDir(task: string, kind: Kind, workspace: string): string {
+	return kind.containerSessions
+		? `${task}/logs/sessions/${basename(kind.containerSessions)}/${claudeProject(workspace)}`
+		: `${task}/logs/sessions`;
 }
 
-function restoreSessions(io: Io, task: string, sandbox: string, kind: Kind): boolean {
-	const store = kind.containerSessions!;
-	const harvested = harvestedSessions(task, store);
-	const projects = io.list(harvested);
-	if (!projects.length) return false;
-	try {
-		for (const project of projects)
-			io.sbx(["cp", `${harvested}/${project}`, `${sandbox}:${store}/`], { quiet: true });
-		io.sbx(["exec", sandbox, "sh", "-c", 'sudo chown -R agent:agent "$1"', "--", store], {
-			quiet: true,
-		});
-	} catch (error) {
-		throw new Error(
-			`transcripts in ${harvested} did not copy into ${sandbox}:${store}, so ${kind.name} would continue into an empty store\n${(error as Error).message}`,
-		);
-	}
-	io.log(`${sandbox}: transcripts ${harvested} -> ${store}`);
-	return true;
+function claudeProject(workspace: string): string {
+	return workspace.replace(/[^a-zA-Z0-9]/g, "-");
+}
+
+function linkSessions(
+	io: Io,
+	sandbox: string,
+	kept: string,
+	store: string,
+	workspace: string,
+): void {
+	io.mkdir(kept);
+	io.sbx(
+		[
+			"exec",
+			sandbox,
+			"sh",
+			"-c",
+			'mkdir -p "$(dirname "$2")" && rm -rf "$2" && ln -sfn "$1" "$2"',
+			"--",
+			kept,
+			`${store}/${claudeProject(workspace)}`,
+		],
+		{ quiet: true },
+	);
 }
 
 export function cacheStore(path: string): string {

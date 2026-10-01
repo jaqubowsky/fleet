@@ -175,7 +175,7 @@ export function watch(
 		const where = dirs.get(name);
 		let activity = "";
 		try {
-			activity = where ? activityNow(where.sandbox, where.dir, io) : "";
+			activity = where ? activityNow(where.dir, io) : "";
 		} catch (error) {
 			io.log(`[fleet] watch: activity: ${String(error)}`);
 		}

@@ -353,7 +353,7 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
-test("down copies claude's transcripts into the task's sessions directory, so a copy an earlier down left there is not nested", () => {
+test("down leaves claude's transcripts where the container wrote them", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
@@ -366,16 +366,8 @@ test("down copies claude's transcripts into the task's sessions directory, so a 
 
 	down("claude-a", {}, io);
 
-	assert.deepEqual(
-		io.calls.filter((c) => c[0] === "sbx" && c[1] === "cp"),
-		[["sbx", "cp", "claude-a:/home/agent/.claude/projects", "/home/me/.fleet/tasks/r/claude-a/logs/sessions/"]],
-	);
-	assert.ok(
-		io.lines.includes(
-			"claude-a: transcripts -> /home/me/.fleet/tasks/r/claude-a/logs/sessions/projects",
-		),
-		io.lines.join("\n"),
-	);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
+	assert.ok(io.calls.some((c) => c.join(" ") === "sbx rm -f claude-a"));
 });
 
 test("down says so when pi never wrote a session", () => {
@@ -1161,7 +1153,8 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
 });
 
-test("ls reads a claude container's cost from its live transcripts, before down copies them out", () => {
+test("ls prices a claude container from the transcripts it writes into its task directory", () => {
+	const claudeTask = "/home/me/.fleet/tasks/r/claude-a";
 	const io = fakeIo(
 		{
 			"sbx ls --json": {
@@ -1180,9 +1173,12 @@ test("ls reads a claude container's cost from its live transcripts, before down 
 				},
 			},
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-			"sbx exec claude-a node /home/agent/fleet/src/fleet/usage.ts /home/agent/.claude/projects":
-				"1.5",
-			"read /home/me/.fleet/tasks/r/claude-a/logs/activity.jsonl": JSON.stringify({
+			[`list ${claudeTask}/logs/sessions`]: ["projects"],
+			[`stat ${claudeTask}/logs/sessions/projects`]: { size: 0, mtime: new Date(0), dir: true },
+			[`list ${claudeTask}/logs/sessions/projects`]: ["s1.jsonl"],
+			[`stat ${claudeTask}/logs/sessions/projects/s1.jsonl`]: { size: 10, mtime: new Date(0), dir: false },
+			[`read ${claudeTask}/logs/sessions/projects/s1.jsonl`]: request("2026-09-16T09:30:00Z", 0),
+			[`read ${claudeTask}/logs/activity.jsonl`]: JSON.stringify({
 				at: "2026-09-16T09:59:00Z",
 				tool: "Edit",
 				ok: true,
@@ -1194,8 +1190,9 @@ test("ls reads a claude container's cost from its live transcripts, before down 
 
 	assert.equal(
 		ls(io),
-		"claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $1.50\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $0.01\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
 	);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[3] === "node"));
 });
 
 test("ls still prices a stopped pi container from the sessions it wrote", () => {
@@ -1261,40 +1258,6 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 	assert.match(table, /acme\/one task 1 dirty 3{40}/);
 	assert.match(table, /acme\/two task 2 dirty 4{40}/);
 	assert.doesNotMatch(table, /last known|\? dirty/);
-});
-
-test("ls keeps a claude container's activity when its image cannot price the transcripts", () => {
-	const io = fakeIo(
-		{
-			"sbx ls --json": {
-				sandboxes: [
-					{
-						name: "claude-a",
-						agent: "claude",
-						status: "running",
-						workspaces: ["/r"],
-					},
-				],
-			},
-			"herdr agent list": { result: { agents: [] } },
-			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-			"sbx exec claude-a node": new Error(
-				"sbx exec claude-a node failed (1)\nError: Cannot find module '/home/agent/fleet/src/fleet/usage.ts'",
-			),
-			"read /home/me/.fleet/tasks/r/claude-a/logs/activity.jsonl": JSON.stringify({
-				at: "2026-09-16T09:59:00Z",
-				tool: "Edit",
-				ok: true,
-				agent: "main",
-			}),
-		},
-		SEATS.claude,
-	);
-
-	assert.equal(
-		ls(io),
-		"claude-a  running  gone     web-1  up 1m, silent 1m, 1 tool call, last Edit\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
-	);
 });
 
 test("history lists every status.md change in local time with what changed in it, the log lines it added and those it removed", (t) => {

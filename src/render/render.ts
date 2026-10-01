@@ -415,7 +415,6 @@ function claude(r: Renderer): void {
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
-		["src/fleet/usage.ts", "home/fleet/src/fleet/usage.ts"],
 		[
 			"extensions/handoff-on-error.ts",
 			"home/fleet/extensions/handoff-on-error.ts",

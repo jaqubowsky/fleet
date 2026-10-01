@@ -24,7 +24,7 @@ import { logEvent } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { harnessStamp, harvestedSessions, imageStampPath, staleImage } from "./up.ts";
+import { harnessStamp, imageStampPath, staleImage } from "./up.ts";
 import {
 	agentFor,
 	branchFacts,
@@ -54,12 +54,10 @@ export function resolveSandbox(name: string, io: Io): Sandbox {
 	);
 }
 
-const CONTAINER_USAGE = "/home/agent/fleet/src/fleet/usage.ts";
-
-export function activityNow(sandbox: Sandbox, task: string, io: Io): string {
+export function activityNow(task: string, io: Io): string {
 	return projection(
 		activityOf(io.read(`${task}/${ACTIVITY}`)),
-		costSoFar(sandbox, task, io),
+		sessionUsage(task, io)?.totals.cost,
 		io.now(),
 	);
 }
@@ -77,19 +75,6 @@ export function blockedWork(task: string, io: Io): number {
 	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), justAfter(from)) : 0;
 }
 
-function costSoFar(sandbox: Sandbox, task: string, io: Io): number | undefined {
-	const sessions = sandbox.kind.containerSessions;
-	if (!sessions) return sessionUsage(task, io)?.totals.cost;
-	try {
-		const printed = io.sbx(
-			["exec", sandbox.name, "node", CONTAINER_USAGE, sessions],
-			{ quiet: true },
-		);
-		return printed ? Number(printed) : undefined;
-	} catch {
-		return undefined;
-	}
-}
 
 export function ls(io: Io): string {
 	const live = agents(io);
@@ -164,9 +149,7 @@ export function ls(io: Io): string {
 					io.now().getTime() - new Date(last).getTime(),
 				),
 			activity:
-				task && (running || !s.kind.containerSessions)
-					? activityNow(s, task, io)
-					: undefined,
+				task ? activityNow(task, io) : undefined,
 			facts:
 				[facts && `commits ${facts.commits}; pr ${facts.pr}`, ...(checkouts ?? [])]
 					.filter(Boolean)
@@ -621,27 +604,6 @@ function pushed(sandbox: string, head: string, io: Io): boolean {
 	);
 }
 
-function harvest(
-	sandbox: string,
-	task: string,
-	from: string,
-	force: boolean,
-	io: Io,
-): void {
-	const to = harvestedSessions(task, from);
-	try {
-		io.sbx(["cp", `${sandbox}:${from}`, `${task}/logs/sessions/`], { quiet: true });
-		io.log(`${sandbox}: transcripts -> ${to}`);
-	} catch (error) {
-		if (!force)
-			throw new Error(
-				`${sandbox}: transcripts in ${from} did not copy out, so the container stays; pass --force to remove it without them\n${(error as Error).message}`,
-			);
-		io.log(
-			`${sandbox}: transcripts in ${from} did not copy out; removing anyway (--force)`,
-		);
-	}
-}
 
 const GUEST_CGROUP = "/sys/fs/cgroup/docker";
 const GUEST_MEMORY_FILES = ["memory.peak", "memory.stat", "memory.events"].map(
@@ -725,8 +687,6 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	logEvent(io, "down", agentName(sandbox));
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
-	if (entry.kind.containerSessions)
-		harvest(sandbox, task, entry.kind.containerSessions, opts.force === true, io);
 	const summary = sessionUsage(task, io, checkout.branch, repo);
 	if (summary) {
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);

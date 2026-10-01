@@ -1,6 +1,3 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
 type Cost = { total?: number };
 type Usage = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; reasoning?: number; cost?: Cost };
 type ToolCall = { type: string; name?: string; arguments?: { path?: string } };
@@ -209,10 +206,4 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 export function oneLine(summary: Summary): string {
 	const t = summary.totals;
 	return `${t.requests} requests, ${summary.runs.length} run(s), cache hit ${Math.round(summary.cache_hit_ratio * 100)}% (${summary.cache_misses} miss), ${t.compactions} compaction(s), ${summary.model_changes} model change(s), cost ${t.cost.toFixed(2)}`;
-}
-
-if (import.meta.filename === process.argv[1]) {
-	const dir = process.argv[2];
-	const transcripts = readdirSync(dir, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".jsonl") && !f.includes("subagent-artifacts/"));
-	process.stdout.write(summarize(transcripts.flatMap((f) => parseEntries(readFileSync(join(dir, f), "utf8")))).totals.cost.toFixed(4));
 }

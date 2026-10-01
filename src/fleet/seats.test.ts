@@ -272,13 +272,7 @@ test("a claude- container an earlier fleet put up is listed, steered and taken d
 	steer(resolveSandbox(name, io), "go", io);
 	down(name, {}, io);
 
-	assert.ok(
-		io.calls.some(
-			(c) =>
-				c.join(" ") ===
-				`sbx cp ${name}:${KINDS.claude.containerSessions} /home/me/.fleet/tasks/r/${name}/logs/sessions/`,
-		),
-	);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 	assert.ok(io.calls.some((c) => c.join(" ") === `sbx rm -f ${name}`));
 });
 

@@ -1557,69 +1557,34 @@ test("up of a claude container starts claude straight through sbx run and copies
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
-test("up of a new claude container puts the transcripts down harvested back where claude reads them, owned by the guest user, before claude continues", async () => {
+test("up of a claude container links claude's transcript store into the task directory before claude starts", async () => {
 	const task = "/home/me/.fleet/tasks/webapp/claude-webapp-web-1";
-	const io = fakeIo(
-		{
-			...base,
-			[`list ${task}/logs/sessions`]: ["projects"],
-			[`list ${task}/logs/sessions/projects`]: ["-Users-me-Work-webapp"],
-		},
-		SEATS.claude,
-	);
+	const io = fakeIo(base, SEATS.claude);
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	const order = io.calls.map((c) => c.join(" "));
-	const copied = order.indexOf(
-		`sbx cp ${task}/logs/sessions/projects/-Users-me-Work-webapp claude-webapp-web-1:/home/agent/.claude/projects/`,
-	);
-	const owned = order.findIndex(
+	const made = order.indexOf(`mkdir ${task}/logs/sessions/projects/-Users-me-Work-webapp`);
+	const linked = order.findIndex(
 		(c) =>
 			c.startsWith("sbx exec claude-webapp-web-1 sh -c") &&
-			c.includes("chown -R agent:agent") &&
-			c.endsWith(" /home/agent/.claude/projects"),
+			c.includes("ln -sfn") &&
+			c.endsWith(
+				`${task}/logs/sessions/projects/-Users-me-Work-webapp /home/agent/.claude/projects/-Users-me-Work-webapp`,
+			),
 	);
 	const started = order.findIndex((c) => c.startsWith("herdr pane run"));
-	assert.ok(copied >= 0 && copied < owned && owned < started, order.join("\n"));
+	assert.ok(made >= 0 && made < linked && linked < started, order.join("\n"));
 	assert.equal(
 		io.calls[started][4],
-		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1 -- --continue",
+		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1",
 	);
 });
 
-test("up of a new claude container removes it and names the transcripts when they do not copy back, rather than continue into an empty store", async () => {
+test("up of a claude container continues the conversation its task directory holds", async () => {
 	const task = "/home/me/.fleet/tasks/webapp/claude-webapp-web-1";
 	const io = fakeIo(
-		{
-			...base,
-			[`list ${task}/logs/sessions`]: ["projects"],
-			[`list ${task}/logs/sessions/projects`]: ["-Users-me-Work-webapp"],
-			[`sbx cp ${task}/logs/sessions/projects/-Users-me-Work-webapp`]: new Error(
-				"sbx cp failed (1)",
-			),
-		},
-		SEATS.claude,
-	);
-
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, io),
-		new RegExp(
-			`claude-webapp-web-1: setup failed and the container was removed\\n.*${task}/logs/sessions/projects.*/home/agent/.claude/projects[\\s\\S]*sbx cp failed`,
-		),
-	);
-	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "claude-webapp-web-1"]);
-	assert.ok(!io.calls.some((c) => c[1] === "pane"));
-});
-
-test("up of a new claude container starts claude fresh when down harvested a store without a conversation", async () => {
-	const task = "/home/me/.fleet/tasks/webapp/claude-webapp-web-1";
-	const io = fakeIo(
-		{
-			...base,
-			[`list ${task}/logs/sessions`]: ["projects"],
-			[`list ${task}/logs/sessions/projects`]: [],
-		},
+		{ ...base, [`list ${task}/logs/sessions/projects/-Users-me-Work-webapp`]: ["s1.jsonl"] },
 		SEATS.claude,
 	);
 
@@ -1627,8 +1592,9 @@ test("up of a new claude container starts claude fresh when down harvested a sto
 
 	assert.equal(
 		io.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1",
+		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1 -- --continue",
 	);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
 test("up of a claude container empties the CLAUDE.md sbx writes beside the workspace, and fleet up leaves pi alone", async () => {
