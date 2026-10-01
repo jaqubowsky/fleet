@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup board</title>
+<link rel="stylesheet" href="canvas.css">
+</head>
+<body>
+<div id="viewport"><div id="world"></div></div>
+<div class="bar right">
+  <button type="button" id="reset" title="Put every frame back where the board lays it out">Reset layout</button>
+  <button type="button" id="zoom-out" title="Zoom out (⌘−)">−</button>
+  <button type="button" id="zoom" title="Fit everything (Shift+1)">100%</button>
+  <button type="button" id="zoom-in" title="Zoom in (⌘+)">+</button>
+</div>
+<script>
+  window.BOARD = [];
+  window.board = entry => window.BOARD.push(entry);
+</script>
+<script src="board.js"></script>
+<script src="canvas.js"></script>
+</body>
+</html>

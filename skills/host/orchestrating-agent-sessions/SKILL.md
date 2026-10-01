@@ -79,7 +79,7 @@ A `[fleet]` line or a question about a task starts at `status.md`, then the one 
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
 | what is happening on the PR | `pr.md` |
-| how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from Summary; the answer goes back as a steer, Decided: <slug>: <page> |
+| how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from Summary; the answer goes back as a steer, Decided: <slug>: <id> |
 | what is it doing this minute, before `status.md` moved | `{{cli}} peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
 
