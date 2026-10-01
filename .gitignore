@@ -3,6 +3,5 @@ audits/
 *.log
 .DS_Store
 .claude/
-*.bak
 __pycache__/
 .playwright-cli/
