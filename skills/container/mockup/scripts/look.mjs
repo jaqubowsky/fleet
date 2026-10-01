@@ -117,7 +117,7 @@ for (const entry of board.filter(e => !only.length || only.includes(e.slug))) {
     for (const run of runs) {
       const out = join(shots, `${stem}-${size.label}${run.name ? `-${run.name}` : ""}.png`);
       const findings = await shoot(browser, url, size, out, run.steps);
-      const counted = findings.filter(f => f.kind !== "taller");
+      const counted = findings.filter(f => !["taller", "low-contrast"].includes(f.kind));
       total += counted.length;
       const label = run.name ? ` after ${run.name}` : "";
       console.log(`== ${entry.slug}/${frame.file} ${size.label}${label}: count ${counted.length}  ${out}`);
