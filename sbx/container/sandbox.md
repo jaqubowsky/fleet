@@ -46,7 +46,7 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 
 The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 
-An order to see a change before it is built runs `mockup` before that change is built. It ends on the question the mockup asks, Summary naming `mockup/<slug>/index.html` and one line per variant with its real downside. The steer that answers it goes into the Log as `Decided: <slug>: <variant>`, and the build follows it.
+An order to see a change before it is built runs `mockup` first. Its hand-over is the Summary, and the steer that answers it goes into the Log.
 
 An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
 

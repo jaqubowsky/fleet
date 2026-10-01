@@ -5,7 +5,7 @@ description: 'Mockup: show the user how a change will look before it is built, a
 
 # Mockup
 
-A mockup is one change drawn on the screen it lands on, before any production code moves. Each mockup has its own directory, `mockup/<slug>/`, the slug naming what it shows, where your seat's rules keep outputs, never in the working tree. A new mockup gets a new slug; a revision of one replaces its directory. The build of that change waits until the user answers it.
+A mockup is one change drawn on the screen it lands on, before any production code moves. Each mockup has its own directory, `mockup/<slug>/`, the slug naming what it shows, where your seat's rules keep outputs, never in the working tree. A new mockup gets a new slug; a revision of one replaces its directory.
 
 1. **Scope.** From the order, name each screen region the change touches and the states it needs (empty, error, long text). A small change is drawn in place on today's screen, everything around it as it is. Done when every changed region has a name.
 2. **Recon.** Today's look comes from the running app on this branch, else from the components' source. Colors, spacing, type and copy are the app's own tokens and strings, in the app's language. Done when every value the mockup uses traces to a token or a string in the repo.
