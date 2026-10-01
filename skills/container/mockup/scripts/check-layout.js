@@ -56,6 +56,17 @@
     }
   }
 
+  if (vw < 600) {
+    const CONTROL = "a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=checkbox], [role=switch], [tabindex]:not([tabindex='-1'])";
+    for (const node of document.body.querySelectorAll(CONTROL)) {
+      if (!visible(node) || node.closest("p, li") && node.localName === "a") continue;
+      const r = (node.closest("label") || node).getBoundingClientRect();
+      if (r.width < 44 || r.height < 44) {
+        findings.push({ kind: "small-target", where: name(node), detail: `"${text(node) || node.getAttribute("aria-label") || node.localName}" ${Math.round(r.width)}×${Math.round(r.height)}, needs 44×44` });
+      }
+    }
+  }
+
   const pixel = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
   const rgba = color => {
     pixel.clearRect(0, 0, 1, 1);
