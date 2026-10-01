@@ -61,7 +61,7 @@ You only talk to one agent, the host, on your Mac. It starts a sandbox per issue
 
 ## Quickstart
 
-You need a Mac with Apple Silicon, [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/), [herdr](https://github.com/herdrdev/herdr), Node, Claude Code and pi.
+You need a Mac with Apple Silicon and zsh, [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/), [herdr](https://github.com/herdrdev/herdr), Node, Claude Code and pi, and a Claude plan and a model provider for pi (setup step 1 matches the models to what you have).
 
 ```bash
 git clone https://github.com/jaqubowsky/fleet ~/harness
@@ -72,23 +72,7 @@ Then tell your agent: **"read SETUP.md and set me up"**. It checks what you have
 
 After setup you work from [herdr](https://github.com/herdrdev/herdr): open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own herdr tab started.
 
-<details>
-<summary>Rather do it by hand?</summary>
-
-```bash
-brew trust docker/tap && brew install docker/tap/sbx herdr
-npm install -g @earendil-works/pi-coding-agent
-curl -fsSL https://claude.ai/install.sh | bash
-git clone https://github.com/jaqubowsky/fleet ~/harness && cd ~/harness
-mkdir -p ~/.config/harness/git   # put the sandboxes' .gitconfig here, docs/setup/02-your-config.md
-./sync.sh            # prints what it would change
-./sync.sh --apply
-herdr integration install claude && herdr integration install pi
-```
-
-Sign in to sbx and Claude Code and install Claude's TypeScript LSP plugin before `--apply`, which builds the sandbox images. Logins, tokens and sandbox secrets are in [`SETUP.md`](SETUP.md).
-
-</details>
+Rather do it by hand? Follow the same steps yourself: [`SETUP.md`](SETUP.md) lists them, one file each.
 
 ## Inside one sandbox
 

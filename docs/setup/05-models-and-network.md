@@ -2,11 +2,11 @@
 
 ## pi sandboxes
 
-pi sandboxes never log in. sbx stores the login on this Mac and its proxy swaps a placeholder for it on the way out:
+pi sandboxes never log in. sbx stores the login on this Mac and its proxy swaps a placeholder for it on the way out. Bind the providers the pi seats use after step 1:
 
 ```bash
-sbx secret set openai --oauth        # person: completes the browser login
-sbx secret set openrouter            # only when a seat uses openrouter; person pastes the key
+sbx secret set openai --oauth        # openai-codex seats; person completes the browser login
+sbx secret set openrouter            # openrouter seats; person pastes the key
 mkdir -p ~/.config/sbx
 printf 'bindings:\n  openai:\n    oauth:\n      domains:\n        - auth.openai.com\n        - chatgpt.com\n' > ~/.config/sbx/credentials.yaml
 ```
@@ -19,7 +19,9 @@ The first `fleet up --claude` stops and asks the person to run `/login` once in 
 
 ## Network
 
-sbx keeps one network allowlist for every sandbox on this Mac. `sbx policy inspect local-policy` prints it, and `sbx policy allow network <host>` adds a host. pi's `web_search` needs `mcp.exa.ai`. Which hosts sandboxes may reach is the person's call: name each one before adding it.
+sbx keeps one allowlist for every sandbox on this Mac, and the pi sandbox adds its own model and package hosts (`pi/kits/pi/spec.yaml`). `sbx policy inspect local-policy` prints the list, and `sbx policy allow network <host>` adds a host.
+
+The sandboxes need `github.com`, `api.github.com` and the API hosts of the model providers from step 1. Add any of those the list lacks. pi's `web_search` also needs `mcp.exa.ai`; without it only that tool fails. Which hosts sandboxes may reach is the person's call: name each one before adding it.
 
 ## Gotchas
 
