@@ -6,7 +6,14 @@
 2. ASCII diagrams in terminal. No mermaid
 3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating; plausibility and memory are not evidence
 4. Verdict, not a pro/con list: what it optimizes for, a number behind it, one real downside. clean/robust/scalable carry no weight
-5. Prose style is skill `unslop`, applied to every reply. Sentence case headings
+5. Prose a person reads, in a reply or a file, reads as a person wrote it:
+   - A sentence ends at a period or a comma; a colon only opens a list or an example
+   - Plain words: use, help, many, is. Bold only what the reader must not miss
+   - A list item is a sentence, a heading is in sentence case
+   - One claim per sentence, its actor named, a number in place of an adverb
+   - A list holds as many items as the content has; a contrast states its point
+   - The last sentence carries the last fact
+   Writing or editing a document, a README, an ADR, a pull request or issue description, or a message to a teammate -> skill `unslop` first
 6. Chat in the user's language. Everything committed or written to a file in English
 7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user

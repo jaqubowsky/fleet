@@ -1,6 +1,6 @@
 ---
 name: unslop
-description: 'Cut AI tells from any writing. Must always apply.'
+description: 'Prose a person reads: a document, README, ADR, report, pull request or issue description, or a message to a teammate. Use before writing or editing one, and when asked to unslop, humanize or strip AI tells from a text.'
 ---
 
 # Unslop
