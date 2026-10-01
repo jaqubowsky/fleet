@@ -80,13 +80,13 @@ brew trust docker/tap && brew install docker/tap/sbx herdr
 npm install -g @earendil-works/pi-coding-agent
 curl -fsSL https://claude.ai/install.sh | bash
 git clone https://github.com/jaqubowsky/fleet ~/harness && cd ~/harness
-mkdir -p ~/.config/harness/git   # put the sandboxes' .gitconfig here, SETUP.md step 3
+mkdir -p ~/.config/harness/git   # put the sandboxes' .gitconfig here, docs/setup/02-your-config.md
 ./sync.sh            # prints what it would change
 ./sync.sh --apply
 herdr integration install claude && herdr integration install pi
 ```
 
-Sign in to sbx and Claude Code and install Claude's TypeScript LSP plugin before `--apply`, which builds the sandbox images. Logins, tokens and sandbox secrets are in `SETUP.md`.
+Sign in to sbx and Claude Code and install Claude's TypeScript LSP plugin before `--apply`, which builds the sandbox images. Logins, tokens and sandbox secrets are in [`SETUP.md`](SETUP.md).
 
 </details>
 

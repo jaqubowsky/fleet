@@ -82,10 +82,10 @@ image_agent_version() {
 
 by_hand() {
 	echo "== set up by hand"
-	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: SETUP.md, step 3"
-	command -v sbx >/dev/null || echo "  missing sbx on PATH: SETUP.md, step 1"
-	command -v herdr >/dev/null || echo "  missing herdr on PATH: SETUP.md, step 1"
-	command -v node >/dev/null || { echo "  missing node on PATH: SETUP.md, requirements"; return; }
+	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
+	command -v sbx >/dev/null || echo "  missing sbx on PATH: docs/setup/01-tools.md"
+	command -v herdr >/dev/null || echo "  missing herdr on PATH: docs/setup/01-tools.md"
+	command -v node >/dev/null || { echo "  missing node on PATH: docs/setup/01-tools.md"; return; }
 	node --input-type=module -e '
 		const [root, home] = process.argv.slice(1);
 		const { readFileSync } = await import("node:fs");
