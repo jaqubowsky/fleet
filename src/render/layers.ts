@@ -60,6 +60,11 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 			),
 		),
 	];
+	const seatSkills = new Set(
+		Object.keys(sources).flatMap(
+			(f) => f.match(/^skills\/(?:container|host)\/([^/]+)\//)?.[1] ?? [],
+		),
+	);
 	const namesSkill = (line: string, except?: string) =>
 		skills.filter(
 			(s) => s !== except && new RegExp(`\`${s}\`|skill \`?${s}\\b`).test(line),
@@ -86,7 +91,13 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 			};
 		}
 		if (file === "rules/core.md" || file === "rules/delegation.md")
-			return { names: (line) => namesMechanic(line), owner: SEAT_OWNERS };
+			return {
+				names: (line) => [
+					...namesSkill(line).filter((s) => seatSkills.has(s)),
+					...namesMechanic(line),
+				],
+				owner: SEAT_OWNERS,
+			};
 		if (file.startsWith("rules/refs/"))
 			return { names: (line) => namesSkill(line), owner: CONTAINER_OWNER };
 	};

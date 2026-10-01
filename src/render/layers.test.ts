@@ -30,6 +30,11 @@ test("a principle naming a mechanic belongs to a seat owner", () => {
 	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `attention:`"), [{ names: "attention:", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
 });
 
+test("a principle naming a skill one seat lacks belongs to a seat owner", () => {
+	assert.deepEqual(atSeededLine("rules/core.md", "9. A red test -> skill `tdd`"), [{ names: "tdd", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("rules/delegation.md", "4. Prose style is skill `unslop`"), []);
+});
+
 test("a contract naming a skill belongs to the container owner", () => {
 	assert.deepEqual(atSeededLine("rules/refs/ticket.md", "A ticket is written by skill `to-tickets`."), [{ names: "to-tickets", owner: "sbx/container/sandbox.md" }]);
 });

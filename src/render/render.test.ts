@@ -377,7 +377,21 @@ function rendered(out: string, seat: string, suffix: string): string {
 	return readFileSync(join(out, seat, file), "utf8");
 }
 
+function seatFiles(out: string, seat: string): string[] {
+	return readdirSync(`${out}/${seat}`, { recursive: true }) as string[];
+}
+
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`the ${name} reviewer and conflict procedure reach only the container`, () => {
+		renderSeats(name, (out) => {
+			for (const suffix of ["agents/reviewer.md", "resolving-merge-conflicts/SKILL.md"]) {
+				assert.equal(seatFiles(out, "host").some((f) => f.endsWith(suffix)), false, `host has ${suffix}`);
+				assert.ok(seatFiles(out, "container").some((f) => f.endsWith(suffix)), `container lacks ${suffix}`);
+			}
+		});
+	});
+
+
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
 		renderSeats(name, (out) => {
 			const leftovers = (readdirSync(out, { recursive: true }) as string[])
