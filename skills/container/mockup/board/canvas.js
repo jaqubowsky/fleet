@@ -75,6 +75,17 @@ function mount(frame) {
   view.onload = () => { old.remove(); view.classList.remove("loading"); };
   old.after(view);
 }
+function resize(frame) {
+  frame.node.querySelector(".view").style.width = `${frame.w}px`;
+  frame.node.querySelector(".view").style.height = `${frame.h}px`;
+  for (const handle of frame.node.querySelectorAll(".resize"))
+    Object.assign(handle.style, {
+      left: `${handle.dataset.corner.includes("e") ? frame.w : 0}px`,
+      top: `${handle.dataset.corner.includes("s") ? frame.h : 0}px`,
+    });
+  const label = frame.node.querySelector(".strip span");
+  label.textContent = label.title = `${frame.base} · ${frame.w}×${frame.h}`;
+}
 function leave() {
   if (!live) return;
   live.node.classList.remove("live");
@@ -92,13 +103,18 @@ function enter(frame) {
 }
 
 const history = { done: [], undone: [] };
-const positions = () => [...titles, ...frames].map(m => ({ m, x: m.x, y: m.y }));
+const positions = () => [...titles, ...frames].map(m => ({ m, x: m.x, y: m.y, w: m.w, h: m.h }));
 function persist(m) {
-  if (m.frame) saved.frames[m.key] = { x: m.x, y: m.y };
+  if (m.frame) saved.frames[m.key] = { x: m.x, y: m.y, w: m.w, h: m.h };
   else saved.titles[m.slug] = { x: m.x, y: m.y };
 }
 function restore(snapshot) {
-  for (const { m, x, y } of snapshot) { m.x = x; m.y = y; place(m); persist(m); }
+  for (const { m, x, y, w, h } of snapshot) {
+    Object.assign(m, { x, y, w, h });
+    place(m);
+    if (m.frame) resize(m);
+    persist(m);
+  }
   save();
 }
 function record(before) {
@@ -126,7 +142,8 @@ function layout() {
     Object.assign(title, saved.titles[entry.slug] || { x: 0, y });
     let x = 0;
     for (const f of own) {
-      Object.assign(f, saved.frames[f.key] || { x, y: y + HEAD });
+      Object.assign(f, { w: f.declared.w, h: f.declared.h }, saved.frames[f.key] || { x, y: y + HEAD });
+      resize(f);
       x += f.w + GAP;
     }
     y += HEAD + Math.max(0, ...own.map(f => f.h)) + ROW_GAP;
@@ -146,14 +163,19 @@ function build() {
     (entry.frames || []).forEach((frame, i) => {
       const size = sizeOf(frame.size || "desktop");
       const src = `${entry.slug}/${frame.file}`;
-      const name = [frame.id, frame.title || frame.file].filter(Boolean).join(" · ") + ` · ${size.label}`;
-      const item = { frame: true, slug: entry.slug, key: `${src}@${size.w}x${size.h}#${i}`, src, name, w: size.w, h: size.h };
+      const base = [frame.id, frame.title || frame.file].filter(Boolean).join(" · ");
+      const item = { frame: true, slug: entry.slug, key: `${src}@${size.w}x${size.h}#${i}`, src, name: base, base, w: size.w, h: size.h, declared: { w: size.w, h: size.h } };
       item.node = el("div", { className: "frame", id: `${entry.slug}/${frame.file}` },
         el("div", { className: "strip" },
-          el("span", { textContent: name, title: `${name} · ${size.w}×${size.h}` }),
+          el("span"),
           el("button", { type: "button", className: "play", textContent: "▷ Play", title: "Use the page here, from the start", onclick: () => live === item ? leave() : enter(item) }),
           el("a", { href: src, target: "_blank", textContent: "↗", title: "Open the page alone" })),
-        frame.note && el("p", { className: "caption", textContent: frame.note }));
+        frame.note && el("p", { className: "caption", textContent: frame.note }),
+        ["nw", "ne", "sw", "se"].map(corner => {
+          const handle = el("div", { className: `resize ${corner}`, title: "Drag to resize the page" });
+          handle.dataset.corner = corner;
+          return handle;
+        }));
       item.node.frameItem = item;
       mount(item);
       frames.push(item);
@@ -170,6 +192,15 @@ viewportEl.addEventListener("pointerdown", e => {
   else if (e.button !== 0 || e.target.closest("button, a")) return;
   const frameNode = e.target.closest(".frame");
   const titleNode = e.target.closest(".title");
+  const handle = e.target.closest(".resize");
+  if (!wheel && !space && handle) {
+    const frame = frameNode.frameItem;
+    leave();
+    select(frame);
+    drag = { sx: e.clientX, sy: e.clientY, moved: false, moving: [], sizing: frame, corner: handle.dataset.corner, before: positions(), from: { x: frame.x, y: frame.y, w: frame.w, h: frame.h }, cam: { ...cam } };
+    viewportEl.setPointerCapture(e.pointerId);
+    return;
+  }
   let moving = [];
   if (wheel) moving = [];
   else if (!space && e.target.closest(".strip")) { leave(); select(frameNode.frameItem); moving = [frameNode.frameItem]; }
@@ -189,7 +220,15 @@ viewportEl.addEventListener("pointermove", e => {
   const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
   if (!drag.moved && Math.hypot(dx, dy) < 3) return;
   if (!drag.moved) { drag.moved = true; document.body.classList.add("dragging"); }
-  if (drag.moving.length) {
+  if (drag.sizing) {
+    const { from, corner, sizing } = drag;
+    sizing.w = Math.max(120, Math.round(from.w + (corner.includes("w") ? -dx : dx) / cam.z));
+    sizing.h = Math.max(80, Math.round(from.h + (corner.includes("n") ? -dy : dy) / cam.z));
+    sizing.x = corner.includes("w") ? from.x + from.w - sizing.w : from.x;
+    sizing.y = corner.includes("n") ? from.y + from.h - sizing.h : from.y;
+    place(sizing);
+    resize(sizing);
+  } else if (drag.moving.length) {
     drag.moving.forEach((m, i) => { m.x = drag.from[i].x + dx / cam.z; m.y = drag.from[i].y + dy / cam.z; place(m); });
   } else {
     cam.x = drag.cam.x + dx;
@@ -200,13 +239,13 @@ viewportEl.addEventListener("pointermove", e => {
 viewportEl.addEventListener("pointerup", () => {
   if (!drag) return;
   document.body.classList.remove("dragging");
-  if (drag.moved && drag.moving.length) {
-    drag.moving.forEach(persist);
+  if (drag.moved && (drag.moving.length || drag.sizing)) {
+    (drag.sizing ? [drag.sizing] : drag.moving).forEach(persist);
     save();
     record(drag.before);
   }
   if (!drag.moved && drag.pick) select(drag.pick);
-  else if (!drag.moved && !drag.moving.length) { select(null); leave(); }
+  else if (!drag.moved && !drag.moving.length && !drag.sizing) { select(null); leave(); }
   drag = null;
 });
 viewportEl.addEventListener("mousedown", e => (e.button === 1 || !e.target.closest("button, a")) && e.preventDefault());
