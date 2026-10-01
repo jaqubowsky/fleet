@@ -27,8 +27,6 @@ rm "$REPORT/jscpd-report.json"
 
 ## What the flags do
 
-Verified against jscpd 5.2.0, the version the container image installs. Re-check when `jscpd --version` prints another.
-
 - `--ignore` takes **comma-separated plain globs**. Brace expansion is not supported: `**/{a,b}/**` silently matches nothing. Inside a git repo `.gitignore` is honoured by default, so `node_modules`, `dist` and `coverage` need no entry.
 - `--cross-formats js-ts` catches the same logic living in a `.js` and a `.ts` file, which the default per-format pass never compares.
 - `--silent --no-tips` still writes a one-line summary and the promo footer to stdout, hence the `> /dev/null`; the report always lands at `<output>/jscpd-report.json`.
