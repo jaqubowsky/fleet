@@ -22,6 +22,7 @@ COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings
 COPY --chown=agent:agent extensions/             /home/agent/.pi/sbx/extensions/
 COPY --chmod=0755 container/base-worktree.sh       /usr/local/bin/base-worktree
 COPY --chmod=0755 container/ticket-check.sh       /usr/local/bin/ticket-check
+COPY --chmod=0755 container/ci-wait.sh            /usr/local/bin/ci-wait
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \
  && mkdir -p /home/agent/.pi/agent/npm \

@@ -663,6 +663,13 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				rendered(out, "container", "context/Dockerfile"),
 				/container\/ticket-check\.sh\s+\/usr\/local\/bin\/ticket-check/,
 			);
+			assert.match(
+				rendered(out, "container", "context/Dockerfile"),
+				/container\/ci-wait\.sh\s+\/usr\/local\/bin\/ci-wait/,
+			);
+			assert.ok(
+				rendered(out, "container", "context/container/ci-wait.sh").includes("headRefOid"),
+			);
 			assert.ok(
 				rendered(out, "container", "context/container/ticket-check.sh").includes(
 					"not done",

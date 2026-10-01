@@ -42,7 +42,7 @@ A ticket, a bug report or a feature runs in this order, every output in the task
 3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
 4. Before the first commit covered by a review decision, name its tickets and the run-or-skip reason in one `status.md` Log line. A later commit outside that scope needs a new decision. A run is `two-axis-review`: `review.md`, evidence in `logs/review-<head-sha7>/`
 5. Work that changes what a user sees is verified after the last visible change against the ticket's observable acceptance criteria and the diff: the way `project.md` names, else the check the change calls for. Open the frames before claiming what the user sees
-6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`
+6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 
 The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
 

@@ -22,23 +22,12 @@ gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.
 2. **Wait for the pull request to change.** Right after a push the jobs are queued and no bot has run, so reading now tells you nothing and settling now ends the loop.
 
 ```bash
-reads=20
-for i in $(seq 1 "$reads"); do
-  sleep 60
-  runs=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq '[.[] | select(.status != "completed")] | length')
-  total=$(gh run list --repo <owner>/<repo> --commit <head-sha> --json status --jq 'length')
-  state=$(gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '.state')
-  echo "read ${i}/${reads}: ${runs} of ${total} runs pending, status ${state}"
-  case "$runs" in ''|*[!0-9]*) echo "read failed, stop waiting"; break;; esac
-  case "$total" in ''|*[!0-9]*) echo "read failed, stop waiting"; break;; esac
-  case "$state" in success|pending|failure|error) ;; *) echo "read failed, stop waiting"; break;; esac
-  [ "$runs" = 0 ] && [ "$total" != 0 ] && [ "$state" != pending ] && break
-done
+ci-wait <owner>/<repo> <number>
 ```
 
-Each read comes back a number or a named state, or it is a finding that ends the wait and gets reported. An error body compared against `0` never matches, so a loop without these guards sleeps out its whole cap printing JSON at the pane, and a status read that failed silently reads as anything-but-pending, which is how a blind loop calls a queued pull request green.
+`ci-wait` is the only wait on CI: it reads the full head SHA, then the runs and the commit status on it as {{refs.ci}} says, at most twenty reads a minute apart, and prints each read. Exit 0 prints the settled runs and status, 1 means still pending after the last read, 2 means a read failed; 1 and 2 are findings to report, never a reason for a loop of your own.
 
-{{ci.wait}} Twenty reads, a minute apart, is the whole wait; a job still hanging then is its own finding. The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
+{{ci.wait}} The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
 
 1. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Name the repository in every call, as {{refs.ci}} says.
 

@@ -38,7 +38,7 @@ const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const pollCi = (agent: string) =>
-	`${agent} has no background shell, so change it to \`reads=1\`: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
+	`${agent} has no background shell, so pass \`1\` as its third argument: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
 const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
