@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node "$(dirname "$(readlink -f "$0")")/../src/fleet/gh.ts" "$@"

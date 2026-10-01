@@ -121,6 +121,7 @@ fi
 echo "== commands"
 [ -d "$HOME/.local/bin" ] || act mkdir -p "$HOME/.local/bin"
 [ "$(readlink "$HOME/.local/bin/fleet" 2>/dev/null)" = "$ROOT/bin/fleet" ] || act ln -sfn "$ROOT/bin/fleet" "$HOME/.local/bin/fleet"
+[ "$(readlink "$HOME/.local/bin/gh" 2>/dev/null)" = "$ROOT/bin/gh" ] || act ln -sfn "$ROOT/bin/gh" "$HOME/.local/bin/gh"
 [ "$(readlink "$HOME/.claude/statusline.mjs" 2>/dev/null)" = "$ROOT/claude/statusline.mjs" ] || act ln -sfn "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"
 
 while read -r name home image owned <&3; do
