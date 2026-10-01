@@ -38,7 +38,7 @@ const io = realIo(
 const usage = `usage:
   ${CLI} up <label> [--repo <path> ...] [--pi|--claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]   clone one repo, or repeat --repo for N private repos (first primary, additional clones imported via Git bundles); each takes its own fetched origin base and branch, one --base applies to all and one --base per repo selects bases in --repo order, --branch names a branch in each, never the default; bind each profile, lay out the task directory with permissions.md and, when ~/.config/harness/projects holds an overlay, project.md, start the container's agent in a herdr tab, the seat's own without --pi|--claude, send nothing
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
-  ${CLI} profile [<repo>] [--apply]                   what ~/.config/harness/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.config/harness/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell
+  ${CLI} profile [<repo>] [--apply [--brief]]         what ~/.config/harness/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.config/harness/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell; --brief prints only what --apply changed, and nothing outside a GitHub checkout, for a session start
   ${CLI} tokens                                       copy every op:// GitHub token the profiles name into the macOS keychain, where the gh on PATH reads the one for the repository it runs in; run it yourself, in a terminal 1Password can unlock
   ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
@@ -60,6 +60,7 @@ const usage = `usage:
 
 const BARE = new Set([
 	"apply",
+	"brief",
 	"continue",
 	"force",
 	"push",
@@ -175,13 +176,12 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		init({ root, repo: resolve(need(rest[0], "repo")) }, io);
 	},
 	profile(args) {
-		const { opts, rest } = flags(args, ["apply"]);
-		io.log(
-			permissions(
-				{ root, repo: rest[0] ?? process.cwd(), apply: opts.apply === true },
-				io,
-			),
+		const { opts, rest } = flags(args, ["apply", "brief"]);
+		const text = permissions(
+			{ root, repo: rest[0] ?? process.cwd(), apply: opts.apply === true, brief: opts.apply === true && opts.brief === true },
+			io,
 		);
+		if (text) io.log(text);
 	},
 	tokens(args) {
 		flags(args, []);

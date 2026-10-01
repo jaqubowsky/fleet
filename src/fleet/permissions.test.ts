@@ -175,6 +175,24 @@ test("profile --apply on a checkout already set for host pushes changes nothing"
 	);
 });
 
+test("profile --apply --brief prints only what it changed, and nothing on an aligned checkout or outside a GitHub checkout", () => {
+	const unset = checkout("git@github.com:alice/cv.git", SAMPLE_PROFILES, {
+		"git config --local --get commit.gpgsign": new Error("exit 1"),
+	});
+	const aligned = checkout("git@github.com:alice/cv.git", SAMPLE_PROFILES, {
+		"git config --local --get commit.gpgsign": "true",
+	});
+	const outside = checkout(new Error("not a git repository") as unknown as string);
+
+	const brief = (io: ReturnType<typeof checkout>) =>
+		permissions({ root: "/root", repo: "/r", apply: true, brief: true }, io);
+
+	assert.equal(brief(unset), "commit.gpgsign unset -> true");
+	assert.equal(brief(aligned), "");
+	assert.equal(brief(outside), "");
+	assert.ok(!outside.calls.some((c) => c[0] === "git" && c.includes("config")));
+});
+
 test("profile --apply turns signing on where it was unset, leaves origin where the host push needs a person, and needs a checkout", () => {
 	const io = checkout("git@github.com:alice/cv.git", SAMPLE_PROFILES, {
 		"git config --local --get commit.gpgsign": new Error("exit 1"),

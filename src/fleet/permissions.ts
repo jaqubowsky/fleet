@@ -29,9 +29,19 @@ function overlaySection(name: string, io: Io): string {
 		: `Overlay ${overlayPath(name)}, which containers read as project.md:\n\n${overlay}`;
 }
 
-export type PermissionsInput = { root: string; repo: string; apply?: boolean };
+export type PermissionsInput = { root: string; repo: string; apply?: boolean; brief?: boolean };
 
 export function permissions(input: PermissionsInput, io: Io): string {
+	if (input.brief) {
+		let name: string;
+		try {
+			name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
+		} catch {
+			return "";
+		}
+		if (!name) return "";
+		return apply(input.repo, name, repoProfile(input.root, name, io), io).join("\n");
+	}
 	const checkout = io.stat(input.repo)?.dir ? input.repo : undefined;
 	if (!checkout && !/^[^/\s]+\/[^/\s]+$/.test(input.repo))
 		throw new Error(`${input.repo} is neither a checkout nor owner/name`);
@@ -43,7 +53,8 @@ export function permissions(input: PermissionsInput, io: Io): string {
 	if (!input.apply) return text;
 	if (!checkout)
 		throw new Error(`--apply sets a checkout; give its path, not ${input.repo}`);
-	return `${text}\n${apply(checkout, name, profile, io).join("\n")}`;
+	const changes = apply(checkout, name, profile, io);
+	return `${text}\n${changes.length ? changes.join("\n") : "nothing changed"}`;
 }
 
 const GH_TOKEN_HELPER = "!gh auth git-credential";
@@ -101,7 +112,7 @@ function apply(
 			);
 	}
 	changes.push(...registerLinear(checkout, profile.host, io));
-	return changes.length ? changes : ["nothing changed"];
+	return changes;
 }
 
 type McpConfig = { mcpServers?: Record<string, unknown> };

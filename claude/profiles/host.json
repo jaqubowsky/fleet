@@ -42,6 +42,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.local/bin/fleet profile --apply --brief",
+            "timeout": 30
+          }
+        ]
       }
     ]
   },
