@@ -6,7 +6,7 @@
     },
     "sbx": {
       "model": "openai-codex/gpt-6.1-sol",
-      "thinking": "high"
+      "thinking": "medium"
     },
     "reviewer": {
       "model": "openai-codex/gpt-6.1-sol",
@@ -14,11 +14,11 @@
     },
     "explorer": {
       "model": "openai-codex/gpt-6-luna",
-      "thinking": "medium"
+      "thinking": "xhigh"
     },
     "researcher": {
       "model": "openai-codex/gpt-6-luna",
-      "thinking": "medium"
+      "thinking": "xhigh"
     }
   }
 }
