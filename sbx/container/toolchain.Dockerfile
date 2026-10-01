@@ -102,3 +102,16 @@ RUN sudo apt-get update \
  && sudo rm -rf /var/lib/apt/lists/* \
  && sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd \
  && jq --version
+
+ARG GH_KEYRING_SHA256=6084d5d7bd8e288441e0e94fc6275570895da18e6751f70f057485dc2d1a811b
+
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /tmp/githubcli.gpg \
+ && echo "$GH_KEYRING_SHA256  /tmp/githubcli.gpg" | sha256sum -c - \
+ && sudo install -m 0644 /tmp/githubcli.gpg /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && rm /tmp/githubcli.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null \
+ && sudo apt-get update \
+ && sudo apt-get install -y --no-install-recommends gh \
+ && sudo rm -rf /var/lib/apt/lists/* \
+ && gh --version | head -1
