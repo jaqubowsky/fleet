@@ -60,6 +60,16 @@ test("a wait tool stays unknown to pi's guard", () => {
 	assert.match(handler()(wait)?.reason ?? "", /Unknown tool policy: wait/);
 });
 
+test("pi's guard lets a codemode script run and still judges each command it calls", () => {
+	const guard = handler();
+	const script = { toolName: "codemode", input: { code: "return await tools.bash({ command: 'git push --force' })" } };
+
+	const verdicts = [guard(script), guard({ toolName: "bash", input: { command: "git push --force" } })];
+
+	assert.equal(verdicts[0], undefined);
+	assert.equal(verdicts[1]?.block, true);
+});
+
 test("a denied command comes back blocked with the reason the policy gave", () => {
 	const guard = handler();
 

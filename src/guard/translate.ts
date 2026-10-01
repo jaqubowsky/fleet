@@ -1,7 +1,7 @@
 const FLEET = ["fleet_watch", "fleet_unwatch"];
 
 export const TRUSTED: Partial<Record<string, Set<string>>> = {
-	pi: new Set(["bg_wait", "ask_user_question", "pi_lens_activate_tools", "ast_grep_dump", ...FLEET]),
+	pi: new Set(["bg_wait", "codemode", "ask_user_question", "pi_lens_activate_tools", "ast_grep_dump", ...FLEET]),
 };
 
 const READ_TOOLS = new Set([
