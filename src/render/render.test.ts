@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -381,6 +381,15 @@ function seatFiles(out: string, seat: string): string[] {
 	return readdirSync(`${out}/${seat}`, { recursive: true }) as string[];
 }
 
+const containerSkills = readdirSync(join(root, "skills/container"))
+	.filter((s) => existsSync(join(root, "skills/container", s, "SKILL.md")))
+	.sort();
+
+function description(skill: string): string {
+	const text = readFileSync(join(root, "skills/container", skill, "SKILL.md"), "utf8");
+	return text.match(/^description: '?(.*?)'?$/m)![1].replaceAll("''", "'");
+}
+
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`the ${name} reviewer and conflict procedure reach only the container`, () => {
 		renderSeats(name, (out) => {
@@ -391,6 +400,16 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
+	test(`the ${name} host reads what a container can deliver, one description per container skill`, () => {
+		renderSeats(name, (out) => {
+			const map = rendered(out, "host", "orchestrating-agent-sessions/references/outcomes.md");
+
+			const lines = map.split("\n").filter((l) => l.startsWith("- "));
+
+			assert.deepEqual(lines, containerSkills.map((s) => `- ${description(s)}`));
+			assert.equal(seatFiles(out, "container").some((f) => f.endsWith("outcomes.md")), false);
+		});
+	});
 
 	test(`${name} renders both seats from the real sources with every token resolved`, () => {
 		renderSeats(name, (out) => {
@@ -697,7 +716,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} verifies what a user sees the way project.md names, with no browser in the container rules`, () => {
 		renderSeats(name, (out) => {
 			const files = (readdirSync(out, { recursive: true }) as string[]).filter(
-				(file) => file.endsWith(".md"),
+				(file) => file.endsWith(".md") && !file.endsWith("references/outcomes.md"),
 			);
 			const rules = containerRules(out);
 			assert.ok(rules.length > 0);

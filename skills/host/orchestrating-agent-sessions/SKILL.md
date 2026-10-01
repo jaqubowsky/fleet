@@ -31,6 +31,7 @@ A steer is the order itself, in your voice, in this order: what to do, what is d
 - A report from the user reaches the container as a fact in your voice: what was seen and where
 - A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself
 - A steer names the outcome, never a skill, on a step-by-step order as on an end-to-end one: "check in the running app that ...". How the work runs (the check, reviews, commits, session handoffs) is the container's rules' to decide
+- What a container can deliver, in the words a steer uses: [references/outcomes.md](references/outcomes.md)
 - After a handoff the stock continue is the whole steer, since a decision already sits in `spec.md` once the container has it. On a run without `spec.md`, the continue carries the `Decided:` lines again
 
 ```text
