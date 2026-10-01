@@ -34,7 +34,7 @@ esac
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/harness-sync.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
-STAMPS="$HOME/.cache/harness/images"
+STAMPS="$HOME/.fleet/state/images"
 changes=0
 skipped=""
 : >"$WORK/queue"

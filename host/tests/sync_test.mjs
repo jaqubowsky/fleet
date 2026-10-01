@@ -130,6 +130,15 @@ test("--apply first packs the files it replaces into one archive", (t) => {
 	assert.deepEqual(readdirSync(join(mac.home, ".config/herdr")).filter((name) => name.endsWith(".bak")), []);
 });
 
+test("--apply records the built image under ~/.fleet", (t) => {
+	const mac = claudeMac(t);
+
+	const { status, out } = mac.sync("--apply");
+
+	assert.equal(status, 0, out);
+	assert.deepEqual(readdirSync(join(mac.home, ".fleet/state/images")), ["claude"]);
+});
+
 test("--apply with nothing to change writes no archive", (t) => {
 	const mac = claudeMac(t);
 	mac.sync("--apply");
