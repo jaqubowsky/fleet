@@ -62,5 +62,8 @@
     ]
   },
   "syncClaudeAiSkills": false,
-  "syncClaudeAiPlugins": false
+  "syncClaudeAiPlugins": false,
+  "enabledPlugins": {
+    "cc-plugin-you-should-know@builtin": true
+  }
 }
