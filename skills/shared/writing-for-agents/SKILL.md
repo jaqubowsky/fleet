@@ -1,6 +1,6 @@
 ---
 name: writing-for-agents
-description: 'Writing for an agent to read. Use before creating or editing a skill, before modifying AGENTS.md or CLAUDE.md, and before writing a prompt sent to another agent, session or subagent.'
+description: 'Writing for an agent to read. Use before creating or editing a rule or ref under rules/, a skill, AGENTS.md or CLAUDE.md, and before writing a prompt or steer sent to another agent, session or subagent.'
 ---
 
 Reference for writing anything an agent consumes: a skill, an `AGENTS.md` / `CLAUDE.md`, a doc reached by a pointer, a prompt sent to another agent. The packaging differs; the writing does not: the same levers make each one predictable, since the agent takes the same _process_ every run rather than producing the same output.
