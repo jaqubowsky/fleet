@@ -12,6 +12,8 @@ const SIZES = {
 };
 const SETTLE_MS = 600;
 const STEP_MS = 400;
+const NARROW = [320, 768];
+const PARALLEL = 4;
 
 const root = resolve("mockup");
 const boardFile = join(root, "board.js");
@@ -105,25 +107,36 @@ if (problems.length) fail(problems.join("\n      "));
 
 const { chromium } = playwright();
 const browser = await chromium.launch();
-let total = 0;
+const jobs = [];
 for (const entry of board.filter(e => !only.length || only.includes(e.slug))) {
   const shots = join(root, entry.slug, "shots");
   mkdirSync(shots, { recursive: true });
+  const narrowed = new Set();
   for (const frame of entry.frames) {
     const size = sizeOf(frame.size || "desktop");
     const url = pathToFileURL(join(root, entry.slug, frame.file)).href;
     const stem = basename(frame.file, ".html");
-    const runs = [{ name: "", steps: [] }, ...(frame.play || [])];
-    for (const run of runs) {
-      const out = join(shots, `${stem}-${size.label}${run.name ? `-${run.name}` : ""}.png`);
-      const findings = await shoot(browser, url, size, out, run.steps);
-      const counted = findings.filter(f => !["taller", "low-contrast", "small-target"].includes(f.kind));
-      total += counted.length;
-      const label = run.name ? ` after ${run.name}` : "";
-      console.log(`== ${entry.slug}/${frame.file} ${size.label}${label}: count ${counted.length}  ${out}`);
-      for (const f of findings) console.log(`   ${f.kind} ${f.where} ${f.detail}`);
+    for (const run of [{ name: "", steps: [] }, ...(frame.play || [])])
+      jobs.push({ entry, frame, url, size, steps: run.steps, label: run.name ? ` after ${run.name}` : "", out: join(shots, `${stem}-${size.label}${run.name ? `-${run.name}` : ""}.png`) });
+    for (const w of NARROW.filter(w => w < size.w && !narrowed.has(`${frame.file}@${w}`))) {
+      narrowed.add(`${frame.file}@${w}`);
+      jobs.push({ entry, frame, url, size: { w, h: size.h, label: `w${w}` }, steps: [], label: " narrowed", out: join(shots, `${stem}-w${w}.png`) });
     }
   }
+}
+let next = 0;
+await Promise.all(Array.from({ length: PARALLEL }, async () => {
+  while (next < jobs.length) {
+    const job = jobs[next++];
+    job.findings = await shoot(browser, job.url, job.size, job.out, job.steps);
+  }
+}));
+let total = 0;
+for (const { entry, frame, size, label, out, findings } of jobs) {
+  const counted = findings.filter(f => !["taller", "low-contrast", "small-target"].includes(f.kind));
+  total += counted.length;
+  console.log(`== ${entry.slug}/${frame.file} ${size.label}${label}: count ${counted.length}  ${out}`);
+  for (const f of findings) console.log(`   ${f.kind} ${f.where} ${f.detail}`);
 }
 
 const boardShot = join(root, "board.png");
