@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - run: brew install bash
       - run: npm ci
       - run: npm install -g @earendil-works/pi-coding-agent
       - run: |
