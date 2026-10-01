@@ -21,7 +21,10 @@ Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 
 - `diff.patch`: `git diff <base>...<head>`, and `changed.txt`: `git diff --name-only --diff-filter=ACMR <base>...<head>`; for uncommitted work, `git diff HEAD` in both.
 - `commits.txt`: `git log <base>..<head> --oneline`; none for uncommitted work.
-- `clones.txt`: the detector run once, per [clone-detection.md](clone-detection.md). No detector is a line in `clones.txt` saying so.
+- `clones.txt`, from the first case that applies:
+  - `changed.txt` holds only config, CI workflows or docs: one line saying so
+  - a gate check already runs jscpd: one line naming that check, whose log the checks below carry
+  - otherwise the detector run once, per [clone-detection.md](clone-detection.md); with no jscpd installed, one line saying so
 - The checks: the gate logs already written on this same uncommitted tree, named with their exit codes and not run again. Otherwise, and for typecheck or lint that gate left out, the gate command the work named, typecheck, lint, each run once with its output in a log here and its exit code noted in the task text. A check that will not run here is named as not run.
 - `red/`: the red logs this work saved, copied in. A test file in `changed.txt` with none is a line in `red/missing.txt`.
 - A check log past 200 lines, repo-wide output such as a formatter's, gets its cut beside it here: `grep -F -f changed.txt <log> > <log>.changed`, the lines that name a changed file.
