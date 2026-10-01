@@ -17,7 +17,9 @@ A mockup is a change drawn as standalone HTML pages before any production code m
 
 - Variants differ on one named axis each (layout, density, wording, motion, interaction model); two that differ only in color or copy are one variant. The title names the direction, never "Option A"
 - Each variant is a proposal a product designer would present: one focal point, hierarchy through scale and contrast, real imagery
-- Images are the project's own and show what the section is about: photos from its assets, CMS uploads or seed data, by absolute path. A generated placeholder stands only where the repo has no fitting one, and the note says so
+- Images are the project's own and show what the section is about: photos from its assets, CMS uploads or seed data, picked by what the asset's file name or its content entry says it shows, by absolute path. A generated placeholder stands only where the repo has no fitting one, and the note says so
+- A design-system element on the page, an icon, a button, a card, is ported from its source: the component's markup, its classes resolved to values, the icon's SVG copied from the project's icon set. A text character or a hand-drawn shape stands in only where the system has no such element
+- Fonts load as the app loads them: the same family, weights and styles; a style the app does not load stays out of the page
 - Every page works: real interactions, realistic copy, plausible sample names and numbers
 
 ## Gotchas
