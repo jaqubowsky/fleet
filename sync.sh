@@ -13,7 +13,10 @@ gone from here disappears there), prints where the two renders differ and
 whether a listed reason covers it, aligns Claude's settings and hooks, rebuilds
 a container image whose rendered seat changed, and removes
 what nothing uses: npm packages pi no longer lists, task directories of
-removed containers that never started and dangling links.
+removed containers that never started and dangling links. Before --apply
+changes anything it packs every existing file it will write, replace or
+delete into ~/.local/state/fleet/backups/<UTC timestamp>.tar.gz and prints
+how to restore it; it keeps the newest 10.
 It ends by naming what a new Mac lacks that it cannot set up itself, with the
 step that does. Without --apply it prints what it would change and changes
 nothing.
@@ -32,13 +35,43 @@ ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/harness-sync.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 STAMPS="$HOME/.cache/harness/images"
+BACKUPS="$HOME/.local/state/fleet/backups"
 changes=0
 skipped=""
+: >"$WORK/queue"
+: >"$WORK/saved"
+
+queue() {
+	printf '%q ' "$@" >>"$WORK/queue"
+	echo >>"$WORK/queue"
+}
 
 act() {
 	changes=$((changes + 1))
 	printf '  %s\n' "$*"
-	if [ "$apply" = 1 ]; then "$@"; fi
+	queue "$@"
+}
+
+keep() {
+	local path
+	for path; do
+		if [ -e "$path" ] || [ -L "$path" ]; then printf '%s\n' "${path#"$HOME"/}" >>"$WORK/saved"; fi
+	done
+}
+
+back_up() {
+	local archive
+	archive="$BACKUPS/$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+	mkdir -p "$BACKUPS"
+	sort -u "$WORK/saved" | tar -czf "$archive" -C "$HOME" -T -
+	ls -1 "$BACKUPS"/*.tar.gz | sort -r | tail -n +11 | while IFS= read -r old; do rm -f "$old"; done
+	echo "Backed up what this run replaces to ~${archive#"$HOME"}"
+	echo "  restore: tar -xzf ~${archive#"$HOME"} -C ~"
+}
+
+stamp_image() {
+	mkdir -p "$STAMPS"
+	printf '%s\n' "$2" >"$STAMPS/$1"
 }
 
 harnesses() {
@@ -54,13 +87,13 @@ drift() {
 	local from="$1" to="$2" owned="$3" f d
 	while IFS= read -r -d '' f; do
 		f="${f#"$from"/}"
-		cmp -s "$from/$f" "$to/$f" || printf 'write  %s\n' "${to/#"$HOME"/\~}/$f"
+		cmp -s "$from/$f" "$to/$f" || printf 'write  %s\n' "$to/$f"
 	done < <(find "$from" -type f -print0)
 	for d in ${owned//,/ }; do
 		[ -d "$to/$d" ] || continue
 		while IFS= read -r -d '' f; do
 			f="${f#"$to"/}"
-			[ -e "$from/$f" ] || printf 'remove %s\n' "${to/#"$HOME"/\~}/$f"
+			[ -e "$from/$f" ] || printf 'remove %s\n' "$to/$f"
 		done < <(find "$to/$d" -type f -print0)
 	done
 }
@@ -84,8 +117,8 @@ image_agent_version() {
 
 link() {
 	[ "$(readlink "$2" 2>/dev/null)" = "$1" ] && return
-	if [ "$apply" = 1 ]; then mkdir -p "$(dirname "$2")"; fi
-	if [ -e "$2" ] && [ ! -L "$2" ]; then act mv "$2" "$2.bak"; fi
+	keep "$2"
+	queue mkdir -p "$(dirname "$2")"
 	act ln -sfn "$1" "$2"
 }
 
@@ -144,7 +177,11 @@ while read -r name home image owned <&3; do
 	render_host "$name" "$home" "$WORK/$name"
 	stale="$(drift "$WORK/$name" "$HOME/$home" "$owned")"
 	if [ -n "$stale" ]; then
-		printf '%s\n' "$stale" | sed 's/^/    /'
+		while read -r verb path; do
+			keep "$path"
+			printf '    %-6s ~%s\n' "$verb" "${path#"$HOME"}"
+		done <<<"$stale"
+		for d in ${owned//,/ }; do keep "$HOME/$home/$d"; done
 		act env FLEET_SEAT="$name" "$ROOT/bin/fleet" render
 	fi
 done 3<<<"$HARNESS_ROWS"
@@ -162,6 +199,7 @@ if set_up claude; then
 	aligned="$(python3 "$ROOT/claude/tools/align-settings.py")"
 	if ! printf '%s\n' "$aligned" | grep -q 'Everything already aligned'; then
 		printf '%s\n' "$aligned" | sed 's/^/    /'
+		while IFS= read -r path; do keep "$path"; done < <(python3 "$ROOT/claude/tools/align-settings.py" --targets)
 		act python3 "$ROOT/claude/tools/align-settings.py" --apply
 	fi
 fi
@@ -172,16 +210,16 @@ while read -r name home image owned <&3; do
 	want="$(seat_hash "$WORK/$name-image" "$ROOT/sbx/build.sh" "$(image_agent_version "$name")")"
 	if [ "$want" != "$(cat "$STAMPS/$name" 2>/dev/null || true)" ] || ! template_loaded "$image"; then
 		act "$ROOT/bin/fleet" build "--$name"
-		if [ "$apply" = 1 ]; then
-			mkdir -p "$STAMPS"
-			printf '%s\n' "$want" >"$STAMPS/$name"
-		fi
+		queue stamp_image "$name" "$want"
 	fi
 done 3<<<"$HARNESS_ROWS"
 
 echo "== unused"
 extensions="$HOME/.pi/agent/extensions"
-if set_up pi && [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then act rmdir "$extensions"; fi
+if set_up pi && [ -d "$extensions" ] && [ -z "$(ls -A "$extensions")" ]; then
+	keep "$extensions"
+	act rmdir "$extensions"
+fi
 if set_up pi && [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 	unused="$(node --input-type=module -e '
 		const { readFileSync } = await import("node:fs");
@@ -190,7 +228,10 @@ if set_up pi && [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 		const listed = (JSON.parse(readFileSync(settings, "utf8")).packages ?? []).map((p) => p.replace(/^npm:/, "").replace(/@[^@/]+$/, ""));
 		console.log(installed.filter((name) => !listed.includes(name)).join(" "));
 	' "$HOME/.pi/agent/npm" "$WORK/pi/agent/settings.json")"
-	if [ -n "$unused" ]; then act npm uninstall --prefix "$HOME/.pi/agent/npm" $unused; fi
+	if [ -n "$unused" ]; then
+		keep "$HOME/.pi/agent/npm/package.json" "$HOME/.pi/agent/npm/package-lock.json"
+		act npm uninstall --prefix "$HOME/.pi/agent/npm" $unused
+	fi
 fi
 if live="$(sbx ls --json 2>/dev/null | jq -r '.sandboxes[].name')"; then
 	for task in "$HOME"/.sandboxes/*/*/; do
@@ -198,12 +239,22 @@ if live="$(sbx ls --json 2>/dev/null | jq -r '.sandboxes[].name')"; then
 		[ -f "$task/status.md" ] && grep -qx 'status: new' "$task/status.md" || continue
 		printf '%s\n' "$live" | grep -qx "$(basename "$task")" && continue
 		[ -z "$(find "$task" -type f ! -name status.md -print -quit)" ] || continue
+		keep "$task"
 		act rm -rf "$task"
 	done
 else
 	echo "  sbx ls failed, so task directories stay untouched"
 fi
-while IFS= read -r -d '' link; do act rm "$link"; done < <(find "$HOME/.local/bin" "$HOME/.claude/hooks" -maxdepth 1 -type l ! -exec test -e {} \; -print0 2>/dev/null)
+while IFS= read -r -d '' link; do
+	grep -qxF "${link#"$HOME"/}" "$WORK/saved" && continue
+	keep "$link"
+	act rm "$link"
+done < <(find "$HOME/.local/bin" "$HOME/.claude/hooks" -maxdepth 1 -type l ! -exec test -e {} \; -print0 2>/dev/null)
+
+if [ "$apply" = 1 ] && [ "$changes" != 0 ]; then
+	back_up
+	while IFS= read -r command <&4; do eval "$command"; done 4<"$WORK/queue"
+fi
 
 by_hand
 
@@ -211,7 +262,7 @@ echo
 if [ "$changes" = 0 ]; then
 	echo "In sync: nothing to change."
 elif [ "$apply" = 0 ]; then
-	echo "$changes change(s) above. Re-run with --apply to make them."
+	echo "$changes change(s) above. Re-run with --apply to make them; it first backs up what they replace to ~/.local/state/fleet/backups/<UTC timestamp>.tar.gz."
 else
 	left=0
 	while read -r name home image owned <&3; do
