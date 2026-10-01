@@ -1,11 +1,6 @@
----
-name: unslop
-description: 'Prose a person reads: a document, README, ADR, report, pull request or issue description, or a message to a teammate. Use before writing or editing one, and when asked to unslop, humanize or strip AI tells from a text.'
----
+# Prose
 
-# Unslop
-
-Edit text to remove AI patterns and add human voice.
+Every text a person reads, a reply or a file, is written this way: no AI patterns, a human voice.
 
 A Polish message with a human reader on the other side (Slack, PR comment, Linear comment, standup) gets the same patterns, in the reader's language.
 

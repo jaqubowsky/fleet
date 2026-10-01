@@ -30,7 +30,7 @@ SOFTWARE.
 
 ## miqdadbadjuber/anti-slop
 
-The design rules in `rules/refs/design.md` and the patterns 7, 14, 15, 23 to 25, 29, 30 and 38 of `skills/shared/unslop/SKILL.md` are adapted from [miqdadbadjuber/anti-slop](https://github.com/miqdadbadjuber/anti-slop), used under the MIT License:
+The design rules in `rules/refs/design.md` and the patterns 7, 14, 15, 23 to 25, 29, 30 and 38 of `rules/prose.md` are adapted from [miqdadbadjuber/anti-slop](https://github.com/miqdadbadjuber/anti-slop), used under the MIT License:
 
 ```text
 MIT License

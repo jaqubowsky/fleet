@@ -32,7 +32,7 @@ test("a principle naming a mechanic belongs to a seat owner", () => {
 
 test("a principle naming a skill one seat lacks belongs to a seat owner", () => {
 	assert.deepEqual(atSeededLine("rules/core.md", "9. A red test -> skill `tdd`"), [{ names: "tdd", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
-	assert.deepEqual(atSeededLine("rules/delegation.md", "4. Prose style is skill `unslop`"), []);
+	assert.deepEqual(atSeededLine("rules/delegation.md", "4. Writing a prompt -> skill `writing-for-agents`"), []);
 });
 
 test("a contract naming a skill belongs to the container owner", () => {
