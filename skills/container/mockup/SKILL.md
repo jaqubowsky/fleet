@@ -40,7 +40,6 @@ board({
       title: "Icon in the toolbar",
       note: "Easy to miss next to the filters.",
     },
-    { id: "A", file: "A.html", size: "phone" },
     {
       id: "B",
       file: "B.html",
@@ -52,4 +51,4 @@ board({
 });
 ```
 
-A frame is one page at one `size`: `"desktop"` (1440×900, the default), `"tablet"`, `"phone"` (390×844) or `{ w, h }`; another size is another frame. `note` is the real downside of a variant, or a caption. `play` lists the interactions Look runs, each from a fresh load, screenshotted after its last step: `click`, `hover` (a selector), `fill` (`[selector, text]`), `press` (a key), `drag` (`[selector, dx, dy]`), `wait` (ms), `eval` (JS). A page with a control or motion gets one run per state it reaches.
+A frame is one page at one `size`: `"desktop"` (1440×900, the default), `"tablet"`, `"phone"` (390×844) or `{ w, h }`. Each page gets one frame: the user drags its corners on the board to see the page at any width, so a second size of the same page is a frame only when the order names that size. `note` is the real downside of a variant, or a caption. `play` lists the interactions Look runs, each from a fresh load, screenshotted after its last step: `click`, `hover` (a selector), `fill` (`[selector, text]`), `press` (a key), `drag` (`[selector, dx, dy]`), `wait` (ms), `eval` (JS). A page with a control or motion gets one run per state it reaches.
