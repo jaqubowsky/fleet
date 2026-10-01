@@ -110,6 +110,33 @@ test("a profile file that breaks the contract is refused with the field it break
 	);
 });
 
+test("a container token is a keychain name or an environment variable, and an op:// reference says how to move to the keychain", () => {
+	refused((e) => {
+		e.container.token = "op://Dev/GitHub PAT private-app/credential";
+	}, /private-app\.container\.token is an op:\/\/ reference, which fleet no longer reads: store the token with `fleet tokens set <name>`, then write keychain:<name>/);
+	refused((e) => {
+		e.container.token = "keychain:Private App";
+	}, /private-app\.container\.token names keychain:Private App; a keychain name matches \^\[a-z0-9\]\[a-z0-9-\]\*\$/);
+	refused((e) => {
+		e.container.token = "keychain:-app";
+	}, /names keychain:-app/);
+	refused((e) => {
+		e.container.token = "keychain:app;rm";
+	}, /names keychain:app;rm/);
+	refused((e) => {
+		e.container.token = "ghp_plain";
+	}, /private-app\.container\.token is "ghp_plain"; it takes keychain:<name> or env:<NAME>/);
+
+	const profiles = parseProfiles(
+		JSON.stringify({
+			"*": star,
+			[PRIVATE_REPO]: { ...PRIVATE_PROFILE, container: { ...PRIVATE_PROFILE.container, token: "keychain:private-app-2" } },
+		}),
+	);
+
+	assert.equal(profiles[PRIVATE_REPO].container.token, "keychain:private-app-2");
+});
+
 test("the harness's profile file holds only *, the profile an unknown repository gets", () => {
 	const profiles = parseProfiles(REPO_PROFILES);
 

@@ -6,7 +6,7 @@ export const PRIVATE_REPO = "alice/private-app";
 
 export const PRIVATE_PROFILE = {
 	host: { sign: "none", push: "auto", pr: "auto", merge: "auto", down: "human", linear: "write", linearServer: "linear-private" },
-	container: { push: "auto", pr: "auto", linear: "read", linearServer: "linear-private-readonly", token: "op://Dev/GitHub PAT private-app/credential" },
+	container: { push: "auto", pr: "auto", linear: "read", linearServer: "linear-private-readonly", token: "keychain:private-app" },
 	resources: { memory: "4g", cpus: "4" },
 };
 
@@ -15,7 +15,7 @@ export const REPO_PROFILES = readFileSync(join(import.meta.dirname, "../../host/
 const OWNERS = {
 	"acme/*": {
 		host: { sign: "none", push: "human", pr: "none", merge: "none", down: "human", linear: "none" },
-		container: { push: "none", pr: "auto", linear: "read", linearServer: "linear-acme-readonly", token: "op://Dev/GitHub PAT webapp/credential" },
+		container: { push: "none", pr: "auto", linear: "read", linearServer: "linear-acme-readonly", token: "keychain:acme" },
 		resources: { memory: "12g", cpus: "4" },
 	},
 };

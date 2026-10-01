@@ -569,15 +569,12 @@ function create(
 	const variable = sessionToken(profile);
 	const name = keychainName(profile.container.token);
 	const bind = ["secret", "set", "github", "--sandbox", sandbox];
-	const [flag, source] = name
-		? ["--command", keychainRead(name)]
-		: ["--ref", profile.container.token];
+	const read = name ? ["--command", keychainRead(name)] : [];
 	try {
-		if (variable) io.sbx(bind, { quiet: true, input: io.env(variable) });
-		else io.sbx([...bind, flag, source], { quiet: true });
+		io.sbx([...bind, ...read], { quiet: true, input: variable && io.env(variable) });
 	} catch (error) {
 		io.log(
-			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${variable ? `printenv ${variable} | sbx ${bind.join(" ")}` : `sbx ${bind.join(" ")} ${flag} '${source}'`}\``,
+			`${sandbox}: no GitHub token bound (${(error as Error).message.split("\n")[0]}); git fetch inside will fail until \`${name ? `sbx ${bind.join(" ")} --command '${keychainRead(name)}'` : `printenv ${variable} | sbx ${bind.join(" ")}`}\``,
 		);
 	}
 	const linear =

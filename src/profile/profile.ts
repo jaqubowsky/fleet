@@ -34,6 +34,12 @@ const USER_PROFILES = `~/${USER_CONFIG}/repos.json`;
 const LEVELS = ["none", "human", "auto"];
 const LINEAR = ["none", "read", "write"];
 
+export const KEYCHAIN_NAME = /^[a-z0-9][a-z0-9-]*$/;
+
+export function keychainName(token: string): string | undefined {
+	return token.startsWith("keychain:") ? token.slice("keychain:".length) : undefined;
+}
+
 type Entry = Record<string, unknown>;
 
 function object(value: unknown, where: string): Entry {
@@ -68,6 +74,22 @@ function text(entry: Entry, keys: string[], where: string): void {
 	for (const key of keys)
 		if (typeof entry[key] !== "string" || !entry[key])
 			throw new Error(`${where}.${key} takes a non-empty string`);
+}
+
+function token(value: string, where: string): void {
+	if (value.startsWith("op://"))
+		throw new Error(
+			`${where}.token is an op:// reference, which ${CLI} no longer reads: store the token with \`${CLI} tokens set <name>\`, then write keychain:<name>`,
+		);
+	const name = keychainName(value);
+	if (name !== undefined && !KEYCHAIN_NAME.test(name))
+		throw new Error(
+			`${where}.token names keychain:${name}; a keychain name matches ${KEYCHAIN_NAME.source}`,
+		);
+	if (name === undefined && !/^env:./.test(value))
+		throw new Error(
+			`${where}.token is ${JSON.stringify(value)}; it takes keychain:<name> or env:<NAME>`,
+		);
 }
 
 function seat(
@@ -117,6 +139,7 @@ function entries(source: string, file: string): Profiles {
 			["token"],
 			`${where}.container`,
 		) as Container;
+		token(container.token, `${where}.container`);
 		const resources = object(entry.resources, `${where}.resources`);
 		exactly(resources, ["memory", "cpus"], `${where}.resources`);
 		text(resources, ["memory", "cpus"], `${where}.resources`);
@@ -163,12 +186,6 @@ export function repoName(origin: string): string {
 			origin.trim(),
 		)?.[1] ?? ""
 	);
-}
-
-export const KEYCHAIN_NAME = /^[a-z0-9][a-z0-9-]*$/;
-
-export function keychainName(token: string): string | undefined {
-	return token.startsWith("keychain:") ? token.slice("keychain:".length) : undefined;
 }
 
 export function profileFor(profiles: Profiles, repo: string): Profile {

@@ -324,13 +324,13 @@ test("up isolates colliding checkout names and shares an order-independent group
 });
 
 test("up refuses incompatible group credential or Linear bindings before creation", async () => {
-	for (const field of ["token", "linearServer"] as const) {
+	for (const [field, binding] of [["token", "keychain:other"], ["linearServer", "different-binding"]] as const) {
 		const profiles = JSON.parse(SAMPLE_PROFILES);
 		profiles["acme/other"] = {
 			...profiles["acme/*"],
 			container: {
 				...profiles["acme/*"].container,
-				[field]: "different-binding",
+				[field]: binding,
 			},
 		};
 		const io = fakeIo({
@@ -527,7 +527,7 @@ for (const harness of [SEATS.claude]) {
 test("up warns and continues when the GitHub token cannot be bound", async () => {
 	const io = fakeIo({
 		...base,
-		"sbx secret set github": new Error("op read: exit status 1"),
+		"sbx secret set github": new Error("sbx: exit status 1"),
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.ok(io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
@@ -1648,7 +1648,7 @@ test("up binds the token, Linear server and resources of the repository's profil
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	const permissions =
 		io.files["/home/me/.sandboxes/webapp/pi-webapp-web-1/permissions.md"];
-	assert.equal(secret.at(-1), "op://Dev/GitHub PAT webapp/credential");
+	assert.equal(secret.at(-1), "security find-generic-password -s fleet-gh -a acme -w");
 	assert.equal(run[run.indexOf("--static-mcp") + 1], "linear-acme-readonly");
 	assert.deepEqual(
 		[run[run.indexOf("--memory") + 1], run[run.indexOf("--cpus") + 1]],
@@ -1710,7 +1710,7 @@ const fromSession = JSON.stringify({
 	},
 });
 
-test("where the profile takes the container token from the session, up hands it to sbx on stdin and asks 1Password nothing", async () => {
+test("where the profile takes the container token from the session, up hands it to sbx on stdin and asks the keychain nothing", async () => {
 	const io = fakeIo(
 		{
 			...pushing,
@@ -1734,7 +1734,7 @@ test("where the profile takes the container token from the session, up hands it 
 		"claude-private-app-x",
 	]);
 	assert.equal(io.sbxOpts[secret]?.input, "github_pat_session");
-	assert.ok(!io.calls.some((c) => c.includes("--ref")));
+	assert.ok(!io.calls.some((c) => c.includes("--command")));
 });
 
 test("where the profile names a keychain token, up has sbx read it from the keychain at use time", async () => {
