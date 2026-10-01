@@ -10,7 +10,7 @@ A mockup is a change drawn as standalone HTML pages before any production code m
 1. **Scope.** Draw what the order asks for and nothing around it: a button is a button alone in its frame, a page is the whole page. Name it and the states it needs. Done when every state has a name.
 2. **Recon.** Today's look comes from the running app on this branch, else from the components' source. Colors, spacing, type and copy are the app's own tokens and strings, in the app's language. Each element is the design system's own component where one fits, and a new one takes the look of its nearest existing kin, unless the order asks for a new look. Done when every value the mockup uses traces to a token or a string in the repo, and every element to a component or the kin it follows.
 3. **Build.** Copy `board/*` from this skill's directory into `mockup/`, overwriting; `mockup/board.js` is yours. Write each page as `mockup/<slug>/<page>.html` and add its sections to `mockup/board.js` in the shape below. One variant by default; two to five when the order asks for more or leaves a visible choice open. Done when every state Scope named is drawn on a page and has a frame.
-4. **Look.** From the directory that holds `mockup/`, run `node <skill dir>/scripts/look.mjs <slug> ...` with every slug of the mockup. It screenshots every frame, and every `play` run, into `mockup/<slug>/shots/` and the board into `mockup/board.png`, and prints its findings and `count`. A `low-contrast` finding stays out of `count`: fix it where the mockup chose the color, keep it where the design system did. Read every screenshot for what it cannot see: a separator (`·`, `|`) opening or closing a line, a button pushed onto a line of its own, a band of dead space, text over an image it cannot be read on. Fix and run again, up to three passes. Done when it prints `count: 0` and the screenshots show none of those, or after the third pass.
+4. **Look.** From the directory that holds `mockup/`, run `node <skill dir>/scripts/look.mjs <slug>...` for the mockup's slugs. It screenshots every frame, and every `play` run, into `mockup/<slug>/shots/` and the board into `mockup/board.png`, and prints its findings and `count`. A `low-contrast` finding stays out of `count`: fix it where the mockup chose the color, keep it where the design system did. Read every screenshot for what it cannot see: a separator (`·`, `|`) opening or closing a line, a button pushed onto a line of its own, a band of dead space, text over an image it cannot be read on. Fix and run again, up to three passes. Done when it prints `count: 0` and the screenshots show none of those, or after the third pass.
 5. **Hand over.** Give the board's link, `mockup/index.html`, and end the turn.
 
 ## Craft
@@ -27,7 +27,7 @@ A mockup is a change drawn as standalone HTML pages before any production code m
 
 ## Shape
 
-`mockup/board.js`, one call per section, in the order the mockups were made:
+`mockup/board.js`, one call per section:
 
 ```js
 board({
