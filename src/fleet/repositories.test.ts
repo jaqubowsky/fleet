@@ -4,7 +4,7 @@ import { artifacts, down, history, ls, peek } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import { repositoryManifest, taskDir } from "./repositories.ts";
 
-const task = "/home/me/.sandboxes/groups/a-b-c/pi-a";
+const task = "/home/me/.fleet/tasks/groups/a-b-c/pi-a";
 const manifest = {
 	version: 1,
 	task,
@@ -18,7 +18,7 @@ const manifest = {
 		served: "",
 	})),
 };
-const path = "/home/me/.config/harness/fleet/pi-a.json";
+const path = "/home/me/.fleet/config/fleet/pi-a.json";
 const answers = {
 	[`read ${path}`]: JSON.stringify(manifest),
 	"sbx ls --json": {
@@ -27,10 +27,10 @@ const answers = {
 		],
 	},
 	"herdr agent list": { result: { agents: [] } },
-	"list /home/me/.config/harness/fleet": ["pi-a.json"],
+	"list /home/me/.fleet/config/fleet": ["pi-a.json"],
 	[`stat ${task}/status.md`]: { size: 10, dir: false, mtime: new Date(0) },
 	[`list ${task}`]: ["status.md"],
-	"list /home/me/.sandboxes/groups/a-b-c": ["pi-a"],
+	"list /home/me/.fleet/tasks/groups/a-b-c": ["pi-a"],
 	[`stat ${task}`]: { size: 0, dir: true, mtime: new Date(0) },
 };
 
@@ -146,10 +146,10 @@ test("legacy multi-repository tasks stay under the primary repository", () => {
 		}),
 	});
 
-	assert.equal(taskDir("/c", "pi-a", io), "/home/me/.sandboxes/a/pi-a");
+	assert.equal(taskDir("/c", "pi-a", io), "/home/me/.fleet/tasks/a/pi-a");
 	assert.equal(
 		taskDir("/c", "pi-single", io),
-		"/home/me/.sandboxes/c/pi-single",
+		"/home/me/.fleet/tasks/c/pi-single",
 	);
 	assert.equal(repositoryManifest("pi-a", io)?.repositories.length, 2);
 });

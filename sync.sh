@@ -15,8 +15,8 @@ a container image whose rendered seat changed, and removes
 what nothing uses: npm packages pi no longer lists, task directories of
 removed containers that never started and dangling links. Before --apply
 changes anything it packs every existing file it will write, replace or
-delete into ~/.local/state/fleet/backups/<UTC timestamp>.tar.gz and prints
-how to restore it; it keeps the newest 10.
+delete into ~/.fleet/backups/<UTC timestamp>.tar.gz and prints how to
+restore it; it keeps the newest 10.
 It ends by naming what a new Mac lacks that it cannot set up itself, with the
 step that does. Without --apply it prints what it would change and changes
 nothing.
@@ -35,7 +35,6 @@ ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/harness-sync.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 STAMPS="$HOME/.cache/harness/images"
-BACKUPS="$HOME/.local/state/fleet/backups"
 changes=0
 skipped=""
 : >"$WORK/queue"
@@ -72,6 +71,14 @@ back_up() {
 stamp_image() {
 	mkdir -p "$STAMPS"
 	printf '%s\n' "$2" >"$STAMPS/$1"
+}
+
+fleet_paths() {
+	node --input-type=module -e '
+		const [root, home] = process.argv.slice(1);
+		const { FLEET } = await import(`${root}/src/fleet/home.ts`);
+		console.log(`${home}/${FLEET.tasks}`, `${home}/${FLEET.backups}`);
+	' "$ROOT" "$HOME"
 }
 
 harnesses() {
@@ -129,7 +136,7 @@ set_up() {
 by_hand() {
 	echo "== set up by hand"
 	for name in $skipped; do echo "  skipped $name: no $name on PATH, so its home and image stay as they are; install it to set it up: docs/setup/01-tools.md"; done
-	[ -d "$HOME/.config/harness" ] || echo "  missing ~/.config/harness/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
+	[ -d "$HOME/.fleet/config" ] || echo "  missing ~/.fleet/config/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
 	command -v sbx >/dev/null || echo "  missing sbx on PATH: docs/setup/01-tools.md"
 	command -v herdr >/dev/null || echo "  missing herdr on PATH: docs/setup/01-tools.md"
 	[ "$(zsh -ic 'type gh' 2>/dev/null | tail -1)" = "gh is $HOME/.local/bin/gh" ] || echo "  gh in a new shell is not ~/.local/bin/gh: put ~/.local/bin first on PATH and drop any gh function, such as the 1Password plugin's: docs/setup/04-github-tokens.md"
@@ -152,6 +159,8 @@ template_loaded() {
 
 command -v node >/dev/null || { by_hand; exit 1; }
 ALL_ROWS="$(harnesses)"
+FLEET_PATHS="$(fleet_paths)"
+read -r TASKS BACKUPS <<<"$FLEET_PATHS"
 HARNESS_ROWS="$(while read -r name rest; do if command -v "$name" >/dev/null; then echo "$name $rest"; fi; done <<<"$ALL_ROWS")"
 skipped="$(while read -r name rest; do if ! command -v "$name" >/dev/null; then echo "$name"; fi; done <<<"$ALL_ROWS")"
 if [ -z "$HARNESS_ROWS" ]; then
@@ -234,7 +243,7 @@ if set_up pi && [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 	fi
 fi
 if live="$(sbx ls --json 2>/dev/null | jq -r '.sandboxes[].name')"; then
-	for task in "$HOME"/.sandboxes/*/*/; do
+	for task in "$TASKS"/*/*/; do
 		task="${task%/}"
 		[ -f "$task/status.md" ] && grep -qx 'status: new' "$task/status.md" || continue
 		printf '%s\n' "$live" | grep -qx "$(basename "$task")" && continue
@@ -262,7 +271,7 @@ echo
 if [ "$changes" = 0 ]; then
 	echo "In sync: nothing to change."
 elif [ "$apply" = 0 ]; then
-	echo "$changes change(s) above. Re-run with --apply to make them; it first backs up what they replace to ~/.local/state/fleet/backups/<UTC timestamp>.tar.gz."
+	echo "$changes change(s) above. Re-run with --apply to make them; it first backs up what they replace to ~/.fleet/backups/<UTC timestamp>.tar.gz."
 else
 	left=0
 	while read -r name home image owned <&3; do

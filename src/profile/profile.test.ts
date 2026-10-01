@@ -167,7 +167,7 @@ test("an entry in the person's own file wins over the harness's for the same mat
 
 	assert.deepEqual(
 		[profileFor(both, "acme/x").match, profileFor(both, "acme/x").file],
-		["Acme/*", "~/.config/harness/repos.json"],
+		["Acme/*", "~/.fleet/config/repos.json"],
 	);
 	assert.equal(profileFor(both, "someone/else").resources.memory, "4g");
 	assert.deepEqual(
@@ -191,7 +191,7 @@ test("an entry in the person's own file wins over the harness's for the same mat
 	);
 	assert.throws(
 		() => parseProfiles(theirs, '{ "*": {},, }'),
-		/^Error: ~\/\.config\/harness\/repos\.json: /,
+		/^Error: ~\/\.fleet\/config\/repos\.json: /,
 	);
 	assert.throws(
 		() =>
@@ -204,7 +204,7 @@ test("an entry in the person's own file wins over the harness's for the same mat
 					},
 				}),
 			),
-		/^Error: ~\/\.config\/harness\/repos\.json a\/b\.host\.push/,
+		/^Error: ~\/\.fleet\/config\/repos\.json a\/b\.host\.push/,
 	);
 });
 

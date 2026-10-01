@@ -284,7 +284,7 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 	);
 	const mine = ["edit", "write"].map((toolName) =>
 		guard(
-			{ toolName, input: { path: "~/.config/harness/repos.json" } },
+			{ toolName, input: { path: "~/.fleet/config/repos.json" } },
 			{ cwd: root },
 		),
 	);
@@ -294,7 +294,7 @@ test("the extension refuses an edit or a shell write of the host's permissions a
 	assert.equal(read, undefined);
 	assert.equal(
 		guard(
-			{ toolName: "read", input: { path: "~/.config/harness/repos.json" } },
+			{ toolName: "read", input: { path: "~/.fleet/config/repos.json" } },
 			{ cwd: root },
 		),
 		undefined,
@@ -355,7 +355,7 @@ test("pi refuses an edit or a shell redirect into its own home, and leaves reads
 		ask("bash", { command: "cat ~/.pi/agent/config.yml > /tmp/config.yml" }),
 		undefined,
 	);
-	assert.equal(ask("bash", { command: "echo x > ~/.pi/cache/note" }), undefined);
+	assert.equal(ask("bash", { command: "echo x > ~/.fleet/cache/pi/note" }), undefined);
 	assert.equal(ask("edit", { path: "src/app.ts" }), undefined);
 	assert.equal(ask("bash", { command: "npm test > out.log 2>&1" }), undefined);
 	assert.equal(ask("bash", { command: "rg '> ~/.pi' src" }), undefined);

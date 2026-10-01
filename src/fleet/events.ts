@@ -1,6 +1,7 @@
+import { FLEET } from "./home.ts";
 import type { Io } from "./io.ts";
 
-export const EVENTS_LOG = ".sandboxes/fleet-events.log";
+export const EVENTS_LOG = `${FLEET.tasks}/fleet-events.log`;
 
 export function logEvent(io: Io, kind: "up" | "steer" | "down", agent: string, text?: string): void {
 	const fields = [io.now().toISOString(), io.pane, kind, agent, `session=${encodeURIComponent(io.sessionId ?? "")}`];

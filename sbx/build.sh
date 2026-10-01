@@ -9,7 +9,7 @@ STAGE="$RENDERED/home"
 BUILD_ARGS=(--build-arg "UPDATE_BUST=$(date +%Y%m%d)-$("$NAME" --version 2>/dev/null | tr -cd '0-9.' || true)")
 trap 'rm -rf "$RENDERED"' EXIT
 
-cp -RL "$HOME/.config/harness/git" "$STAGE/git"
+cp -RL "$HOME/.fleet/config/git" "$STAGE/git"
 find "$STAGE" -name .DS_Store -delete
 
 if [ -f "$RENDERED/stage.sh" ]; then . "$RENDERED/stage.sh"; fi

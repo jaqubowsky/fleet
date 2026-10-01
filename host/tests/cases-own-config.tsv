@@ -11,8 +11,8 @@ deny	Bash	echo x > ~/.pi/agent/AGENTS.md
 allow	Write	~/.claude/projects/-Users-alice-app/notes.md
 allow	Write	~/.claude/todos/list.json
 allow	Bash	echo x > ~/.claude/sandbox-transcripts/a.log
-allow	Bash	echo x > ~/.claude/fleet-cache/app/note
-allow	Bash	echo x > ~/.pi/cache/note
+allow	Bash	echo x > ~/.fleet/cache/claude/app/note
+allow	Bash	echo x > ~/.fleet/cache/pi/note
 allow	Read	~/.claude/settings.json
 allow	Bash	grep -r model ~/.claude/settings.json
 allow	Bash	cat ~/.claude/settings.json

@@ -3,7 +3,7 @@ import { test, type TestContext } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { relay } from "./relay.ts";
 
-const TASK = "/home/me/.sandboxes/webapp/pi-webapp-a";
+const TASK = "/home/me/.fleet/tasks/webapp/pi-webapp-a";
 const STATE = `${TASK}/logs/agent-state.json`;
 const LISTED = { "sbx ls --json": { sandboxes: [{ name: "pi-webapp-a", agent: "pi", status: "running", workspaces: ["/w/webapp"] }] } };
 

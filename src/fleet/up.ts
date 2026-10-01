@@ -2,6 +2,7 @@ import { basename, dirname } from "node:path";
 import { codexArgs } from "./codex.ts";
 import { INSTALL_LOG, installScript, setupCommand } from "./deps.ts";
 import { logEvent } from "./events.ts";
+import { agentCache } from "./home.ts";
 import { describe, keychainName, repoName, type Profile } from "../profile/profile.ts";
 import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
@@ -29,7 +30,7 @@ const IMAGE_SOURCES = [
 ];
 
 export function imageStampPath(kind: Kind, io: Io): string {
-	return `${io.home}/${kind.home}/${kind.cache}/image-stamp`;
+	return `${io.home}/${agentCache(kind.name)}/image-stamp`;
 }
 
 export function harnessStamp(root: string, kind: Kind, io: Io): string {
@@ -631,7 +632,7 @@ function create(
 }
 
 export function cacheDir(repo: string, kind: Kind, io: Io): string {
-	return `${io.home}/${kind.home}/${kind.cache}/${basename(repo)}`;
+	return `${io.home}/${agentCache(kind.name)}/${basename(repo)}`;
 }
 
 function lockfiles(listing: string): number {

@@ -41,7 +41,7 @@ function machine(t, agents) {
 function claudeMac(t) {
 	const mac = machine(t, ["claude", "docker", "sbx"]);
 	const plugins = join(mac.home, ".claude/plugins");
-	for (const path of [".config/harness/git", ".config/herdr", ".claude/plugins/marketplaces/claude-plugins-official", ".claude/plugins/cache/claude-plugins-official/typescript-lsp"])
+	for (const path of [".fleet/config/git", ".config/herdr", ".claude/plugins/marketplaces/claude-plugins-official", ".claude/plugins/cache/claude-plugins-official/typescript-lsp"])
 		mkdirSync(join(mac.home, path), { recursive: true });
 	writeFileSync(join(plugins, "known_marketplaces.json"), "{}");
 	writeFileSync(join(plugins, "installed_plugins.json"), '{"version": 2, "plugins": {"typescript-lsp@claude-plugins-official": [{}]}}');
@@ -49,7 +49,7 @@ function claudeMac(t) {
 }
 
 function archives(home) {
-	const dir = join(home, ".local/state/fleet/backups");
+	const dir = join(home, ".fleet/backups");
 	try {
 		return readdirSync(dir).map((name) => join(dir, name));
 	} catch {
@@ -103,7 +103,7 @@ test("a dry run names the archive --apply would write", (t) => {
 	const { status, out } = mac.sync();
 
 	assert.equal(status, 0, out);
-	assert.match(out, /~\/\.local\/state\/fleet\/backups\/<UTC timestamp>\.tar\.gz/);
+	assert.match(out, /~\/\.fleet\/backups\/<UTC timestamp>\.tar\.gz/);
 	assert.deepEqual(archives(mac.home), []);
 });
 
@@ -133,7 +133,7 @@ test("--apply first packs the files it replaces into one archive", (t) => {
 test("--apply with nothing to change writes no archive", (t) => {
 	const mac = claudeMac(t);
 	mac.sync("--apply");
-	rmSync(join(mac.home, ".local/state/fleet/backups"), { recursive: true });
+	rmSync(join(mac.home, ".fleet/backups"), { recursive: true });
 
 	const { status, out } = mac.sync("--apply");
 

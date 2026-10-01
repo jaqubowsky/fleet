@@ -16,7 +16,7 @@ function located(word: string, dir: string, home: string): string {
 }
 
 function own(path: string, home: string): boolean {
-	return HOMES.some((h) => within(path, `${home}/${h.home}`) && ![h.cache, ...RUNTIME[h.name]].some((state) => within(path, `${home}/${h.home}/${state}`)));
+	return HOMES.some((h) => within(path, `${home}/${h.home}`) && !RUNTIME[h.name].some((state) => within(path, `${home}/${h.home}/${state}`)));
 }
 
 function targets(argv: string[]): { redirected: string[]; named: string[] } {

@@ -5,7 +5,7 @@ cat >/dev/null
 
 state="$HOME/.claude/plugins/installed_plugins.json"
 markets="$HOME/.claude/plugins/known_marketplaces.json"
-baseline="${XDG_STATE_HOME:-$HOME/.local/state}/claude-fleet/plugins-baseline.json"
+baseline="$HOME/.fleet/state/plugins-baseline.json"
 
 [ -r "$state" ] || exit 0
 

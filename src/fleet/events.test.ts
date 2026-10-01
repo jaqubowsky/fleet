@@ -12,8 +12,8 @@ test("new up and steer events carry the invoking Pi session", () => {
 	logEvent(io, "up", "webapp-web-2");
 
 	assert.deepEqual(io.calls, [
-		["append", "/home/me/.sandboxes/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
-		["append", "/home/me/.sandboxes/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
+		["append", "/home/me/.fleet/tasks/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
+		["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
 	]);
 });
 
@@ -68,7 +68,7 @@ test("a harness that watches through its CLI logs events in its writable fleet c
 
 	logEvent(io, "down", "worker-a");
 
-	assert.deepEqual(io.calls, [["append", "/home/me/.sandboxes/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
+	assert.deepEqual(io.calls, [["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
 });
 
 test("a container taken down is closed until it comes up again", () => {

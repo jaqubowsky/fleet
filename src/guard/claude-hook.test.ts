@@ -179,7 +179,7 @@ test("the claude hook refuses an edit or a shell write of the host's permissions
 	);
 	for (const tool of ["Edit", "Write"])
 		assert.match(
-			ask(tool, { file_path: "~/.config/harness/repos.json" }),
+			ask(tool, { file_path: "~/.fleet/config/repos.json" }),
 			/"permissionDecision":"deny"/,
 			tool,
 		);

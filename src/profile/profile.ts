@@ -1,3 +1,4 @@
+import { FLEET } from "../fleet/home.ts";
 import { CLI } from "../harness.ts";
 type Level = "none" | "human" | "auto";
 type LinearLevel = "none" | "read" | "write";
@@ -28,7 +29,7 @@ export type Profile = {
 type Profiles = Record<string, Profile>;
 
 export const PROFILES = "host/repos.json";
-export const USER_CONFIG = ".config/harness";
+export const USER_CONFIG = FLEET.config;
 const USER_PROFILES = `~/${USER_CONFIG}/repos.json`;
 
 const LEVELS = ["none", "human", "auto"];
