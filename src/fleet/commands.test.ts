@@ -352,6 +352,31 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
+test("down copies claude's transcripts into the task's sessions directory, so a copy an earlier down left there is not nested", () => {
+	const io = fakeIo({
+		"sbx ls --json": {
+			sandboxes: [
+				{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] },
+			],
+		},
+		"herdr agent list": { result: { agents: [] } },
+		[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+	});
+
+	down("claude-a", {}, io);
+
+	assert.deepEqual(
+		io.calls.filter((c) => c[0] === "sbx" && c[1] === "cp"),
+		[["sbx", "cp", "claude-a:/home/agent/.claude/projects", "/home/me/.fleet/tasks/r/claude-a/logs/sessions/"]],
+	);
+	assert.ok(
+		io.lines.includes(
+			"claude-a: transcripts -> /home/me/.fleet/tasks/r/claude-a/logs/sessions/projects",
+		),
+		io.lines.join("\n"),
+	);
+});
+
 test("down says so when pi never wrote a session", () => {
 	const io = fakeIo({
 		...running,

@@ -251,6 +251,7 @@ export async function up(
 	const found = findPane(io, basename(input.repo), agent, kind);
 	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
 	layoutTask(task, io);
+	let restored = false;
 	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
 		throw new Error(`${sandbox} already exists with different repositories`);
 	if (!existing) {
@@ -302,6 +303,8 @@ export async function up(
 			seedCache(io, input.repo, sandbox, kind);
 			if (kind.projectConfig)
 				seedProjectConfig(io, input.repo, sandbox, kind.projectConfig);
+			if (kind.containerSessions)
+				restored = restoreSessions(io, task, sandbox, kind);
 			if (kind.sbxGuidance)
 				io.sbx(
 					[
@@ -503,8 +506,9 @@ export async function up(
 		const args = agentArgs(
 			kind,
 			input.model,
-			io.list(`${task}/logs/sessions`).length > 0 ||
-				(Boolean(existing) && Boolean(kind.containerSessions)),
+			kind.containerSessions
+				? Boolean(existing) || restored
+				: io.list(`${task}/logs/sessions`).length > 0,
 		);
 		const start = kind.herdrIntegration
 			? `${input.root}/bin/${CLI} relay ${sandbox} ${task}`
@@ -766,6 +770,30 @@ function seedProjectConfig(
 	io.log(
 		`${sandbox}: copied ${paths.length} ignored path(s) under ${dir} from the host checkout`,
 	);
+}
+
+export function harvestedSessions(task: string, store: string): string {
+	return `${task}/logs/sessions/${basename(store)}`;
+}
+
+function restoreSessions(io: Io, task: string, sandbox: string, kind: Kind): boolean {
+	const store = kind.containerSessions!;
+	const harvested = harvestedSessions(task, store);
+	const projects = io.list(harvested);
+	if (!projects.length) return false;
+	try {
+		for (const project of projects)
+			io.sbx(["cp", `${harvested}/${project}`, `${sandbox}:${store}/`], { quiet: true });
+		io.sbx(["exec", sandbox, "sh", "-c", 'sudo chown -R agent:agent "$1"', "--", store], {
+			quiet: true,
+		});
+	} catch (error) {
+		throw new Error(
+			`transcripts in ${harvested} did not copy into ${sandbox}:${store}, so ${kind.name} would continue into an empty store\n${(error as Error).message}`,
+		);
+	}
+	io.log(`${sandbox}: transcripts ${harvested} -> ${store}`);
+	return true;
 }
 
 export function cacheStore(path: string): string {

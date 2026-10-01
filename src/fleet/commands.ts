@@ -24,7 +24,7 @@ import { logEvent } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { harnessStamp, imageStampPath, staleImage } from "./up.ts";
+import { harnessStamp, harvestedSessions, imageStampPath, staleImage } from "./up.ts";
 import {
 	agentFor,
 	branchFacts,
@@ -628,9 +628,9 @@ function harvest(
 	force: boolean,
 	io: Io,
 ): void {
-	const to = `${task}/logs/sessions/${from.split("/").pop()}`;
+	const to = harvestedSessions(task, from);
 	try {
-		io.sbx(["cp", `${sandbox}:${from}`, to], { quiet: true });
+		io.sbx(["cp", `${sandbox}:${from}`, `${task}/logs/sessions/`], { quiet: true });
 		io.log(`${sandbox}: transcripts -> ${to}`);
 	} catch (error) {
 		if (!force)
