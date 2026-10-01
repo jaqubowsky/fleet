@@ -11,6 +11,7 @@ Check all of them first and report the full list, passed and missing, in one mes
 | zsh as the login shell | `echo $SHELL` ends in `zsh` | `chsh -s /bin/zsh`; the setup edits `~/.zshrc` and checks with `zsh -ic` |
 | Homebrew | `command -v brew` | brew.sh |
 | git, jq, python3, gh | `command -v git jq python3 gh` prints four paths | `brew install jq gh`; git and python3 come with the Xcode command line tools |
+| bash 5 | `bash --version` prints 5 or higher | `brew install bash`; macOS ships 3.2, and the test suite the setup runs needs 5, as the sandboxes have |
 | Node 22.19 or newer | `node --version` | pi's minimum |
 
 ## Install
