@@ -51,10 +51,10 @@ Every capture is read by the agent that took it, before it is filed: the state t
 
 ## Runbook
 
-`run.sh start` brings the app up and prints the URL; `run.sh stop` takes it down and confirms the ports fall silent. `run.md` holds what the script does, the credentials source and one line per workaround with its reason; `features/<screen>.md` how a screen is reached and driven; `gotchas.md` what does not take a scripted action. A run that fails there reports a stale runbook and stops.
+`features/<screen>.md` holds how a screen is reached and driven; `gotchas.md` what does not take a scripted action.
 
-After cleanup, from the scratch log of this run and not from memory, in English: a command that changed goes into `run.sh` or `run.md`; a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`, folded into an existing entry when one describes it, and an entry whose failure did not reproduce is deleted. Each file stays under 150 lines. The report names every runbook file touched.
+After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`, folded into an existing entry when one describes it, and an entry whose failure did not reproduce is deleted. Each file stays under 150 lines. The report names every runbook file touched.
 
 ## Cleanup
 
-`playwright-cli close`, then `run.sh stop`, then a request per port confirms nothing answers; the stop script's own report is not that confirmation. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it in every repository, and a multi-repository report still names the complete set of SHAs that actually ran. Publication, pushes and merges stay with the person.
+`playwright-cli close`, then the app stops the way it was started. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it in every repository, and a multi-repository report still names the complete set of SHAs that actually ran. Publication, pushes and merges stay with the person.
