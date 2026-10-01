@@ -1,10 +1,10 @@
 :root {
   --canvas: #efeee9; --ink: #1b1d21; --muted: #6a6f78; --line: #d3d2cc; --panel: #fffffff0;
-  --accent: #2f6fe4; --grid: #00000008; --live: #1f9d55; --stop: #d93b3b; --shadow: 0 1px 2px #0000000f, 0 8px 24px #00000014;
+  --accent: #2f6fe4; --grid: #00000008; --live: #1f9d55; --shadow: 0 1px 2px #0000000f, 0 8px 24px #00000014;
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --canvas: #1a1a1a; --ink: #ececec; --muted: #9b9b9b; --line: #333333; --panel: #242424f0; --accent: #6b9cff; --grid: #ffffff06; --live: #3ecf7a; --stop: #f05252; --shadow: 0 1px 2px #0008, 0 8px 24px #0006; }
+  :root { --canvas: #1a1a1a; --ink: #ececec; --muted: #9b9b9b; --line: #333333; --panel: #242424f0; --accent: #6b9cff; --grid: #ffffff06; --live: #3ecf7a; --shadow: 0 1px 2px #0008, 0 8px 24px #0006; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--canvas); color: var(--ink); font: 13px/1.4 var(--sans); }
@@ -31,12 +31,12 @@ body.dragging iframe { pointer-events: none !important; }
   font-size: calc(13px / var(--z)); color: var(--muted); cursor: grab; user-select: none;
 }
 .strip span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.strip button, .strip a {
+.strip a {
   flex: none; font: inherit; line-height: 1; color: var(--muted); background: none; text-decoration: none; cursor: pointer;
   border: calc(1px / var(--z)) solid transparent; border-radius: calc(5px / var(--z)); padding: calc(2px / var(--z)) calc(5px / var(--z));
 }
-.strip button:hover, .strip a:hover { color: var(--ink); border-color: var(--line); }
-.frame.narrow:not(:hover):not(.selected) .strip :is(button, a) { display: none; }
+.strip a:hover { color: var(--ink); border-color: var(--line); }
+.frame.narrow:not(:hover):not(.selected) .strip a { display: none; }
 .frame.selected .strip span, .frame.live .strip span { color: var(--ink); }
 .frame .view { display: block; border: 0; background: #fff; pointer-events: none; box-shadow: var(--shadow); }
 .frame.live .view { pointer-events: auto; }
@@ -64,9 +64,6 @@ body.dragging .frame:not(.selected)::before, body.dragging .title:not(.selected)
 
 .frame.live::before { opacity: 1; border-color: var(--live); border-width: calc(2px / var(--z)); }
 .frame.live .strip span { color: var(--live); }
-.frame.live .strip .play { color: #fff; background: var(--stop); border-color: var(--stop); }
-.frame.live .strip .play:hover { color: #fff; filter: brightness(1.1); }
-.frame.live.narrow .strip .play { display: inline-block; }
 .resize {
   position: absolute; width: calc(16px / var(--z)); height: calc(16px / var(--z));
   border: 0 solid var(--accent); cursor: nwse-resize; opacity: 0; z-index: 1;

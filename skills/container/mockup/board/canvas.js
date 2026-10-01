@@ -89,7 +89,7 @@ function resize(frame) {
 function leave() {
   if (!live) return;
   live.node.classList.remove("live");
-  live.node.querySelector(".play").textContent = "▷ Play";
+  document.activeElement?.blur();
   live = null;
 }
 function enter(frame) {
@@ -98,7 +98,6 @@ function enter(frame) {
   live = frame;
   select(frame);
   frame.node.classList.add("live");
-  frame.node.querySelector(".play").textContent = "■ Stop";
   mount(frame);
 }
 
@@ -168,7 +167,6 @@ function build() {
       item.node = el("div", { className: "frame", id: `${entry.slug}/${frame.file}` },
         el("div", { className: "strip" },
           el("span"),
-          el("button", { type: "button", className: "play", textContent: "▷ Play", title: "Use the page here, from the start", onclick: () => live === item ? leave() : enter(item) }),
           el("a", { href: src, target: "_blank", textContent: "↗", title: "Open the page alone" })),
         frame.note && el("p", { className: "caption", textContent: frame.note }),
         ["nw", "ne", "sw", "se"].map(corner => {
@@ -176,6 +174,7 @@ function build() {
           handle.dataset.corner = corner;
           return handle;
         }));
+      item.node.title = "Double-click to use the page; click outside it to return to the board";
       item.node.frameItem = item;
       mount(item);
       frames.push(item);
@@ -247,6 +246,11 @@ viewportEl.addEventListener("pointerup", () => {
   if (!drag.moved && drag.pick) select(drag.pick);
   else if (!drag.moved && !drag.moving.length && !drag.sizing) { select(null); leave(); }
   drag = null;
+});
+viewportEl.addEventListener("dblclick", e => {
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const frameNode = under?.closest(".frame");
+  if (frameNode && !under.closest(".resize, a")) enter(frameNode.frameItem);
 });
 viewportEl.addEventListener("mousedown", e => (e.button === 1 || !e.target.closest("button, a")) && e.preventDefault());
 viewportEl.addEventListener("wheel", e => {
