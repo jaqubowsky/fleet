@@ -19,15 +19,15 @@ You run in an isolated container. Someone outside watches this session and gives
 
 1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file, `status.md`, and `repositories.json` when present before your first command. The manifest names each clone's path, base SHA and branch; the host keeps its own authoritative copy. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
 2. `project.md`, when present, says how the primary project works; when `repositories.json` exists, read each additional repo's overlay in `projects/<workspace basename>.md` when present and use the matching part of `permissions.md` for each repo
-3. `runbook/` at the root of `$FLEET_ARTIFACTS` holds how this app starts and how its screens drive. The root is shared by tasks for the same repository set and read by the person; a new multi-repository task has its own group root, not the first repo's runbook. Starting the app or a service it needs, for any reason, follows skill `running-the-app`
+3. `runbook/` at the root of `$FLEET_ARTIFACTS` holds how this app starts and how its screens drive. The root is shared by tasks for the same repository set and read by the person; a new multi-repository task has its own group root, not the first repo's runbook. Starting the app or a service it needs, for any reason, follows skill `running-the-app`. `gotchas.md` there holds what defies a reasonable assumption about this environment: a gate that dies or flakes here, an action no script takes. A new entry folds into one that describes it; an entry whose failure did not reproduce is deleted. Each runbook file stays under 150 lines
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
-5. A red gate is yours only when the same command is green on the base. Known base failures live in `$FLEET_ARTIFACTS/runbook/gate-baseline.md`: the command, the base sha and counts per file. Read it, when it exists, before running anything twice. A gate it does not record runs once on the base:
+5. Read `runbook/gotchas.md` before the first gate. A red gate is yours only when the same command is green on your base commit. `runbook/gate-base/<base sha7>.md` holds that commit's results, one line per command: exit code, counts per file, log path. A command it lacks runs once on the base:
    - on this checkout while it is still clean at the base commit
    - otherwise in `base-worktree <base-commit>`, which builds `/tmp/base` with deps, env files and generated code linked in. A build output under suspicion is shared through those links, so rebuild it there first
 
-   Whoever runs it, the analysis included, writes the result into that file for every later session and container
+   Whoever runs it, the analysis included, adds its line to that file for every later session and container on the same base
 6. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:
-   - goes into `runbook/gate-baseline.md` as not runnable here, with the memory it had
+   - goes into `runbook/gotchas.md` as not runnable here, with the memory it had
    - goes once into `attention:`, so the host can give the next container more
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it

@@ -51,9 +51,9 @@ Every capture is read by the agent that took it, before it is filed: the state t
 
 ## Runbook
 
-`features/<screen>.md` holds how a screen is reached and driven; `gotchas.md` what does not take a scripted action.
+`features/<screen>.md` holds how a screen is reached and driven.
 
-After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`, folded into an existing entry when one describes it, and an entry whose failure did not reproduce is deleted. Each file stays under 150 lines. The report names every runbook file touched.
+After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`. The report names every runbook file touched.
 
 ## Cleanup
 

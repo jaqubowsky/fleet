@@ -22,7 +22,7 @@ browser/       <run-id>/report.md, screenshots, a walkthrough video
 logs/          sessions/, status.jsonl, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; <skill>-<id>/ evidence
 ```
 
-`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-baseline.md`.
+`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-base/<sha7>.md`.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 
