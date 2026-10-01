@@ -20,7 +20,6 @@ body.dragging iframe { pointer-events: none !important; }
 
 .title { position: absolute; white-space: nowrap; cursor: grab; user-select: none; }
 .title h2 { margin: 0; font-size: 72px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
-.title p { margin: 8px 0 0; font-size: 28px; color: var(--muted); }
 
 .frame { position: absolute; }
 .frame.selected:not(.live) { cursor: grab; }

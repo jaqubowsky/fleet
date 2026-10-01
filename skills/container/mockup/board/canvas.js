@@ -149,8 +149,7 @@ function build() {
   for (const entry of BOARD) {
     const title = { slug: entry.slug };
     title.node = el("div", { className: "title", id: entry.slug },
-      el("h2", { textContent: entry.title || entry.slug }),
-      entry.question && el("p", { textContent: entry.question }));
+      el("h2", { textContent: entry.title || entry.slug }));
     title.node.dataset.slug = entry.slug;
     titles.push(title);
     world.append(title.node);
