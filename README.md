@@ -122,7 +122,7 @@ Every tool call an agent makes goes through a policy first. This is what an agen
 | Stopped | Example |
 | --- | --- |
 | Rewriting shared history | `git push --force`, delete and mirror pushes |
-| Reading secrets | SSH keys, the keychain, `op read` |
+| Reading secrets | SSH keys, the keychain, `op read`, `gh auth token` |
 | Changing its own rules | writes to `~/.claude` and `~/.pi` |
 | Deleting your work | `rm -rf` on home and project folders |
 | Acting on GitHub for you | merging a PR in another repository |
@@ -143,7 +143,7 @@ Every tool call an agent makes goes through a policy first. This is what an agen
 ## Also in the box
 
 - **Several repositories in one task.** Repeat `--repo`, and one `land` brings all of them home.
-- **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox.
+- **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox, and every host session applies its repository's profile to the checkout as it starts.
 - **Cost per task.** `fleet ls` shows what each sandbox has spent so far.
 - **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone, and `fleet history` replays how its status changed.
 - **A setup that audits itself.** `audit-harness` reads past transcripts and reports what held, what broke and what's missing, quoting each.
@@ -151,7 +151,7 @@ Every tool call an agent makes goes through a policy first. This is what an agen
 
 ## Trust model
 
-Sandboxes never hold your SSH or signing key, and their GitHub token reaches them only through the sandbox proxy. A repository's ignored `.env` files are copied into its sandbox. Three things never happen without you:
+Sandboxes never hold your SSH or signing key, and their GitHub token reaches them only through the sandbox proxy. The host session takes each repository's token from the keychain one `gh` call at a time, so it never sits in the session's environment; the host agent can still use it within its scopes. A repository's ignored `.env` files are copied into its sandbox. Three things never happen without you:
 
 - a force, delete or mirror push, from any seat;
 - a pull request opened or merged where the repository's profile doesn't give the host `auto`, since the guard refuses it;

@@ -71,7 +71,7 @@ Check: `git config --file ~/.config/harness/git/.gitconfig user.email` prints th
 
 ## 4. Sync
 
-`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet` and herdr's config, and builds both container images. The render owns whole directories and replaces them on every run: `~/.claude/rules`, `refs`, `skills` and `agents`, and `~/.pi/skills`, `agent/refs`, `agent/agents` and `agent/themes`. Anything of the person's own there is deleted, and the dry run lists each such file as `remove`. Before the first `--apply`, show the person that list and copy what they want to keep. Read the plan first:
+`sync.sh` renders both harness homes (`~/.pi`, `~/.claude`), writes Claude's host settings into `~/.claude/settings.json`, links the guard hook, the status line, `fleet`, the `gh` wrapper and herdr's config, and builds both container images. The render owns whole directories and replaces them on every run: `~/.claude/rules`, `refs`, `skills` and `agents`, and `~/.pi/skills`, `agent/refs`, `agent/agents` and `agent/themes`. Anything of the person's own there is deleted, and the dry run lists each such file as `remove`. Before the first `--apply`, show the person that list and copy what they want to keep. Read the plan first:
 
 ```bash
 ./sync.sh            # prints what it would change, changes nothing
@@ -85,6 +85,8 @@ Neither host agent runs in an OS sandbox: on this Mac the guard hook is the only
 
 The last section of `sync.sh`, `== set up by hand`, names what it found missing and cannot install itself.
 
+A profile that names a Linear server needs it registered once, which no check from this Mac can confirm. For a container seat: `sbx mcp add <name> --url https://mcp.linear.app/mcp/readonly`, or `https://mcp.linear.app/mcp` where the container writes. For the host seat, every host session start runs `fleet profile --apply --brief` in its checkout, which registers the server for both agents and prints only what it changed.
+
 Check: a second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, and `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.
 
 ## 5. GitHub tokens
@@ -93,14 +95,14 @@ A container gets its GitHub token from the profile of the repository it works on
 
 Two forms:
 
-- `env:<NAME>`: the value of that variable in the host session. The `*` profile uses `env:GH_TOKEN`, so start the host session with it set. `up` refuses before creating anything when the variable is missing
+- `env:<NAME>`: the value of that variable in the host session. The `*` profile uses `env:GH_TOKEN`, so start the host session with it set. `up` refuses before creating anything when the variable is missing. The token then sits in the session's environment, where any command the agent runs can print it, so prefer `op://`
 - `op://<vault>/<item>/<field>`: a 1Password reference; `up` has sbx read it. `sync.sh` then asks for the `op` CLI
 
 Every container a profile covers gets the same token, so scope it. Person: create a fine-grained token limited to the repositories the agents work on, with contents read, and pull requests write where the profile gives the container `pr: auto`. Where `container.push` is `auto`, `up` refuses a token that sees any private repository but that one.
 
 The host session gets the same token without holding it. `sync.sh` puts a `gh` in `~/.local/bin`, ahead of the real one on `PATH`: it finds the repository from `--repo` or the checkout's origin, reads the token its profile references from the macOS keychain, and runs the real `gh` with it in that one process only. Git over HTTPS asks `gh auth git-credential`, so a push takes the same route. Person: run `fleet tokens` in your own terminal after adding or rotating an `op://` token; it reads each reference with one 1Password unlock and copies it into the keychain under `fleet-gh`. A profile with an `env:` token, or a reference not yet copied, leaves `gh` to its own login. A shell function named `gh`, such as the 1Password shell plugin's, shadows this one, so leave it out of agent sessions. The guard refuses the commands that print a token (`gh auth token`, `gh auth status --show-token`, `git credential fill`) and `fleet tokens` itself. This keeps the value out of the session's environment and transcript; an agent can still use the token within its scopes, so scope each one to what that repository's seats need.
 
-Where a profile gives the host `push: auto`, the host session pushes with the same `GH_TOKEN` over HTTPS: `fleet profile <checkout> --apply` sets that checkout up for it. With `push: human` the person pushes with their own key, and with `sign: human` `fleet land` signs each commit through it, which needs `user.signingkey` in the person's git config. With no signing set up, give the profile `sign: none`.
+Where a profile gives the host `push: auto`, the host session pushes over HTTPS through that `gh`: `fleet profile <checkout> --apply` sets the checkout up for it, and every host session start runs it with `--brief` on its own checkout. With `push: human` the person pushes with their own key, and with `sign: human` `fleet land` signs each commit through it, which needs `user.signingkey` in the person's git config. With no signing set up, give the profile `sign: none`.
 
 Check: `fleet profile <a checkout>` prints what each seat may do there, and the token line names the form you chose.
 
