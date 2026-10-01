@@ -10,7 +10,6 @@ deny	Edit	~/.pi/agent/settings.json
 deny	Bash	echo x > ~/.pi/agent/AGENTS.md
 allow	Write	~/.claude/projects/-Users-alice-app/notes.md
 allow	Write	~/.claude/todos/list.json
-allow	Bash	echo x > ~/.claude/sandbox-transcripts/a.log
 allow	Bash	echo x > ~/.fleet/cache/claude/app/note
 allow	Bash	echo x > ~/.fleet/cache/pi/note
 allow	Read	~/.claude/settings.json

@@ -4,7 +4,7 @@ import { argvsOf } from "./argv.ts";
 import { within } from "./host.ts";
 
 const HOMES = Object.values(KINDS);
-const RUNTIME: Record<AgentName, string[]> = { pi: [], claude: ["projects", "todos", "sandbox-transcripts"] };
+const RUNTIME: Record<AgentName, string[]> = { pi: [], claude: ["projects", "todos"] };
 const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|echo|printf|test|\[|cd|pushd)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
