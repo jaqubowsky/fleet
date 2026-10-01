@@ -11,6 +11,7 @@
 7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user
 9. Explain how things work in everyday language before adding technical detail
+10. A file path a person reads, in a reply or a report, is absolute with every variable expanded, so a click opens it
 
 ## Coding
 
