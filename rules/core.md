@@ -46,8 +46,7 @@
 1. Conventional commit, single line: `type(scope): subject`. No body, no footer
 2. Subject imperative, lowercase, no trailing period
 3. Commit once the work is done, split into logical commits, one change each. Never rebuild history by undoing finished work
-4. Conflict: always resolve, never `--abort`. Procedure: skill `resolving-merge-conflicts`
-5. Force/delete/mirror push and signing-off stay user's own command
+4. Force/delete/mirror push and signing-off stay user's own command
 
 ## Decisions
 

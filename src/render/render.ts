@@ -12,7 +12,10 @@ const SKILL_SCOPES: Record<Seat, string[]> = {
 	host: ["shared", "host"],
 	container: ["shared", "container"],
 };
-const AGENTS = ["explorer", "researcher", "reviewer"];
+const AGENTS: Record<Seat, string[]> = {
+	host: ["explorer", "researcher"],
+	container: ["explorer", "researcher", "reviewer"],
+};
 
 function qualified(
 	seat: string,
@@ -239,8 +242,9 @@ class Renderer {
 		}
 	}
 
+
 	agents(to: string): void {
-		for (const name of AGENTS)
+		for (const name of AGENTS[this.input.seat])
 			this.put(`${to}/${name}.md`, this.text(`agents/${name}.md`));
 	}
 
