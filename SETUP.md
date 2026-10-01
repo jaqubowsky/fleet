@@ -135,15 +135,7 @@ Leave `CLAUDE_CODE_SUBAGENT_MODEL` unset: each rendered agent names its own mode
 
 Check: `test -f ~/.config/sbx/credentials.yaml && echo ok` prints `ok`.
 
-## 7. Context7 and the network policy
-
-Context7 gives agents library docs. A container never sees its key: a custom sbx secret puts a placeholder in `CONTEXT7_API_KEY`, and the proxy swaps it on the way to `mcp.context7.com`.
-
-```bash
-sbx secret set-custom --host mcp.context7.com --env CONTEXT7_API_KEY --value '<key>'   # person
-```
-
-pi containers read the placeholder from the environment. The Claude image carries it in `claude/profiles/sbx.json` under `managedMcpServers.context7`: put the placeholder the command printed there and run `fleet build --claude`. The value there in a fresh clone is the author's and works on no other Mac. Rotating the key changes the placeholder, so repeat both. Without Context7, delete that entry.
+## 7. The network policy
 
 sbx keeps one network allowlist for every sandbox on this Mac, in its own state, not in this repository. `sbx policy inspect local-policy` prints it. Allow a host once with `sbx policy allow network <host>`; pi's `web_search` needs `mcp.exa.ai`. Which hosts every sandbox may reach is the person's call: name each one before adding it.
 

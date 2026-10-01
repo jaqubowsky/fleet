@@ -27,7 +27,6 @@ permissions:
       - chatgpt.com
       - auth.openai.com
       - registry.npmjs.org
-      - mcp.context7.com
       - api.openai.com
       - openai.com
       - openrouter.ai
@@ -56,6 +55,6 @@ setup:
     - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
       user: "1000"
       description: Point npm at the sandbox proxy so pi's startup package fetches work
-    - command: 'mkdir -p ~/.pi/agent && printf ''{"mcpServers":{"gateway":{"url":"%s"},"context7":{"url":"https://mcp.context7.com/mcp","headers":{"CONTEXT7_API_KEY":"%s"}}}}\n'' "${MCP_GATEWAY_URL:-}" "${CONTEXT7_API_KEY:-}" > ~/.pi/agent/mcp.json'
+    - command: 'mkdir -p ~/.pi/agent && printf ''{"mcpServers":{"gateway":{"url":"%s"}}}\n'' "${MCP_GATEWAY_URL:-}" >~/.pi/agent/mcp.json'
       user: "1000"
-      description: Hand the sandbox MCP gateway and the Context7 placeholder to pi-mcp-adapter
+      description: Hand the sandbox MCP gateway to pi-mcp-adapter

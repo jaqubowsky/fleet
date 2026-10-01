@@ -87,15 +87,6 @@
   "disableClaudeAiConnectors": true,
   "syncClaudeAiSkills": false,
   "syncClaudeAiPlugins": false,
-  "managedMcpServers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "sbx-cs-4siyjVHL2MFRhraD"
-      }
-    }
-  },
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true
   },
