@@ -70,6 +70,8 @@ cd ~/harness && claude
 
 Then tell your agent: **"read SETUP.md and set me up"**. It checks what you have, asks what it can't know, and ends by starting and stopping one test sandbox.
 
+After setup you work from [herdr](https://github.com/herdrdev/herdr): open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own herdr tab started.
+
 <details>
 <summary>Rather do it by hand?</summary>
 
