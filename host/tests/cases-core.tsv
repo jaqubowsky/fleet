@@ -38,6 +38,8 @@ deny	Bash	rm -rf /
 deny	Bash	rm -rf /etc/nginx
 deny	Bash	rm -rf ~/my-knowledge-base
 deny	Bash	rm -rf /Users/alice/.pi/hooks
+deny	Bash	rm -rf /Users/alice/.fleet/tasks
+deny	Bash	rm -rf /Users/alice/fleet
 allow	Bash	sbx exec pi-cv sh -c 'rm -rf /home/agent/.pi/agent/npm/plugstage'
 pass	Bash	rm -rf /tmp/pi-501/scratch
 deny	Bash	ssh remote.example rm -rf /home/bob/dev/personal/x/node_modules

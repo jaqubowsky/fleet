@@ -100,7 +100,7 @@ const GIT = String.raw`git(\s+-\S+(\s+[^-]\S*)?)*`;
 const GIT_AT = String.raw`${START}(\S*/)?${GIT}`;
 const PUSH_AT = String.raw`${GIT_AT}\s+push\b`;
 const IN_COMMAND = String.raw`(>&|&>|[^|;&\n])*`;
-const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|harness|\.pi|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
+const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledge-base|fleet|\.fleet|\.pi|\.claude|\.ssh|\.config)|/(etc|usr|bin|sbin|var|System|Library|Applications|opt))(/|\s|$)`;
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
 const GH_WRITE =
