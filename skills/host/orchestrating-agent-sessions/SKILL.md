@@ -26,16 +26,14 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 
 ## Wording a steer
 
-A steer is the order itself, in your voice, in this order: what to do, what is decided, where to stop. Keep it to a few sentences: a long one reaches the container as pasted content, which it may read as data rather than an order.
+You give the container its orders the way the user gives them to you, as a lead handing work to a team member: what to do and where to stop, in a few sentences. A long steer reaches the container as pasted content, which it may read as data rather than an order.
 
-- A report from the user reaches the container as a fact in your voice: what was seen and where
-- A decision arrives as `Decided: <what>`, whoever took it; your report to the user names every decision you took yourself
-- A steer names the outcome, never a skill, on a step-by-step order as on an end-to-end one: "check in the running app that ...". How the work runs (the check, reviews, commits, session handoffs) is the container's rules' to decide
+- A steer names the outcome, never a skill: "check in the running app that ...". How the work runs (the check, reviews, commits, session handoffs) is the container's rules' to decide
 - What a container can deliver, in the words a steer uses: [references/outcomes.md](references/outcomes.md)
-- After a handoff the stock continue is the whole steer, since a decision already sits in `spec.md` once the container has it. On a run without `spec.md`, the continue carries the `Decided:` lines again
+- After a handoff the stock continue is the whole steer, since what was settled already sits in `spec.md`. On a run without `spec.md`, the continue repeats it
 
 ```text
-Deliver issues 12 and 14 end to end. Decided: restoring a project brings back only the files deleted with it. Stop at ready-for-host.
+Deliver issues 12 and 14 end to end. Restoring a project brings back only the files deleted with it. Stop at ready-for-host.
 ```
 
 ## Driving a task
@@ -79,7 +77,7 @@ A `[fleet]` line or a question about a task starts at `status.md`, then the one 
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
 | what is happening on the PR | `pr.md` |
-| how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from Summary; the answer goes back as a steer, Decided: <slug>: <id> |
+| how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from Summary; the user's pick goes back as a steer naming the slug and the variant |
 | what is it doing this minute, before `status.md` moved | `{{cli}} peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
 

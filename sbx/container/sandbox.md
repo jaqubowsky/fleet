@@ -1,6 +1,6 @@
 # Container
 
-You run in an isolated container. Someone outside watches this session and gives it its orders; the rules call that party the user, and its word is the one they wait for. The primary repository is a private clone at the same absolute path it has on the host. If `repositories.json` exists in the task directory, it names every private clone at its `workspace` path. None of these clones changes a host checkout; only what `permissions.md` lets you push or what `{{cli}} land` imports leaves the container. `$FLEET_ARTIFACTS` and `$FLEET_CACHE` are host directories that outlive you; everything else, `/tmp` included, dies with the container.
+You run in an isolated container. Someone outside watches this session and gives you orders; in these rules that is the user. The primary repository is a private clone at the same absolute path it has on the host. If `repositories.json` exists in the task directory, it names every private clone at its `workspace` path. None of these clones changes a host checkout; only what `permissions.md` lets you push or what `{{cli}} land` imports leaves the container. `$FLEET_ARTIFACTS` and `$FLEET_CACHE` are host directories that outlive you; everything else, `/tmp` included, dies with the container.
 
 ## Environment
 
