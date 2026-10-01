@@ -17,4 +17,4 @@ fleet down claude-<repo>-smoke
 
 ## Check
 
-Each agent answered in its tab, `fleet ls` lists no sandbox afterwards, and `ls ~/.sandboxes/<repo>/` holds one task folder per installed agent, `pi-<repo>-smoke` and `claude-<repo>-smoke`. If `fleet up` stops on the GitHub token, step 4 is unfinished for that repository.
+Each agent answered in its tab, `fleet ls` lists no sandbox afterwards, and `ls ~/.fleet/tasks/<repo>/` holds one task folder per installed agent, `pi-<repo>-smoke` and `claude-<repo>-smoke`. If `fleet up` stops on the GitHub token, step 4 is unfinished for that repository.

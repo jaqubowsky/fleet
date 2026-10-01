@@ -10,12 +10,14 @@ In `~/.claude/settings.json` it writes only the keys `claude/profiles/host.json`
 
 It links `host/herdr.toml` as herdr's config, `~/.config/herdr/config.toml`, in place of any config the person had; tell them, since the repository's one sets its own theme and sounds.
 
-Before `--apply` changes anything, it packs every existing file it will write, replace or delete into one archive, `~/.local/state/fleet/backups/<UTC timestamp>.tar.gz`, and prints its path. It keeps the newest 10. The dry run ends by naming the archive it would write. To get files back, list the archive and extract what is wanted, into a scratch directory first:
+Everything fleet keeps on the Mac lives under `~/.fleet`: `config/` from step 2, `tasks/` with one folder per sandbox, `cache/<agent>/`, `backups/` and `state/`.
+
+Before `--apply` changes anything, it packs every existing file it will write, replace or delete into one archive, `~/.fleet/backups/<UTC timestamp>.tar.gz`, and prints its path. It keeps the newest 10. The dry run ends by naming the archive it would write. To get files back, list the archive and extract what is wanted, into a scratch directory first:
 
 ```bash
-tar -tzf ~/.local/state/fleet/backups/<timestamp>.tar.gz
-mkdir -p /tmp/restore && tar -xzf ~/.local/state/fleet/backups/<timestamp>.tar.gz -C /tmp/restore
-tar -xzf ~/.local/state/fleet/backups/<timestamp>.tar.gz -C ~      # everything back in place
+tar -tzf ~/.fleet/backups/<timestamp>.tar.gz
+mkdir -p /tmp/restore && tar -xzf ~/.fleet/backups/<timestamp>.tar.gz -C /tmp/restore
+tar -xzf ~/.fleet/backups/<timestamp>.tar.gz -C ~      # everything back in place
 ```
 
 `fleet` and the `gh` wrapper land in `~/.local/bin`, which must come first on the person's `PATH`, ahead of Homebrew. If their `~/.zshrc` lacks it, propose `export PATH="$HOME/.local/bin:$PATH"` there.

@@ -5,7 +5,7 @@ description: 'Fleet containers: put one up, steer it, read its task directory, l
 
 # Fleet containers
 
-One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; one task directory holds the repository set's state and the skills' work. A single repo uses `~/.sandboxes/<repo>/<sandbox>/`; new multi-repository tasks use `~/.sandboxes/groups/<repo-names>-<hash>/<sandbox>/` and the group's own runbook. Existing tasks keep their paths. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
+One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; one task directory holds the repository set's state and the skills' work. A single repo uses `~/.fleet/tasks/<repo>/<sandbox>/`; new multi-repository tasks use `~/.fleet/tasks/groups/<repo-names>-<hash>/<sandbox>/` and the group's own runbook. Existing tasks keep their paths. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
 
 | Ask | Command | Result to report |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ A rule or skill change reaches a container through `{{cli}} build` and a new con
 
 How a container's branch and pull request reach GitHub is the land line of `{{cli}} profile <repo>`.
 
-Every repository is a private clone. `repositories.json` names all additional clones built from Git bundles inside the sandbox, their git dirs under the primary's `.git/fleet-repos/`; no additional host checkout is mounted writable. Writes stay there until `{{cli}} land`; multi-repository container pushes are refused and require an approved host push. Configure each repo's own profile. The shared sandbox needs identical `container.token`, `container.linear` and `container.linearServer` bindings; the token must access every repo. Incompatible bindings refuse creation. Two host directories are mounted alongside it at the same absolute path inside as outside: `$FLEET_ARTIFACTS`, either `~/.sandboxes/<repo>` or the repository group's root, with one task directory per container and `runbook/`; and `$FLEET_CACHE` for what is expensive to rebuild. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
+Every repository is a private clone. `repositories.json` names all additional clones built from Git bundles inside the sandbox, their git dirs under the primary's `.git/fleet-repos/`; no additional host checkout is mounted writable. Writes stay there until `{{cli}} land`; multi-repository container pushes are refused and require an approved host push. Configure each repo's own profile. The shared sandbox needs identical `container.token`, `container.linear` and `container.linearServer` bindings; the token must access every repo. Incompatible bindings refuse creation. Two host directories are mounted alongside it at the same absolute path inside as outside: `$FLEET_ARTIFACTS`, either `~/.fleet/tasks/<repo>` or the repository group's root, with one task directory per container and `runbook/`; and `$FLEET_CACHE` for what is expensive to rebuild. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
 
 ## Pull request rounds
 
