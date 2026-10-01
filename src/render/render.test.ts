@@ -632,6 +632,9 @@ test("a host Linear server any profile names leaves pi's machine-wide mcp.json, 
 		"npm:pi-lens@4.1.3",
 		"npm:pi-mcp-adapter@2.32.0",
 	]);
+	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).extensions, [
+		"-builtin:mcp",
+	]);
 });
 
 test("with no host Linear server in any profile, the host render writes no mcp.json and loads no adapter", () => {

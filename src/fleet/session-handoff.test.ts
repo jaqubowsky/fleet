@@ -205,7 +205,7 @@ test("every kind's container rule suggests a handoff in the same words", () => {
 test("handoff is loaded only through the sandbox profile and image", () => {
 	const sandbox = JSON.parse(readFileSync("pi/profiles/sbx.json", "utf8"));
 	const host = JSON.parse(readFileSync("pi/profiles/host.json", "utf8"));
-	assert.deepEqual(sandbox.extensions, ["../sbx/extensions/session-handoff.ts"]);
+	assert.deepEqual(sandbox.extensions, ["../sbx/extensions/session-handoff.ts", "-builtin:mcp"]);
 	assert.ok(!(host.extensions ?? []).some((path: string) => path.includes("session-handoff")));
 	assert.equal(sandbox.sessionHandoff.suggestAtTokens, 250000);
 	assert.match(readFileSync("pi/sbx/Dockerfile", "utf8"), /COPY.*extensions\/\s+\/home\/agent\/\.pi\/sbx\/extensions\//);

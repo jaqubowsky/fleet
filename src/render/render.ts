@@ -312,8 +312,8 @@ function hostSettings(r: Renderer, servers: Record<string, string>): string {
 	const { packages = [] } = parseJson<{ packages?: string[] }>(
 		r.settings("sbx.json"),
 	);
-	const own = parseJson<{ packages?: string[] }>(settings);
-	return `${JSON.stringify({ ...own, packages: [...(own.packages ?? []), ...packages.filter((p) => p.startsWith("npm:pi-mcp-adapter@"))] }, null, 2)}\n`;
+	const own = parseJson<{ packages?: string[]; extensions?: string[] }>(settings);
+	return `${JSON.stringify({ ...own, extensions: [...(own.extensions ?? []), "-builtin:mcp"], packages: [...(own.packages ?? []), ...packages.filter((p) => p.startsWith("npm:pi-mcp-adapter@"))] }, null, 2)}\n`;
 }
 
 function hostMcp(r: Renderer, servers: Record<string, string>): void {
