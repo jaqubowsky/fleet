@@ -90,7 +90,6 @@
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true
   },
-  "language": "Polish",
   "model": "{{models.sbx}}",
   "effortLevel": "{{thinking.sbx}}",
   "autoCompactEnabled": false,
