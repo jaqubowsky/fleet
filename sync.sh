@@ -87,16 +87,14 @@ by_hand() {
 	command -v herdr >/dev/null || echo "  missing herdr on PATH: SETUP.md, step 1"
 	command -v node >/dev/null || { echo "  missing node on PATH: SETUP.md, requirements"; return; }
 	node --input-type=module -e '
-		const [root, home, op] = process.argv.slice(1);
+		const [root, home] = process.argv.slice(1);
 		const { readFileSync } = await import("node:fs");
 		const { loadProfiles } = await import(`${root}/src/profile/profile.ts`);
+		const { keychain, tokenNames } = await import(`${root}/src/fleet/tokens.ts`);
 		const read = (path) => { try { return readFileSync(path, "utf8"); } catch { return undefined; } };
-		const lines = new Set();
-		const profiles = Object.values(loadProfiles(read, root, home));
-		if (!op && profiles.some(({ container }) => container.token.startsWith("op://")))
-			lines.add("  missing op on PATH, the 1Password CLI, which a profile names for its container token: SETUP.md, step 5");
-		for (const line of lines) console.log(line);
-	' "$ROOT" "$HOME" "$(command -v op || true)"
+		for (const name of tokenNames(loadProfiles(read, root, home)))
+			if (!keychain.has(name)) console.log(`  missing keychain token ${name}: fleet tokens set ${name}`);
+	' "$ROOT" "$HOME"
 }
 
 template_loaded() {

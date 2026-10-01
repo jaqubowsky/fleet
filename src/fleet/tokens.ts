@@ -41,7 +41,7 @@ export function askHidden(prompt: string): string {
 	return read.stdout;
 }
 
-function tokenNames(profiles: Profiles): string[] {
+export function tokenNames(profiles: Profiles): string[] {
 	const names = Object.values(profiles).map((profile) => keychainName(profile.container.token));
 	return [...new Set(names.filter((name) => name !== undefined))].sort();
 }
