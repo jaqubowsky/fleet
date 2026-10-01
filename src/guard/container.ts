@@ -18,7 +18,7 @@ const PUSH_VALUED = new Set([
 ]);
 const EVERY_BRANCH = /^--(all|branches|mirror)$/;
 const MOVES_TARGET = /^(switch|checkout|symbolic-ref|config|branch|remote)$/;
-const COMPUTED = /\$|\x60|(^|[\s|;&])xargs\s/;
+const SUBSTITUTED = /\$\(|\x60|(^|[\s|;&])xargs\s/;
 const EVERYTHING = "*";
 
 function git(cwd: string, ...args: string[]): string | undefined {
@@ -83,16 +83,17 @@ export function pushRefusal(
 	cwd: string,
 	mode?: "host-only",
 ): string | undefined {
-	const calls = argvsOf(command)
-		.map(gitCall)
-		.filter((call) => call !== undefined);
+	const argvs = argvsOf(command);
+	const calls = argvs.map(gitCall).filter((call) => call !== undefined);
 	const pushes = calls.filter((call) => call.subcommand === "push");
+	const pushArgvs = argvs.filter((argv) => gitCall(argv)?.subcommand === "push");
 	if (!pushes.length) return undefined;
 	if (mode === "host-only")
 		return "Two-repository container pushes stay on the host; request a separate fleet land --push approval.";
 	if (
-		COMPUTED.test(command) ||
+		SUBSTITUTED.test(command) ||
 		pushes.some((push) => push.configured) ||
+		pushArgvs.some((argv) => argv.some((word) => word.includes("$"))) ||
 		calls.some((call) => MOVES_TARGET.test(call.subcommand))
 	)
 		return "The guard cannot tell where this push goes: the same command computes its target, sets git config or moves HEAD. Run the push on its own line, with the branch spelled out: `git push -u origin <your branch>`.";

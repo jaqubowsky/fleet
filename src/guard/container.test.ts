@@ -82,6 +82,7 @@ test("a push the guard cannot place, because the same command moves HEAD, change
 		"git push origin $(echo main)",
 		"git push origin \x60echo main\x60",
 		'B=main; git push origin "$B"',
+		'git -C "$DIR" push origin web-1',
 		"echo main | xargs git push origin",
 	])
 		assert.match(
@@ -93,6 +94,14 @@ test("a push the guard cannot place, because the same command moves HEAD, change
 		pushRefusal("git push origin HEAD:heads/main", dir) ?? "",
 		/default branch main/,
 	);
+});
+
+test("a push with a spelled-out target passes beside a command that reads an exit status", () => {
+	const dir = clone("web-1");
+
+	const refusal = pushRefusal('grep -n x f; echo "grep exit $?"; git push -u origin HEAD', dir);
+
+	assert.equal(refusal, undefined);
 });
 
 test("a push that names no branch goes where git config sends it, so a branch tracking the default branch cannot reach it", () => {
