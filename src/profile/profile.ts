@@ -165,6 +165,8 @@ export function repoName(origin: string): string {
 	);
 }
 
+export const KEYCHAIN_NAME = /^[a-z0-9][a-z0-9-]*$/;
+
 export function keychainName(token: string): string | undefined {
 	return token.startsWith("keychain:") ? token.slice("keychain:".length) : undefined;
 }

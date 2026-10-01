@@ -1,36 +1,49 @@
 import { spawnSync } from "node:child_process";
-import { type Profile, profileFor, repoName } from "../profile/profile.ts";
+import { CLI } from "../harness.ts";
+import { KEYCHAIN_NAME, type Profile, keychainName, profileFor, repoName } from "../profile/profile.ts";
 
 type Profiles = Record<string, Profile>;
-type Keychain = { read(ref: string): string | undefined; write(ref: string, value: string): void };
+type Keychain = {
+	has(name: string): boolean;
+	read(name: string): string | undefined;
+	write(name: string, value: string): void;
+};
 
 const SERVICE = "fleet-gh";
 
 export const keychainRead = (name: string) => `security find-generic-password -s ${SERVICE} -a ${name} -w`;
 
 export const keychain: Keychain = {
-	read(ref) {
-		const found = spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", ref, "-w"], { encoding: "utf8" });
+	has(name) {
+		return spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", name], { stdio: "ignore" }).status === 0;
+	},
+	read(name) {
+		const found = spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", name, "-w"], { encoding: "utf8" });
 		return found.status === 0 ? found.stdout.trim() : undefined;
 	},
-	write(ref, value) {
+	write(name, value) {
 		const added = spawnSync("security", ["-i"], {
-			input: `add-generic-password -U -s ${SERVICE} -a "${ref}" -w "${value}"\n`,
+			input: `add-generic-password -U -s ${SERVICE} -a "${name}" -w "${value}"\n`,
 			encoding: "utf8",
 		});
-		if (added.status !== 0) throw new Error(`the keychain refused ${ref}: ${added.stderr.trim()}`);
+		if (added.status !== 0) throw new Error(`the keychain refused ${name}: ${added.error?.message ?? added.stderr.trim()}`);
 	},
 };
 
-export function opRead(ref: string): string {
-	const read = spawnSync("op", ["read", "--no-newline", ref], { encoding: "utf8", stdio: ["inherit", "pipe", "inherit"] });
-	if (read.status !== 0) throw new Error(`op read ${ref} failed`);
+export function askHidden(prompt: string): string {
+	process.stderr.write(prompt);
+	const read = spawnSync("sh", ["-c", `trap 'stty echo 2>/dev/null' EXIT; trap 'exit 130' INT TERM; stty -echo 2>/dev/null; IFS= read -r value; printf %s "$value"`], {
+		stdio: ["inherit", "pipe", "inherit"],
+		encoding: "utf8",
+	});
+	process.stderr.write("\n");
+	if (read.status !== 0) throw new Error("no token read from the terminal");
 	return read.stdout;
 }
 
-export function tokenRefs(profiles: Profiles): string[] {
-	const refs = Object.values(profiles).map((profile) => profile.container.token);
-	return [...new Set(refs.filter((ref) => ref.startsWith("op://")))].sort();
+function tokenNames(profiles: Profiles): string[] {
+	const names = Object.values(profiles).map((profile) => keychainName(profile.container.token));
+	return [...new Set(names.filter((name) => name !== undefined))].sort();
 }
 
 function repoFlag(args: string[]): string | undefined {
@@ -42,13 +55,21 @@ function repoFlag(args: string[]): string | undefined {
 }
 
 export function tokenFor(args: string[], origin: () => string, profiles: Profiles, keychain: Keychain): string | undefined {
-	const ref = profileFor(profiles, repoFlag(args) ?? repoName(origin())).container.token;
-	return ref.startsWith("op://") ? keychain.read(ref) : undefined;
+	const name = keychainName(profileFor(profiles, repoFlag(args) ?? repoName(origin())).container.token);
+	return name ? keychain.read(name) : undefined;
 }
 
-export function syncTokens(profiles: Profiles, opRead: (ref: string) => string, keychain: Keychain): string[] {
-	return tokenRefs(profiles).map((ref) => {
-		keychain.write(ref, opRead(ref));
-		return `copied ${ref}`;
-	});
+export function listTokens(profiles: Profiles, keychain: Keychain): string[] {
+	const names = tokenNames(profiles);
+	if (!names.length) return ["no profile names a keychain:<name> token"];
+	return names.map((name) => `keychain:${name}  ${keychain.has(name) ? "stored" : `missing: ${CLI} tokens set ${name}`}`);
+}
+
+export function setToken(name: string, ask: () => string, keychain: Keychain): string {
+	if (!KEYCHAIN_NAME.test(name)) throw new Error(`${name} is no keychain token name: a name matches ${KEYCHAIN_NAME.source}`);
+	const token = ask().trim();
+	if (!token) throw new Error(`the token for ${name} is empty`);
+	if (/["\n\r]/.test(token)) throw new Error(`the token for ${name} holds a quote or a line break, which the keychain's command line would misread`);
+	keychain.write(name, token);
+	return `stored keychain:${name}`;
 }
