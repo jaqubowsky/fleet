@@ -1,6 +1,6 @@
 # Design
 
-Applies to every screen, component and layout drawn or built, in a mockup or in production code. A generic screen is the failure this guards against: one whose layout, color and copy would fit any product with the logo swapped.
+Applies to every screen, component and layout drawn or built, in a mockup or in production code. A generic screen is the failure this guards against: one whose layout, color and copy would fit any product with the logo swapped. What the project's design system already does outranks every pattern named below: in that project it is the look, not a default.
 
 ## Direction
 
@@ -33,7 +33,7 @@ Applies to every screen, component and layout drawn or built, in a mockup or in 
 
 ## States
 
-1. Every view that shows data has an empty, a loading and an error state. Empty says why and gives the one action that fills it ("No jobs yet. Run a sync to see results here"); loading says what it loads; error says what failed and what to do next
+1. In production code every view that shows data has an empty, a loading and an error state; a mockup draws the states its order names. Empty says why and gives the one action that fills it ("No jobs yet. Run a sync to see results here"); loading says what it loads; error says what failed and what to do next
 2. First run, filtered to nothing and permission denied are three different empty states
 3. A status is never color alone: text or an icon carries it too
 
