@@ -22,6 +22,7 @@
 5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A lint gate demanding one loses: report what the gate printed, leave it red. Comments in untouched code stay
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
+8. A screen, component or layout drawn or built -> {{refs.design}} first
 
 ## Architecture
 

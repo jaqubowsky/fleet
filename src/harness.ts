@@ -36,6 +36,7 @@ export type Kind = {
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
+const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
 const pollCi = (agent: string) =>
 	`${agent} has no background shell, so pass \`1\` as its third argument: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
 const watchSource = (cli: string, env: string) =>
@@ -65,6 +66,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			refs: REFS_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
+			"refs.design": DESIGN_BESIDE_AGENTS,
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source": watchSource("fleet", "PI_SESSION_ID"),
@@ -97,6 +99,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			refs: "`~/.claude/refs/artifacts.md`",
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
+			"refs.design": "`~/.claude/refs/design.md`",
 			"steer.result":
 				"steered; the container takes it after its current step, and `fleet watch` reports how it settles",
 			"watch.source":

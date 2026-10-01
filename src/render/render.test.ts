@@ -521,6 +521,27 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`${name} gives both seats the design ref, and the rules and mockup point at it without a copy`, () => {
+		renderSeats(name, (out) => {
+			const pointer = KINDS[name].tokens["refs.design"]!;
+			const rules = name === "pi" ? "AGENTS.md" : "rules/core.md";
+
+			for (const seat of ["host", "container"]) {
+				assert.equal(
+					rendered(out, seat, "refs/design.md"),
+					readFileSync(join(root, "rules/refs/design.md"), "utf8"),
+				);
+				assert.ok(rendered(out, seat, rules).includes(pointer), "rules point at the design ref");
+			}
+			assert.ok(
+				rendered(out, "container", "mockup/SKILL.md").includes(pointer),
+				"mockup points at the design ref",
+			);
+		});
+	});
+}
+
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} tells the host which ticket of a wave goes up first, and both seats that one ordered ticket ends at ready-for-host`, () => {
 		renderSeats(name, (out) => {
 			const breakTables = (seat: string) =>
