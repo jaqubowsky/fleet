@@ -26,7 +26,7 @@ COPY --chmod=0755 container/ci-wait.sh            /usr/local/bin/ci-wait
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \
  && mkdir -p /home/agent/.pi/agent/npm \
- && npm install --prefix /home/agent/.pi/agent/npm --legacy-peer-deps $pkgs \
+ && npm install --prefix /home/agent/.pi/agent/npm --legacy-peer-deps --min-release-age=1 $pkgs \
  && ls /home/agent/.pi/agent/npm/node_modules | grep -cE "^pi-|^@"
 
 COPY --from=pi-home --chown=agent:agent git/ /home/agent/
