@@ -104,7 +104,7 @@ You win twice: fewer tokens, and a sharper hook for the agent to hang its thinki
 
 ## Refining against runs
 
-Every lever here is a claim about behaviour, so the document is settled by running it, not by reading it. Run it on a real task and read the _trace_, not just the output: wasted moves name their own cause. Thrashing between approaches is a vague completion criterion; a step followed where it does not apply is reference that belongs behind a branch pointer; visible deliberation is a menu missing its default.
+Every lever here is a claim about behaviour, so the document is settled by running it, not by reading it. When you test a wording, the steps, from naming the failure to the confirming run, are in [`TESTING.md`](TESTING.md). Run it on a real task and read the _trace_, not just the output: wasted moves name their own cause. Thrashing between approaches is a vague completion criterion; a step followed where it does not apply is reference that belongs behind a branch pointer; visible deliberation is a menu missing its default.
 
 Two comparisons pay for themselves. Against no document at all: if the unaided run is just as good, the document buys nothing and its load is pure cost. Against the previous version: that is where a wording change proves it generalised rather than fitted the one prompt you were staring at.
 
