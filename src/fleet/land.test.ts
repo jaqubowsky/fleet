@@ -164,6 +164,7 @@ exec ssh-keygen "$@"
 	if (manifest)
 		io.files[`${root}/.fleet/config/fleet/pi-a.json`] = JSON.stringify({
 			version: 1,
+			task: `${root}/.fleet/tasks/${names[0]}/pi-a`,
 			repositories: repos,
 		});
 	io.git = (args, cwd, opts) => {
@@ -494,6 +495,7 @@ test("every exit prints one line per repository with its container head, host br
 
 const multi = {
 	version: 1,
+	task: "/home/me/.fleet/tasks/r/pi-a",
 	repositories: [
 		{ repo: "/r", name: "acme/fe", base: "main", baseSha: "1".repeat(40), branch: "task", workspace: "/r", served: "" },
 		{ repo: "/api", name: "acme/api", base: "main", baseSha: "2".repeat(40), branch: "task", workspace: "/tmp/fleet-repos/api", served: "/.git/fleet-repos/api.git" },

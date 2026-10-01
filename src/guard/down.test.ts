@@ -85,6 +85,7 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 		join(root, ".fleet/config/fleet/pi-auto.json"),
 		JSON.stringify({
 			version: 1,
+			task: join(root, ".fleet/tasks/auto/pi-auto"),
 			repositories: [sandboxes[1], sandboxes[0], sandboxes[2]].map((entry) => ({
 				repo: entry.workspaces[0],
 				name: `alice/${entry.name.slice(3)}`,

@@ -18,7 +18,7 @@ type Repository = {
 
 export type RepositoryManifest = {
 	version: 1;
-	task?: string;
+	task: string;
 	repositories: Repository[];
 };
 
@@ -61,11 +61,7 @@ export function taskDir(
 		throw new Error(
 			`${sandbox} is recorded for different repositories in ${manifestPath(sandbox, io)}; take another label, or remove that file once its task is done`,
 		);
-	if (manifest)
-		return (
-			manifest.task ??
-			`${artifactsDir(manifest.repositories[0].repo, io)}/${sandbox}`
-		);
+	if (manifest) return manifest.task;
 	const root = repos?.length
 		? groupArtifactsDir([repo, ...repos], io)
 		: artifactsDir(repo, io);
@@ -108,7 +104,9 @@ export function repositoryManifest(
 				isAbsolute((entry as Repository).repo) &&
 				isAbsolute((entry as Repository).workspace),
 		) ||
-		("task" in data && (typeof data.task !== "string" || !isAbsolute(data.task)))
+		!("task" in data) ||
+		typeof data.task !== "string" ||
+		!isAbsolute(data.task)
 	)
 		throw new Error(
 			`${manifestPath(sandbox, io)} is not a fleet repository manifest`,

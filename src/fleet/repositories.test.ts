@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { artifacts, down, history, ls, peek } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
-import { repositoryManifest, taskDir } from "./repositories.ts";
+import { taskDir } from "./repositories.ts";
 
 const task = "/home/me/.fleet/tasks/groups/a-b-c/pi-a";
 const manifest = {
@@ -138,7 +138,7 @@ test("a one-repository up cannot take over a label a group task recorded", () =>
 	assert.throws(() => taskDir("/a", "pi-a", io, []), /pi-a.*different repositories/);
 });
 
-test("legacy multi-repository tasks stay under the primary repository", () => {
+test("a manifest without its task directory is refused rather than guessed", () => {
 	const io = fakeIo({
 		[`read ${path}`]: JSON.stringify({
 			version: 1,
@@ -146,10 +146,5 @@ test("legacy multi-repository tasks stay under the primary repository", () => {
 		}),
 	});
 
-	assert.equal(taskDir("/c", "pi-a", io), "/home/me/.fleet/tasks/a/pi-a");
-	assert.equal(
-		taskDir("/c", "pi-single", io),
-		"/home/me/.fleet/tasks/c/pi-single",
-	);
-	assert.equal(repositoryManifest("pi-a", io)?.repositories.length, 2);
+	assert.throws(() => taskDir("/c", "pi-a", io), /pi-a\.json is not a fleet repository manifest/);
 });

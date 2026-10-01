@@ -217,6 +217,7 @@ const remoteRefs =
 
 const twoRepositories = {
 	version: 1,
+	task: "/home/me/.fleet/tasks/r/pi-a",
 	repositories: [
 		{
 			repo: "/r",
@@ -575,6 +576,7 @@ test("ls and peek report both private repositories with their own heads", () => 
 	const apiWorkspace = "/tmp/fleet-repos/api";
 	const manifest = {
 		version: 1,
+		task: "/home/me/.fleet/tasks/r/pi-a",
 		repositories: [
 			{
 				repo: "/r",
@@ -622,6 +624,7 @@ test("ls names the API when its checkout cannot be probed", () => {
 		...running,
 		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,
+			task: "/home/me/.fleet/tasks/r/pi-a",
 			repositories: [
 				{
 					repo: "/r",
@@ -1226,6 +1229,7 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 		"herdr agent list": { result: { agents: [] } },
 		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,
+			task: "/home/me/.fleet/tasks/r/pi-a",
 			repositories: [
 				{
 					repo: "/r",
