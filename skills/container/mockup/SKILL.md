@@ -22,7 +22,7 @@ A mockup is a change drawn as standalone HTML pages before any production code m
 
 - The user opens the board straight from disk. Each page carries its own `<!doctype html>`, `<meta charset="utf-8">` and viewport meta, or non-ASCII letters arrive garbled; fonts load from Google Fonts with the app's fallback stack, everything else is inline
 - A clip that is the design, such as a long name ending in an ellipsis, carries `data-clip` on the clipping element and Look passes it
-- Look shoots 600 ms after load: a page reaches its complete look by then. The board runs every page at once, so motion plays once and settles, never loops
+- Look shoots 600 ms after load: a page reaches its complete look by then. The board runs every page at once, so motion plays once and settles; an indicator the app animates while it lasts, such as a loading spinner, loops
 
 ## Shape
 
