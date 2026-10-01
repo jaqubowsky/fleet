@@ -35,7 +35,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## The run
 
-A ticket, a bug report or a feature runs in this order, every output in the task directory:
+A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
 1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled
 2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first

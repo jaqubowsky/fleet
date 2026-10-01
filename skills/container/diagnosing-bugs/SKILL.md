@@ -17,8 +17,6 @@ The failure this skill prevents is reading code, forming a theory, and patching 
 
 The failed patches stay in place until the loop is red: a revert is a change like any other, and it goes out with the real fix, proven by the same loop. A patch that is harmful on its own (a retry on a call not shown to be idempotent) is reverted as its own fix, with its own check.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
-
 ## Redact
 
 This skill has you show commands, outputs and captured artifacts. **Redact every secret first**: write `<REDACTED>` in its place. Build loops against env vars, so the credential stays in the environment rather than in what you show. Captured artifacts carry auth headers: quote only the lines that carry the signal.

@@ -25,7 +25,7 @@ Required, in the tracker (Linear or equivalent):
 Required, in the repository, for the area being changed:
 
 - README at the root and at the module
-- CLAUDE.md, AGENTS.md, CONTRIBUTING.md, CONTEXT.md
+- CLAUDE.md, AGENTS.md, CONTRIBUTING.md
 - `docs/`, in particular `docs/adr/`
 - comments and docstrings in the touched files, plus `git log -p` on them where the code looks deliberately odd
 

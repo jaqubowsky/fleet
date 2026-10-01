@@ -11,7 +11,7 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 ## Process
 
-1. **Read what exists.** The analysis when there is one, the reference the user passed, `docs/PRD.md` if it exists (the feature serves a capability the PRD names and keeps its constraints), `CONTEXT.md` for vocabulary, the repository's written standards (design, UI, implementation rules), the ADRs in the area. Note every source while it is in hand: tracker issue, ADR, document, pull request, prior art in the code. They go into the spec as pointers, one line each, never summarised.
+1. **Read what exists.** The analysis when there is one, the reference the user passed, `docs/PRD.md` if it exists (the feature serves a capability the PRD names and keeps its constraints), the repository's written standards (design, UI, implementation rules). Note every source while it is in hand: tracker issue, ADR, document, pull request, prior art in the code. They go into the spec as pointers, one line each, never summarised.
 
 2. **Write `spec.md`** from the template below. `Status: ready-for-agent` at the top. A product decision (who may do what, what the user sees, parity with old behaviour) enters `Decisions` only with the source or the answer that settled it. One nothing settled stops the run here, before any ticket, as a question for the user.
 

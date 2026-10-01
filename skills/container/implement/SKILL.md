@@ -11,7 +11,7 @@ Implement the ticket, spec or analysis you were handed.
 
 1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of the tickets where your seat's rules keep them, else `.issues/<feature-slug>/`: the lowest-numbered ticket whose `Status:` is `ready-for-agent` and whose "Blocked by" tickets are all `done`. No tickets: the short run the analysis named is the work.
 
-2. **Load context.** The analysis, the shared spec beside the tickets if it exists, plus `CONTEXT.md` and any ADRs touching the area.
+2. **Load context.** The analysis, and the shared spec beside the tickets if it exists.
 
 3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require:
 
