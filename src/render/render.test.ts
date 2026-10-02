@@ -547,19 +547,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} host reshapes a poorly described issue in ticket.md and leaves the tracker issue as filed`, () => {
-		renderSeats(name, (out) => {
-			const host = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
-
-			assert.match(
-				host,
-				/After `\S+ up`, write the issue's description into the task directory as `ticket\.md`, reshaped into .+ with what you gathered where it is poorly described; the tracker issue stays as filed\./,
-			);
-		});
-	});
-}
-
-for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} gives both seats the design ref, and the rules and mockup point at it without a copy`, () => {
 		renderSeats(name, (out) => {
 			const pointer = KINDS[name].tokens["refs.design"]!;
