@@ -515,6 +515,14 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				rendered(out, "container", "refs/ticket.md"),
 				/^## Scope\n\n- `<path>` `<symbol>`, checked <date>: /m,
 			);
+			assert.match(
+				rendered(out, "container", "refs/ticket.md"),
+				/^## Out of scope\n\n- .+, or "None"\.$/m,
+			);
+			assert.doesNotMatch(
+				rendered(out, "container", "refs/ticket.md"),
+				/Out of scope headings only when/,
+			);
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
 					"`spec/ticket.md`",

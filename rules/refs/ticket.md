@@ -9,11 +9,15 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 <Describe precisely what works for the user after this ticket, through the layers it touches. Name the input, result and boundary; do not list implementation steps.>
 
-<Explain the work and constraints the next agent needs to make that outcome hold. Link a spec, ADR or prior implementation where it matters. Use Work or Out of scope headings only when the content earns them.>
+<Explain the work and constraints the next agent needs to make that outcome hold. Link a spec, ADR or prior implementation where it matters. Use a Work heading only when the content earns it.>
 
 ## Scope
 
 - `<path>` `<symbol>`, checked <date>: <what changes there, or the pattern to copy from it>
+
+## Out of scope
+
+- <What a reader could expect this ticket to touch and it leaves alone, with the reason>, or "None".
 
 ## Acceptance criteria
 
