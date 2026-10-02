@@ -511,43 +511,53 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);
 				assert.match(skill, /Scope/);
 			}
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^## Scope\n\n- `<path>` `<symbol>`, checked <date>: /m,
-			);
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^## Out of scope\n\n- .+, or "None"\.$/m,
-			);
-			assert.doesNotMatch(
-				rendered(out, "container", "refs/ticket.md"),
-				/Out of scope headings only when/,
-			);
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^## Open questions\n\n- <.+> -> <.+>, or "None"\.$/m,
-			);
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^The title states the change in a few words, imperative, the way it reads on a board: ".+", never the symptom\.$/m,
-			);
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^- \[ \] <Boundary case: .+> -> <observable outcome with its concrete value>\.$/m,
-			);
-			assert.match(
-				rendered(out, "container", "refs/ticket.md"),
-				/^Each criterion is an invariant whose expected result comes from the ticket, not from the current code\. Write it in the form that reads clearest, Given\/When\/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases/m,
-			);
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
 					"`spec/ticket.md`",
 				),
 				"to-tickets names the project's own template first",
 			);
+		});
+	});
+}
+
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`${name} ticket template holds scope, out of scope and open questions slots, a title rule and a boundary criterion`, () => {
+		renderSeats(name, (out) => {
+			const ticket = rendered(out, "container", "refs/ticket.md");
+
+			assert.match(ticket, /^## Scope\n\n- `<path>` `<symbol>`, checked <date>: /m);
+			assert.match(ticket, /^## Out of scope\n\n- .+, or "None"\.$/m);
+			assert.doesNotMatch(ticket, /Out of scope headings only when/);
+			assert.match(ticket, /^## Open questions\n\n- <.+> -> <.+>, or "None"\.$/m);
 			assert.match(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
-				/Before `\S+ up`, an issue that reads as a report \(.+\) is rewritten into the shape of .+ in the tracker where your linear line allows writes, else in `ticket\.md` alone/,
+				ticket,
+				/^The title states the change in a few words, imperative, the way it reads on a board: ".+", never the symptom\.$/m,
+			);
+			assert.match(
+				ticket,
+				/^- \[ \] <Boundary case: .+> -> <observable outcome with its concrete value>\.$/m,
+			);
+			assert.match(
+				ticket,
+				/^Each criterion is an invariant whose expected result comes from the ticket, not from the current code\. Write it in the form that reads clearest, Given\/When\/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases/m,
+			);
+		});
+	});
+}
+
+for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`${name} host reshapes a raw report into the ticket shape before its container starts`, () => {
+		renderSeats(name, (out) => {
+			const host = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
+
+			assert.match(
+				host,
+				/An issue that reads as a report \(.+\) is rewritten into the shape of .+ before its container starts, in the tracker where your linear line allows writes, else in `ticket\.md` alone/,
+			);
+			assert.match(
+				host,
+				/After `\S+ up`, write the issue's description, reshaped, into the task directory as `ticket\.md`/,
 			);
 		});
 	});
