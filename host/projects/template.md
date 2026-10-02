@@ -10,6 +10,4 @@
 
 ## Tracker transitions
 
-## Tracker descriptions
-
 ## Labels and review state
