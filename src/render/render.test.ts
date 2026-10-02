@@ -531,6 +531,14 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				rendered(out, "container", "refs/ticket.md"),
 				/^The title states the change in a few words, imperative, the way it reads on a board: ".+", never the symptom\.$/m,
 			);
+			assert.match(
+				rendered(out, "container", "refs/ticket.md"),
+				/^- \[ \] <Boundary case: .+> -> <observable outcome with its concrete value>\.$/m,
+			);
+			assert.match(
+				rendered(out, "container", "refs/ticket.md"),
+				/^Each criterion is an invariant whose expected result comes from the ticket, not from the current code\. Write it in the form that reads clearest, Given\/When\/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases/m,
+			);
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
 					"`spec/ticket.md`",
