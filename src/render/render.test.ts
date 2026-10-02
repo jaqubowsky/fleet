@@ -509,7 +509,12 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			]) {
 				assert.ok(skill.includes(pointer), "skill points at the ticket template");
 				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);
+				assert.match(skill, /Scope/);
 			}
+			assert.match(
+				rendered(out, "container", "refs/ticket.md"),
+				/^## Scope\n\n- `<path>` `<symbol>`, checked <date>: /m,
+			);
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
 					"`spec/ticket.md`",

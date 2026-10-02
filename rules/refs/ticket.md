@@ -11,10 +11,16 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 <Explain the work and constraints the next agent needs to make that outcome hold. Link a spec, ADR or prior implementation where it matters. Use Work or Out of scope headings only when the content earns them.>
 
+## Scope
+
+- `<path>` `<symbol>`, checked <date>: <what changes there, or the pattern to copy from it>
+
 ## Acceptance criteria
 
 - [ ] Given <state or input>, when <action>, then <observable outcome with its concrete value>.
 - [ ] <Adjacent behavior that must remain unchanged> -> <observable result>.
+
+A Scope anchor names the symbol beside the path, so a moved file is found again by the symbol; the date says when the path last held.
 
 Each criterion is an invariant whose expected result comes from the ticket, not from the current code. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
 
