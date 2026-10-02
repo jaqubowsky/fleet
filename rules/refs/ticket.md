@@ -19,6 +19,10 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 - <What a reader could expect this ticket to touch and it leaves alone, with the reason>, or "None".
 
+## Open questions
+
+- <A decision no source settles> -> <the criterion or the work it decides>, or "None".
+
 ## Acceptance criteria
 
 - [ ] Given <state or input>, when <action>, then <observable outcome with its concrete value>.
