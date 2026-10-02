@@ -553,7 +553,11 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 			assert.match(
 				host,
-				/An issue that reads as a report \(.+\) is rewritten into the shape of .+ before its container starts, in the tracker where your linear line allows writes, else in `ticket\.md` alone/,
+				/An issue that reads as a report \(.+\) is rewritten into the shape of .+ before its container starts, into `ticket\.md` alone, the tracker issue left as filed\. Only where the overlay has a `Tracker descriptions` section does the rewrite also replace the tracker issue's description/,
+			);
+			assert.match(
+				readFileSync(join(root, "host/projects/template.md"), "utf8"),
+				/^## Tracker transitions\n\n## Tracker descriptions\n/m,
 			);
 			assert.match(
 				host,
