@@ -28,6 +28,8 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 - [ ] Given <state or input>, when <action>, then <observable outcome with its concrete value>.
 - [ ] <Adjacent behavior that must remain unchanged> -> <observable result>.
 
+The title states the change in a few words, imperative, the way it reads on a board: "Restore only the files deleted with a project", never the symptom.
+
 A Scope anchor names the symbol beside the path, so a moved file is found again by the symbol; the date says when the path last held.
 
 Each criterion is an invariant whose expected result comes from the ticket, not from the current code. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.

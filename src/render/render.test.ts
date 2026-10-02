@@ -527,6 +527,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				rendered(out, "container", "refs/ticket.md"),
 				/^## Open questions\n\n- <.+> -> <.+>, or "None"\.$/m,
 			);
+			assert.match(
+				rendered(out, "container", "refs/ticket.md"),
+				/^The title states the change in a few words, imperative, the way it reads on a board: ".+", never the symptom\.$/m,
+			);
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
 					"`spec/ticket.md`",
