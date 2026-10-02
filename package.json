@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/node": "26.6.0",
     "@types/qrcode-terminal": "0.12.2",
+    "esbuild": "0.28.2",
     "typescript": "7.0.2"
   }
 }

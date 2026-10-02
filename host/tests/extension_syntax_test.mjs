@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 const root = join(import.meta.dirname, "../..");
 const extensionRoot = join(root, "extensions");
 const moduleRoot = process.env.PI_NPM_MODULES ?? join(homedir(), ".pi/agent/npm/node_modules");
-const esbuild = join(moduleRoot, "esbuild/bin/esbuild");
+const esbuild = join(root, "node_modules/.bin/esbuild");
 const output = mkdtempSync(join(tmpdir(), "pi-extension-syntax-"));
 const files = readdirSync(extensionRoot, { withFileTypes: true }).flatMap((entry) => {
 	if (entry.isFile() && entry.name.endsWith(".ts")) return [join(extensionRoot, entry.name)];
