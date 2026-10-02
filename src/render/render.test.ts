@@ -545,6 +545,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				),
 				"to-tickets names the project's own template first",
 			);
+			assert.match(
+				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				/Before `\S+ up`, an issue that reads as a report \(.+\) is rewritten into the shape of .+ in the tracker where your linear line allows writes, else in `ticket\.md` alone/,
+			);
 		});
 	});
 }
