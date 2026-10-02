@@ -547,21 +547,13 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} host reshapes a raw report into the ticket shape before its container starts`, () => {
+	test(`${name} host reshapes a poorly described issue in ticket.md and leaves the tracker issue as filed`, () => {
 		renderSeats(name, (out) => {
 			const host = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
 
 			assert.match(
 				host,
-				/An issue that reads as a report \(.+\) is rewritten into the shape of .+ before its container starts, into `ticket\.md` alone, the tracker issue left as filed\. Only where the overlay has a `Tracker descriptions` section does the rewrite also replace the tracker issue's description/,
-			);
-			assert.match(
-				readFileSync(join(root, "host/projects/template.md"), "utf8"),
-				/^## Tracker transitions\n\n## Tracker descriptions\n/m,
-			);
-			assert.match(
-				host,
-				/After `\S+ up`, write the issue's description, reshaped, into the task directory as `ticket\.md`/,
+				/After `\S+ up`, write the issue's description into the task directory as `ticket\.md`, reshaped into .+ with what you gathered where it is poorly described; the tracker issue stays as filed\./,
 			);
 		});
 	});
