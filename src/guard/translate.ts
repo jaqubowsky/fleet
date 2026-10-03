@@ -1,21 +1,10 @@
 const FLEET = ["fleet_watch", "fleet_unwatch"];
 
 export const TRUSTED: Partial<Record<string, Set<string>>> = {
-	pi: new Set(["bg_wait", "codemode", "ask_user_question", "pi_lens_activate_tools", "ast_grep_dump", ...FLEET]),
+	pi: new Set(["bg_wait", "codemode", "ask_user_question", ...FLEET]),
 };
 
-const READ_TOOLS = new Set([
-	"lens_diagnostics",
-	"lsp_diagnostics",
-	"symbol_search",
-	"module_report",
-	"read_symbol",
-	"read_enclosing",
-	"ast_grep_search",
-	"ast_grep_outline",
-	"glob",
-	"ast_grep",
-]);
+const READ_TOOLS = new Set(["glob", "ast_grep"]);
 
 const LSP_MUTATIONS = new Set(["rename", "rename_file", "move", "format", "code_action", "executeCommand"]);
 
@@ -36,14 +25,10 @@ function pathStrings(value: unknown): string[] {
 	);
 }
 
-function filePayload(
-	toolName: "Read" | "Edit",
-	input: Record<string, unknown>,
-	fallback = "",
-) {
+function filePayload(toolName: "Read" | "Edit", input: Record<string, unknown>) {
 	return {
 		tool_name: toolName,
-		tool_input: { file_path: pathStrings(input).join(" ") || fallback },
+		tool_input: { file_path: pathStrings(input).join(" ") || "." },
 	};
 }
 
@@ -92,23 +77,10 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 				tool_name: "WebFetch",
 				tool_input: { url: strings(input).join(" ") },
 			};
-		case "ast_grep_replace":
 		case "ast_edit":
-			return filePayload("Edit", input, ".");
+			return filePayload("Edit", input);
 		case "lsp":
-		case "lsp_navigation":
-			return filePayload(
-				LSP_MUTATIONS.has(String(input.operation)) ? "Edit" : "Read",
-				input,
-				".",
-			);
-		case "lens_diagnostic_mark":
-			return filePayload(
-				input.disposition === "suppress" ? "Edit" : "Read",
-				input,
-			);
-		case "project_report":
-			return filePayload("Read", input, ".");
+			return filePayload(LSP_MUTATIONS.has(String(input.operation)) ? "Edit" : "Read", input);
 		case "eval":
 			return { tool_name: "Bash", tool_input: { command: strings(input).join(" ") } };
 		case "subagent":
@@ -126,7 +98,7 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 			break;
 	}
 
-	if (READ_TOOLS.has(toolName)) return filePayload("Read", input, ".");
+	if (READ_TOOLS.has(toolName)) return filePayload("Read", input);
 
 	if (
 		toolName === "mcp" ||

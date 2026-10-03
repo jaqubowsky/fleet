@@ -17,9 +17,6 @@ sandbox:
 environment:
   variables:
     NODE_OPTIONS: "--disable-warning=UNDICI-EHPA"
-    PI_LENS_TS_IDLE_EVICT_MS: "30000"
-    PI_LENS_LSP_CLIENT_CEILING: "2"
-    PI_LENS_DISABLE_TOOL_INSTALL: "1"
     OPENROUTER_API_KEY: "sbx-openrouter-proxy"
 permissions:
   network:

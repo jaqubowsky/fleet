@@ -29,9 +29,9 @@ test("pi tools are judged on the subject their own policy reads", () => {
 });
 
 test("an edit reaching a protected path through a nested argument is still an edit", () => {
-	assert.equal(verdict("ast_grep_replace", { paths: ["/Users/me/.ssh/config"] }), "deny");
-	assert.equal(verdict("lsp_navigation", { operation: "rename", file_path: "/Users/me/.config/op/x" }), "deny");
-	assert.equal(verdict("project_report", {}), "allow");
+	assert.equal(verdict("ast_edit", { paths: ["/Users/me/.ssh/config"] }), "deny");
+	assert.equal(verdict("lsp", { operation: "rename", file_path: "/Users/me/.config/op/x" }), "deny");
+	assert.equal(verdict("lsp", {}), "allow");
 });
 
 test("an mcp tool is judged on every string it carries", () => {

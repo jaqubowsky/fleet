@@ -361,6 +361,27 @@ test("pi host, sandbox and reviewer select Sol 6.1 with a 1.05M catalog override
 	});
 });
 
+test("pi host and container load no pi-lens, and the pi kit sets none of its variables", () => {
+	renderSeats("pi", (out) => {
+		const host = JSON.parse(
+			readFileSync(`${out}/host/agent/settings.json`, "utf8"),
+		);
+		const sbx = JSON.parse(
+			readFileSync(`${out}/container/context/agent-settings.json`, "utf8"),
+		);
+
+		assert.ok(host.packages.length > 0);
+		assert.ok(sbx.packages.length > 0);
+		assert.deepEqual(host.packages.filter((p: string) => p.includes("pi-lens")), []);
+		assert.deepEqual(sbx.packages.filter((p: string) => p.includes("pi-lens")), []);
+	});
+
+	const kit = readFileSync(`${KINDS.pi.agentSpec(root)}/spec.yaml`, "utf8");
+
+	assert.doesNotMatch(kit, /PI_LENS_/);
+	assert.ok(!KINDS.pi.agentArgs.includes("--no-lens-context"));
+});
+
 function containerRules(out: string): string[] {
 	return (
 		readdirSync(`${out}/container`, { recursive: true }) as string[]
@@ -662,10 +683,10 @@ test("a host Linear server any profile names leaves pi's machine-wide mcp.json, 
 			},
 		}),
 		"read /root/pi/profiles/host.json": JSON.stringify({
-			packages: ["npm:pi-lens@4.1.3"],
+			packages: ["npm:pi-subagents@0.73.1"],
 		}),
 		"read /root/pi/profiles/sbx.json": JSON.stringify({
-			packages: ["npm:pi-lens@4.1.3", "npm:pi-mcp-adapter@2.32.0"],
+			packages: ["npm:pi-subagents@0.73.1", "npm:pi-mcp-adapter@2.32.0"],
 		}),
 	};
 	const pi = fakeIo(sources(profiles));
@@ -676,7 +697,7 @@ test("a host Linear server any profile names leaves pi's machine-wide mcp.json, 
 		context7,
 	});
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, [
-		"npm:pi-lens@4.1.3",
+		"npm:pi-subagents@0.73.1",
 		"npm:pi-mcp-adapter@2.32.0",
 	]);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).extensions, [
@@ -701,7 +722,7 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 		sources({
 			...profiles,
 			"read /root/pi/profiles/host.json": JSON.stringify({
-				packages: ["npm:pi-lens@4.1.3"],
+				packages: ["npm:pi-subagents@0.73.1"],
 			}),
 		}),
 	);
@@ -710,7 +731,7 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 
 	assert.equal(pi.files["/home/agent/mcp.json"], undefined);
 	assert.deepEqual(JSON.parse(pi.files["/home/agent/settings.json"]).packages, [
-		"npm:pi-lens@4.1.3",
+		"npm:pi-subagents@0.73.1",
 	]);
 });
 
