@@ -150,7 +150,7 @@ function registerLinear(checkout: string, host: Host, io: Io): string[] {
 	}
 	const path = `${top}/.pi/mcp.json`;
 	const config = parseJson<McpConfig>(io.read(path) ?? "{}", path);
-	const entry = { url, auth: "oauth" };
+	const entry = { url };
 	if (JSON.stringify(config.mcpServers?.[name]) !== JSON.stringify(entry)) {
 		io.mkdir(`${top}/.pi`);
 		io.write(

@@ -161,7 +161,7 @@ test("profile --apply on a checkout already set for host pushes changes nothing"
 		...REGISTERED,
 		"read /r/.pi/mcp.json": JSON.stringify({
 			mcpServers: {
-				"linear-private": { url: "https://mcp.linear.app/mcp", auth: "oauth" },
+				"linear-private": { url: "https://mcp.linear.app/mcp" },
 			},
 		}),
 		"git rev-parse --path-format=absolute --git-path info/exclude":
@@ -339,7 +339,7 @@ test("profile --apply registers the host Linear server for the checkout alone: c
 	);
 	assert.deepEqual(
 		JSON.parse(claude.files["/r/.pi/mcp.json"]).mcpServers["linear-private"],
-		{ url: "https://mcp.linear.app/mcp", auth: "oauth" },
+		{ url: "https://mcp.linear.app/mcp" },
 	);
 
 	const readOnly = {
@@ -367,7 +367,7 @@ test("profile --apply registers the host Linear server for the checkout alone: c
 	);
 
 	for (const [harness, dir, entry] of [
-		[SEATS.pi, ".pi", { url: "https://mcp.linear.app/mcp", auth: "oauth" }],
+		[SEATS.pi, ".pi", { url: "https://mcp.linear.app/mcp" }],
 	] as const) {
 		const context7 = { url: "https://mcp.context7.com/mcp" };
 		const io = checkout(
@@ -375,7 +375,12 @@ test("profile --apply registers the host Linear server for the checkout alone: c
 			WITH_PRIVATE,
 			{
 				...PRIVATE_SET,
-				[`read /r/${dir}/mcp.json`]: JSON.stringify({ mcpServers: { context7 } }),
+				[`read /r/${dir}/mcp.json`]: JSON.stringify({
+					mcpServers: {
+						context7,
+						"linear-private": { url: "https://mcp.linear.app/mcp", auth: "oauth" },
+					},
+				}),
 			},
 			harness,
 		);
