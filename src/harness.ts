@@ -54,7 +54,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		sbxFlags: ["--skills=off"],
 		env: [],
 		agentSpec: (root) => `${root}/pi/kits/pi`,
-		agentArgs: ["--approve", "--no-autoformat", "--no-lens-context"],
+		agentArgs: ["--approve"],
 		resume: "-c",
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
 		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
