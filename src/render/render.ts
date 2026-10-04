@@ -306,16 +306,6 @@ class Renderer {
 	}
 }
 
-function hostSettings(r: Renderer, servers: Record<string, string>): string {
-	const settings = r.settings("host.json");
-	if (r.input.agent !== "pi" || !Object.keys(servers).length) return settings;
-	const { packages = [] } = parseJson<{ packages?: string[] }>(
-		r.settings("sbx.json"),
-	);
-	const own = parseJson<{ packages?: string[]; extensions?: string[] }>(settings);
-	return `${JSON.stringify({ ...own, extensions: [...(own.extensions ?? []), "-builtin:mcp"], packages: [...(own.packages ?? []), ...packages.filter((p) => p.startsWith("npm:pi-mcp-adapter@"))] }, null, 2)}\n`;
-}
-
 function hostMcp(r: Renderer, servers: Record<string, string>): void {
 	const config = parseJson<{ mcpServers?: Record<string, unknown> }>(
 		r.io.read(`${r.input.out}/agent/mcp.json`) ?? "{}",
@@ -341,7 +331,7 @@ function pi(r: Renderer): void {
 		const servers = hostLinearServers(
 			loadProfiles((path) => r.io.read(path), r.input.root, r.io.home),
 		);
-		r.put("agent/settings.json", hostSettings(r, servers));
+		r.put("agent/settings.json", r.settings("host.json"));
 		hostMcp(r, servers);
 		r.put("agent/AGENTS.md", buildAgents(rules, []));
 		for (const name of r.refs())

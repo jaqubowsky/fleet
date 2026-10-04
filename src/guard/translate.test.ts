@@ -35,8 +35,8 @@ test("an edit reaching a protected path through a nested argument is still an ed
 });
 
 test("an mcp tool is judged on every string it carries", () => {
-	assert.equal(verdict("mcp", { title: "see op://Dev/GitHub PAT/credential" }), "deny");
-	assert.equal(verdict("mcp", { body: "ssh key at /Users/me/.ssh/id_ed25519" }), "deny");
+	assert.equal(verdict("mcp__linear__create_issue", { title: "see op://Dev/GitHub PAT/credential" }), "deny");
+	assert.equal(verdict("mcp__linear__create_issue", { body: "ssh key at /Users/me/.ssh/id_ed25519" }), "deny");
 	assert.equal(verdict("mcp__linear", { title: "ticket WEB-1659" }), "allow");
 });
 

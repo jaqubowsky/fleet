@@ -54,4 +54,4 @@ setup:
       description: Point npm at the sandbox proxy so pi's startup package fetches work
     - command: 'mkdir -p ~/.pi/agent && printf ''{"mcpServers":{"gateway":{"url":"%s"}}}\n'' "${MCP_GATEWAY_URL:-}" >~/.pi/agent/mcp.json'
       user: "1000"
-      description: Hand the sandbox MCP gateway to pi-mcp-adapter
+      description: Connect Pi's native MCP client to the sandbox gateway

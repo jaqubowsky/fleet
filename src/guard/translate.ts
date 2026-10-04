@@ -100,15 +100,8 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 
 	if (READ_TOOLS.has(toolName)) return filePayload("Read", input);
 
-	if (
-		toolName === "mcp" ||
-		toolName === "mcpScript" ||
-		toolName.startsWith("mcp__")
-	) {
-		const guardedName = toolName.startsWith("mcp__")
-			? toolName
-			: `mcp__${toolName}`;
-		return { tool_name: guardedName, tool_input: input };
+	if (toolName.startsWith("mcp__")) {
+		return { tool_name: toolName, tool_input: input };
 	}
 
 	return null;

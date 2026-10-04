@@ -5,12 +5,11 @@
   "defaultProjectTrust": "always",
   "showCacheMissNotices": true,
   "sessionHandoff": { "suggestAtTokens": 250000 },
-  "extensions": ["../sbx/extensions/session-handoff.ts", "-builtin:mcp"],
+  "extensions": ["../sbx/extensions/session-handoff.ts"],
   "skills": ["~/.pi/skills"],
   "packages": [
     "npm:pi-web-access@0.33.0",
     "npm:pi-subagents@0.73.1",
-    "npm:@juicesharp/rpiv-ask-user-question@2.12.0",
-    "npm:pi-mcp-adapter@2.32.0"
+    "npm:@juicesharp/rpiv-ask-user-question@2.12.0"
   ]
 }
