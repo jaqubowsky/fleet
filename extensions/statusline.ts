@@ -74,7 +74,7 @@ export default function (pi: any) {
     if (!ctx.hasUI) return;
     ctx.ui.setFooter((_tui: any, _theme: any, footerData: any) => ({
       render(width: number) {
-        return ["", statusline(status(current, usage, footerData.getExtensionStatuses().get("pi-remote")), { width })];
+        return [statusline(status(current, usage, footerData.getExtensionStatuses().get("pi-remote")), { width })];
       },
       invalidate() {},
     }));

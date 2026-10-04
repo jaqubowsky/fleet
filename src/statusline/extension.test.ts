@@ -10,7 +10,8 @@ test("pi's footer ends with the marker pi-remote sets", () => {
 	statusline({ on: (name: string, fn: (event: unknown, ctx: unknown) => void) => handlers.set(name, fn) });
 	handlers.get("session_start")!({}, { hasUI: true, cwd: "/tmp", ui: { setFooter: (factory: Footer) => { footer = factory; } } });
 
-	const [, line] = footer!(undefined, undefined, { getExtensionStatuses: () => new Map([["pi-remote", "⌁ remote"]]) }).render(200);
+	const lines = footer!(undefined, undefined, { getExtensionStatuses: () => new Map([["pi-remote", "⌁ remote"]]) }).render(200);
 
-	assert.match(line, /\x1b\[90m⌁ remote\x1b\[0m$/);
+	assert.equal(lines.length, 1);
+	assert.match(lines[0], /\x1b\[90m⌁ remote\x1b\[0m$/);
 });
