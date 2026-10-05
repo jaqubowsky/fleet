@@ -21,7 +21,7 @@ Implement the ticket, spec or analysis you were handed.
    Done-check: <the command that proves this ticket done>, <why it is the right command>
    ```
 
-   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. This is the check step 7 runs, so name it now, not later.
+   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. The done-check covers what this diff touches: the tests of the changed files and of the files importing them, typecheck, lint. This is the check step 7 runs, so name it now, not later.
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
 
@@ -35,7 +35,7 @@ Implement the ticket, spec or analysis you were handed.
 
    In a short run, or on an order naming this one ticket, the rest stays in this ticket.
 
-6. Run typechecking regularly and single test files regularly. The full suite belongs to step 7, not here.
+6. Run typechecking regularly and single test files regularly.
 
 7. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log.
 
