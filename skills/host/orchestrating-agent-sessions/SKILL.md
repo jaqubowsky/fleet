@@ -29,6 +29,7 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 You give the container its orders the way the user gives them to you, as a lead handing work to a team member: what to do and where to stop, in a few sentences. A long steer reaches the container as pasted content, which it may read as data rather than an order.
 
 - A steer names the outcome, never a skill: "check in the running app that ...". How the work runs (the check, reviews, commits, session handoffs) is the container's rules' to decide
+- Context pointers carry the supporting material: name the spec, ticket, research notes and relevant commit SHAs the container needs to read, with what each holds. Before steering, check that the files are readable from the container and the commits exist in its clone. Keep the outcome and boundaries in the steer; the linked material stays in its source
 - What a container can deliver, in the words a steer uses: [references/outcomes.md](references/outcomes.md)
 - After a handoff the stock continue is the whole steer, since what was settled already sits in `spec.md`. On a run without `spec.md`, the continue repeats it
 
