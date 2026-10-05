@@ -57,4 +57,4 @@ One line each.
 
 </spec-template>
 
-File paths outside Scope and code snippets in ticket bodies go stale. A prototype snippet that encodes a decision is the exception, trimmed to the decision.
+File paths and code snippets in ticket bodies go stale. A prototype snippet that encodes a decision is the exception, trimmed to the decision.

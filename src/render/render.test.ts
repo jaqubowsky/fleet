@@ -530,7 +530,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			]) {
 				assert.ok(skill.includes(pointer), "skill points at the ticket template");
 				assert.doesNotMatch(skill, /<ticket-template>|## Acceptance criteria/);
-				assert.match(skill, /Scope/);
 			}
 			assert.ok(
 				rendered(out, "container", "to-tickets/SKILL.md").includes(
@@ -543,11 +542,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} ticket template holds scope, out of scope and open questions slots, a title rule and a boundary criterion`, () => {
+	test(`${name} ticket template holds out of scope and open questions slots, a title rule and a boundary criterion`, () => {
 		renderSeats(name, (out) => {
 			const ticket = rendered(out, "container", "refs/ticket.md");
 
-			assert.match(ticket, /^## Scope\n\n- `<path>` `<symbol>`, checked <date>: /m);
 			assert.match(ticket, /^## Out of scope\n\n- .+, or "None"\.$/m);
 			assert.doesNotMatch(ticket, /Out of scope headings only when/);
 			assert.match(ticket, /^## Open questions\n\n- <.+> -> <.+>, or "None"\.$/m);

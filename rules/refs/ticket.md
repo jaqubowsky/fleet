@@ -11,10 +11,6 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 <Explain the work and constraints the next agent needs to make that outcome hold. Link a spec, ADR or prior implementation where it matters. Use a Work heading only when the content earns it.>
 
-## Scope
-
-- `<path>` `<symbol>`, checked <date>: <what changes there, or the pattern to copy from it>
-
 ## Out of scope
 
 - <What a reader could expect this ticket to touch and it leaves alone, with the reason>, or "None".
@@ -30,8 +26,6 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 - [ ] <Adjacent behavior that must remain unchanged> -> <observable result>.
 
 The title states the change in a few words, imperative, the way it reads on a board: "Restore only the files deleted with a project", never the symptom.
-
-A Scope anchor names the symbol beside the path, so a moved file is found again by the symbol; the date says when the path last held.
 
 Each criterion is an invariant whose expected result comes from the ticket, not from the current code. Write it in the ticket's language, in the form that reads clearest, Given/When/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases rather than more happy paths. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
 
