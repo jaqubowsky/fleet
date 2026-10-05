@@ -43,7 +43,7 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 		const restart = () => {
 			watcher?.stop();
 			said.clear();
-			watcher = watch(scope, { ...io, log: say }, deliver);
+			watcher = watch(scope, { ...io, log: say }, deliver, (line) => ui?.setStatus?.("fleet", line || undefined));
 		};
 		const fleetCommand = new RegExp(`(^|[\\s;&|(])${CLI}\\s`);
 		const refresh = () => watcher?.refresh();
@@ -119,6 +119,7 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 		pi.on("session_shutdown", () => {
 			watcher?.stop();
 			watcher = undefined;
+			ui?.setStatus?.("fleet", undefined);
 			unwatchFile(log, refresh);
 		});
 	};

@@ -1,4 +1,4 @@
-import { type Status, statusline, type Window } from "../src/statusline/statusline.ts";
+import { type Status, statusline, watching, type Window } from "../src/statusline/statusline.ts";
 
 const CODEX_PROVIDER = "openai-codex";
 const CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
@@ -37,7 +37,7 @@ const fetchUsage = async (ctx: any): Promise<Usage | undefined> => {
   return { windows, fetchedAt: Date.now() };
 };
 
-const status = (ctx: any, usage: Usage | undefined, remote: string | undefined): Status => {
+const status = (ctx: any, usage: Usage | undefined, statuses: Map<string, string>): Status => {
   const context = ctx.getContextUsage?.();
   const tokens: number = context?.tokens ?? 0;
   const window: number = context?.contextWindow ?? ctx.model?.contextWindow ?? 0;
@@ -48,7 +48,7 @@ const status = (ctx: any, usage: Usage | undefined, remote: string | undefined):
     tokens,
     percent: context?.percent ?? (window ? (tokens / window) * 100 : 0),
     windows: usage?.windows ?? [],
-    remote,
+    remote: statuses.get("pi-remote"),
   };
 };
 
@@ -74,7 +74,10 @@ export default function (pi: any) {
     if (!ctx.hasUI) return;
     ctx.ui.setFooter((_tui: any, _theme: any, footerData: any) => ({
       render(width: number) {
-        return [statusline(status(current, usage, footerData.getExtensionStatuses().get("pi-remote")), { width })];
+        const statuses = footerData.getExtensionStatuses();
+        const fleet = statuses.get("fleet");
+        const line = statusline(status(current, usage, statuses), { width });
+        return fleet ? [line, watching(fleet)] : [line];
       },
       invalidate() {},
     }));

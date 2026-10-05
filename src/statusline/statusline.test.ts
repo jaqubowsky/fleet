@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type Status, statusline } from "./statusline.ts";
+import { type Status, statusline, watching } from "./statusline.ts";
 
 const visible = (line: string) => line.replace(/\x1b\[[0-9;]*m/g, "");
 const full: Status = {
@@ -52,4 +52,17 @@ test("a narrow line gives up the marker before anything else", () => {
 	const width = visible(statusline(full)).length;
 
 	assert.equal(statusline({ ...full, remote: "⌁ remote 2" }, { width }), statusline(full));
+});
+
+test("the watched containers get a line of their own, coloured like the status line", () => {
+	const line = watching("claude-a working · pi-b blocked · pi-c done · pi-d idle · pi-e unknown");
+
+	assert.equal(visible(line), " ◉ watching  claude-a working · pi-b blocked · pi-c done · pi-d idle · pi-e unknown");
+	assert.match(line, /\x1b\[35mwatching/);
+	assert.match(line, /\x1b\[39mclaude-a /);
+	assert.match(line, /\x1b\[33mworking/);
+	assert.match(line, /\x1b\[31mblocked/);
+	assert.match(line, /\x1b\[32mdone/);
+	assert.match(line, /\x1b\[32midle/);
+	assert.match(line, /\x1b\[35munknown/);
 });

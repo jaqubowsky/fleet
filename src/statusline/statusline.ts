@@ -24,6 +24,7 @@ const EFFORT = [35];
 const MUTED = [90];
 const ACCENT = [33];
 const ZONES = [[32], [33], [31], [91, 1]];
+const AGENT_STATUS: Record<string, number[]> = { working: [33], idle: [32], done: [32], blocked: [31], exited: [31], gone: [31] };
 
 type Run = { text: string; codes: number[] };
 type Group = { rank: number; runs: Run[] };
@@ -129,4 +130,13 @@ export function statusline(s: Status, options: { width?: number } = {}): string 
     line = draw(shown);
   }
   return line;
+}
+
+export function watching(containers: string): string {
+  const runs = containers.split(" · ").flatMap((entry, i) => {
+    const cut = entry.lastIndexOf(" ");
+    const state = entry.slice(cut + 1);
+    return [...(i ? [run(" · ", MUTED)] : []), run(`${entry.slice(0, cut)} `, MODEL), run(state, AGENT_STATUS[state] ?? EFFORT)];
+  });
+  return draw([{ rank: 0, runs: [run("◉ ", ACCENT), run("watching  ", EFFORT), ...runs] }]);
 }

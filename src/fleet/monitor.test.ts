@@ -66,6 +66,7 @@ function monitorRuntime(
 			options: { deliverAs: string; triggerTurn: boolean };
 		}[] = [];
 		const notices: string[] = [];
+		const statuses: [string, string | undefined][] = [];
 		fleetMonitor(
 			h,
 			io,
@@ -79,14 +80,17 @@ function monitorRuntime(
 			registerCommand() {},
 			sendMessage: (message: any, options: any) =>
 				messages.push({ message, options }),
-			ui: { notify: (text: string) => notices.push(text) },
+			ui: {
+				notify: (text: string) => notices.push(text),
+				setStatus: (key: string, text: string | undefined) => statuses.push([key, text]),
+			},
 		});
 		t.after(() => handlers.session_shutdown());
 		handlers.session_start(
 			{},
 			{ sessionManager: { getSessionId: () => sessionId } },
 		);
-		return { handlers, tools, messages, notices };
+		return { handlers, tools, messages, notices, statuses };
 	};
 	const exit = (pane = "worker:pane") => {
 		for (const socket of sockets.filter((s) => !s.destroyed))
@@ -131,6 +135,23 @@ test("only the invoking Pi session receives automatic fleet notifications", (t) 
 		b.notices.filter((n) => n.startsWith("[fleet] pi-worker:")),
 		[],
 	);
+});
+
+test("the footer names each container the session watches with its status, and clears at shutdown", (t) => {
+	const runtime = monitorRuntime(t);
+	const writer = Object.assign(fakeIo(), { sessionId: "session-a" });
+	logEvent(writer, "up", "pi-worker");
+	runtime.events(writer.calls[0][2]);
+	const a = runtime.start("session-a");
+
+	runtime.settle();
+	a.handlers.session_shutdown();
+
+	assert.deepEqual(a.statuses, [
+		["fleet", "pi-worker working"],
+		["fleet", "pi-worker idle"],
+		["fleet", undefined],
+	]);
 });
 
 for (const h of [SEATS.pi]) {
