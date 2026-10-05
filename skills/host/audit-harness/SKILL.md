@@ -1,60 +1,32 @@
 ---
 name: audit-harness
-description: 'Audit this harness on its transcripts since the last audit: what held, what broke, what is missing, each with a quote, in a findings table with the smallest fix. Ends at a report; nothing is edited.'
+description: 'Review a coding session for friction and mistakes. Suggest the smallest harness changes, backed by evidence. Report only; nothing is edited.'
 disable-model-invocation: true
 ---
 
 # Audit harness
 
-Transcripts are the experiment; the harness (rules, skills, guard, fleet, image, settings) is the hypothesis. Grade the harness monorepo at `{{root}}`, a git repository whose `README.md` layout table names every part: the shared sources and the `pi/` and `claude/` parts. Ends at a report; every edit is the user's call.
+Improve the agent's environment at `{{root}}`, not its compliance score. End with proposals; changes are the user's call.
 
-## 1. New transcripts
+## 1. Read the session
 
-`audits/ledger.tsv` under the root: `audited_at`, `path`, `verdict`, one line per audited transcript. Candidates: every container's `logs/sessions/**/*.jsonl` under `~/.fleet/tasks/*/*/`, and the Mac's own session stores (`~/.pi/agent/sessions/`, `~/.claude/projects/`); `subagent-artifacts/*_transcript.jsonl` and `subagents/*.jsonl` belong to the session beside them. New = absent from the ledger and untouched for 10 minutes. None -> say so and stop. Print the groups (one per `~/.fleet/tasks/*/*/` directory or Mac session file) with side, size and date, so the user can narrow the run.
+Use the session the user names, or the current session by default. Session stores and extraction commands are in [references/extract.md](references/extract.md). Include child transcripts when the problem occurred in delegated work. Read enough surrounding messages to establish the task, outcome and what led to the problem.
 
-The newest `audits/*.md` carries the findings of the last run into step 4: every row with its id, severity and run count. Declining a fix does not close a row.
+## 2. Find friction
 
-## 2. Rules as they were
+Look for mistakes, repeated commands, tool errors, user corrections, slow navigation, missing information and oversized tool results. Include instructions that were followed but produced a bad outcome. Each candidate needs a quote and source line, or a measured tool-call count. If the session shows no actionable problem, say so and stop.
 
-`git log -1 --before=<session start> --format=%h -- rules skills agents extensions sbx host pi claude` (the first commit when none precedes), then `git show <sha>:<path>` for `rules/*.md`, the container rule under `sbx/` and the skill descriptions. A Claude Code transcript lists the rule files it carried (`instructions` attachment); a pi container carries what the render step folds into its `AGENTS.md`, a Claude container the rendered `~/.claude/rules`. A rule the session never carried is `not exercised`.
+## 3. Find the smallest fix
 
-## 3. Scorecard per session
+For each candidate, inspect the relevant harness source and check whether a solution already exists. Consult historical instructions only when the finding depends on what the session actually carried.
 
-One `explorer` per session, all in the same turn. The brief: the paths, the commit, [references/extract.md](references/extract.md), and this shape as its done-check:
+- Mechanical errors belong in deterministic checks. Inspect the project's declared checks, hooks and CI before proposing another one; an existing check that was not run may be the cause.
+- Navigation and information gaps may need a pointer or access to an existing source.
+- Instructions needing judgement may need deletion or clarification rather than another rule.
+- Expensive tool calls may need narrower queries or output.
 
-- header: path, side, model, task in one line, outcome (finished, died, stopped by the user)
-- each rule: `held`, `broken` or `not exercised`; the first two with one quote and its transcript line
-- each skill the task matched: `SKILL.md` read at which line, before or after the user named it; steps skipped
-- friction with counts: a command repeated three or more times, tool errors, guard denials (correct or false positive), fleet refusals, user corrections verbatim
+Prefer removing the cause over adding instructions or tooling. Check shared sources and both `pi/` and `claude/`; state when a proposal applies to only one. A candidate is ready when its evidence, cause, smallest fix and cost are known. Label an uncertain cause as unverified.
 
-Done when every rule has a verdict and every `broken` has a line number. An explorer without one is sent back for it.
+## 4. Report
 
-## 4. Findings
-
-Open every `broken` quote yourself. Then one finding per defect across sessions, each under an id `<area>/<name>` whose area is one of rule, skill, guard, fleet, image, env, settings, docs, with:
-
-- runs = audits whose evidence this id appeared in, this one included. Match a defect to an open row by its evidence, never by the row's wording; a third run raises the severity one step
-- violations = sessions affected / sessions that exercised it
-- severity: **high** = a boundary crossed or missed (push, sign, secret, Linear write) or no deliverable; **medium** = minutes, repeats or a user correction; **low** = wording or drift
-- fix = the smallest change that removes the evidence: delete before rewrite, rewrite before add; a mechanism (script, guard case, trigger line) when a rule broke in every session that exercised it
-
-Transcripts are not the only evidence; two defects leave none there:
-
-- **dead**: a pointer the harness still carries and nothing can reach — a path, command, skill, tool or file name that no longer exists. Sweep the rules, container rule and skill descriptions step 2 reconstructed; a part the scorecards keep calling `not exercised` is where these collect.
-- **wording**: a rule a session followed to the letter with a bad outcome. It scores `held` and disappears, and the sentence is what failed, not the agent.
-
-Each takes a row like any other, quoting the harness line in place of a transcript one.
-
-A defect earns a row only while the harness still carries it. Test every fix that landed since the last audit against this run's evidence, the fix itself, never the commit message:
-
-- landed, evidence gone -> **closed**: one line under Open with the commit, no row
-- landed, evidence still standing -> a row under the old id, `runs` + 1, saying what the fix missed
-- no fix -> a row
-
-An open row this run turned up no fresh evidence for keeps its id, severity and count and goes under Open, out of the findings table: the sessions either never exercised it or the harness moved around it. Say which.
-
-A gap (a skill, command, tool or runbook note the sessions lacked) is a suggestion only with two sessions behind it and its cost stated; one session is a note.
-
-## 5. Report
-
-`audits/<YYYY-MM-DD>.md` per [references/report.md](references/report.md): verdict, findings table sorted by runs then severity then violations, evidence and the full fix per row, open rows, suggestions, held with one quote each, not exercised. Append the audited paths to the ledger. Print the verdict and the tables. Stop.
+Use [references/report.md](references/report.md). Order proposals by impact on safety and task completion, then wasted work. Merge candidates with the same cause. Show the report in the conversation. Save it only if the user asks, in the artifacts directory rather than the working tree. Stop without editing the harness.

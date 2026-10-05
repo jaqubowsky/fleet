@@ -1,6 +1,6 @@
 # Extracting a transcript
 
-Both formats are JSONL, one object per line. Never `cat` a file: sizes reach 8 MB. Pipe through `jq` and slice with `.[0:N]`. `nl` on the extracted stream gives line numbers for the scorecard; the number is the transcript line when the filter keeps one output per input line, so print `input_line_number` where it matters.
+Both formats are JSONL, one object per line. Never `cat` a file: sizes reach 8 MB. Pipe through `jq` and slice with `.[0:N]`. Use jq's `input_line_number` before filtering to preserve source lines; numbering the filtered output does not identify transcript lines.
 
 ## pi (`~/.pi/agent/sessions`, `~/.fleet/tasks/*/pi-*/logs/sessions`)
 
@@ -30,12 +30,4 @@ jq -c 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_us
 jq -c 'select(.type=="user") | .message.content[]? | select(.type=="tool_result") | {is_error, content: (.content|tostring|.[0:300])}' "$f"
 ```
 
-Skill loads are `Skill` tool calls or `Read` calls on a `SKILL.md` path. Sub-agent briefs are `Agent` tool inputs; their transcripts sit in `subagents/` beside the parent. Written code is the `input` of `Edit` and `Write` calls: that is where comments and commit subjects are graded.
-
-## Counts that grade a rule
-
-- Restatement before the first mutation (Communication): first assistant text before the first `edit`/`write`/`Edit`/`Write` call.
-- Done-check after the last change (Acceptance): last mutating call versus the last test or check command.
-- Repeats (friction): `sort | uniq -c | sort -rn` over the extracted tool calls.
-- Push, sign, Linear writes (Autonomy): grep the tool calls for `git push`, `-S`, `gpgsign`, and MCP names containing `create` or `update`.
-- Sub-agents (Delegation): count of `explorer`/`researcher`/`reviewer` tool calls in pi, `Agent` calls in Claude, against what the session's skill asked for.
+Skill loads are `Skill` tool calls or `Read` calls on a `SKILL.md` path. Sub-agent briefs are `Agent` tool inputs; their transcripts sit in `subagents/` beside the parent. Written code is the `input` of `Edit` and `Write` calls.

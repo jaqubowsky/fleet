@@ -1,39 +1,21 @@
-# Audit <YYYY-MM-DD>
+# Session audit
 
-Sessions: <n> new since <previous audit date or "first audit">: <path, side, model, task in five words>.
+Session: <source, harness, task and outcome>.
 
 ## Verdict
 
-Three sentences: what held, what broke, the one change with the widest effect.
+<The change worth making first and why, or no actionable finding.>
 
-## Findings
+## Proposals
 
-| Id | Where | Finding | Runs | Violations | Severity | Fix |
-| --- | --- | --- | --- | --- | --- | --- |
-| `rule/acceptance-5` | `rules/core.md:42` | <one line> | 2 | 3/3 | high | <one line> |
+Repeat for each proposal, highest impact first:
 
-**`rule/acceptance-5`** <session>, line <l>: "<quote>". Cause: wording | mechanism | dead | conflict with <other>. Fix: <full replacement text, or the script, guard case or trigger line>. On a repeat, what the last audit proposed and what the evidence did since.
+### <Problem>
 
-## Open
+Evidence: <source URL, line and quote, or measured count>.
 
-Rows with no fresh evidence this run: the sessions never exercised them, or the harness moved around them. Closed, the fix landed and the evidence is gone: `<id>` in `<commit>`.
+Cause: <what in the environment caused the problem; mark uncertainty>.
 
-| Id | First seen | Runs | Severity | Standing |
-| --- | --- | --- | --- | --- |
-| `guard/agents-md` | 2026-09-17 | 1 | high | not exercised: no session edited a rule |
+Fix: <smallest concrete change, its location and applicability to pi and Claude>.
 
-## Suggestions
-
-| # | Kind | Need shown | Sessions | Addition | Cost |
-| --- | --- | --- | --- | --- | --- |
-| 1 | skill | <done from scratch> | 2 | <name and trigger> | <lines, or a script> |
-
-**1.** <sessions and lines that show the need; what the addition would have saved>.
-
-## Held
-
-One quote per rule, skill or mechanism that changed behaviour.
-
-## Not exercised
-
-Parts no session touched. One nothing could have touched is `dead`, and belongs in Findings.
+Cost: <implementation or maintenance cost and what the change gives up>.

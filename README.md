@@ -145,7 +145,7 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 - **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox.
 - **Cost per task.** `fleet ls` shows what each sandbox has spent so far.
 - **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone, and `fleet history` replays how its status changed.
-- **A setup that audits itself.** `audit-harness` reads past transcripts and reports what held, what broke and what's missing, quoting each.
+- **Session retrospectives.** `audit-harness` reads a selected session, defaults to the current one, and proposes the smallest environment changes for observed friction and mistakes. Each proposal includes evidence and cost; nothing is edited.
 - **Your phone as a remote.** Drive pi sessions from your phone over Tailscale, set up as [extensions/pi-remote](extensions/pi-remote/README.md) describes.
 
 ## Trust model
