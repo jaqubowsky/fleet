@@ -85,10 +85,23 @@ export function wakeName(text: string): string | undefined {
 	return text.match(/^\[fleet\] ([^:\s]+):/)?.[1];
 }
 
+export function jsonLines(io: Io): {
+	io: Io;
+	onWake: (text: string) => void;
+	onTracked: (line: string) => void;
+} {
+	return {
+		io: { ...io, log: (line) => io.log(JSON.stringify({ log: line })) },
+		onWake: (text) => io.log(JSON.stringify({ wake: text })),
+		onTracked: (line) => io.log(JSON.stringify({ watching: line })),
+	};
+}
+
 export function watch(
 	scope: () => string[] | undefined,
 	io: Io,
 	onWake: (text: string) => void = io.log,
+	onTracked: (line: string) => void = () => {},
 ): { refresh: () => void; stop: () => void } {
 	const socketPath =
 		process.env.HERDR_SOCKET_PATH ?? `${io.home}/.config/herdr/herdr.sock`;
@@ -112,6 +125,13 @@ export function watch(
 	let stopped = false;
 	let failing: string | undefined;
 	let failingLocate: string | undefined;
+	let reported: string | undefined;
+
+	const report = () => {
+		const line = [...tracked.values()].map((t) => `${t.name} ${t.status}`).join(" · ");
+		if (line !== reported) onTracked(line);
+		reported = line;
+	};
 
 	const locate = (name: string, rows: Sandbox[]) => {
 		const dir = taskDirOf(rows, name, io);
@@ -234,6 +254,7 @@ export function watch(
 		if (down) emit(entry.name, `${entry.status} -> taken down`, { down });
 		else if (exited) emit(entry.name, `${entry.status} -> gone`);
 		tracked.delete(pane);
+		report();
 	};
 
 	const settle = (pane: string, from: string | undefined) => {
@@ -265,6 +286,7 @@ export function watch(
 		const wakeable = shouldWake(previous, next);
 		const now = Date.now();
 		tracked.set(pane, { ...entry, status: next, since: now, rang: now });
+		report();
 		if (TERMINAL.has(next)) {
 			if (wakeable || settling.has(pane)) settle(pane, previous);
 			return;
@@ -363,6 +385,7 @@ export function watch(
 				since: now,
 				rang: now,
 			});
+		report();
 		noticeDeaths(rows);
 		if (fresh.length)
 			io.log(

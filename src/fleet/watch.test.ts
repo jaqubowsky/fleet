@@ -6,7 +6,7 @@ import { CONTINUE, SEATS, KINDS } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
 import { commitsProbe } from "./status.ts";
-import { fleetAgents, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
+import { fleetAgents, jsonLines, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
 
 const agents = [
 	{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
@@ -221,6 +221,40 @@ test("CLI watch reconciles status and reconnects after a closed stream", (t: Tes
 			.length,
 		1,
 	);
+});
+
+test("a JSON watch prints each wake and each notice as one line a reader can split on newlines", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
+	]);
+	const json = jsonLines(io);
+	watch(() => undefined, json.io, json.onWake, json.onTracked);
+
+	status("w1:p1", "idle");
+	t.mock.timers.tick(1100);
+
+	const parsed = io.lines.map((line) => JSON.parse(line));
+	assert.deepEqual(parsed[0], { watching: "claude-webapp-a working" });
+	assert.match(parsed[1].log, /^\[fleet\] watching/);
+	assert.match(parsed.at(-1).wake, /^\[fleet\] claude-webapp-a: working -> idle\n\n/);
+	assert.ok(io.lines.every((line) => !line.includes("\n")));
+});
+
+test("watch reports the containers it follows with each one's status as it changes", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
+		{ name: "pi-webapp-b", pane_id: "w1:p2", agent_status: "idle" },
+	]);
+	const reports: string[] = [];
+
+	watch(() => undefined, io, () => {}, (line) => reports.push(line));
+	status("w1:p1", "blocked");
+	status("w1:p1", "blocked");
+
+	assert.deepEqual(reports, [
+		"claude-webapp-a working · pi-webapp-b idle",
+		"claude-webapp-a blocked · pi-webapp-b idle",
+	]);
 });
 
 test("a transient idle between active turns does not wake the host", (t: TestContext) => {

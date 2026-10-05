@@ -25,7 +25,7 @@ import { relay } from "./relay.ts";
 import { loadProfiles } from "../profile/profile.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
 import { up } from "./up.ts";
-import { paneScope, watch } from "./watch.ts";
+import { jsonLines, paneScope, watch } from "./watch.ts";
 
 const home = homedir();
 const root = process.env.FLEET_ROOT ?? resolve(import.meta.dirname, "../..");
@@ -52,7 +52,7 @@ const usage = `usage:
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
-  ${CLI} watch [<sandbox>...]                         print a [fleet] line each time a container this pane put up or steered last, or one named, settles; hold it with Monitor
+  ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this pane put up or steered last, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
   ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the tab of a kind that reports its state through a herdr extension: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
@@ -67,6 +67,8 @@ const BARE = new Set([
 	"sign",
 	"pi",
 	"claude",
+	"json",
+	"every",
 ]);
 
 export function flags(
@@ -279,8 +281,12 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		);
 	},
 	async watch(args) {
-		const { rest } = flags(args, []);
-		watch(paneScope(io, rest), io);
+		const { opts, rest } = flags(args, ["json", "every"]);
+		const scope = opts.every ? () => undefined : paneScope(io, rest);
+		if (opts.json) {
+			const json = jsonLines(io);
+			watch(scope, json.io, json.onWake, json.onTracked);
+		} else watch(scope, io);
 		await new Promise(() => {});
 	},
 };
