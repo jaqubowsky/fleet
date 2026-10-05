@@ -101,9 +101,9 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
 			"refs.design": "`~/.claude/refs/design.md`",
 			"steer.result":
-				"steered; the container takes it after its current step, and `fleet watch` reports how it settles",
+				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":
-				"Nothing watches a container by itself here: this session has no extension that can start a turn, so the wake is `fleet watch`, held with `Monitor` at `timeout_ms: 1800000`, its maximum. Start it before the first steer and keep one Monitor per session; its expiry notice, and a notice that it stopped with an earlier session, is the re-arm, before anything else. With no names it follows the containers whose latest `fleet up` or `fleet steer` came from this herdr pane, drops one at its `fleet down`, and picks up new ones within 30 seconds; names add those sandboxes beside them, whoever put them up. Its first line is `[fleet] watching ...`; a Monitor that never printed it never subscribed, so restart it. Before a long run, arm the limit resume as well: one more `fleet watch` as a `Bash` call with `run_in_background: true`, which has no Monitor expiry, so it resumes containers the account limit stopped while that limit stops this session too.",
+				"Only the session in the herdr pane that ran `fleet up` or `fleet steer` auto-watches that container: the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit, resuming the containers that limit stopped. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',

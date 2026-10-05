@@ -652,8 +652,9 @@ test("the claude host watches the containers its own pane put up or steered last
 
 		assert.match(
 			rules,
-			/With no names it follows the containers whose latest `fleet up` or `fleet steer` came from this herdr pane/,
+			/the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane/,
 		);
+		assert.doesNotMatch(rules, /Monitor/);
 		assert.doesNotMatch(rules, /watches every `claude-` container/);
 	});
 });
@@ -990,12 +991,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				skill,
 				/One stopped by the account limit is resumed by the watch with the stock continue/,
 			);
-			assert.match(
-				skill,
-				name === "claude"
-					? /Before a long run, arm the limit resume/
-					: /keeps running while the session waits out an account limit/,
-			);
+			assert.match(skill, /keeps running while the session waits out an account limit/);
 			assert.match(skill, /one fix round and one recheck/);
 			assert.match(skill, /carries your stop rule/);
 			assert.match(

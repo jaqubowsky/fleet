@@ -45,6 +45,8 @@ check("an aligned file reports no change", align.fix_user(json.loads(json.dumps(
 guard = data["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
 check("the guard hook reaches the user settings at an absolute path under this HOME", guard == str(align.HOME / ".claude" / "hooks" / "guard.sh"))
 check("no $HOME is left unexpanded", "$HOME" not in json.dumps(data))
+check("the fleet mod is enabled from this checkout's own marketplace folder", data["enabledPlugins"].get("fleet@harness") is True and data["extraKnownMarketplaces"]["harness"]["source"] == {"source": "directory", "path": str(align.REPO / "claude" / "mods")})
+check("no $HARNESS is left unexpanded", "$HARNESS" not in json.dumps(data))
 check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": True}) != [])
 
 herdr = {"matcher": "^(startup|resume|clear|compact|fork)$", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/herdr-agent-state.sh session"}]}

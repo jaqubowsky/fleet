@@ -5,3 +5,5 @@ audits/
 .claude/
 __pycache__/
 .playwright-cli/
+claude/mods/*/.claude-plugin/types/
+claude/mods/*/tsconfig.json

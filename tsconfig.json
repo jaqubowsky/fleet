@@ -24,5 +24,8 @@
     "extensions/**/*.ts",
     "pi/**/*.ts",
     "claude/**/*.ts"
+  ],
+  "exclude": [
+    "claude/mods"
   ]
 }

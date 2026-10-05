@@ -63,7 +63,16 @@
   },
   "syncClaudeAiSkills": false,
   "syncClaudeAiPlugins": false,
+  "extraKnownMarketplaces": {
+    "harness": {
+      "source": {
+        "source": "directory",
+        "path": "$HARNESS/claude/mods"
+      }
+    }
+  },
   "enabledPlugins": {
-    "cc-plugin-you-should-know@builtin": true
+    "cc-plugin-you-should-know@builtin": true,
+    "fleet@harness": true
   }
 }

@@ -139,7 +139,7 @@ def expand(value):
     if isinstance(value, list):
         return [expand(item) for item in value]
     if isinstance(value, str):
-        return value.replace("$HOME", str(HOME))
+        return value.replace("$HOME", str(HOME)).replace("$HARNESS", str(REPO))
 
     return value
 

@@ -12,15 +12,9 @@ const DIVERGENCES: Divergence[] = [
 	},
 	{
 		where:
-			/^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: (Only the session that ran|Nothing watches a container by itself here)/,
+			/^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: Only the session (that ran|in the herdr pane that ran)/,
 		reason:
-			"claude has no extension that can start a turn, so its watching is a held `fleet watch`",
-	},
-	{
-		where:
-			/^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| send it this \|/,
-		reason:
-			"a pi seat watches a steered container from its own session, a claude seat through a held `fleet watch`",
+			"a pi seat owns a container by its session ID and watches it in-process, a claude seat owns it by its herdr pane and its fleet mod holds `fleet watch`",
 	},
 	{
 		where:
