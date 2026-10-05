@@ -240,7 +240,18 @@ export function stoppedPane(sandbox: Pick<Sandbox, "name" | "workspaces">, io: I
 	return record.pane;
 }
 
-export function stop(sandbox: Sandbox, io: Io): void {
+const STOPPED_AGENT = "fleet";
+const RELEASE_POLL_MS = 500;
+const RELEASE_POLLS = 20;
+
+async function agentReleased(pane: string, io: Io): Promise<void> {
+	for (let poll = 0; poll < RELEASE_POLLS; poll++) {
+		if (!io.herdr<{ result?: { pane?: { agent?: string } } }>(["pane", "get", pane]).result?.pane?.agent) return;
+		await io.sleep(RELEASE_POLL_MS);
+	}
+}
+
+export async function stop(sandbox: Sandbox, io: Io): Promise<void> {
 	const file = stopFile(sandbox, io);
 	let pane = stoppedPane(sandbox, io);
 	if (!pane) {
@@ -257,9 +268,11 @@ export function stop(sandbox: Sandbox, io: Io): void {
 		else io.write(file, before);
 		throw error;
 	}
-	io.herdr(["pane", "report-agent", pane, "--source", "fleet:stopped", "--agent", sandbox.kind.name, "--state", "unknown"]);
+	io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
+	await agentReleased(pane, io);
+	io.herdr(["pane", "run", pane, `HERDR_AGENT=${sandbox.kind.name} ${CLI} stopped ${sandbox.name}`]);
+	io.herdr(["pane", "report-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT, "--state", "unknown"]);
 	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--applies-to-source", "fleet:stopped", "--state-label", "unknown=stopped"]);
-	io.herdr(["agent", "rename", pane, agentName(sandbox.name)]);
 	io.log(`${sandbox.name}: stopped; tab and files kept. Resume with ${CLI} start ${sandbox.name}`);
 }
 
@@ -267,7 +280,8 @@ export async function start(sandbox: Sandbox, root: string, io: Io): Promise<voi
 	const pane = stoppedPane(sandbox, io);
 	if (!pane) throw new Error(`${sandbox.name}: no saved stopped tab; use ${CLI} up to attach it`);
 	if (sandbox.status !== "stopped") throw new Error(`${sandbox.name}: already ${sandbox.status}; inspect its tab before starting again`);
-	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", sandbox.kind.name]);
+	io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
+	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT]);
 	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
 	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), pane, root, io);
 	io.remove(stopFile(sandbox, io));

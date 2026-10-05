@@ -17,20 +17,40 @@ for (const kind of Object.values(KINDS)) {
 		[`list ${task}/logs/sessions/projects/-w-webapp`]: ["s1.jsonl"],
 	};
 
-	test(`${kind.name} stop keeps the tab, session and dirty files`, () => {
+	test(`${kind.name} stop keeps the tab, session and dirty files`, async () => {
 		const io = fakeIo(fixture, SEATS[kind.name]);
 		io.files[`${task}/status.md`] = "status: implementing\nattention: none\n";
 		io.files[`${task}/logs/sessions/s1.jsonl`] = "saved conversation";
 
-		stop(sandbox, io);
+		await stop(sandbox, io);
 
 		assert.equal(stoppedPane(sandbox, io), "w1:p7");
 		assert.equal(io.files[`${task}/status.md`], "status: implementing\nattention: none\n");
 		assert.equal(io.files[`${task}/logs/sessions/s1.jsonl`], "saved conversation");
 		assert.deepEqual(io.calls.filter((c) => c[0] === "sbx"), [["sbx", "stop", sandbox.name]]);
-		assert.ok(io.calls.some((c) => c[2] === "report-metadata" && c.includes("unknown=stopped")));
-		assert.ok(io.calls.some((c) => c[1] === "agent" && c[2] === "rename" && c[3] === "w1:p7"));
 		assert.equal(io.calls.filter((c) => c.includes("close") || c.includes("rm")).length, 0);
+	});
+
+	test(`${kind.name} a stopped tab is reported under fleet's own label once herdr has let the exited agent go`, async () => {
+		const io = fakeIo(fixture, SEATS[kind.name]);
+		const herdr = io.herdr;
+		let reads = 0;
+		io.herdr = <T>(args: string[]) => {
+			if (args[0] !== "pane" || args[1] !== "get") return herdr<T>(args);
+			io.calls.push(["herdr", ...args]);
+			reads += 1;
+			return { result: { pane: reads < 3 ? { pane_id: "w1:p7", agent: kind.name } : { pane_id: "w1:p7" } } } as T;
+		};
+
+		await stop(sandbox, io);
+
+		const herdrCalls = io.calls.filter((c) => c[0] === "herdr").map((c) => c.slice(1));
+		const steps = herdrCalls.map((c) => c.slice(0, 2).join(" "));
+		assert.deepEqual(steps.slice(steps.indexOf("pane send-keys")), ["pane send-keys", "pane get", "pane get", "pane get", "pane run", "pane report-agent", "pane report-metadata"]);
+		assert.deepEqual(herdrCalls.find((c) => c[1] === "run"), ["pane", "run", "w1:p7", `HERDR_AGENT=${kind.name} fleet stopped ${sandbox.name}`]);
+		const report: string[] = herdrCalls.find((c) => c[1] === "report-agent") ?? [];
+		assert.equal(report[report.indexOf("--agent") + 1], "fleet");
+		assert.ok(herdrCalls.some((c) => c[1] === "report-metadata" && c.includes("unknown=stopped")));
 	});
 
 	test(`${kind.name} start resumes the saved session in the same pane without a prompt`, async () => {
@@ -40,6 +60,10 @@ for (const kind of Object.values(KINDS)) {
 		await start(stopped, "/harness", io);
 
 		const launched = io.calls.find((c) => c[2] === "run");
+		const released: string[] = io.calls.find((c) => c[2] === "release-agent") ?? [];
+		assert.equal(released[released.indexOf("--agent") + 1], "fleet");
+		const closed = io.calls.findIndex((c) => c[2] === "send-keys" && c[3] === "w1:p7" && c[4] === "ctrl+c");
+		assert.ok(closed >= 0 && closed < io.calls.indexOf(launched!), "the stopped view closes before the agent starts");
 		assert.equal(launched?.[3], "w1:p7");
 		assert.match(launched?.[4] ?? "", new RegExp(kind.resume));
 		assert.ok(launched?.[4].includes(kind.herdrIntegration ? `/harness/bin/fleet relay ${sandbox.name} ${task}` : `sbx run --name ${sandbox.name}`));
@@ -75,20 +99,20 @@ for (const kind of Object.values(KINDS)) {
 		assert.deepEqual(io.calls, []);
 	});
 
-	test(`${kind.name} a failed stop leaves the running agent available`, () => {
+	test(`${kind.name} a failed stop leaves the running agent available`, async () => {
 		const io = fakeIo({ ...fixture, "sbx stop": new Error("stop refused") });
 
-		assert.throws(() => stop(sandbox, io), /stop refused/);
+		await assert.rejects(stop(sandbox, io), /stop refused/);
 
 		assert.equal(stoppedPane(sandbox, io), undefined);
 		assert.equal(io.calls.filter((c) => c[2] === "report-agent").length, 0);
 	});
 
-	test(`${kind.name} stopping twice keeps the saved pane`, () => {
+	test(`${kind.name} stopping twice keeps the saved pane`, async () => {
 		const io = fakeIo(fixture);
 		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 
-		stop(stopped, io);
+		await stop(stopped, io);
 
 		assert.equal(stoppedPane(sandbox, io), "w1:p7");
 		assert.equal(io.calls.filter((c) => c[0] === "sbx").length, 0);

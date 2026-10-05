@@ -27,6 +27,8 @@ import { repositoryManifest } from "./repositories.ts";
 import { relay } from "./relay.ts";
 import { loadProfiles } from "../profile/profile.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
+import { agentName } from "./name.ts";
+import { keepName, stoppedScreen, stoppedView } from "./stopped.ts";
 import { up } from "./up.ts";
 import { jsonLines, paneScope, watch } from "./watch.ts";
 
@@ -47,6 +49,7 @@ const usage = `usage:
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
   ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
+  ${CLI} stopped <sandbox>                           what stop leaves in the saved tab: a full-screen view of the stopped container until ctrl+c
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
   ${CLI} handoff <sandbox> [--continue]              approve the session handoff the container suggested: its fresh session starts from the task directory, and --continue sends it the stock continue once it is ready for it
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
@@ -62,6 +65,8 @@ const usage = `usage:
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory; up accepts it repeatedly, primary first; multi-repo land uses the recorded primary`;
+
+const NAME_CHECK_MS = 5000;
 
 const BARE = new Set([
 	"apply",
@@ -207,13 +212,40 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const { opts, rest } = flags(args, ["lines"]);
 		io.log(peek(sandboxOf(rest[0]).name, io, Number(opts.lines ?? 40)));
 	},
-	stop(args) {
+	async stop(args) {
 		const { rest } = flags(args, []);
-		stop(sandboxOf(rest[0]), io);
+		await stop(sandboxOf(rest[0]), io);
 	},
 	async start(args) {
 		const { rest } = flags(args, []);
 		await start(sandboxOf(rest[0]), root, io);
+	},
+	async stopped(args) {
+		const { rest } = flags(args, []);
+		const sandbox = sandboxOf(rest[0]);
+		const view = stoppedView(sandbox, io);
+		const pane = process.env.HERDR_PANE_ID;
+		if (pane) {
+			const name = () => keepName(pane, agentName(sandbox.name), io);
+			name();
+			setInterval(name, NAME_CHECK_MS);
+		}
+		const out = process.stdout;
+		const draw = () => out.write(`\x1b[2J\x1b[H${stoppedScreen(view, { columns: out.columns ?? 80, rows: out.rows ?? 24 }).join("\n")}`);
+		const leave = () => {
+			out.write("\x1b[?25h\x1b[?1049l");
+			process.exit(0);
+		};
+		out.write("\x1b[?1049h\x1b[?25l");
+		draw();
+		out.on("resize", draw);
+		process.stdin.setRawMode?.(true);
+		process.stdin.on("data", (key: Buffer) => {
+			if (key.includes(3)) leave();
+		});
+		process.on("SIGTERM", leave);
+		process.on("SIGHUP", leave);
+		await new Promise(() => {});
 	},
 	steer(args) {
 		const { rest } = flags(args, []);
