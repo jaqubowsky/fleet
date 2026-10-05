@@ -24,7 +24,7 @@ import { logEvent } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { harnessStamp, imageStampPath, staleImage } from "./up.ts";
+import { harnessStamp, imageStampPath, resumeAgent, staleImage } from "./up.ts";
 import {
 	agentFor,
 	branchFacts,
@@ -79,10 +79,10 @@ export function blockedWork(task: string, io: Io): number {
 export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
-		const agent = agentFor(live, agentName(s.name))?.agent_status ?? "gone";
+		const stopped = s.status === "stopped" || Boolean(stoppedPane(s, io));
+		const agent = stopped ? "stopped" : agentFor(live, agentName(s.name))?.agent_status ?? "gone";
 		const manifest = groupManifest(s.name, io);
-		const canProbe =
-			s.status === "running" || (manifest !== undefined && s.status === "stopped");
+		const canProbe = !stopped && s.status === "running";
 		let checkout = { branch: "?", dirty: 0, head: "" };
 		try {
 			if (canProbe)
@@ -99,7 +99,7 @@ export function ls(io: Io): string {
 				facts: lastLine(error),
 			};
 		}
-		const running = s.status === "running";
+		const running = canProbe;
 		const repo = s.workspaces[0];
 		const task = repo ? taskDir(repo, s.name, io) : undefined;
 		const last = task
@@ -135,7 +135,7 @@ export function ls(io: Io): string {
 		}
 		return {
 			sandbox: s.name,
-			status: s.status,
+			status: stopped ? "stopped" : s.status,
 			agent,
 			branch: checkout.branch,
 			dirty: checkout.dirty,
@@ -169,6 +169,12 @@ function lastLine(error: unknown): string {
 }
 
 export function peek(sandbox: string, io: Io, lines = 40): string {
+	const entry = sandboxes(io).find((s) => s.name === sandbox);
+	if (entry && (entry.status === "stopped" || stoppedPane(entry, io))) {
+		const pane = stoppedPane(entry, io);
+		const tail = pane ? io.herdrText(["pane", "read", pane, "--source", "recent-unwrapped", "--lines", String(lines)]) : "no saved herdr pane";
+		return `${sandbox}: stopped; checkout not probed\n=== last ${lines} lines\n${tail}`;
+	}
 	const manifest = groupManifest(sandbox, io);
 	const git = manifest
 		? manifest.repositories
@@ -221,12 +227,60 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
+export function stopFile(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string {
+	return `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/logs/sandbox-stop.json`;
+}
+
+export function stoppedPane(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string | undefined {
+	const file = stopFile(sandbox, io);
+	const text = io.read(file);
+	if (text === undefined) return undefined;
+	const record = JSON.parse(text);
+	if (typeof record?.pane !== "string" || !record.pane) throw new Error(`${file}: missing pane`);
+	return record.pane;
+}
+
+export function stop(sandbox: Sandbox, io: Io): void {
+	const file = stopFile(sandbox, io);
+	let pane = stoppedPane(sandbox, io);
+	if (!pane) {
+		pane = agentFor(agents(io), agentName(sandbox.name))?.pane_id;
+		if (!pane) throw new Error(`${sandbox.name}: no herdr agent to preserve; inspect ${CLI} peek ${sandbox.name}`);
+	}
+	const before = io.read(file);
+	io.mkdir(dirname(file));
+	io.write(file, `${JSON.stringify({ pane })}\n`);
+	try {
+		if (sandbox.status !== "stopped") io.sbx(["stop", sandbox.name], { quiet: true });
+	} catch (error) {
+		if (before === undefined) io.remove(file);
+		else io.write(file, before);
+		throw error;
+	}
+	io.herdr(["pane", "report-agent", pane, "--source", "fleet:stopped", "--agent", sandbox.kind.name, "--state", "unknown"]);
+	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--applies-to-source", "fleet:stopped", "--state-label", "unknown=stopped"]);
+	io.herdr(["agent", "rename", pane, agentName(sandbox.name)]);
+	io.log(`${sandbox.name}: stopped; tab and files kept. Resume with ${CLI} start ${sandbox.name}`);
+}
+
+export async function start(sandbox: Sandbox, root: string, io: Io): Promise<void> {
+	const pane = stoppedPane(sandbox, io);
+	if (!pane) throw new Error(`${sandbox.name}: no saved stopped tab; use ${CLI} up to attach it`);
+	if (sandbox.status !== "stopped") throw new Error(`${sandbox.name}: already ${sandbox.status}; inspect its tab before starting again`);
+	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", sandbox.kind.name]);
+	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
+	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), pane, root, io);
+	io.remove(stopFile(sandbox, io));
+	io.log(`${sandbox.name}: started in the same tab; no prompt sent`);
+}
+
 export function steer(
 	sandbox: Sandbox,
 	text: string,
 	io: Io,
 	root?: string,
 ): void {
+	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
 	prompt(sandbox, text, io, { root });
 }
 
@@ -237,6 +291,7 @@ export async function handoff(
 	io: Io,
 	options: { continue?: boolean; root?: string } = {},
 ): Promise<void> {
+	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
 	const command = sandbox.kind.tokens["handoff.command"];
 	if (sandbox.kind.handoffTakesText)
 		return prompt(
@@ -272,6 +327,8 @@ function prompt(
 	{ root, reset }: { root?: string; reset?: boolean } = {},
 ): void {
 	seatOf(io);
+	const row = { name: sandbox, workspaces };
+	if (stoppedPane(row, io)) throw new Error(`${sandbox}: stopped; run ${CLI} start ${sandbox} first`);
 	const agent = agentName(sandbox);
 	const stale = root ? staleImage(root, kind, io) : undefined;
 	if (stale)
@@ -712,5 +769,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		);
 		return;
 	}
+	const stopped = stopFile(entry, io);
+	if (io.read(stopped) !== undefined) io.remove(stopped);
 	io.log(`${sandbox}: removed`);
 }

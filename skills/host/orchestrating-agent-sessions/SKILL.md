@@ -10,8 +10,10 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 | Ask | Command | Result to report |
 | --- | --- | --- |
 | put up a container for a task | `{{cli}} up <label> --repo <path> [--repo <path> ...] [--pi | --claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]` | the sandbox is `<agent>-<repo>-<label>`, so `<label>` names the task alone; one repo keeps its existing setup; multiple repos use the first as primary and bring each additional repo into a private clone by Git bundle, never a writable host mount, with its git dir under the primary's `.git/fleet-repos/`; every repo gets its ignored `.env*` files. Each has its own fetched origin base, branch, profile and install log. One `--base` applies to all, or supply one per repo in `--repo` order for different bases; `--branch` names one branch in each. Report every repo, task directory and waiting tab; no prompt is sent |
-| what is running | `{{cli}} ls` | status and herdr state, then the branch, dirty count and full SHA of each repo; stalled, activity, cost and each repo's PR and CI. A repo whose checkout cannot be probed shows `failed` with its name and error; other containers still list |
-| what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | each repo's branch, dirty count, full SHA, status, log, diff and install log, then the pane tail |
+| what is running | `{{cli}} ls` | status and herdr state, then the branch, dirty count and full SHA of each running repo; stalled, activity, cost and each repo's PR and CI. Stopped containers stay listed without checkout probes. A running repo whose checkout cannot be probed shows `failed` with its name and error; other containers still list |
+| release a container's resources, keep its work | `{{cli}} stop <sandbox>` | stopped, files and herdr tab kept; the watch shows `stopped` and sends no automatic continue |
+| resume a stopped container | `{{cli}} start <sandbox>` | the agent in its saved tab, with its last saved session when one exists; no prompt sent |
+| what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | each running repo's branch, dirty count, full SHA, status, log, diff and install log, then the pane tail; a stopped container shows only its saved pane, without starting it |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
 | approve its session handoff | `{{cli}} handoff <sandbox> [--continue]` | steered once `status.md` reads `session handoff complete; fresh session idle`; with `--continue` the fresh session gets the stock continue as soon as it can take it |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
@@ -23,6 +25,8 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 | close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
 | rebuild the image | `{{cli}} build [--pi | --claude]` | the docker build output, and what the image now carries |
 | switch models for new containers | `{{cli}} render` after editing `<kind>/profiles/models.json` in the harness repo, `<kind>` the container's `--pi | --claude`, or`--model` on one `{{cli}} up` | containers take it after `{{cli}} build`, the host {{reload.models}} |
+
+A stopped container needs `{{cli}} start` before a steer, handoff or exec. `stop` ends guest processes; `start` restores the saved conversation, not an interrupted tool call or app server. It leaves the task's `status.md` unchanged. `paused` there still means the agent finished the step its order named. Raw `sbx exec` starts stopped containers, so inspection goes through `{{cli}} ls` or `{{cli}} peek`.
 
 ## Wording a steer
 

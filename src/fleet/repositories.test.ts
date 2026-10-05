@@ -34,29 +34,18 @@ const answers = {
 	[`stat ${task}`]: { size: 0, dir: true, mtime: new Date(0) },
 };
 
-test("three repository snapshots, peek and history use the recorded task directory", () => {
+test("a stopped group's listing and history use its task directory without starting it", () => {
 	const io = fakeIo({ ...answers, [`read ${task}/logs/status.jsonl`]: "" });
-	const sbx = io.sbx;
-	io.sbx = (args, opts) => {
-		const result = sbx(args, opts);
-		if (args[4]?.startsWith('cd "$1" && printf'))
-			return `task\t0\t${String("abc".indexOf(args.at(-1)!.slice(1)) + 2).repeat(40)}`;
-		return result;
-	};
-
 	const table = ls(io);
 	const detail = peek("pi-a", io);
 	history("pi-a", "/c", io);
 
 	assert.equal(taskDir("/c", "pi-a", io), task);
-	for (const [index, name] of ["a", "b", "c"].entries()) {
-		assert.match(
-			table,
-			new RegExp(`owner/${name} task 0 dirty ${String(index + 2).repeat(40)}`),
-		);
-		assert.match(detail, new RegExp(`owner/${name}`));
+	for (const name of ["a", "b", "c"]) {
+		assert.match(table, new RegExp(`owner/${name} task \\? dirty ${"1".repeat(40)} \\(last known\\)`));
 	}
-	assert.ok(io.calls.some((call) => call[0] === "sbx" && call.includes("/c")));
+	assert.match(detail, /stopped; checkout not probed/);
+	assert.equal(io.calls.filter((call) => call[0] === "sbx" && call[1] === "exec").length, 0);
 });
 
 test("ls reads PR and CI state for every repository", () => {

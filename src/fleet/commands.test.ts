@@ -79,6 +79,14 @@ const sessions = {
 		"abc1234\t2026-09-21T12:02:10Z",
 };
 
+test("a stopped container rejects a steer without waking it", () => {
+	const io = fakeIo();
+
+	assert.throws(() => steer({ ...row("pi-a"), status: "stopped" }, "go", io), /fleet start pi-a/);
+
+	assert.deepEqual(io.calls, []);
+});
+
 test("steer logs the prompt before sending it", () => {
 	const io = fakeIo();
 	steer(row("pi-webapp-web-1"), 'zrób analizę "x"', io);
@@ -533,7 +541,7 @@ test("ls joins sbx, herdr and git state", () => {
 	});
 	assert.equal(
 		ls(io),
-		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x          stopped  gone     ?",
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x          stopped  stopped  ?",
 	);
 });
 
@@ -867,6 +875,7 @@ test("ls leaves an idle container unmarked while its PR's CI runs", () => {
 
 test("peek shows git state and the pane tail, or says the agent is gone", () => {
 	const io = fakeIo({
+		...running,
 		"sbx exec pi-a sh -c": " M a.ts\n---\nabc feat: x\n---\n 1 file changed",
 		"herdr agent read pi-a": "❯ waiting",
 	});
@@ -874,6 +883,7 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 	assert.match(out, /M a\.ts/);
 	assert.match(out, /=== last 5 lines\n❯ waiting/);
 	const gone = fakeIo({
+		...running,
 		"sbx exec pi-a sh -c": "clean",
 		"herdr agent read pi-a": new Error("agent_not_found"),
 	});
@@ -1228,11 +1238,11 @@ test("ls still prices a stopped pi container from the sessions it wrote", () => 
 		[`read ${task}/logs/sessions/s1.jsonl`]: request("2026-09-16T09:30:00Z", 0),
 	});
 
-	assert.equal(ls(io), "pi-a  stopped  gone     ?  $0.01");
+	assert.equal(ls(io), "pi-a  stopped  stopped  ?  $0.01");
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "exec"));
 });
 
-test("ls probes both heads and dirty counts even when a two-repo sandbox is stopped", () => {
+test("ls keeps a stopped two-repo sandbox asleep", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
@@ -1264,16 +1274,13 @@ test("ls probes both heads and dirty counts even when a two-repo sandbox is stop
 				},
 			],
 		}),
-		[`sbx exec pi-a sh -c ${checkoutProbe}`]: `task\t1\t${"3".repeat(40)}`,
-		'sbx exec pi-a sh -c cd "$1" && printf': `task\t1\t${"3".repeat(40)}`,
-		'sbx exec pi-a sh -c cd "$1" && printf "%s\\t%s\\t%s" "$(git branch --show-current)" "$(git status --porcelain | wc -l | tr -d " ")" "$(git rev-parse HEAD)" -- /tmp/fleet-repos/api': `task\t2\t${"4".repeat(40)}`,
 	});
 
 	const table = ls(io);
-	assert.match(table, /pi-a\s+stopped\s+gone\s+task.*1 uncommitted/);
-	assert.match(table, /acme\/one task 1 dirty 3{40}/);
-	assert.match(table, /acme\/two task 2 dirty 4{40}/);
-	assert.doesNotMatch(table, /last known|\? dirty/);
+	assert.match(table, /pi-a\s+stopped\s+stopped\s+\?/);
+	assert.match(table, /acme\/one task \? dirty 1{40} \(last known\)/);
+	assert.match(table, /acme\/two task \? dirty 2{40} \(last known\)/);
+	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
 });
 
 test("history lists every status.md change in local time with what changed in it, the log lines it added and those it removed", (t) => {

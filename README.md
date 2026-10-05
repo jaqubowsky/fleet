@@ -122,6 +122,8 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `./sync.sh` | shows what `--apply` would change for each agent whose CLI is on `PATH`, and names the backup archive it would write | nothing |
 | `./sync.sh --apply` | installs the harness for each agent whose CLI is on `PATH` and builds its sandbox image | first packs every file it will change into `~/.fleet/backups/<UTC timestamp>.tar.gz`; replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}` of the agents it sets up; writes keys into `~/.claude/settings.json` and links the guard hook into `~/.claude/hooks` with claude; links `fleet` and a `gh` wrapper into `~/.local/bin` and herdr's config |
 | `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a herdr tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.fleet/tasks/` |
+| `fleet stop <sandbox>` | stops the sandbox, keeping its files and herdr tab | ends guest processes; the tab and watch status show `stopped` |
+| `fleet start <sandbox>` | restarts in the saved tab with the last saved session when one exists | starts the sandbox and agent; sends no prompt |
 | `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
 | `fleet watch` | wakes the host when a sandbox needs it | nothing |
 | `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
@@ -138,6 +140,8 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
 
 `fleet --help` lists every flag.
+
+Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in the same tab, not an interrupted tool call or app server. The task's `status.md` stays unchanged. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer, handoff and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
 
 ## Also in the box
 

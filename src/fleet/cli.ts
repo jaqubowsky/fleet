@@ -14,7 +14,10 @@ import {
 	peek,
 	renderHost,
 	resolveSandbox,
+	start,
 	steer,
+	stop,
+	stoppedPane,
 } from "./commands.ts";
 import { init } from "./init.ts";
 import { realIo, seatOf } from "./io.ts";
@@ -42,6 +45,8 @@ const usage = `usage:
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
   ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
+  ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
+  ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
   ${CLI} handoff <sandbox> [--continue]              approve the session handoff the container suggested: its fresh session starts from the task directory, and --continue sends it the stock continue once it is ready for it
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
@@ -202,6 +207,14 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const { opts, rest } = flags(args, ["lines"]);
 		io.log(peek(sandboxOf(rest[0]).name, io, Number(opts.lines ?? 40)));
 	},
+	stop(args) {
+		const { rest } = flags(args, []);
+		stop(sandboxOf(rest[0]), io);
+	},
+	async start(args) {
+		const { rest } = flags(args, []);
+		await start(sandboxOf(rest[0]), root, io);
+	},
 	steer(args) {
 		const { rest } = flags(args, []);
 		const [sandbox, ...text] = rest;
@@ -216,7 +229,9 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	},
 	exec(args) {
 		const { rest } = flags(args, []);
-		exec(sandboxOf(rest[0]).name, rest.slice(1), io);
+		const sandbox = sandboxOf(rest[0]);
+		if (sandbox.status === "stopped" || stoppedPane(sandbox, io)) throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
+		exec(sandbox.name, rest.slice(1), io);
 	},
 	copy(args) {
 		const { rest } = flags(args, []);

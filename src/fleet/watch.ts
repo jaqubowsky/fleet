@@ -6,7 +6,7 @@ import {
 	logLines,
 } from "../../extensions/status-history.ts";
 import { activityOf } from "./activity.ts";
-import { activityNow, blockedWork, steer } from "./commands.ts";
+import { activityNow, blockedWork, steer, stoppedPane } from "./commands.ts";
 import { CLI, CONTINUE } from "../harness.ts";
 import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
 import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
@@ -162,6 +162,8 @@ export function watch(
 		const where = dirs.get(name);
 		if (!where)
 			return { text: "commits: not counted\n\npr: not read", running: false };
+		if (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io))
+			return { text: "container stopped; checkout not probed", running: false };
 		const manifest = groupManifest(where.sandbox.name, io);
 		if (manifest) {
 			const lines: string[] = [];
@@ -213,7 +215,8 @@ export function watch(
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name) && !when.down) return;
 		const rows = listed();
-		if (rows) locate(name, rows);
+		const where = rows ? locate(name, rows) : dirs.get(name);
+		if (!when.down && where && (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io))) return;
 		const status = statusOf(name);
 		const facts = factsOf(name);
 		if (
@@ -275,11 +278,13 @@ export function watch(
 		const pane = frame.data?.pane_id;
 		const entry = pane ? tracked.get(pane) : undefined;
 		if (!pane || !entry) return;
-		if (/pane[._]exited/.test(frame.event ?? "")) {
+		const where = dirs.get(entry.name);
+		const stopped = where && (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io));
+		if (!stopped && /pane[._]exited/.test(frame.event ?? "")) {
 			leave(pane, entry, listed(), true);
 			return;
 		}
-		const next = frame.data?.agent_status ?? "unknown";
+		const next = stopped ? "stopped" : frame.data?.agent_status ?? "unknown";
 		const previous = entry.status;
 		const change = transition(previous, next);
 		if (!change) return;
@@ -355,8 +360,17 @@ export function watch(
 		let rows: Sandbox[];
 		try {
 			listed = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result
-				.agents;
+				.agents.map((agent) => ({ ...agent }));
 			rows = sandboxes(io);
+			for (const row of rows) {
+				locate(agentName(row.name), rows);
+				const saved = stoppedPane(row, io);
+				if (row.status !== "stopped" && !saved) continue;
+				const name = agentName(row.name);
+				const live = listed.find((a) => a.name === name);
+				if (live) live.agent_status = "stopped";
+				else if (saved) listed.push({ name, pane_id: saved, agent_status: "stopped" });
+			}
 			agents = fleetAgents(listed, rows, wanted);
 			failing = undefined;
 		} catch (error) {
@@ -437,10 +451,10 @@ export function watch(
 		const idle = [...tracked.values()].filter(
 			(t) => t.status === "idle" || t.status === "done",
 		);
-		const rows = idle.some((t) => !dirs.has(t.name)) ? listed() : undefined;
+		const rows = idle.length ? listed() : undefined;
 		for (const t of idle) {
-			const where = dirs.get(t.name) ?? (rows && locate(t.name, rows));
-			if (!where || !limitStop(fieldsOf(statusOf(t.name)).attention)) continue;
+			const where = rows && locate(t.name, rows);
+			if (!where || where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io) || !limitStop(fieldsOf(statusOf(t.name)).attention)) continue;
 			const stoppedAt = io.stat(`${where.dir}/status.md`)?.mtime;
 			if (!stoppedAt) continue;
 			const stop = `${t.name}@${stoppedAt.toISOString()}`;

@@ -138,6 +138,40 @@ test("watch reads the group task and waits for CI on the third repository", (t) 
 	assert.match(wakes[0], /status: working/);
 });
 
+test("a stopped container stays in the status line without waking or probing it", (t) => {
+	const { io, status, intervals } = herdr(t, [agents[0]]);
+	const sbx = io.sbx;
+	io.sbx = (args, opts) => args[0] === "ls"
+		? JSON.stringify({ sandboxes: [{ ...sandboxes[0], status: "stopped" }] })
+		: sbx(args, opts);
+	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
+	const lines: string[] = [];
+	const wakes: string[] = [];
+	const handle = watch(() => undefined, io, (text) => wakes.push(text), (line) => lines.push(line));
+	t.after(() => handle.stop());
+
+	status("w1:p1", "idle");
+	t.mock.timers.tick(1000);
+	intervals.get(60_000)?.();
+
+	assert.equal(lines.at(-1), "claude-webapp-a stopped");
+	assert.deepEqual(wakes, []);
+	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
+});
+
+test("a stopped tab stays watched after herdr loses the live process", (t) => {
+	const { io } = herdr(t, []);
+	io.sbx = () => JSON.stringify({ sandboxes: [{ ...sandboxes[0], status: "stopped" }] });
+	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
+	const lines: string[] = [];
+	const handle = watch(() => undefined, io, () => {}, (line) => lines.push(line));
+	t.after(() => handle.stop());
+
+	handle.refresh();
+
+	assert.equal(lines.at(-1), "claude-webapp-a stopped");
+});
+
 test("watch follows the harness's containers and nothing else in herdr", () => {
 	assert.deepEqual(
 		fleetAgents(agents, sandboxes, undefined).map((a) => a.name),
@@ -676,6 +710,18 @@ function limited(
 	};
 	return { ...fixture, events, at, dir };
 }
+
+test("a manual stop suppresses account-limit retries before the watch refreshes", (t) => {
+	const { io, at, dir } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
+	const handle = watch(() => undefined, io, () => {});
+	t.after(() => handle.stop());
+	io.files[`${dir}/logs/sandbox-stop.json`] = JSON.stringify({ pane: "worker:pane" });
+
+	const resumes = at(31);
+
+	assert.equal(resumes, 0);
+	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
+});
 
 test("a container stopped by the account limit resumes with the stock continue at the reset time its message gives", (t: TestContext) => {
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);

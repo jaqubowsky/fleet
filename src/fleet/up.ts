@@ -15,7 +15,7 @@ import {
 	repositoryManifest,
 	saveRepositories,
 } from "./repositories.ts";
-import { agentFor, sandboxes, type Agent } from "./status.ts";
+import { agentFor, sandboxes, type Agent, type Sandbox } from "./status.ts";
 import { keychainRead } from "./tokens.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
@@ -507,15 +507,7 @@ export async function up(
 			input.model,
 			io.list(sessionsDir(task, kind, input.repo)).length > 0,
 		);
-		const start = kind.herdrIntegration
-			? `${input.root}/bin/${CLI} relay ${sandbox} ${task}`
-			: `sbx run --name ${sandbox}`;
-		io.herdr([
-			"pane",
-			"run",
-			pane,
-			`HERDR_AGENT=${kind.name} ${start}${args ? ` -- ${args}` : ""}`,
-		]);
+		runAgent(sandbox, task, pane, kind, args, input.root, io);
 	}
 	await waitForAgent(io, pane, sandbox, kind);
 	logEvent(io, "up", agent);
@@ -524,6 +516,20 @@ export async function up(
 		`${sandbox}: the container's agent waiting in tab ${agent} (pane ${pane}); no prompt sent`,
 	);
 	return { sandbox, agent, pane };
+}
+
+function runAgent(sandbox: string, task: string, pane: string, kind: Kind, args: string, root: string, io: Io): void {
+	const command = kind.herdrIntegration
+		? `${root}/bin/${CLI} relay ${sandbox} ${task}`
+		: `sbx run --name ${sandbox}`;
+	io.herdr(["pane", "run", pane, `HERDR_AGENT=${kind.name} ${command}${args ? ` -- ${args}` : ""}`]);
+}
+
+export async function resumeAgent(sandbox: Sandbox, task: string, pane: string, root: string, io: Io): Promise<void> {
+	const args = agentArgs(sandbox.kind, undefined, io.list(sessionsDir(task, sandbox.kind, sandbox.workspaces[0])).length > 0);
+	runAgent(sandbox.name, task, pane, sandbox.kind, args, root, io);
+	await waitForAgent(io, pane, sandbox.name, sandbox.kind);
+	io.herdr(["agent", "rename", pane, agentName(sandbox.name)]);
 }
 
 function sessionToken(profile: Profile): string | undefined {
