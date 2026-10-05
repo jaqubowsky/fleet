@@ -18,6 +18,18 @@ test("the host policy leaves sandbox removal to the fleet down approval path", (
 	}
 });
 
+test("the host policy sends a sandbox stop through fleet stop, which keeps its tab and its stopped state", () => {
+	for (const command of [
+		"sbx stop claude-flowmee-flo-1781",
+		`sh -c 'exec "$@"' -- sbx stop pi-demo`,
+	]) {
+		const verdict = decide("Bash", { command }, here);
+		assert.equal(verdict.decision, "deny", command);
+		assert.match(verdict.reason, /fleet stop/);
+	}
+	assert.equal(decide("Bash", { command: "sbx ls --json" }, here).decision, "allow");
+});
+
 test("a tool the policy does not know is refused, and its own tools are read on their subject", () => {
 	assert.equal(decide("Bash", { command: "ls -la" }, here).decision, "allow");
 	assert.equal(

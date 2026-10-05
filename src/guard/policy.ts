@@ -326,17 +326,21 @@ export function decide(
 			return deny("Recursive delete of a home or filesystem root.");
 	}
 
-	if (
+	const sbxRuns = (verb: string) =>
 		argvsOf(subject).some(
 			(argv) =>
-				(/(?:^|\/)sbx$/.test(argv[0] ?? "") && argv[1] === "rm") ||
+				(/(?:^|\/)sbx$/.test(argv[0] ?? "") && argv[1] === verb) ||
 				(/(?:^|\/)sh$/.test(argv[0] ?? "") &&
 					argv.includes("--") &&
-					argv.some((part, i) => part === "sbx" && argv[i + 1] === "rm")),
-		)
-	)
+					argv.some((part, i) => part === "sbx" && argv[i + 1] === verb)),
+		);
+	if (sbxRuns("rm"))
 		return deny(
 			"Agents close sandboxes through fleet down; sbx rm bypasses the repository's down permission.",
+		);
+	if (sbxRuns("stop"))
+		return deny(
+			"Agents stop sandboxes through fleet stop <sandbox>; sbx stop saves no tab, so the watch loses the container and fleet start cannot resume it.",
 		);
 	if (ORCHESTRATION.test(subject))
 		return plain(subject, "sbx/herdr orchestration.");
