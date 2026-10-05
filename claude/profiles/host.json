@@ -72,7 +72,6 @@
     }
   },
   "enabledPlugins": {
-    "cc-plugin-you-should-know@builtin": true,
     "fleet@harness": true
   }
 }
