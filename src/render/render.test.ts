@@ -561,7 +561,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				ticket,
-				/^Each criterion is an invariant whose expected result comes from the ticket, not from the current code\. Write it in the form that reads clearest, Given\/When\/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases/m,
+				/^Each criterion is an invariant whose expected result comes from the ticket, not from the current code\. Write it in the ticket's language, in the form that reads clearest, Given\/When\/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases/m,
 			);
 		});
 	});

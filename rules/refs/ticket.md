@@ -25,7 +25,7 @@ Blocked by: <NN>-<slug>.md, or "None, can start immediately"
 
 ## Acceptance criteria
 
-- [ ] Given <state or input>, when <action>, then <observable outcome with its concrete value>.
+- [ ] <State or input>, <action>, <observable outcome with its concrete value>.
 - [ ] <Boundary case: empty, at the limit, just past it, invalid> -> <observable outcome with its concrete value>.
 - [ ] <Adjacent behavior that must remain unchanged> -> <observable result>.
 
@@ -33,7 +33,7 @@ The title states the change in a few words, imperative, the way it reads on a bo
 
 A Scope anchor names the symbol beside the path, so a moved file is found again by the symbol; the date says when the path last held.
 
-Each criterion is an invariant whose expected result comes from the ticket, not from the current code. Write it in the form that reads clearest, Given/When/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases rather than more happy paths. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
+Each criterion is an invariant whose expected result comes from the ticket, not from the current code. Write it in the ticket's language, in the form that reads clearest, Given/When/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases rather than more happy paths. A screen change is a normal criterion: the browser check derives its screen and state from the criterion and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
 
 In a tracker, the heading's title is the issue title, its key is the only number, `Status:` is the issue's workflow state, and `Blocked by:` is the tracker's blocking relation with landed blockers left out. The local copy puts the heading and working `Status:` back above the description. Its full text remains available to a container without tracker access.
 
