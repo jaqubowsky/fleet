@@ -454,12 +454,33 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	});
 }
 
-test("the continue steer reads the current summary and recent log before the ticket frontier", () => {
-	assert.match(CONTINUE, /Summary and recent Log turning points/);
-	assert.match(CONTINUE, /frontier of issues\//);
+test("the continue steer points at the shared resume rule", () => {
+	assert.match(CONTINUE, /following the Session handoff rule/);
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`${name} resumes with bounded reads from unfinished work`, () => {
+		renderSeats(name, (out) => {
+			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+
+			assert.match(rules, /If implementation is complete, start from the remaining acceptance criteria and gates/);
+			assert.match(rules, /Read supporting documents one at a time, only the sections needed for that unfinished step/);
+		});
+	});
+
+	test(`${name} verifies after the repository's required branch update`, () => {
+		renderSeats(name, (out) => {
+			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+			const finish = rules.split("## Finish\n")[1]!;
+
+			assert.match(finish, /merge where merge commits are allowed, rebase only where linear history requires it/);
+			assert.match(finish, /If no update is needed, verify the current HEAD/);
+			assert.match(finish, /If the base advances during verification, report it to the host instead of updating the branch again/);
+			assert.match(finish, /On that recorded tree, run the final visible acceptance, typecheck and lint, and each changed workspace's full suite once/);
+			assert.doesNotMatch(finish, /git fetch origin && git rebase origin\/<base>/);
+		});
+	});
+
 	test(`${name} renders no Next step and carries the continue steer`, () => {
 		renderSeats(name, (out) => {
 			const naming = (readdirSync(out, { recursive: true }) as string[])

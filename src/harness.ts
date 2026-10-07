@@ -43,7 +43,7 @@ const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
 export const CONTINUE =
-	"Continue the previous task: read the status.md header, Summary and recent Log turning points, then take the work from the frontier of issues/ and git. Read older Log entries only when the frontier needs them.";
+	"Continue the previous task from its current frontier, following the Session handoff rule in your container instructions.";
 
 export const KINDS: Record<AgentName, Kind> = {
 	pi: {
