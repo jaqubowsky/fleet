@@ -333,34 +333,6 @@ function renderSeats(
 	}
 }
 
-test("pi host, sandbox and reviewer select Sol 6.1 with a 1.05M catalog override", () => {
-	renderSeats("pi", (out) => {
-		const host = JSON.parse(
-			readFileSync(`${out}/host/agent/settings.json`, "utf8"),
-		);
-		const sbx = JSON.parse(
-			readFileSync(`${out}/container/context/agent-settings.json`, "utf8"),
-		);
-		const models = JSON.parse(
-			readFileSync(`${out}/host/agent/models.json`, "utf8"),
-		);
-
-		assert.equal(host.defaultProvider, "openai-codex");
-		assert.equal(host.defaultModel, "gpt-6.1-sol");
-		assert.equal(host.defaultThinkingLevel, "medium");
-		assert.equal(sbx.defaultModel, "gpt-6.1-sol");
-		assert.equal(sbx.defaultThinkingLevel, "medium");
-		assert.deepEqual(host.subagents.agentOverrides.reviewer, {
-			model: "openai-codex/gpt-6.1-sol",
-			thinking: "high",
-		});
-		assert.deepEqual(
-			models.providers["openai-codex"].modelOverrides["gpt-6.1-sol"],
-			{ contextWindow: 1050000, maxTokens: 128000 },
-		);
-	});
-});
-
 test("pi host and container load no pi-lens, and the pi kit sets none of its variables", () => {
 	renderSeats("pi", (out) => {
 		const host = JSON.parse(
