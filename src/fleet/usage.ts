@@ -1,3 +1,6 @@
+import type { ToolUsage } from "./activity.ts";
+import type { Runtime } from "./events.ts";
+
 type Cost = { total?: number };
 type Usage = { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; reasoning?: number; cost?: Cost };
 type ToolCall = { type: string; name?: string; arguments?: { path?: string } };
@@ -29,6 +32,10 @@ export type Run = {
 };
 
 export type Summary = {
+	usage_scope?: "container_lifetime" | "task_sessions";
+	runtime?: Runtime;
+	tools?: ToolUsage;
+	task?: { status?: string; branch: string; head: string };
 	runs: Run[];
 	totals: Pick<Run, "requests" | "input" | "cached_input" | "cache_write" | "output" | "reasoning" | "cost" | "compactions">;
 	cache_hit_ratio: number;
@@ -85,7 +92,7 @@ function claudeCalls(content: ClaudePart[] | string | undefined): ToolCall[] {
 }
 
 function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
-	if (line.type === "system" && line.subtype === "compact_boundary") return [{ type: "compaction" }];
+	if (line.type === "system" && line.subtype === "compact_boundary") return [{ type: "compaction", timestamp: line.timestamp }];
 	const usage = line.message?.usage;
 	if (line.type !== "assistant" || !usage) return [];
 	const id = line.message?.id;

@@ -714,6 +714,7 @@ test("up reuses an existing container and only opens the tab", async () => {
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
 	assert.ok(io.calls.some((c) => c[1] === "pane"));
+	assert.ok(!io.calls.some((c) => c[0] === "append" && c[2].includes(" created ")));
 });
 
 test("up adopts an agent that already carries the name, whatever its tab is called", async () => {

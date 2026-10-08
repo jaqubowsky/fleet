@@ -27,6 +27,7 @@ for (const kind of Object.values(KINDS)) {
 		assert.equal(stoppedPane(sandbox, io), "w1:p7");
 		assert.equal(io.files[`${task}/status.md`], "status: implementing\nattention: none\n");
 		assert.equal(io.files[`${task}/logs/sessions/s1.jsonl`], "saved conversation");
+		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` stop ${sandbox.name} `)));
 		assert.deepEqual(io.calls.filter((c) => c[0] === "sbx"), [["sbx", "stop", sandbox.name]]);
 		assert.equal(io.calls.filter((c) => c.includes("close") || c.includes("rm")).length, 0);
 	});
@@ -68,6 +69,7 @@ for (const kind of Object.values(KINDS)) {
 		assert.match(launched?.[4] ?? "", new RegExp(kind.resume));
 		assert.ok(launched?.[4].includes(kind.herdrIntegration ? `/harness/bin/fleet relay ${sandbox.name} ${task}` : `sbx run --name ${sandbox.name}`));
 		assert.equal(stoppedPane(sandbox, io), undefined);
+		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` start ${sandbox.name} `)));
 		assert.equal(io.calls.filter((c) => c.includes("prompt") || c.includes("create")).length, 0);
 	});
 
@@ -106,6 +108,7 @@ for (const kind of Object.values(KINDS)) {
 
 		assert.equal(stoppedPane(sandbox, io), undefined);
 		assert.equal(io.calls.filter((c) => c[2] === "report-agent").length, 0);
+		assert.equal(io.calls.filter((c) => c[0] === "append").length, 0);
 	});
 
 	test(`${kind.name} stopping twice keeps the saved pane`, async () => {
@@ -116,6 +119,7 @@ for (const kind of Object.values(KINDS)) {
 
 		assert.equal(stoppedPane(sandbox, io), "w1:p7");
 		assert.equal(io.calls.filter((c) => c[0] === "sbx").length, 0);
+		assert.equal(io.calls.filter((c) => c[0] === "append").length, 0);
 	});
 
 	test(`${kind.name} a pending stop rejects a steer even before sandboxd updates its status`, () => {

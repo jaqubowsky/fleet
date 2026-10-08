@@ -293,6 +293,7 @@ export async function up(
 				);
 		}
 		create(input, sandbox, profile, kind, io, task);
+		logEvent(io, "created", agent);
 		let locks: number;
 		try {
 			if (!group && profile.container.push === "auto")

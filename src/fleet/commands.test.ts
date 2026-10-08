@@ -361,6 +361,171 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
+test("down excludes a stopped night from running time", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": [
+			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+			"2026-09-21T13:00:00Z w1:host stop pi-a session=s",
+			"2026-09-22T01:00:00Z w1:host start pi-a session=s",
+		].join("\n"),
+	});
+	io.now = () => new Date("2026-09-22T02:00:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.runtime?.coverage, "complete");
+	assert.equal(usage.usage_scope, "container_lifetime");
+	assert.equal(usage.runtime?.elapsed_ms, 14 * 3600_000);
+	assert.equal(usage.runtime?.stopped_ms, 12 * 3600_000);
+	assert.equal(usage.runtime?.running_ms, 2 * 3600_000);
+	assert.equal(usage.runtime?.stop_count, 1);
+	assert.equal(usage.runtime?.restart_count, 1);
+	assert.equal(usage.totals.requests, 2);
+	assert.ok(io.lines.some((line) => line.includes("running 120m, stopped 720m")));
+});
+
+test("down keeps usage from an older container out of the new runtime", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": [
+			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+			"2026-09-21T12:30:00Z w1:host down pi-a session=s",
+			"2026-09-21T13:00:00Z w1:host created pi-a session=s runtime=1",
+		].join("\n"),
+		[`read ${task}/logs/sessions/--r--/2026-09-21T12-01-18-932Z_s1.jsonl`]: [
+			request("2026-09-21T12:02:02Z", 0),
+			request("2026-09-21T13:02:02Z", 90),
+			request("2026-09-21T15:02:02Z", 90),
+		].join("\n"),
+		[`read ${task}/logs/activity.jsonl`]: [
+			JSON.stringify({ at: "2026-09-21T12:10:00Z", tool: "bash", ok: false, agent: "main" }),
+			JSON.stringify({ at: "2026-09-21T13:10:00Z", tool: "read", ok: true, agent: "main" }),
+			JSON.stringify({ at: "2026-09-21T15:10:00Z", tool: "read", ok: true, agent: "main" }),
+		].join("\n"),
+	});
+	io.now = () => new Date("2026-09-21T14:00:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.runtime.elapsed_ms, 3600_000);
+	assert.equal(usage.totals.requests, 1);
+	assert.equal(usage.totals.cost, 0.01);
+	assert.equal(usage.tools.calls, 1);
+	assert.equal(usage.tools.failed, 0);
+});
+
+test("down flags long tool-activity gaps without calling them stopped time", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+		[`read ${task}/logs/activity.jsonl`]: [
+			JSON.stringify({ at: "2026-09-21T12:10:00Z", tool: "read", ok: true, agent: "main" }),
+			JSON.stringify({ at: "2026-09-21T12:20:00Z", tool: "bash", ok: true, agent: "main" }),
+		].join("\n"),
+	});
+	io.now = () => new Date("2026-09-21T13:00:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.runtime.running_ms, 3600_000);
+	assert.equal(usage.runtime.stopped_ms, 0);
+	assert.equal(usage.tools?.silence_threshold_ms, 20 * 60_000);
+	assert.deepEqual(usage.tools?.activity_gaps, [{ from: "2026-09-21T12:20:00.000Z", to: "2026-09-21T13:00:00.000Z", running_ms: 40 * 60_000 }]);
+});
+
+test("a stopped night is not flagged as tool inactivity", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": [
+			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+			"2026-09-21T12:02:00Z w1:host stop pi-a session=s",
+			"2026-09-22T00:02:00Z w1:host start pi-a session=s",
+		].join("\n"),
+		[`read ${task}/logs/activity.jsonl`]: [
+			JSON.stringify({ at: "2026-09-21T12:01:00Z", tool: "read", ok: true, agent: "main" }),
+			JSON.stringify({ at: "2026-09-22T00:03:00Z", tool: "bash", ok: true, agent: "main" }),
+		].join("\n"),
+	});
+	io.now = () => new Date("2026-09-22T00:04:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.deepEqual(usage.tools?.activity_gaps, []);
+	assert.equal(usage.runtime.running_ms, 4 * 60_000);
+});
+
+test("down includes an unfinished stop without treating it as running", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": [
+			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+			"2026-09-21T13:00:00Z w1:host stop pi-a session=s",
+		].join("\n"),
+	});
+	io.now = () => new Date("2026-09-22T02:00:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.runtime?.stopped_ms, 13 * 3600_000);
+	assert.equal(usage.runtime?.running_ms, 3600_000);
+	assert.equal(usage.runtime?.restart_count, 0);
+});
+
+test("legacy runtime coverage is unknown rather than zero stopped time", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z w1:host up pi-a session=s",
+	});
+	io.now = () => new Date("2026-09-22T02:00:00Z");
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.runtime?.coverage, "partial");
+	assert.equal(usage.usage_scope, "task_sessions");
+	assert.equal(usage.runtime?.elapsed_ms, 14 * 3600_000);
+	assert.equal(usage.runtime?.running_ms, undefined);
+	assert.equal(usage.runtime?.stopped_ms, undefined);
+});
+
+test("down reports recorded tool failures without claiming task accuracy", () => {
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		[`read ${task}/logs/activity.jsonl`]: [
+			JSON.stringify({ at: "2026-09-21T12:02:10Z", tool: "bash", ok: false, agent: "main" }),
+			JSON.stringify({ at: "2026-09-21T12:02:20Z", tool: "read", ok: true, agent: "reviewer" }),
+			JSON.stringify({ at: "2026-09-21T12:02:30Z", tool: "bash", ok: true, agent: "main" }),
+		].join("\n"),
+	});
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.deepEqual(usage.tools, { calls: 3, failed: 1, by_tool: { bash: { calls: 2, failed: 1 }, read: { calls: 1, failed: 0 } }, by_agent: { main: { calls: 2, failed: 1 }, reviewer: { calls: 1, failed: 0 } } });
+	assert.equal(usage.accuracy, undefined);
+	assert.equal(usage.tps, undefined);
+});
+
 test("down leaves claude's transcripts where the container wrote them", () => {
 	const io = fakeIo({
 		"sbx ls --json": {

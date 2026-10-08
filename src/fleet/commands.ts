@@ -9,7 +9,7 @@ import {
 	fieldsOf,
 	STATUS_LOG,
 } from "../../extensions/status-history.ts";
-import { activityOf, callsSince, projection } from "./activity.ts";
+import { activityOf, callsSince, projection, toolUsage } from "./activity.ts";
 import { render } from "../render/render.ts";
 import {
 	artifactsDir,
@@ -20,7 +20,7 @@ import {
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef } from "./land.ts";
-import { logEvent } from "./events.ts";
+import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { idleStalled, TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
@@ -262,7 +262,10 @@ export async function stop(sandbox: Sandbox, io: Io): Promise<void> {
 	io.mkdir(dirname(file));
 	io.write(file, `${JSON.stringify({ pane })}\n`);
 	try {
-		if (sandbox.status !== "stopped") io.sbx(["stop", sandbox.name], { quiet: true });
+		if (sandbox.status !== "stopped") {
+			io.sbx(["stop", sandbox.name], { quiet: true });
+			logEvent(io, "stop", agentName(sandbox.name));
+		}
 	} catch (error) {
 		if (before === undefined) io.remove(file);
 		else io.write(file, before);
@@ -285,6 +288,7 @@ export async function start(sandbox: Sandbox, root: string, io: Io): Promise<voi
 	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
 	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), pane, root, io);
 	io.remove(stopFile(sandbox, io));
+	logEvent(io, "start", agentName(sandbox.name));
 	io.log(`${sandbox.name}: started in the same tab; no prompt sent`);
 }
 
@@ -606,6 +610,8 @@ function sessionUsage(
 	io: Io,
 	branch?: string,
 	repo?: string,
+	from?: string,
+	until?: string,
 ): Summary | undefined {
 	const files = collect(`${task}/logs/sessions`, "", io, []).filter(
 		(f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/"),
@@ -616,7 +622,9 @@ function sessionUsage(
 	const entries = files
 		.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""))
 		.sort((a, b) => firstAt(a).localeCompare(firstAt(b)))
-		.flat();
+		.flat().filter((entry) =>
+			(!from || !!entry.timestamp && Date.parse(entry.timestamp) >= Date.parse(from)) &&
+			(!until || !!entry.timestamp && Date.parse(entry.timestamp) <= Date.parse(until)));
 	const first = entries.find(
 		(e) => e.type === "message" && e.message?.role === "assistant",
 	)?.timestamp;
@@ -755,13 +763,25 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${CLI} land first or pass --force to discard`,
 		);
 	}
+	const runtime = runtimeOf(io.read(`${io.home}/${EVENTS_LOG}`), agentName(sandbox), io.now());
 	logEvent(io, "down", agentName(sandbox));
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
-	const summary = sessionUsage(task, io, checkout.branch, repo);
+	const from = runtime.coverage === "complete" ? runtime.started_at : undefined;
+	const summary = sessionUsage(task, io, checkout.branch, repo, from, from ? runtime.finished_at : undefined);
 	if (summary) {
+		summary.usage_scope = from ? "container_lifetime" : "task_sessions";
+		summary.runtime = runtime;
+		const tools = toolUsage(io.read(`${task}/${ACTIVITY}`), runtime);
+		if (tools) summary.tools = tools;
+		summary.task = { status: fieldsOf(io.read(`${task}/status.md`)).status, branch: checkout.branch, head: checkout.head };
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
+		io.log(runtime.coverage === "complete"
+			? `${sandbox}: elapsed ${Math.round(runtime.elapsed_ms! / 60000)}m, running ${Math.round(runtime.running_ms! / 60000)}m, stopped ${Math.round(runtime.stopped_ms! / 60000)}m`
+			: `${sandbox}: runtime coverage ${runtime.coverage}; running and stopped time not recorded`);
+		if (tools?.activity_gaps?.length)
+			io.log(`${sandbox}: ${tools.activity_gaps.length} long tool-activity gap(s); not classified as stalls`);
 	} else {
 		io.log(
 			`${sandbox}: no session in ${task}/logs/sessions (the container's agent never ran)`,

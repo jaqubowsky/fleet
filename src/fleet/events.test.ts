@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { eventAgents, lifecycle, logEvent } from "./events.ts";
+import { eventAgents, lifecycle, logEvent, runtimeOf } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
 import { SEATS } from "../harness.ts";
 import { realIo } from "./io.ts";
@@ -15,6 +15,77 @@ test("new up and steer events carry the invoking Pi session", () => {
 		["append", "/home/me/.fleet/tasks/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
 		["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
 	]);
+});
+
+test("runtime sums several stops without counting a repeated stop twice", () => {
+	const log = [
+		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
+		"2026-09-16T10:10:00Z w1:p stop worker session=a",
+		"2026-09-16T10:20:00Z w1:p stop worker session=a",
+		"2026-09-16T10:40:00Z w1:p start worker session=a",
+		"2026-09-16T10:45:00Z w1:p stop worker session=a",
+		"2026-09-16T10:50:00Z w1:p start worker session=a",
+	].join("\n");
+
+	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
+
+	assert.equal(runtime.coverage, "complete");
+	assert.equal(runtime.elapsed_ms, 60 * 60_000);
+	assert.equal(runtime.stopped_ms, 35 * 60_000);
+	assert.equal(runtime.running_ms, 25 * 60_000);
+	assert.equal(runtime.stop_count, 2);
+	assert.equal(runtime.restart_count, 2);
+});
+
+test("runtime follows the latest creation rather than a previous container", () => {
+	const log = [
+		"2026-09-16T09:00:00Z w1:p created worker session=a runtime=1",
+		"2026-09-16T09:30:00Z w1:p down worker session=a",
+		"2026-09-16T10:00:00Z w1:p created worker session=b runtime=1",
+		"2026-09-16T10:10:00Z w1:p stop another-worker session=b",
+		"2026-09-16T12:00:00Z w1:p stop worker session=b",
+	].join("\n");
+
+	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
+
+	assert.equal(runtime.coverage, "complete");
+	assert.equal(runtime.elapsed_ms, 60 * 60_000);
+	assert.equal(runtime.stopped_ms, 0);
+	assert.equal(runtime.started_at, "2026-09-16T10:00:00Z");
+});
+
+test("an unmatched start leaves runtime coverage partial", () => {
+	const log = [
+		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
+		"2026-09-16T10:30:00Z w1:p start worker session=a",
+	].join("\n");
+
+	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
+
+	assert.equal(runtime.coverage, "partial");
+	assert.equal(runtime.running_ms, undefined);
+	assert.equal(runtime.stopped_ms, undefined);
+});
+
+test("a missing creation leaves runtime unavailable", () => {
+	const runtime = runtimeOf("not an event", "worker", new Date("2026-09-16T11:00:00Z"));
+
+	assert.equal(runtime.coverage, "unavailable");
+	assert.equal(runtime.elapsed_ms, undefined);
+	assert.equal(runtime.running_ms, undefined);
+});
+
+test("stop and start do not change watch ownership", () => {
+	const log = [
+		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
+		"2026-09-16T10:00:01Z w1:p up worker session=a",
+		"2026-09-16T10:30:00Z w2:p stop worker session=b",
+		"2026-09-16T11:00:00Z w2:p start worker session=b",
+	].join("\n");
+
+	assert.deepEqual(eventAgents(log, { sessionId: "a" }), ["worker"]);
+	assert.deepEqual(eventAgents(log, { sessionId: "b" }), []);
+	assert.deepEqual([...lifecycle(log).closed], []);
 });
 
 test("two Pi sessions sharing a pane only adopt their own events", () => {
