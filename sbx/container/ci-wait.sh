@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: ci-wait <owner>/<repo> <pr number> [reads, default 20]"
+usage="usage: ci-wait <owner>/<repo> <pr number>"
 
 count() {
   case "$1" in ''|*[!0-9]*) return 1 ;; esac
 }
 
 main() {
-  local repo="${1:?$usage}" pr="${2:?$usage}" reads="${3:-20}" interval="${CI_WAIT_INTERVAL:-60}"
+  [[ "$#" == 2 ]] || { echo "$usage"; exit 2; }
+  local repo="$1" pr="$2" reads=20 interval="${CI_WAIT_INTERVAL:-60}"
   local sha pending total state i
   sha="$(gh pr view "$pr" --repo "$repo" --json headRefOid --jq .headRefOid)"
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "head read failed: $sha"; exit 2; }

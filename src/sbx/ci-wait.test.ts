@@ -43,14 +43,23 @@ test("settled runs end the wait green", () => {
 });
 
 test("runs still pending after the last read are a finding", () => {
-	const run = ciWait({ pending: "1", total: "2", state: "pending" }, "3");
+	const run = ciWait({ pending: "1", total: "2", state: "pending" });
 
 	assert.equal(run.status, 1);
-	assert.match(run.out, /still pending after 3 reads/);
+	assert.match(run.out, /read 20\/20: 1 of 2 runs pending, status pending/);
+	assert.match(run.out, /still pending after 20 reads/);
+});
+
+test("a caller cannot shorten the round with an extra argument", () => {
+	const run = ciWait({ pending: "1", total: "2", state: "pending" }, "1");
+
+	assert.equal(run.status, 2);
+	assert.match(run.out, /usage: ci-wait/);
+	assert.doesNotMatch(run.out, /head |read 1/);
 });
 
 test("no runs registered yet keeps waiting", () => {
-	const run = ciWait({ pending: "0", total: "0", state: "success" }, "2");
+	const run = ciWait({ pending: "0", total: "0", state: "success" });
 
 	assert.equal(run.status, 1);
 });
