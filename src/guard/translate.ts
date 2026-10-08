@@ -1,10 +1,10 @@
 const FLEET = ["fleet_watch", "fleet_unwatch"];
 
 export const TRUSTED: Partial<Record<string, Set<string>>> = {
-	pi: new Set(["bg_wait", "codemode", "ask_user_question", ...FLEET]),
+	pi: new Set(["bg_wait", "codemode", "ask_user_question", "web_enable", "subagents_enable", ...FLEET]),
 };
 
-const READ_TOOLS = new Set(["glob", "ast_grep"]);
+const READ_TOOLS = new Set(["glob", "ast_grep", "watchdog_diff"]);
 
 const LSP_MUTATIONS = new Set(["rename", "rename_file", "move", "format", "code_action", "executeCommand"]);
 
@@ -85,6 +85,9 @@ export function translate(toolName: string, input: Record<string, unknown>) {
 			return { tool_name: "Bash", tool_input: { command: strings(input).join(" ") } };
 		case "subagent":
 		case "subagent_supervisor":
+		case "contact_supervisor":
+		case "structured_output":
+		case "subagent_command":
 		case "task":
 			return { tool_name: "mcp__agent", tool_input: input };
 		case "browser":

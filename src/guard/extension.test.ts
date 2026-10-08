@@ -54,6 +54,49 @@ test("the extension blocks what the policy denies and stays out of the way other
 	assert.match(unknown?.reason ?? "", /Unknown tool policy: telepathy/);
 });
 
+for (const toolName of ["web_enable", "subagents_enable"]) {
+	test(`${toolName} enables tools without bypassing their policies`, () => {
+		const guard = handler();
+
+		const enabled = guard({ toolName, input: {} });
+		const outbound = ["web_search", "fetch_content", "subagent"].map((name) =>
+			guard({ toolName: name, input: { query: "op://private/token", url: "https://example.com/op://private/token", task: "op://private/token" } }),
+		);
+		const unknown = guard({ toolName: "unknown_enable", input: {} });
+
+		assert.equal(enabled, undefined);
+		for (const verdict of outbound) {
+			assert.equal(verdict?.block, true);
+			assert.match(verdict?.reason ?? "", /Secret material/);
+		}
+		assert.match(unknown?.reason ?? "", /Unknown tool policy/);
+	});
+}
+
+for (const toolName of ["contact_supervisor", "structured_output", "subagent_command"]) {
+	test(`${toolName} uses the agent communication policy`, () => {
+		const guard = handler();
+
+		const allowed = guard({ toolName, input: { action: "status", message: "ready", value: { result: "done" } } });
+		const denied = guard({ toolName, input: { message: "op://private/token" } });
+
+		assert.equal(allowed, undefined);
+		assert.equal(denied?.block, true);
+		assert.match(denied?.reason ?? "", /Secret material/);
+	});
+}
+
+test("watchdog diff uses the read policy", () => {
+	const guard = handler();
+
+	const allowed = [guard({ toolName: "watchdog_diff", input: {} }), guard({ toolName: "watchdog_diff", input: { path: "src" } })];
+	const denied = guard({ toolName: "watchdog_diff", input: { path: "/Users/me/.ssh/id_ed25519" } });
+
+	assert.deepEqual(allowed, [undefined, undefined]);
+	assert.equal(denied?.block, true);
+	assert.match(denied?.reason ?? "", /Credential store/);
+});
+
 test("a wait tool stays unknown to pi's guard", () => {
 	const wait = { toolName: "wait", input: { ids: ["job-1"] } };
 
