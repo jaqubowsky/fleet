@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
@@ -560,16 +560,19 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 		.filter((c) => c[0] === "sbx" && c[1] === "cp")
 		.map((c) => c.slice(2));
 	assert.deepEqual(cps, [
+		[
+			"/home/me/.pi/agent/extensions/herdr-agent-state.ts",
+			"pi-webapp-web-1:/home/agent/.pi/agent/extensions/herdr-agent-state.ts",
+		],
 		[`${repo}/packages/pdf-generator`, `pi-webapp-web-1:${repo}/packages/`],
 		[
 			`${repo}/.git/modules/packages/pdf-generator`,
 			`pi-webapp-web-1:${repo}/.git/modules/packages/`,
 		],
-		[
-			"/home/me/.pi/agent/extensions/herdr-agent-state.ts",
-			"pi-webapp-web-1:/home/agent/.pi/agent/extensions/herdr-agent-state.ts",
-		],
 	]);
+	const switched = io.calls.findIndex((c) => c[0] === "sbx" && c[5] === SWITCH_TO_BRANCH);
+	const copied = io.calls.findIndex((c) => c[0] === "sbx" && c[1] === "cp" && c[2] === `${repo}/packages/pdf-generator`);
+	assert.ok(switched < copied);
 	const chown = io.calls.find(
 		(c) => c[0] === "sbx" && String(c[5]).startsWith("sudo chown"),
 	)!;
@@ -1053,7 +1056,11 @@ test("a submodule of an extra repository lives under the git dir the clone repor
 	]);
 });
 
-test("the seeding scripts leave a working submodule behind a separate git dir", async (t) => {
+for (const [name, state] of [
+	["a copied submodule follows the guest gitlink without moving the host", "ahead"],
+	["local submodule edits stop startup without losing host files", "dirty"],
+	["an unavailable submodule commit stops startup", "missing"],
+] as const) test(name, async (t) => {
 	const root = realpathSync(mkdtempSync(join(tmpdir(), "up-submodule-")));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
 	const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" };
@@ -1084,6 +1091,16 @@ test("the seeding scripts leave a working submodule behind a separate git dir", 
 	const gitDir = join(root, "primary", ".git", "fleet-repos", "api.git");
 	mkdirSync(dirname(gitDir), { recursive: true });
 	execFileSync("git", ["clone", "--quiet", "--separate-git-dir", gitDir, host, guest], { env });
+	const hostModule = join(host, "libs/shared");
+	const pinned = git(hostModule, "rev-parse", "HEAD");
+	git(hostModule, "commit", "--quiet", "--allow-empty", "-m", "host checkout ahead");
+	const hostHead = git(hostModule, "rev-parse", "HEAD");
+	if (state === "dirty") writeFileSync(join(hostModule, "local.txt"), "local edits\n");
+	if (state === "missing") {
+		git(lib, "commit", "--quiet", "--allow-empty", "-m", "unavailable in host copy");
+		git(guest, "update-index", "--cacheinfo", `160000,${git(lib, "rev-parse", "HEAD")},libs/shared`);
+		git(guest, "commit", "--quiet", "-m", "pin unavailable commit");
+	}
 	const io = fakeIo({
 		...base,
 		"sbx exec pi-webapp-web-1 sh -c printf": guest,
@@ -1107,8 +1124,25 @@ test("the seeding scripts leave a working submodule behind a separate git dir", 
 		return printed;
 	};
 
+	if (state === "dirty") {
+		await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /submodule libs\/shared has local changes/);
+
+		assert.equal(readFileSync(join(hostModule, "local.txt"), "utf8"), "local edits\n");
+		assert.equal(git(hostModule, "rev-parse", "HEAD"), hostHead);
+		return;
+	}
+	if (state === "missing") {
+		await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /submodule libs\/shared cannot check out its recorded commit/);
+
+		assert.equal(git(hostModule, "rev-parse", "HEAD"), hostHead);
+		return;
+	}
+
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
+	assert.equal(git(guest, "status", "--porcelain"), "");
+	assert.equal(git(join(guest, "libs/shared"), "rev-parse", "HEAD"), pinned);
+	assert.equal(git(hostModule, "rev-parse", "HEAD"), hostHead);
 	assert.match(git(join(guest, "libs/shared"), "status", "--porcelain=v1", "--branch"), /^## /);
 	assert.equal(
 		git(join(guest, "libs/shared"), "rev-parse", "--absolute-git-dir"),

@@ -297,7 +297,6 @@ export async function up(
 		try {
 			if (!group && profile.container.push === "auto")
 				refuseOtherPrivate(io, sandbox, name);
-			seedSubmodules(io, input.repo, sandbox);
 			seedEnv(io, input.repo, sandbox);
 			seedCache(io, input.repo, sandbox, kind);
 			if (kind.projectConfig)
@@ -335,6 +334,7 @@ export async function up(
 				.filter(Boolean))
 				io.log(`${sandbox}: ${line}`);
 			plans[0].baseSha = fetchedBase(plans[0], sandbox, io);
+			seedSubmodules(io, input.repo, sandbox);
 			for (const plan of plans.slice(1)) {
 				cloneSecondary(plan, sandbox, task, io);
 				plan.baseSha = fetchedBase(plan, sandbox, io);
@@ -936,7 +936,10 @@ function seedSubmodules(
 				sandbox,
 				"sh",
 				"-c",
-				'cd "$1" && git submodule init "$2"',
+				`cd "$1" && git submodule init "$2" || exit 1
+changes="$(git -C "$2" status --porcelain)" || exit 1
+[ -z "$changes" ] || { echo "submodule $2 has local changes; refusing to overwrite them" >&2; exit 1; }
+git submodule update --no-fetch --checkout -- "$2" || { echo "submodule $2 cannot check out its recorded commit" >&2; exit 1; }`,
 				"--",
 				workspace,
 				module,
