@@ -18,6 +18,14 @@ test("a blocked task keeps the blocker it already names", () => {
 	assert.equal(deathNote(undefined, "boom"), undefined);
 });
 
+test("a new error replaces an earlier automatic stop", () => {
+	const stopped = "status: blocked\nattention: the agent stopped on an error: WebSocket closed 1000\n";
+
+	const next = deathNote(stopped, "terminated");
+
+	assert.equal(next, "status: blocked\nattention: the agent stopped on an error: terminated\n");
+});
+
 test("a status without an attention line gets one", () => {
 	const next = deathNote("status: implementing\nnow: fix\n", "boom");
 

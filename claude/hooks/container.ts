@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { deathNote } from "../../extensions/handoff-on-error.ts";
+import { deathNote, resumeAfterError } from "../../extensions/handoff-on-error.ts";
 import {
 	COMPLETE,
 	contextNote,
@@ -124,6 +124,8 @@ async function refusal(stdin: string): Promise<string | undefined> {
 
 function track(task: string, event: string, input: HookInput): void {
 	const file = join(task, "status.md");
+	if (event === "stop-failure") snapshot(task);
+	if (event === "post-tool-use" && !input.agent_id) resumeAfterError(task);
 	if (event === "post-tool-use" || event === "post-tool-use-failure")
 		record(task, {
 			tool: input.tool_name ?? "?",

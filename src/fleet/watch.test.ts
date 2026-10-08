@@ -364,6 +364,40 @@ test("different containers wake independently while an identical transition stay
 	assert.doesNotMatch(wakes[0], /claude-second/);
 });
 
+test("an unchanged blocker wakes once despite working status flaps", (t) => {
+	const { io, status } = herdr(t, [agents[0]]);
+	const wakes: string[] = [];
+	const handle = watch(() => undefined, io, (text) => wakes.push(text));
+	t.after(() => handle.stop());
+	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/status.md"] =
+		"status: implementing\nattention: the agent stopped on an error: WebSocket closed 1000\n";
+
+	for (let i = 0; i < 3; i++) {
+		status("w1:p1", "blocked");
+		status("w1:p1", "working");
+	}
+
+	assert.equal(wakes.length, 1);
+	assert.match(wakes[0], /working -> blocked/);
+});
+
+test("a new error wakes after an earlier blocker", (t) => {
+	const { io, status } = herdr(t, [agents[0]]);
+	const file = "/home/me/.fleet/tasks/webapp/claude-webapp-a/status.md";
+	const wakes: string[] = [];
+	const handle = watch(() => undefined, io, (text) => wakes.push(text));
+	t.after(() => handle.stop());
+	io.files[file] = "status: blocked\nattention: the agent stopped on an error: WebSocket closed 1000\n";
+
+	status("w1:p1", "blocked");
+	status("w1:p1", "working");
+	io.files[file] = "status: blocked\nattention: the agent stopped on an error: terminated\n";
+	status("w1:p1", "blocked");
+
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[1], /attention: the agent stopped on an error: terminated/);
+});
+
 test("each wake counts only the log lines added since its previous wake", (t: TestContext) => {
 	const { io, status } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
@@ -664,6 +698,8 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 
 	status("worker:pane", "blocked");
 	status("worker:pane", "working");
+	io.files["/home/me/.fleet/tasks/webapp/claude-worker/status.md"] =
+		"status: blocked\nattention: a different input is needed\n";
 	status("worker:pane", "blocked");
 
 	assert.equal(wakes.length, 2);

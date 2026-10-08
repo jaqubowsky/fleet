@@ -84,6 +84,68 @@ test("pi appends one activity line per finished tool: time, tool, ok, agent", (t
 	assert.ok(lines.every((line) => !Number.isNaN(Date.parse(line.at))));
 });
 
+test("pi restores the interrupted phase after a successful main tool", (t) => {
+	const dir = task(t, "status: reviewing\nattention: none\n\n## Log\n- PR opened\n");
+	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
+	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
+	const { handlers, pi } = runtime();
+	handoffOnError(pi);
+
+	handlers.get("agent_end")?.({ messages: [{ role: "assistant", stopReason: "error", errorMessage: "WebSocket closed 1000" }] });
+	handlers.get("tool_execution_end")?.({ toolName: "read", isError: false });
+
+	assert.equal(readFileSync(join(dir, "status.md"), "utf8"), "status: reviewing\nattention: none\n\n## Log\n- PR opened\n");
+	assert.deepEqual(kept(dir).map(({ status }) => status), ["reviewing", "blocked", "reviewing"]);
+});
+
+test("pi keeps the phase the agent already resumed", (t) => {
+	const dir = task(t, "status: implementing\nattention: the agent stopped on an error: WebSocket closed 1000\n");
+	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
+	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
+	const { handlers, pi } = runtime();
+	handoffOnError(pi);
+
+	handlers.get("tool_execution_end")?.({ toolName: "read", isError: false });
+
+	assert.equal(readFileSync(join(dir, "status.md"), "utf8"), "status: implementing\nattention: none\n");
+});
+
+test("pi ignores a successful tool outside a task directory", (t) => {
+	const dir = task(t);
+	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
+	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
+	const { handlers, pi } = runtime();
+	handoffOnError(pi);
+
+	assert.doesNotThrow(() => handlers.get("tool_execution_end")?.({ toolName: "read", isError: false }));
+});
+
+test("pi retains the error after failed or nested tools", (t) => {
+	const dir = task(t, "status: implementing\nattention: none\n");
+	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
+	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
+	const { handlers, pi } = runtime();
+	handoffOnError(pi);
+
+	handlers.get("agent_end")?.({ messages: [{ role: "assistant", stopReason: "error", errorMessage: "terminated" }] });
+	handlers.get("tool_execution_end")?.({ toolName: "read", isError: true });
+	handlers.get("tool_execution_end")?.({ toolName: "read", isError: false, parentToolCallId: "parent" });
+
+	assert.match(readFileSync(join(dir, "status.md"), "utf8"), /status: blocked\nattention: the agent stopped on an error: terminated/);
+});
+
+test("pi leaves a manual blocker after a successful tool", (t) => {
+	const dir = task(t, "status: blocked\nattention: choose a vendor\n");
+	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
+	env(t, { PI_CODING_AGENT_SESSION_DIR: join(dir, "logs/sessions") });
+	const { handlers, pi } = runtime();
+	handoffOnError(pi);
+
+	handlers.get("tool_execution_end")?.({ toolName: "read", isError: false });
+
+	assert.equal(readFileSync(join(dir, "status.md"), "utf8"), "status: blocked\nattention: choose a vendor\n");
+});
+
 test("an agent that dies on an API error leaves its blocked status as a change", (t) => {
 	const dir = task(t, "status: implementing\nattention: none\n");
 	mkdirSync(join(dir, "logs/sessions"), { recursive: true });
@@ -93,5 +155,5 @@ test("an agent that dies on an API error leaves its blocked status as a change",
 
 	handlers.get("agent_end")?.({ messages: [{ role: "assistant", stopReason: "error", errorMessage: "402 Payment Required" }] });
 
-	assert.deepEqual(kept(dir).map(({ status, attention }) => [status, attention]), [["blocked", "the agent stopped on an error: 402 Payment Required"]]);
+	assert.deepEqual(kept(dir).map(({ status, attention }) => [status, attention]), [["implementing", "none"], ["blocked", "the agent stopped on an error: 402 Payment Required"]]);
 });

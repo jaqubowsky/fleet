@@ -119,10 +119,47 @@ test("the end of a turn keeps a status.md change that no tool call reported", (t
 	assert.deepEqual(kept(), [["ready-for-host", "none"]]);
 });
 
+test("claude restores the interrupted phase after a successful main tool", (t) => {
+	const { task, hook, kept } = container(t, status);
+
+	hook("stop-failure", JSON.stringify({ error: "WebSocket closed 1000" }));
+	hook("post-tool-use", JSON.stringify({ tool_name: "Read" }));
+
+	assert.equal(readFileSync(join(task, "status.md"), "utf8"), status);
+	assert.deepEqual(kept(), [["implementing", "none"], ["blocked", "the agent stopped on an error: WebSocket closed 1000"], ["implementing", "none"]]);
+});
+
+test("claude keeps the phase the agent already resumed", (t) => {
+	const { task, hook } = container(t, "status: reviewing\nattention: the agent stopped on an error: WebSocket closed 1000\n");
+
+	hook("post-tool-use", JSON.stringify({ tool_name: "Read" }));
+
+	assert.equal(readFileSync(join(task, "status.md"), "utf8"), "status: reviewing\nattention: none\n");
+});
+
+test("claude retains the error after failed or child tools", (t) => {
+	const { task, hook } = container(t, status);
+
+	hook("stop-failure", JSON.stringify({ error: "terminated" }));
+	hook("post-tool-use-failure", JSON.stringify({ tool_name: "Read" }));
+	hook("post-tool-use", JSON.stringify({ tool_name: "Read", agent_id: "child" }));
+
+	assert.match(readFileSync(join(task, "status.md"), "utf8"), /status: blocked\nattention: the agent stopped on an error: terminated/);
+});
+
+test("claude keeps a manual blocker after a successful tool", (t) => {
+	const blocked = "status: blocked\nattention: choose a vendor\n";
+	const { task, hook } = container(t, blocked);
+
+	hook("post-tool-use", JSON.stringify({ tool_name: "Read" }));
+
+	assert.equal(readFileSync(join(task, "status.md"), "utf8"), blocked);
+});
+
 test("a session that stops on an API error keeps its blocked status as a change", (t) => {
 	const { hook, kept } = container(t, "status: implementing\nattention: none\n");
 
 	hook("stop-failure", JSON.stringify({ error: "402 Payment Required" }));
 
-	assert.deepEqual(kept(), [["blocked", "the agent stopped on an error: 402 Payment Required"]]);
+	assert.deepEqual(kept(), [["implementing", "none"], ["blocked", "the agent stopped on an error: 402 Payment Required"]]);
 });

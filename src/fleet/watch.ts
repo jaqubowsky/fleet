@@ -299,7 +299,7 @@ export function watch(
 		const pending = settling.get(pane);
 		if (pending) clearTimeout(pending.timer);
 		settling.delete(pane);
-		if (wakeable) emit(entry.name, change);
+		if (wakeable) emit(entry.name, change, { settled: next === "blocked" });
 	};
 
 	const connect = () => {
