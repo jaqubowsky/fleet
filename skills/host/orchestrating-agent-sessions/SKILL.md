@@ -7,24 +7,7 @@ description: 'Fleet containers: put one up, steer it, read its task directory, l
 
 One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; one task directory holds the repository set's state and the skills' work. A single repo uses `~/.fleet/tasks/<repo>/<sandbox>/`; new multi-repository tasks use `~/.fleet/tasks/groups/<repo-names>-<hash>/<sandbox>/` and the group's own runbook. Existing tasks keep their paths. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
 
-| Ask | Command | Result to report |
-| --- | --- | --- |
-| put up a container for a task | `{{cli}} up <label> --repo <path> [--repo <path> ...] [--pi | --claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]` | the sandbox is `<agent>-<repo>-<label>`, so `<label>` names the task alone; one repo keeps its existing setup; multiple repos use the first as primary and bring each additional repo into a private clone by Git bundle, never a writable host mount, with its git dir under the primary's `.git/fleet-repos/`; every repo gets its ignored `.env*` files. Each has its own fetched origin base, branch, profile and install log. One `--base` applies to all, or supply one per repo in `--repo` order for different bases; `--branch` names one branch in each. Report every repo, task directory and waiting tab; no prompt is sent |
-| what is running | `{{cli}} ls` | status and herdr state, then the branch, dirty count and full SHA of each running repo; stalled, activity, cost and each repo's PR and CI. Stopped containers stay listed without checkout probes. A running repo whose checkout cannot be probed shows `failed` with its name and error; other containers still list |
-| release a container's resources, keep its work | `{{cli}} stop <sandbox>` | stopped, files and herdr tab kept; the watch shows `stopped` and sends no automatic continue |
-| resume a stopped container | `{{cli}} start <sandbox>` | the agent in its saved tab, with its last saved session when one exists; no prompt sent |
-| what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | each running repo's branch, dirty count, full SHA, status, log, diff and install log, then the pane tail; a stopped container shows only its saved pane, without starting it |
-| send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
-| approve its session handoff | `{{cli}} handoff <sandbox> [--continue]` | steered once `status.md` reads `session handoff complete; fresh session idle`; with `--continue` the fresh session gets the stock continue as soon as it can take it |
-| run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
-| what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
-| what happened, step by step | `{{cli}} history <sandbox> [--repo <path>]` | every change of `status.md` in order, with its time: status changes, attention, summary, the Log lines it added and any it removed |
-| get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |
-| bring the branch home | `{{cli}} land <sandbox> [--branch <name>] [--sign] [--push]` | the same flags for any number of repos: fetch each branch from the sandbox's git daemon, preflight every repo (clean container on the recorded branch, descends from the saved base, checked out in no host worktree) before any branch moves, then fast-forward or re-create what the container added since the `landed` ref. Bare `land` signs per profile, `--sign` forces it, `--push` also pushes, after every repo is signed. A declined signature or refused push keeps finished repos; rerun the same command. Never force. `--branch` is one-repo only |
-| what may each seat do in this repository | `{{cli}} profile [<repo>] [--apply]` | the profile's level per action for host and container, one sentence each, then the repository's overlay, which containers read as `project.md`; `--apply` sets the checkout's signing, origin and branch tracking as those lines say, and prints each change |
-| close it | `{{cli}} down <sandbox> [--force]` | the usage line and where the task directory stays |
-| rebuild the image | `{{cli}} build [--pi | --claude]` | the docker build output, and what the image now carries |
-| switch models for new containers | `{{cli}} render` after editing `<kind>/profiles/models.json` in the harness repo, `<kind>` the container's `--pi | --claude`, or`--model` on one `{{cli}} up` | containers take it after `{{cli}} build`, the host {{reload.models}} |
+Each `{{cli}}` command, its flags and what to report from it: [references/commands.md](references/commands.md). Read the row for the operation before you run it.
 
 A stopped container needs `{{cli}} start` before a steer, handoff or exec. `stop` ends guest processes; `start` restores the saved conversation, not an interrupted tool call or app server. It leaves the task's `status.md` unchanged. `paused` there still means the agent finished the step its order named. Raw `sbx exec` starts stopped containers, so inspection goes through `{{cli}} ls` or `{{cli}} peek`.
 
@@ -74,23 +57,11 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 
 A `[fleet]` line or a question about a task starts at `status.md`, then the one file that answers it.
 
-| Question | Read |
-| --- | --- |
-| where is it, does it need anyone, which PR, what is at risk or uncommitted | `status.md` |
-| what happened, in order | `## Log` in `status.md`; every change of the file with `{{cli}} history` |
-| which commits | `{{cli}} ls` for each repo's branch, dirty count and full SHA; `repositories.json` records each repo's base and branch, `refs/fleet/<sandbox>/<repo>/landed` in the host repo is the container head last landed, and `git log <base>..<branch>` shows the host history after land |
-| what did the analysis find | `analysis.md` |
-| what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. A ticket the container did not review has a Log line in `status.md` saying why and pointing at its gate logs |
-| what is happening on the PR | `pr.md` |
-| how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from Summary; the user's pick goes back as a steer naming the slug and the variant |
-| what is it doing this minute, before `status.md` moved | `{{cli}} peek` |
-| why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
+The table of which file answers which question, and where a multi-repository task keeps its clones: [references/reading.md](references/reading.md).
 
 A rule or skill change reaches a container through `{{cli}} build` and a new container. A running container keeps the rules it started with.
 
 How a container's branch and pull request reach GitHub is the land line of `{{cli}} profile <repo>`.
-
-Every repository is a private clone. `repositories.json` names all additional clones built from Git bundles inside the sandbox, their git dirs under the primary's `.git/fleet-repos/`; no additional host checkout is mounted writable. Writes stay there until `{{cli}} land`; multi-repository container pushes are refused and require an approved host push. Configure each repo's own profile. The shared sandbox needs identical `container.token`, `container.linear` and `container.linearServer` bindings; the token must access every repo. Incompatible bindings refuse creation. Two host directories are mounted alongside it at the same absolute path inside as outside: `$FLEET_ARTIFACTS`, either `~/.fleet/tasks/<repo>` or the repository group's root, with one task directory per container and `runbook/`; and `$FLEET_CACHE` for what is expensive to rebuild. They outlive the container, so `{{cli}} down` leaves the task directory, its sessions and `logs/usage.json` behind.
 
 ## Pull request rounds
 

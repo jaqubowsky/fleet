@@ -75,7 +75,7 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 		);
 	const layerOf = (file: string): Layer | undefined => {
 		const skill = file.match(/^skills\/(container|host|shared)\/([^/]+)\//);
-		if (skill && file !== HOST_OWNER) {
+		if (skill && file !== HOST_OWNER && !file.startsWith(HOST_OWNER.replace("SKILL.md", "references/"))) {
 			const [, seat, name] = skill;
 			return {
 				names: (line) => [

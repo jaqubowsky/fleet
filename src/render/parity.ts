@@ -18,7 +18,7 @@ const DIVERGENCES: Divergence[] = [
 	},
 	{
 		where:
-			/^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: \| switch models for new containers \|/,
+			/^skills\/host\/orchestrating-agent-sessions\/references\/commands\.md: \| switch models for new containers \|/,
 		reason:
 			"claude has no rendered host settings file: its host reads the person's own ~/.claude/settings.json, into which `align-settings.py` merges `claude/profiles/host.json`, where pi `/reload`s a rendered file",
 	},
