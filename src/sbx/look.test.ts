@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -50,4 +50,11 @@ test("look reports layout, accessibility and execution as separate totals", () =
 	assert.match(output, /^execution: 0$/m, output);
 	assert.doesNotMatch(output, /^count: /m, output);
 	assert.equal(status, 1);
+});
+
+test("the checker test drives the playwright-cli version the image installs", () => {
+	const image = readFileSync(resolve(import.meta.dirname, "../../sbx/container/toolchain.Dockerfile"), "utf8").match(/^ARG PLAYWRIGHT_CLI_VERSION=(.+)$/m)?.[1];
+	const pinned = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8")).devDependencies["@playwright/cli"];
+
+	assert.equal(pinned, image);
 });
