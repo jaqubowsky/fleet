@@ -999,6 +999,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(skill, /with your own `reviewer` agent/);
 			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
+			assert.match(skill, /exec <sandbox> -- git -C <repo path> diff <base>\.\.\.<head>/);
 			assert.doesNotMatch(skill, /review[^.\n]*with (your own )?`?explorer/i);
 			assert.match(
 				skill,
