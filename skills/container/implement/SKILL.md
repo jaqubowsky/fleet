@@ -11,7 +11,7 @@ Implement the ticket, spec or analysis you were handed.
 
 1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of the tickets where your seat's rules keep them, else `.issues/<feature-slug>/`: the lowest-numbered ticket whose `Status:` is `ready-for-agent` and whose "Blocked by" tickets are all `done`. No tickets: the short run the analysis named is the work.
 
-2. **Load context.** The analysis, and the shared spec beside the tickets if it exists.
+2. **Load context.** The shared spec beside the tickets if it exists; the analysis for what the ticket leaves open.
 
 3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require:
 
@@ -27,7 +27,7 @@ Implement the ticket, spec or analysis you were handed.
 
 4. **Claim it.** Set `Status: claimed` in the ticket file and save before implementation.
 
-5. **Build at the pre-agreed seams.** A failing test first: one seam, one red, one implementation.
+5. **Build at the seams the ticket names, else existing public ones.** A failing test first: one seam, one red, one implementation.
 
    Commit the first coherent vertical piece before widening. A ticket that still holds a second behaviour once the first works end to end was cut too wide:
    - the first behaviour takes steps 7-10 as this ticket
@@ -37,7 +37,7 @@ Implement the ticket, spec or analysis you were handed.
 
 6. Run typechecking regularly and single test files regularly.
 
-7. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log.
+7. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this ticket.
 
 8. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 7 logs and the step 5 red logs as its checks, when the diff touches any of these:
    - a shared seam other code calls
