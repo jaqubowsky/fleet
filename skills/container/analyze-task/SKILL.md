@@ -104,7 +104,7 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### The run and the one question
 
-The run this analysis calls for, in one line with the reason: tickets, or the short run when the work is one accepted behaviour, one seam and one commit. Under it, the proposed split into tickets and the test seams, one line each. Then the one question: every open decision a numbered item, the run, the split and its seams always the last.
+The run this analysis calls for, in one line with the reason: tickets, or the short run when the work is one accepted behaviour, one seam and one commit. Under it, the proposed split into tickets and the test seams, one line each. Cite the approving user decision for an accepted run, split or seam. Ask one question containing only unresolved decisions, with an unapproved run, split and seams last. If none remain, state the approved next step.
 
 ```md
 1. <decision>

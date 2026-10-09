@@ -37,7 +37,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled
+1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled; that approval is written down, as Session handoff says, before implementation starts
 2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first
 3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
 4. Before the first commit covered by a review decision, name its tickets and the run-or-skip reason in one `status.md` Log line. A later commit outside that scope needs a new decision. A run is `two-axis-review`: `review.md`, evidence in `logs/review-<head-sha7>/`
@@ -52,7 +52,9 @@ An ADR the run's decisions need is proposed in its pull request, as a commit add
 
 ## Session handoff
 
-A fresh session reads the `status.md` header, Summary and recent Log turning points, then checks the frontier ticket and git. If implementation is complete, start from the remaining acceptance criteria and gates. Read supporting documents one at a time, only the sections needed for that unfinished step. Read older Log entries when that step depends on them. Suggest a session handoff at every natural break:
+Before a context reset, and before analysis turns into implementation, write the approval into `spec.md` or the ticket: the user's deciding words with their date, the accepted phase, the work left and where it stops. Link it from `status.md`, replacing the analysis-only scope it supersedes.
+
+A fresh session reads the `status.md` header, Summary and recent Log turning points, then checks the frontier ticket, that recorded approval and git, and resumes the approved work without asking for it again. An unsettled product choice still blocks the work it decides. If implementation is complete, start from the remaining acceptance criteria and gates. Read supporting documents one at a time, only the sections needed for that unfinished step. Read older Log entries when that step depends on them. Suggest a session handoff at every natural break:
 
 {{file:natural-breaks}}
 
