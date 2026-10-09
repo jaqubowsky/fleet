@@ -63,7 +63,7 @@ Base: main
 - checks: Quality Checks success, CodeRabbit success
 ```
 
-1. **Commit, push where your seat may, and hand back.** A round that changes what a user sees rechecks the affected acceptance criteria in the running app after its last visible change; open the frames and link the browser report to the new head before calling those criteria passed. A test-only round needs no new browser walk. The number and URL head `pr.md`. A body that has to change goes through `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`, because `gh pr edit` queries the retired Projects (classic) field and fails. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
+1. **Commit, push where your seat may, and hand back.** A round that changes what a user sees rechecks the affected acceptance criteria in the running app after its last visible change; open the frames and link the browser report to the new head before calling those criteria passed. A test-only round needs no new browser walk. The number and URL head `pr.md`. A body that has to change is rewritten whole, the way the pull request was opened, and goes through `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`, because `gh pr edit` queries the retired Projects (classic) field and fails. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so and writes nothing.
 
 ## A stale base
 
