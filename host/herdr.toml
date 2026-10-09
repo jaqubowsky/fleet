@@ -22,3 +22,8 @@ auto_switch = false
 
 [keys]
 focus_agent = "prefix+alt+1..9"
+
+[[keys.command]]
+key = "prefix+d"
+type = "shell"
+command = "fleet diff"

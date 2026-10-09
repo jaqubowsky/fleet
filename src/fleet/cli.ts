@@ -20,6 +20,8 @@ import {
 	stoppedPane,
 } from "./commands.ts";
 import { init } from "./init.ts";
+import { diffSnapshot, toggleDiff } from "./diff.ts";
+import { diffView } from "./diff-view.ts";
 import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
@@ -46,6 +48,7 @@ const usage = `usage:
   ${CLI} profile [<repo>] [--apply [--brief]]         what ~/.fleet/config/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.fleet/config/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell; --brief prints only what --apply changed, and nothing outside a GitHub checkout, for a session start
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
   ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
+  ${CLI} diff [<sandbox>] [--pane <id>]              toggle the live Changes pane in the current Herdr tab; Ctrl+B then D
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
   ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
@@ -79,6 +82,8 @@ const BARE = new Set([
 	"claude",
 	"json",
 	"every",
+	"view",
+	"snapshot",
 ]);
 
 export function flags(
@@ -207,6 +212,14 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	ls(args) {
 		flags(args, []);
 		io.log(ls(io));
+	},
+	async diff(args) {
+		const { opts, rest } = flags(args, ["pane", "view", "snapshot", "scope", "repo"]);
+		if (opts.view) await diffView(need(rest[0], "sandbox"), root, io);
+		else if (opts.snapshot) {
+			if (opts.scope !== undefined && !["task", "uncommitted"].includes(String(opts.scope))) throw new Error("scope must be task or uncommitted");
+			io.log(JSON.stringify(diffSnapshot(need(rest[0], "sandbox"), { repository: String(opts.repo ?? ""), scope: String(opts.scope ?? "task") }, io)));
+		} else toggleDiff(rest[0], opts.pane as string | undefined, root, io);
 	},
 	peek(args) {
 		const { opts, rest } = flags(args, ["lines"]);

@@ -127,6 +127,7 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
 | `fleet watch` | wakes the host when a sandbox needs it | nothing |
 | `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
+| `fleet diff [<sandbox>]` | toggles a live diff beside the current container's terminal | opens or closes its Herdr pane; saves the selected file and scroll position in the host cache; reads Git without changing the checkout |
 | `fleet history`, `fleet artifacts` | replay a task's status, list task folders | nothing |
 | `fleet exec <sandbox> -- <command>` | runs a command inside a sandbox | whatever that command changes there |
 | `fleet copy <src> <dst>` | copies a file in or out of a sandbox | the destination file |
@@ -140,6 +141,10 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
 
 `fleet --help` lists every flag.
+
+In a container's Herdr tab, press **Ctrl+B, then D** to toggle its Changes pane. It works with both pi and Claude and leaves focus in the agent terminal. The host needs `delta` on `PATH`. Reload Herdr's configuration after installing the binding with `herdr server reload-config`.
+
+The pane shows one continuous diff with a heading before each file. Long lines wrap. The mouse wheel scrolls through every file; clicking the file list jumps to that file without hiding the rest. With keyboard focus in the pane, `[` and `]` jump between files, `j` and `k` or the arrow keys scroll, Page Up and Page Down scroll by a page, and Home and End jump to the beginning and end. `s` switches between branch changes and uncommitted changes, and Tab selects a repository. The pane reads changes every two seconds after the previous read finishes, retaining the current file and its scroll offset. Branch changes compare the working tree to the merge base of HEAD and the container's origin base branch, so rebasing does not include unrelated upstream changes. The header names the base. No fetch runs while viewing. `p` pauses reads, `r` refreshes once, and `q` closes the pane. Closing stops its reads and reopening restores the file and scroll position. New untracked files are included; ignored files are excluded. A stopped or removed container leaves the last displayed snapshot and its status, without starting the container. Files larger than 4 MiB show a size notice instead of their contents.
 
 Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in the same tab, not an interrupted tool call or app server. The task's `status.md` stays unchanged. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer, handoff and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
 
