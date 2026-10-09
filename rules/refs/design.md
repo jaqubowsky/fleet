@@ -1,6 +1,6 @@
 # Design
 
-Applies to every screen, component and layout drawn or built, in a mockup or in production code. A generic screen is the failure this guards against: one whose layout, color and copy would fit any product with the logo swapped. What the project's design system already does outranks every pattern named below: in that project it is the look, not a default.
+Applies to every screen, component and layout drawn or built, in a mockup or in production code. A generic screen is the failure this guards against: one whose layout, color and copy would fit any product with the logo swapped. What the project's design system already does outranks every pattern named below: in that project it is the look, not a default. The rules bind what the change draws or builds; the unchanged screen around it keeps its look, and a finding there is named as inherited rather than redesigned. An accessibility defect on an action the task requires stays a defect, whichever component drew it.
 
 ## Direction
 
