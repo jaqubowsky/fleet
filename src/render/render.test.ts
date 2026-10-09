@@ -386,7 +386,7 @@ function description(skill: string): string {
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`the ${name} reviewer, conflict procedure and pull request body reach only the container`, () => {
 		renderSeats(name, (out) => {
-			for (const suffix of ["agents/reviewer.md", "resolving-merge-conflicts/SKILL.md", "pr-body/SKILL.md"]) {
+			for (const suffix of ["agents/reviewer.md", "resolving-merge-conflicts/SKILL.md", "/pr/SKILL.md"]) {
 				assert.equal(seatFiles(out, "host").some((f) => f.endsWith(suffix)), false, `host has ${suffix}`);
 				assert.ok(seatFiles(out, "container").some((f) => f.endsWith(suffix)), `container lacks ${suffix}`);
 			}

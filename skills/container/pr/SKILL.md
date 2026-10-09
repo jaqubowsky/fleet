@@ -1,5 +1,5 @@
 ---
-name: pr-body
+name: pr
 description: 'Writing a pull request body. Use when a pull request is opened, and when a later round changes what its body says.'
 ---
 
