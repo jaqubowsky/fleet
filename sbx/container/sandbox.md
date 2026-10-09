@@ -37,7 +37,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked`. An order to deliver end to end answers it, all but a product decision nothing settled; that approval is written down, as Session handoff says, before implementation starts
+1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked` while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval is written down, as Session handoff says, before implementation starts
 2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first
 3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
 4. Before the first commit covered by a review decision, name its tickets and the run-or-skip reason in one `status.md` Log line. A later commit outside that scope needs a new decision. A run is `two-axis-review`: `review.md`, evidence in `logs/review-<head-sha7>/`

@@ -58,7 +58,7 @@ When the expectation is genuinely wrong, the correction comes from the same plac
 
 ## The red has to be the right red
 
-Before writing implementation, confirm the test failed at the assertion, with roughly the expected and actual you predicted. A red for the wrong reason gives no evidence, and the green that follows proves only that the mechanics got fixed.
+Before writing implementation, confirm the test failed at the assertion, or inside production code on the path under test, with roughly the expected and actual you predicted. A red for the wrong reason gives no evidence, and the green that follows proves only that the mechanics got fixed.
 
 ## Attempt budget
 
