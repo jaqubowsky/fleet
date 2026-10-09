@@ -7,6 +7,8 @@ Launch: `<command>` from `<working directory>`, answered at <URL>
 Source: <analysis, spec, tickets or diff the criteria came from>
 Runbook: <files edited and why, or none>
 
+A failed required action makes the run `failed`, even when another action works. With no failed criterion, an unfinished required check or coverage gap keeps the run `blocked`. `passed` requires evidence for every cumulative criterion. A later refactor alone removes none.
+
 ## Criteria
 
 | Criterion | Verdict | Evidence |
