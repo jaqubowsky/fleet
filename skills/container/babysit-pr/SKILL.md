@@ -36,12 +36,12 @@ The wait ends by recording the settled state: the runs and the commit status it 
 gh pr view <number> --repo <owner>/<repo> --json number,state,headRefOid,isDraft,mergeable
 gh run list --repo <owner>/<repo> --commit <head-sha> --json name,status,conclusion,url
 gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '.statuses[] | {context, state, target_url}'
-gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{id isResolved path line comments(first:10){nodes{body createdAt author{login}}}}}}}}' -F pr=<number> -f owner=<owner> -f repo=<repo>
+gh api graphql --paginate -f query='query($owner:String!,$repo:String!,$pr:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id isResolved path line comments(first:10){totalCount nodes{body createdAt author{login}}}}}}}}' -F pr=<number> -f owner=<owner> -f repo=<repo>
 gh pr view <number> --repo <owner>/<repo> --json comments --jq '.comments[] | {author: .author.login, createdAt, body}'
 git fetch origin && git merge-base --is-ancestor origin/<base> HEAD
 ```
 
-A bot's first pass often arrives as one long comment rather than as threads, so an empty `reviewThreads` still carries a review.
+A thread whose `totalCount` is above 10 has more comments than the page shows: read the rest before you answer it. A bot's first pass often arrives as one long comment rather than as threads, so an empty `reviewThreads` still carries a review.
 
 `pr.md` names every thread you already answered and is the whole deduplication: nothing resolves those threads on GitHub, so every round would meet them again. A thread whose id appears there is done unless the bot added a comment newer than your last push.
 
