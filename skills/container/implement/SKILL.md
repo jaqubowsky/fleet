@@ -21,7 +21,7 @@ Implement the ticket, spec or analysis you were handed.
    Done-check: <the command that proves this ticket done>, <why it is the right command>
    ```
 
-   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. The done-check covers what this diff touches: the tests of the changed files and of the files importing them, typecheck, lint. This is the check step 7 runs, so name it now, not later.
+   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. The done-check covers what this diff touches: the tests of the changed files and of the files importing them. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
 
@@ -30,16 +30,14 @@ Implement the ticket, spec or analysis you were handed.
 5. **Build at the seams the ticket names, else existing public ones.** A failing test first: one seam, one red, one implementation.
 
    Commit the first coherent vertical piece before widening. A ticket that still holds a second behaviour once the first works end to end was cut too wide:
-   - the first behaviour takes steps 7-10 as this ticket
+   - the first behaviour takes steps 6-9 as this ticket
    - the rest, with its acceptance lines, becomes the next ticket, blocked by this one
 
    In a short run, or on an order naming this one ticket, the rest stays in this ticket.
 
-6. Run typechecking regularly and single test files regularly.
+6. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this ticket.
 
-7. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this ticket.
-
-8. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 7 logs and the step 5 red logs as its checks, when the diff touches any of these:
+7. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 6 logs and the step 5 red logs as its checks, when the diff touches any of these:
    - a shared seam other code calls
    - persisted data or its schema
    - security, credentials or permissions
@@ -49,9 +47,9 @@ Implement the ticket, spec or analysis you were handed.
 
    Only a diff that touches none of them takes the gate as its check. An order for a review runs it whatever the diff. Record the decision, run or skipped, with a reason that names only what this diff can break, or why it cannot. A review's findings close as the review says.
 
-9. **Commit** the work, with the review's fixes when one ran, to the current branch.
+8. **Commit** the work, with the review's fixes when one ran, to the current branch.
 
-10. **Resolve the ticket.**
+9. **Resolve the ticket.**
     - Tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
     - Set `Status: done`
     - Slice-only findings go under a `## Comments` heading at the bottom of the ticket file; a changed shared decision or accepted scope updates the spec
