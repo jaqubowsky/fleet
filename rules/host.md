@@ -19,4 +19,4 @@ Containers are the user's workbench. Commands: skill `orchestrating-agent-sessio
 
 - Fetch and any other remote command the profile does not name only on the user's word
 - Every signature costs the user one Touch ID tap: say what you are about to sign
-- SSH auth failure or `banner exchange` = missed Touch ID prompt, not a broken remote. Say so, retry. Never switch to https or change auth config, except through `{{cli}} profile --apply` on the user's word
+- SSH auth failure or `banner exchange` right after a Touch ID prompt went unanswered = the missed prompt: say so, retry once. Without that evidence, quote the error and diagnose it like any other. Never switch to https or change auth config, except through `{{cli}} profile --apply` on the user's word
