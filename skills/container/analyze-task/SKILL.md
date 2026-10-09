@@ -51,7 +51,9 @@ If expected behavior is genuinely unclear, ask for it while gathering independen
 
 ## Trace the current behavior
 
-Follow the actual mounted entry point through selection and state, validation, API, backend effects, and the user-visible outcome. Check callers, feature flags, permissions and alternative paths. Separate active code from unmounted or legacy code. Cover success, failure, cancellation, retry, empty selection and partial validity where relevant. Read the existing tests.
+Bind each screen criterion to the original request and its user amendments: original source, mounted route, organization or role, operated control and expected transition. A derived ticket's route is a claim to check against those sources. If two mounted screens fit and the original sources do not distinguish them, ask which before mockup or implementation. Carry the source and target beside the criterion into the ticket.
+
+Follow that mounted entry point through selection and state, validation, API, backend effects, and the user-visible outcome. Check callers, feature flags, permissions and alternative paths. Separate active code from unmounted or legacy code. Cover success, failure, cancellation, retry, empty selection and partial validity where relevant. Read the existing tests.
 
 Whole flow means every reachable branch from trigger to outcome, not every file in the repository. Stop when those branches are accounted for and each requirement has supporting evidence or an explicit gap. Record what the code proves, what you executed, and what stays unverified.
 
