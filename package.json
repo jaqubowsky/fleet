@@ -17,6 +17,7 @@
     "qrcode-terminal": "0.12.0"
   },
   "devDependencies": {
+    "@playwright/cli": "0.1.20",
     "@types/node": "26.6.0",
     "@types/qrcode-terminal": "0.12.2",
     "esbuild": "0.28.2",

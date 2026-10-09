@@ -130,11 +130,13 @@ await Promise.all(Array.from({ length: PARALLEL }, async () => {
     job.findings = await shoot(browser, job.url, job.size, job.out, job.steps);
   }
 }));
-let total = 0;
+const GROUP = { "low-contrast": "accessibility", "small-target": "accessibility", "step-failed": "execution", "js-error": "execution", taller: "note" };
+const totals = { layout: 0, accessibility: 0, execution: 0 };
 for (const { entry, frame, size, label, out, findings } of jobs) {
-  const counted = findings.filter(f => !["taller", "low-contrast", "small-target"].includes(f.kind));
-  total += counted.length;
-  console.log(`== ${entry.slug}/${frame.file} ${size.label}${label}: count ${counted.length}  ${out}`);
+  const counts = { layout: 0, accessibility: 0, execution: 0 };
+  for (const f of findings) if (GROUP[f.kind] !== "note") counts[GROUP[f.kind] ?? "layout"] += 1;
+  for (const group in totals) totals[group] += counts[group];
+  console.log(`== ${entry.slug}/${frame.file} ${size.label}${label}: layout ${counts.layout}, accessibility ${counts.accessibility}, execution ${counts.execution}  ${out}`);
   for (const f of findings) console.log(`   ${f.kind} ${f.where} ${f.detail}`);
 }
 
@@ -147,6 +149,6 @@ await page.screenshot({ path: boardShot });
 await browser.close();
 const declared = board.reduce((n, e) => n + e.frames.length, 0);
 console.log(`== board: ${shown} of ${declared} frames shown  ${boardShot}`);
-if (shown !== declared) total += 1;
-console.log(`count: ${total}`);
-process.exit(total ? 1 : 0);
+if (shown !== declared) totals.execution += 1;
+for (const group in totals) console.log(`${group}: ${totals[group]}`);
+process.exit(totals.layout || totals.execution ? 1 : 0);

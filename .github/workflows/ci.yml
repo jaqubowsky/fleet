@@ -19,6 +19,7 @@ jobs:
           cache: npm
       - run: brew install bash
       - run: npm ci
+      - run: npx playwright-core install chromium
       - run: npm install -g @earendil-works/pi-coding-agent
       - run: |
           npm install --prefix "$RUNNER_TEMP/pi-npm" --legacy-peer-deps \

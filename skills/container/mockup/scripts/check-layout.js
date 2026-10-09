@@ -16,6 +16,10 @@
     const r = node.getBoundingClientRect();
     return s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
   };
+  const transparent = node => {
+    for (let n = node; n && n !== document.body; n = n.parentElement) if (getComputedStyle(n).opacity === "0") return true;
+    return false;
+  };
   const outside = node => {
     const r = node.getBoundingClientRect();
     return getComputedStyle(node).position !== "fixed" && (r.right > vw + 1 || r.left < -1);
@@ -33,7 +37,7 @@
   }
 
   for (const node of document.body.querySelectorAll("*")) {
-    if (!visible(node)) continue;
+    if (!visible(node) || transparent(node)) continue;
     const s = getComputedStyle(node);
     const r = node.getBoundingClientRect();
 
