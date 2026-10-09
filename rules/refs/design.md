@@ -37,6 +37,15 @@ Applies to every screen, component and layout drawn or built, in a mockup or in 
 2. First run, filtered to nothing and permission denied are three different empty states
 3. A status is never color alone: text or an icon carries it too
 
+## Worst-case data
+
+Demo data is chosen to make a design look good. Every view that shows user data is also drawn and tested with the worst values a real user produces:
+
+1. List each rendered value with its source and its limit from the schema, the column or the input's `maxLength`; no limit found is a finding
+2. The worst values enter where the demo data does, as a fixture or a mock, never as an edit to markup or CSS: a long but real name or email, a missing optional field, an empty list, exactly one item ("1 members"), a list past one screen, a large number. A mockup gets a frame with them beside the demo frame; a component that renders them gets a test on that fixture
+3. Per field, decide: wrap what identifies a thing, truncate secondary metadata with the full value one hover away, truncate in the middle what differs at its end, never truncate numbers, amounts or dates
+4. The usual causes: a flex or grid child without `min-width: 0`, a fixed-size box without `flex-shrink: 0`, a string with no break opportunity without `overflow-wrap: anywhere`, a plural hardcoded instead of from the locale
+
 ## People
 
 1. Contrast is measured, never judged by eye: 4.5:1 for text, 3:1 for large text (24px, or 18.66px bold), component edges and the focus ring. Text over an image or a gradient passes at its worst spot
