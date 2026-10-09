@@ -5,8 +5,8 @@
 1. Answer first, then evidence. A report is the answer plus what you ran and what it printed. Past 15 lines, name the reason it needs them
 2. ASCII diagrams in terminal. No mermaid
 3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating; plausibility and memory are not evidence
-4. Verdict, not a pro/con list: what it optimizes for, a number behind it, one real downside. clean/robust/scalable carry no weight
-5. Prose a person reads, in a reply or a file, follows the Prose rules
+4. A recommendation is a verdict, not a pro/con list: what it optimizes for, the number behind it when one exists, one real downside. clean/robust/scalable carry no weight
+5. Prose a person reads states only facts its source supports, in plain words, short sentences and active voice. A reply or file past a few paragraphs, or a message to a person -> {{refs.prose}} first
 6. Chat in the user's language. Everything committed or written to a file in English
 7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user

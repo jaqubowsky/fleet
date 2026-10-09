@@ -891,6 +891,22 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
+	test(`${name} keeps the prose catalogue behind a pointer on both seats`, () => {
+		renderSeats(name, (out) => {
+			for (const seat of ["host", "container"]) {
+				const always = seatFiles(out, seat)
+					.filter((file) => file.endsWith("AGENTS.md") || /(^|\/)rules\/[^/]+\.md$/.test(file))
+					.map((file) => readFileSync(join(out, seat, file), "utf8"))
+					.join("\n");
+				const ref = rendered(out, seat, "refs/prose.md");
+
+				assert.doesNotMatch(always, /Patterns to detect and fix/, `${seat} always loads the catalogue`);
+				assert.match(always, /refs\/prose\.md/, `${seat} has no pointer to the catalogue`);
+				assert.match(ref, /Patterns to detect and fix/);
+			}
+		});
+	});
+
 	test(`${name} reviewer separates completed review from required fixes and task readiness`, () => {
 		renderSeats(name, (out) => {
 			const reviewer = rendered(out, "container", "agents/reviewer.md");

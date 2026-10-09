@@ -37,6 +37,7 @@ const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
+const PROSE_BESIDE_AGENTS = "`refs/prose.md` beside `AGENTS.md`";
 const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
@@ -65,6 +66,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
 			"refs.design": DESIGN_BESIDE_AGENTS,
+			"refs.prose": PROSE_BESIDE_AGENTS,
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source": watchSource("fleet", "PI_SESSION_ID"),
@@ -98,6 +100,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
 			"refs.design": "`~/.claude/refs/design.md`",
+			"refs.prose": "`~/.claude/refs/prose.md`",
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":

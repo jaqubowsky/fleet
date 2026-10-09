@@ -1,6 +1,6 @@
 # Prose
 
-Every text a person reads, a reply or a file, is written this way: no AI patterns, a human voice.
+Reached from the core rules for a reply or file a person reads past a few paragraphs, and for a message to a person: no AI patterns, a human voice.
 
 A Polish message with a human reader on the other side (Slack, PR comment, Linear comment, standup) gets the same patterns, in the reader's language.
 
