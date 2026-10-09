@@ -8,6 +8,6 @@ These rules apply when a test is read or changed, or a bug is reproduced.
 4. Test the behavior at the lowest seam that can still fail on it. None -> test higher, up to e2e, and name the doubles it forced: that list is the coupling to remove before the next test goes lower
 5. Bug report -> regression test first. Show the red, then the fix
 6. Red = production code wrong until proven otherwise. Quote failure, name cause before editing
-7. Red from import error or TypeError says nothing about behavior. Fix mechanics, get real red
+7. Red raised in the test's own setup (import, fixture, arity) says nothing about behavior. Fix mechanics, get real red. An exception raised in production code is behavior, whatever its name
 8. While red never weaken test: no value copied from actual, no loosened matcher, no skip/only, no raised timeout, no renamed scenario
 9. Wrong expectation -> stop, quote spec or ask user. Never re-derive from what code returns

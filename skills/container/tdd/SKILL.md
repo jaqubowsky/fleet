@@ -5,7 +5,7 @@ description: 'Writing or changing a test, or fixing a bug that needs one. Use be
 
 # Test-Driven Development
 
-TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle: consult them before and during the loop, not after.
+TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop.
 
 ## What a good test is
 
@@ -17,9 +17,7 @@ See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking g
 
 A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
 
-**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user; the seams an accepted analysis or ticket names are confirmed already. No test is written at an unconfirmed seam. You can't test everything: agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
-
-Otherwise, ask: "What's the public interface, and which seams should we test?"
+**Test at an existing public seam by default**: the one an accepted analysis or ticket names, else the interface the code's callers already use. Write the seams under test down before the first test. Ask the user only when choosing a seam changes scope or a contract: a new public interface, a moved module boundary, or test effort the ticket did not plan.
 
 ## Anti-patterns
 
@@ -31,6 +29,6 @@ Otherwise, ask: "What's the public interface, and which seams should we test?"
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
 - **Every red leaves a log.** Save the right red's output to `logs/tdd-<ticket>/<test-name>.log` where your seat's rules keep outputs. It is the review's only evidence that the test can fail.
-- **A red test accuses the code, not itself.** Diagnose before editing and never weaken an assertion to reach green. The procedure is [red.md](red.md); it applies to every failure in the loop.
+- **A red test accuses the code, not itself.** [red.md](red.md) is the procedure for every failure in the loop.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs after green, before the gate, not inside the red → green implementation cycle.

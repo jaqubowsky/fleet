@@ -8,11 +8,11 @@ A red test has exactly three causes. Name one, out loud, with the failure output
 
 1. **The production code is wrong.** The default. Expected and actual are both meaningful and they disagree.
 2. **The expectation is wrong.** The test encodes a rule the domain does not have.
-3. **The test is mechanically broken.** It never reached the assertion: import error, `TypeError`, unawaited promise, missing fixture, wrong constructor arity.
+3. **The test is mechanically broken.** It never reached the behavior under test: an import error, an unawaited promise, a missing fixture, wrong constructor arity, an exception raised in the test's own setup.
 
 Tell 2 from 1 by where the expected value came from. A value traced to a spec line, a ticket, a worked example or a sentence from the user is not wrong because the code disagrees with it. A value you invented while writing the test may be. If you cannot name its source, that is the finding: report it.
 
-Tell 3 from 1 by the shape of the failure. `AssertionError: expected 15 to be 12` is a behavior disagreement. `Cannot read properties of undefined` is a broken test.
+Tell 3 from 1 by where the failure was raised, read from the stack trace, not by the exception's name. `AssertionError: expected 15 to be 12` is a behavior disagreement. `Cannot read properties of undefined` raised in the test's setup is a broken test; raised inside production code on the path under test, it is the bug the test found.
 
 ## What may be edited while red
 
