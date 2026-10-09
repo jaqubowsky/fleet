@@ -13,16 +13,16 @@ This workflow ends at a proposal; implementation, ticket updates and the work it
 
 ## Read the sources before reading the code
 
-Requirements are not in the ticket title. Work through both lists, or state that a source is missing.
+Requirements are not in the ticket title. Read each source below that can change this task's scope or behavior, and name the ones you could not open.
 
-Required, in the tracker (Linear or equivalent):
+In the tracker (Linear or equivalent):
 
 - the description, then every comment, with author and date
 - attachments: screenshots, recordings, files
 - every linked issue, followed one level deep: parent, sub-issues, blocks and blocked by, relates to, duplicates. Read their descriptions and comments. Stop descending when a link stops touching the analyzed flow.
 - outbound links: Figma, Notion, Slack threads, specification documents, pull requests. List them and say which ones you could open.
 
-Required, in the repository, for the area being changed:
+In the repository, for the area being changed:
 
 - README at the root and at the module
 - CLAUDE.md, AGENTS.md, CONTRIBUTING.md
@@ -78,7 +78,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 After the code analysis, report missing knowledge or access honestly.
 
-The reply is the report: the headings below, in this order, in the chat, nothing before the first and nothing after the last, one screen in all.
+The reply is the report: the headings below, in this order, one screen in all.
 
 A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed.
 
