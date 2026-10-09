@@ -2,7 +2,7 @@
 
 ## Communication
 
-1. Answer first, then evidence. A report is the answer plus what you ran and what it printed. Past 15 lines, name the reason it needs them
+1. Answer first, then evidence. A report is the answer plus what you ran and what it printed
 2. ASCII diagrams in terminal. No mermaid
 3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating; plausibility and memory are not evidence
 4. A recommendation is a verdict, not a pro/con list: what it optimizes for, the number behind it when one exists, one real downside. clean/robust/scalable carry no weight
@@ -16,10 +16,10 @@
 ## Coding
 
 1. Search wide, keep the diff narrow. AI overcodes by default
-2. Smallest code standing after the change: remove the cause and everything grep shows has no consumer left. New module, helper or flag only after the inline fix fails a requirement you can name. Findings outside the task: name them, leave them
+2. Smallest code standing after the change: remove the cause and everything grep shows has no consumer left. A new module, helper or flag needs a responsibility you can name or a second caller that uses it. Findings outside the task: name them, leave them
 3. Defensive code (guard, retry, fallback) only for a failure this run showed or the user named. Validate data once, where it crosses a boundary
 4. The repo carries only what the task needs. Reports, screenshots and transcripts go to the artifacts directory, never the working tree
-5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A lint gate demanding one loses: report what the gate printed, leave it red. Comments in untouched code stay
+5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A repository gate that requires one is a policy conflict: report what it printed and ask which wins. A bot's advice that binds nothing can be declined with the reason. Comments in untouched code stay
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
 8. A screen, component or layout drawn or built -> {{refs.design}} first
@@ -30,9 +30,8 @@
 2. Colocation: what changes together lives together
 3. Isolation over duplication. Share technical code, copy domain code
 4. Public API as narrow as possible: module boundary, props, SDK
-5. Layers in modules per case complexity
-6. Presentation/logic split
-7. Frontend state: slice per bounded context, no cross-boundary selectors, no central normalized store
+5. Presentation/logic split
+6. Frontend state: slice per bounded context, no cross-boundary selectors, no central normalized store
 
 ## Acceptance
 
@@ -52,7 +51,7 @@
 
 ## Decisions
 
-1. Expensive to change AND success-determining -> defer. Cheap technical -> decide now
+1. Expensive to change AND success-determining -> defer. Cheap technical, such as a test seam or a tool -> decide now
 2. Plan = fewest steps reaching the done-check, smallest blast radius. Wider shape -> name it as an option with its cost, build it on the user's word
 3. A decision a later change could undo unknowingly becomes an ADR in `docs/adr/`, in the format the ADRs there use. A ticket's own decisions go into its issue
 
