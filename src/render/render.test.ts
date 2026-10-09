@@ -920,12 +920,11 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} babysit-pr waits on CI without holding the session`, () => {
+	test(`${name} babysit-pr records one bounded CI round through its shell adapter`, () => {
 		renderSeats(name, (out) => {
 			const skill = rendered(out, "container", "babysit-pr/SKILL.md");
 			if (name === "claude") assert.match(skill, /`run_in_background: true`/);
-			else assert.match(skill, /one read per tool call.*up to twenty calls/);
-			assert.doesNotMatch(skill, /The wait blocks on purpose/);
+			else assert.doesNotMatch(skill, /third argument|one read per tool call|Repeat the call/);
 			assert.match(skill, /The wait ends by recording the settled state/);
 			assert.match(
 				rendered(out, "container", "refs/artifacts.md"),

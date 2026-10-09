@@ -27,7 +27,8 @@ ci-wait <owner>/<repo> <number>
 
 `ci-wait` is the only wait on CI: it reads the full head SHA, then the runs and the commit status on it as {{refs.ci}} says, at most twenty reads a minute apart, and prints each read. Exit 0 prints the settled runs and status, 1 means still pending after the last read, 2 means a read failed; 1 and 2 are findings to report, never a reason for a loop of your own.
 
-{{ci.wait}} The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
+{{ci.wait}}
+The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
 
 1. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Name the repository in every call, as {{refs.ci}} says.
 

@@ -37,8 +37,6 @@ const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
-const pollCi = (agent: string) =>
-	`${agent} has no background shell, so pass \`1\` as its third argument: one read per tool call, about a minute each, so a steer lands between calls. Repeat the call while it prints runs or status pending, up to twenty calls; the pane shows each read, and you keep the count.`;
 const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
@@ -74,7 +72,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"delegation.parallel":
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
 			"handoff.command": "/session-handoff",
-			"ci.wait": pollCi("pi"),
+			"ci.wait": "",
 			"review.call":
 				'One `reviewer` call with `async: false`, so this turn waits for it, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`.',
 		},
