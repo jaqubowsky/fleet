@@ -2,7 +2,7 @@
 
 ## mattpocock/skills
 
-The code smell list in `skills/container/two-axis-review/smells.md` is adapted from the `code-review` skill of [mattpocock/skills](https://github.com/mattpocock/skills), and `skills/container/pr/SKILL.md` from its [`pr`](https://github.com/mattpocock/skills/tree/main/skills/engineering/pr) skill, both used under the MIT License. The `pr` skill credits its Summary visuals to [Dex Horthy](https://github.com/dexhorthy)'s `show-me` skill in [humanlayer/skills](https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md).
+The code smell list in `skills/shared/two-axis-review/smells.md` is adapted from the `code-review` skill of [mattpocock/skills](https://github.com/mattpocock/skills), and `skills/container/pr/SKILL.md` from its [`pr`](https://github.com/mattpocock/skills/tree/main/skills/engineering/pr) skill, both used under the MIT License. The `pr` skill credits its Summary visuals to [Dex Horthy](https://github.com/dexhorthy)'s `show-me` skill in [humanlayer/skills](https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md).
 
 ```text
 MIT License

@@ -917,6 +917,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(reviewer, /proven \| plausible \| unverified/);
 			assert.doesNotMatch(reviewer, /PASS <head-sha>|FAIL <head-sha>/);
 			const skill = rendered(out, "container", "two-axis-review/SKILL.md");
+			assert.equal(rendered(out, "host", "two-axis-review/SKILL.md"), skill);
 			assert.match(skill, /Axis 1: correctness and fulfillment/);
 			assert.match(skill, /Axis 2: engineering quality/);
 			if (name === "pi") {
@@ -998,8 +999,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				skill,
 				/Whether a change earns an independent review is yours, by risk class/,
 			);
-			assert.match(skill, /with your own `reviewer` agent/);
-			assert.match(skill, /exec <sandbox> -- git -C <repo path> diff <base>\.\.\.<head>/);
+			assert.match(skill, /yourself with skill `two-axis-review` over the container's range/);
 			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
 			assert.doesNotMatch(skill, /review[^.\n]*with (your own )?`?explorer/i);
 			assert.match(
