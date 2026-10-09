@@ -10,7 +10,7 @@ Use only test identities the runbook names or credentials the sandbox already ho
 
 ## Session
 
-Load the `playwright-cli` skill before the first action: it carries the command reference at the version this image installed. A container without it is a stale image, and the run is `blocked` on it.
+Load the `playwright-cli` skill before the first action: it carries the command reference at the version this image installed. A container without it is a stale image, and the run is `blocked` on it. This file and the ticket set the viewport and require real UI actions; the skill's generic defaults yield to them. Read results through `--raw`, which prints only the value, and `snapshot <target>` scoped to the element in question.
 
 A config file carries what the run depends on: `outputDir` takes the CLI's own scratch into a subdirectory, and the viewport is a context option, so a context the CLI restarts mid-run comes back at the same size. The image points `PLAYWRIGHT_MCP_CONFIG` at a container-wide config, and passing your own replaces that file, which is why this one repeats `browserName`:
 
