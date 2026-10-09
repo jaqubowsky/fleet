@@ -74,9 +74,10 @@ export const KINDS: Record<AgentName, Kind> = {
 			"delegation.parallel":
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
 			"handoff.command": "/session-handoff",
-			"ci.wait": "",
+			"ci.wait":
+				"pi runs it in the foreground, so give that bash call no timeout or one above 1260 seconds; a steer lands after it returns.",
 			"review.call":
-				'One `reviewer` call with `async: true`, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. Continue independent work or end the turn; native completion wakes the session. Read the report before deciding what to fix.',
+				'One `reviewer` call with `async: true`, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. Leave the working tree untouched until `review.md` arrives: continue other read-only work or end the turn, and native completion wakes the session. Read the report before deciding what to fix.',
 		},
 	},
 	claude: {

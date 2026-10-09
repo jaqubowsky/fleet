@@ -921,6 +921,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(skill, /Axis 2: engineering quality/);
 			if (name === "pi") {
 				assert.match(skill, /`async: true`/);
+				assert.match(skill, /Leave the working tree untouched until `review\.md` arrives/);
 				assert.doesNotMatch(skill, /`async: false`/);
 			}
 		});
@@ -998,8 +999,8 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				/Whether a change earns an independent review is yours, by risk class/,
 			);
 			assert.match(skill, /with your own `reviewer` agent/);
-			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
 			assert.match(skill, /exec <sandbox> -- git -C <repo path> diff <base>\.\.\.<head>/);
+			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
 			assert.doesNotMatch(skill, /review[^.\n]*with (your own )?`?explorer/i);
 			assert.match(
 				skill,

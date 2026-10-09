@@ -30,7 +30,7 @@ const DIVERGENCES: Divergence[] = [
 	},
 	{
 		where:
-			/^skills\/container\/babysit-pr\/SKILL\.md: Run it as one `Bash` call/,
+			/^skills\/container\/babysit-pr\/SKILL\.md: (Run it as one `Bash` call|<agent> runs it in the foreground)/,
 		reason:
 			"claude names its background Bash adapter; pi uses the shared bounded CLI command through its foreground bash tool",
 	},
