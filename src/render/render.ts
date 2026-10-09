@@ -13,7 +13,7 @@ const SKILL_SCOPES: Record<Seat, string[]> = {
 	container: ["shared", "container"],
 };
 const AGENTS: Record<Seat, string[]> = {
-	host: ["explorer", "researcher"],
+	host: ["explorer", "researcher", "reviewer"],
 	container: ["explorer", "researcher", "reviewer"],
 };
 const OUTCOMES = "orchestrating-agent-sessions/references/outcomes.md";

@@ -1,6 +1,6 @@
 ---
 name: two-axis-review
-description: 'Independent review of one diff for correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user asks to review a branch, a PR or work in progress.'
+description: 'Independent review of one diff for correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user orders an independent review of a range, a branch, a PR or work in progress.'
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
@@ -42,6 +42,11 @@ Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`,
 
 Collect the repo paths. The reviewer reads them, and [smells.md](smells.md) beside this file, itself.
 
+Supply these two axes in the review packet:
+
+- Axis 1: correctness and fulfillment. Against the original ask and the supplied plan, find missing or partial behavior, unrequested changes, wrong results, reached edge cases, regressions, integration gaps and missing regression evidence. Quote the requirement for each finding; a derived plan does not replace its source.
+- Axis 2: engineering quality. Apply repository standards, then the four questions above, then the smell baseline. Check unnecessary complexity, architectural fit, scope, and security or performance reached by the diff. Decide each clone pair as shared knowledge or independent copies, with evidence rather than an extraction quota.
+
 ### 4. Run the reviewer
 
 {{review.call}} The task text carries, in this order:
@@ -51,13 +56,13 @@ Collect the repo paths. The reviewer reads them, and [smells.md](smells.md) besi
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
 5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline) and the path of `smells.md`
-6. `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
+6. the two axes from step 3 and `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
 
-Every claim in the brief is a file in the evidence directory, quoted. The reviewer reads everything it is given and returns `review.md` in the shape its own definition holds.
+Every claim in the brief is a file in the evidence directory, quoted. The reviewer returns `review.md` in the shape its own definition holds.
 
 ### 5. Hand back
 
-Read `review.md`. Report its `PASS` or `FAIL` line and the finding count per axis in chat, with the path of `review.md`. Fixes are the main agent's, and this review is the only one. Close each finding:
+Read `review.md`. Report Review: complete or incomplete, Required fixes: yes or no, and the finding count per axis with its path. An incomplete assessment or open proven P0/P1 prevents closure. Task readiness still requires the task's acceptance and final gates. Fixes are the main agent's, and this review is the only one. Close each finding:
 
 - one that carries a smallest fix: fix it and close it with its evidence, a test that fails without the fix or a log path and line
 - a `plausible` or `unverified` one whose break no test or trace reproduces: not reproduced, unbuilt

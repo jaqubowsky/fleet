@@ -26,7 +26,7 @@ const DIVERGENCES: Divergence[] = [
 		where:
 			/^skills\/container\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/,
 		reason:
-			"claude's `Agent` call has no output file, so the caller writes review.md; pi's subagent call needs `async: false` to wait",
+			"claude's foreground Agent returns the report for the caller to write; pi's asynchronous reviewer writes the report and wakes the session on completion",
 	},
 	{
 		where:

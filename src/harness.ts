@@ -74,7 +74,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"handoff.command": "/session-handoff",
 			"ci.wait": "",
 			"review.call":
-				'One `reviewer` call with `async: false`, so this turn waits for it, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`.',
+				'One `reviewer` call with `async: true`, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. Continue independent work or end the turn; native completion wakes the session. Read the report before deciding what to fix.',
 		},
 	},
 	claude: {

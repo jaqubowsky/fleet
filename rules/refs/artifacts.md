@@ -16,7 +16,7 @@ ticket.md      the tracker issue this task delivers, copied at start by the host
 analysis.md    what was found: verdict, evidence, open questions
 spec.md        what will be built and why
 issues/        NN-<slug>.md, one ticket per commit
-review.md      verdict line, findings, checks read, shared seams
+review.md      Review and Required fixes lines, findings, checks read, shared seams
 pr.md          pull request rounds: threads answered, verdicts
 browser/       <run-id>/report.md, screenshots, a walkthrough video
 mockup/        index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots

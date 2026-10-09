@@ -384,9 +384,16 @@ function description(skill: string): string {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`the ${name} reviewer, conflict procedure and pull request body reach only the container`, () => {
+	test(`the ${name} reviewer reaches both seats`, () => {
 		renderSeats(name, (out) => {
-			for (const suffix of ["agents/reviewer.md", "resolving-merge-conflicts/SKILL.md", "/pr/SKILL.md"]) {
+			for (const seat of ["host", "container"])
+				assert.ok(seatFiles(out, seat).some((f) => f.endsWith("agents/reviewer.md")), `${seat} lacks agents/reviewer.md`);
+		});
+	});
+
+	test(`the ${name} conflict procedure and pull request body reach only the container`, () => {
+		renderSeats(name, (out) => {
+			for (const suffix of ["resolving-merge-conflicts/SKILL.md", "/pr/SKILL.md"]) {
 				assert.equal(seatFiles(out, "host").some((f) => f.endsWith(suffix)), false, `host has ${suffix}`);
 				assert.ok(seatFiles(out, "container").some((f) => f.endsWith(suffix)), `container lacks ${suffix}`);
 			}
@@ -869,22 +876,37 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} reviewer opens review.md with PASS or FAIL and blocks only a proven break of an acceptance line`, () => {
+	test(`${name} allows exactly the read-only roles installed on each seat`, () => {
+		renderSeats(name, (out) => {
+			for (const seat of ["host", "container"]) {
+				const rules = name === "pi"
+					? rendered(out, seat, "AGENTS.md")
+					: rendered(out, seat, "rules/delegation.md") + (seat === "container" ? rendered(out, seat, "rules/sandbox.md") : "");
+				const allowance = rules.split("\n").filter((line) => /^Shared roles, all read-only:/.test(line)).join("\n");
+				const allowed = [...allowance.matchAll(/`(explorer|researcher|reviewer)`/g)].map((match) => match[1]).sort();
+				const installed = seatFiles(out, seat).flatMap((file) => file.match(/(?:^|\/)agents\/([^/]+)\.md$/)?.[1] ?? []).sort();
+
+				assert.deepEqual(allowed, installed, `${name} ${seat}`);
+			}
+		});
+	});
+
+	test(`${name} reviewer separates completed review from required fixes and task readiness`, () => {
 		renderSeats(name, (out) => {
 			const reviewer = rendered(out, "container", "agents/reviewer.md");
-			assert.match(reviewer, /```md\nPASS <head-sha> \| FAIL <head-sha>\n/);
-			assert.match(
-				reviewer,
-				/P0 is a `proven` break of an acceptance line, quoted, and the only one that blocks/,
-			);
-			assert.match(
-				reviewer,
-				/The first line is `FAIL` on any P0, `PASS` otherwise/,
-			);
+			assert.match(reviewer, /Review: complete \| incomplete/);
+			assert.match(reviewer, /Required fixes: yes \| no/);
+			assert.match(reviewer, /proven P0 or P1/);
+			assert.match(reviewer, /Neither field declares the task ready/);
 			assert.match(reviewer, /proven \| plausible \| unverified/);
-			assert.doesNotMatch(reviewer, /Verdict: OK/);
+			assert.doesNotMatch(reviewer, /PASS <head-sha>|FAIL <head-sha>/);
 			const skill = rendered(out, "container", "two-axis-review/SKILL.md");
-			assert.doesNotMatch(skill, /two axes/i);
+			assert.match(skill, /Axis 1: correctness and fulfillment/);
+			assert.match(skill, /Axis 2: engineering quality/);
+			if (name === "pi") {
+				assert.match(skill, /`async: true`/);
+				assert.doesNotMatch(skill, /`async: false`/);
+			}
 		});
 	});
 }
@@ -959,6 +981,9 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				skill,
 				/Whether a change earns an independent review is yours, by risk class/,
 			);
+			assert.match(skill, /with your own `reviewer` agent/);
+			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
+			assert.doesNotMatch(skill, /review[^.\n]*with (your own )?`?explorer/i);
 			assert.match(
 				skill,
 				/Before a wave starts, settle once what its tickets will share/,
