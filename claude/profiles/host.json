@@ -6,6 +6,7 @@
   "autoMemoryEnabled": false,
   "remoteControlAtStartup": true,
   "skipWorkflowUsageWarning": true,
+  "advisorModel": "claude-fable-5-1",
   "attribution": {
     "sessionUrl": false,
     "commit": "",
