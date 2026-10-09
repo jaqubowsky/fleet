@@ -55,6 +55,8 @@ Demo data is chosen to make a design look good. Every view that shows user data 
 
 ## Reflow
 
+A project that names the widths it serves, such as desktop only, is designed and checked at those widths alone; otherwise this section holds.
+
 1. Every width from 320px to a wide desktop is a designed state: no sideways scroll, nothing clipped, nothing colliding. The band between phone and desktop (600 to 1024px) gets its own state
 2. Breakpoints sit where the content breaks, not at device widths
 3. On a phone the scale steps down: type through `clamp()` or a smaller step, section padding about half, a grid collapsing to one column. Grid tracks use `minmax()` or `auto-fit`; a flex or grid child can shrink (`min-width: 0`)
