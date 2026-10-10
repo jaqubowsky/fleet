@@ -12,6 +12,7 @@ REPO = Path(__file__).resolve().parents[2]
 USER_SETTINGS = HOME / ".claude" / "settings.json"
 HOST_SEAT = REPO / "claude" / "profiles" / "models.json"
 HOST_SETTINGS = REPO / "claude" / "profiles" / "host.json"
+COMPACTION = REPO / "src" / "compaction.json"
 HOOK_SOURCE = REPO / "claude" / "hooks" / "guard.sh"
 HOOK_TARGET = HOME / ".claude" / "hooks" / "guard.sh"
 DRIFT_SOURCE = REPO / "claude" / "hooks" / "plugin-drift.sh"
@@ -139,7 +140,7 @@ def expand(value):
     if isinstance(value, list):
         return [expand(item) for item in value]
     if isinstance(value, str):
-        return value.replace("$HOME", str(HOME)).replace("$HARNESS", str(REPO))
+        return value.replace("$HOME", str(HOME)).replace("$HARNESS", str(REPO)).replace("{{compaction.tokens}}", str(load(COMPACTION)["tokens"]))
 
     return value
 

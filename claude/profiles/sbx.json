@@ -1,7 +1,8 @@
 {
   "env": {
     "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
-    "CLAUDE_CODE_NO_FLICKER": "1"
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "{{compaction.tokens}}"
   },
   "hooks": {
     "PreToolUse": [
@@ -57,7 +58,8 @@
   },
   "model": "{{models.sbx}}",
   "effortLevel": "{{thinking.sbx}}",
-  "autoCompactEnabled": false,
+  "advisorModel": "claude-fable-5-1",
+  "autoCompactEnabled": true,
   "remoteControlAtStartup": false,
   "autoMemoryEnabled": false,
   "skipWorkflowUsageWarning": true

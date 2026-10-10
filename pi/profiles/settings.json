@@ -6,8 +6,8 @@
   "hideThinkingBlock": true,
   "defaultTools": ["+codemode"],
   "compaction": {
-    "enabled": false,
-    "reserveTokens": 16384,
+    "enabled": true,
+    "reserveTokens": {{compaction.reserve}},
     "keepRecentTokens": 20000
   },
   "retry": { "maxRetries": 10, "baseDelayMs": 5000, "maxAgentDelayMs": 120000 },

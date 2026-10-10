@@ -40,13 +40,11 @@ const fetchUsage = async (ctx: any): Promise<Usage | undefined> => {
 const status = (ctx: any, usage: Usage | undefined, statuses: Map<string, string>): Status => {
   const context = ctx.getContextUsage?.();
   const tokens: number = context?.tokens ?? 0;
-  const window: number = context?.contextWindow ?? ctx.model?.contextWindow ?? 0;
   return {
     dir: ctx.cwd ?? process.cwd(),
     model: ctx.model?.name ?? ctx.model?.id,
     effort: ctx.thinkingLevel,
     tokens,
-    percent: context?.percent ?? (window ? (tokens / window) * 100 : 0),
     windows: usage?.windows ?? [],
     remote: statuses.get("pi-remote"),
   };

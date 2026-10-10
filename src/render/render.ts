@@ -42,10 +42,10 @@ function parseJson<T>(text: string): T {
 export function renderSettings(
 	template: string,
 	models: Models,
-	paths: Record<string, string> = {},
+	values: Record<string, string> = {},
 ): string {
 	const rendered = template
-		.replace(/\{\{(root|home)\}\}/g, (all, key: string) => paths[key] ?? all)
+		.replace(/\{\{(root|home|compaction\.tokens|compaction\.reserve)\}\}/g, (all, key: string) => values[key] ?? all)
 		.replace(
 			/\{\{(models|thinking|providers)\.([a-z-]+)\}\}/g,
 			(_, field: string, seat: string) => {
@@ -86,6 +86,12 @@ export function buildAgents(sources: Source[], exclude: string[]): string {
 		.join("\n");
 }
 
+function compactionTokens(source: string | undefined): Record<string, string> {
+	if (source === undefined) return {};
+	const { tokens, window } = parseJson<{ tokens: number; window: number }>(source);
+	return { "compaction.tokens": String(tokens), "compaction.reserve": String(window - tokens) };
+}
+
 export function seatSettings(
 	io: Io,
 	root: string,
@@ -94,12 +100,12 @@ export function seatSettings(
 ): string {
 	const own = `${root}/${agent}/profiles`;
 	const models = parseJson<Models>(io.read(`${own}/models.json`) ?? "{}");
-	const paths = { root, home: `${io.home}/${KINDS[agent].home}` };
+	const values = { root, home: `${io.home}/${KINDS[agent].home}`, ...compactionTokens(io.read(`${root}/src/compaction.json`)) };
 	const base = parseJson<Record<string, unknown>>(
-		renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, paths),
+		renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, values),
 	);
 	const seat = parseJson<Record<string, unknown>>(
-		renderSettings(io.read(`${own}/${template}`) ?? "{}", models, paths),
+		renderSettings(io.read(`${own}/${template}`) ?? "{}", models, values),
 	);
 	return `${JSON.stringify({ ...base, ...seat }, null, 2)}\n`;
 }
@@ -365,6 +371,7 @@ function pi(r: Renderer): void {
 		["src/guard/translate.ts", "home/agent/src/guard/translate.ts"],
 		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
 		["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
+		["src/compaction.json", "home/agent/src/compaction.json"],
 	]);
 }
 
@@ -395,6 +402,7 @@ function claude(r: Renderer): void {
 	r.extra([
 		["claude/statusline.mjs", "home/fleet/claude/statusline.mjs"],
 		["src/statusline/statusline.ts", "home/fleet/src/statusline/statusline.ts"],
+		["src/compaction.json", "home/fleet/src/compaction.json"],
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
