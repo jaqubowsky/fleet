@@ -51,7 +51,7 @@ If expected behavior is genuinely unclear, ask for it while gathering independen
 
 ## Trace the current behavior
 
-Bind each screen criterion to the original request and its user amendments: original source, mounted route, organization or role, operated control and expected transition. A derived ticket's route is a claim to check against those sources. If two mounted screens fit and the original sources do not distinguish them, ask which before mockup or implementation. Carry the source and target beside the criterion into the ticket.
+Bind each screen criterion to the original request and its user amendments: original source, mounted route, organization or role, operated control and expected transition. A derived ticket's route is a claim to check against those sources. Carry the source and target beside the criterion into the ticket.
 
 Follow that mounted entry point through selection and state, validation, API, backend effects, and the user-visible outcome. Check callers, feature flags, permissions and alternative paths. Separate active code from unmounted or legacy code. Cover success, failure, cancellation, retry, empty selection and partial validity where relevant. Read the existing tests.
 
@@ -85,6 +85,15 @@ A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed.
 ### Verdict
 
 At most three sentences: what the task turns out to be, and whether the ticket's scope holds. For a bug: the symptom the user sees, the cause, the reproduction command and its result. Name the cause, not the layer where you happened to notice it.
+
+### Where it lands
+
+The place the change lands, a route, endpoint, job, command or function, marked as chosen, then every other place that matches the request's words, one line each with what tells it apart.
+
+```md
+- `/projects/:id/trash` restore button (chosen): the request names deleted projects
+- `/admin/projects` restore action: also restores, admins only
+```
 
 ### What this rests on
 

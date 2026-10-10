@@ -115,17 +115,17 @@ test("a pi container carries the state relay for herdr's integration, and its ho
 	assert.equal(pi.files["/home/agent/extensions/state-relay.ts"], undefined);
 });
 
-test("every container carries status history beside each module that imports it, and no host does", () => {
-	const history = {
-		"read /root/extensions/status-history.ts": "history\n",
-		"stat /root/extensions/status-history.ts": {
-			size: 8,
+test("every container carries the activity recorder beside each module that imports it, and no host does", () => {
+	const activity = {
+		"read /root/extensions/activity.ts": "activity\n",
+		"stat /root/extensions/activity.ts": {
+			size: 9,
 			mtime: new Date(0),
 			dir: false,
 		},
 	};
-	const pi = fakeIo(sources(history));
-	const claude = fakeIo(sources(history), SEATS.claude);
+	const pi = fakeIo(sources(activity));
+	const claude = fakeIo(sources(activity), SEATS.claude);
 
 	for (const io of [pi, claude]) {
 		render(
@@ -138,22 +138,12 @@ test("every container carries status history beside each module that imports it,
 		);
 	}
 
-	assert.equal(
-		pi.files["/stage/home/agent/extensions/status-history.ts"],
-		"history\n",
-	);
-	assert.equal(
-		pi.files["/stage/context/extensions/status-history.ts"],
-		"history\n",
-	);
-	assert.equal(
-		claude.files["/stage/home/fleet/extensions/status-history.ts"],
-		"history\n",
-	);
+	assert.equal(pi.files["/stage/home/agent/extensions/activity.ts"], "activity\n");
+	assert.equal(claude.files["/stage/home/fleet/extensions/activity.ts"], "activity\n");
 	for (const io of [pi, claude])
 		assert.deepEqual(
 			Object.keys(io.files).filter(
-				(path) => path.startsWith("/home/") && path.endsWith("status-history.ts"),
+				(path) => path.startsWith("/home/") && path.endsWith("activity.ts"),
 			),
 			[],
 		);
@@ -433,34 +423,32 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	});
 }
 
-test("the continue steer points at the shared resume rule", () => {
-	assert.match(CONTINUE, /following the Session handoff rule/);
+test("the stock continue names no session rule", () => {
+	assert.equal(CONTINUE, "Continue the task from where it stopped.");
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} resumes with bounded reads from unfinished work`, () => {
+	test(`${name} starts every ticket, the final verification and every PR round in a fresh session`, () => {
 		renderSeats(name, (out) => {
 			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
 
-			assert.match(rules, /If implementation is complete, start from the remaining acceptance criteria and gates/);
-			assert.match(rules, /Read supporting documents one at a time, only the sections needed for that unfinished step/);
+			assert.match(rules, /Every ticket, the final verification and every pull request round start in a fresh session, with one line naming the ticket or the step/);
+			assert.match(rules, /Read that file, `spec\.md` when it exists, and `git log`/);
 		});
 	});
 
-	test(`${name} verifies after the repository's required branch update`, () => {
+	test(`${name} updates the branch once, by the merge method the project names, as a git command decides`, () => {
 		renderSeats(name, (out) => {
 			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
 			const finish = rules.split("## Finish\n")[1]!;
 
-			assert.match(finish, /merge where merge commits are allowed, rebase only where linear history requires it/);
-			assert.match(finish, /If no update is needed, verify the current HEAD/);
-			assert.match(finish, /If the base advances during verification, report it to the host instead of updating the branch again/);
-			assert.match(finish, /On that recorded tree, run the final visible acceptance, typecheck and lint, and each changed workspace's full suite once/);
-			assert.doesNotMatch(finish, /git fetch origin && git rebase origin\/<base>/);
+			assert.match(finish, /`git merge-base --is-ancestor origin\/<base> HEAD` exiting 0 means no update/);
+			assert.match(finish, /by the method `## Merge method` in `project\.md` names/);
+			assert.match(rules, /\| Branch update, by the method `## Merge method` in `project\.md` names \| before the final checks \| 1, never repeated by a later session \|/);
 		});
 	});
 
-	test(`${name} renders no Next step and carries the continue steer`, () => {
+	test(`${name} renders no Next step`, () => {
 		renderSeats(name, (out) => {
 			const naming = (readdirSync(out, { recursive: true }) as string[])
 				.filter((file) => file.endsWith(".md"))
@@ -468,13 +456,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					readFileSync(join(out, file), "utf8").includes("Next step"),
 				);
 			assert.deepEqual(naming, []);
-			assert.ok(
-				(readdirSync(out, { recursive: true }) as string[]).some(
-					(file) =>
-						file.endsWith(".md") &&
-						readFileSync(join(out, file), "utf8").includes(CONTINUE),
-				),
-			);
 		});
 	});
 }
@@ -587,28 +568,17 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} tells the host which ticket of a wave goes up first, and both seats that one ordered ticket ends at ready-for-host`, () => {
+	test(`${name} tells the host which ticket of a wave goes up first, and no seat holds a natural-break table`, () => {
 		renderSeats(name, (out) => {
-			const breakTables = (seat: string) =>
-				(readdirSync(`${out}/${seat}`, { recursive: true }) as string[])
-					.filter((file) => file.endsWith(".md"))
-					.map((file) => readFileSync(join(out, seat, file), "utf8"))
-					.filter((text) => text.includes("| Natural break |"));
 			assert.match(
 				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
 				/within a wave the ticket the most open tickets wait on goes up first/,
 			);
 			for (const seat of ["host", "container"]) {
-				const tables = breakTables(seat);
-				assert.notEqual(tables.length, 0, `${seat} has no natural-break table`);
-				for (const table of tables) {
-					assert.ok(
-						table.includes(
-							"| the run's last commit is in, and nothing a user sees is left unverified | `ready-for-host`, with no session for a next ticket |",
-						),
-						`${seat} table lacks the one-ticket break`,
-					);
-				}
+				const tables = (readdirSync(`${out}/${seat}`, { recursive: true }) as string[])
+					.filter((file) => file.endsWith(".md"))
+					.filter((file) => readFileSync(join(out, seat, file), "utf8").includes("| Natural break |"));
+				assert.deepEqual(tables, [], `${seat} still has a natural-break table`);
 			}
 		});
 	});
@@ -732,7 +702,7 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} seats review by blast radius, and the image carries the ticket check the gate runs`, () => {
+	test(`${name} plans a per-ticket review by blast radius, reviews the whole branch once, and the image carries no ticket check`, () => {
 		renderSeats(name, (out) => {
 			const promises = (readdirSync(out, { recursive: true }) as string[])
 				.filter((file) => file.endsWith(".md"))
@@ -748,32 +718,28 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				);
 			assert.deepEqual(promises, []);
 			assert.match(
+				rendered(out, "container", "to-tickets/SKILL.md"),
+				/carries the line `Review: after this ticket`, written now/,
+			);
+			assert.match(
 				rendered(out, "container", "implement/SKILL.md"),
-				/blast radius/,
+				/runs when the ticket carries `Review: after this ticket` or the order asks for one/,
 			);
 			const rules = containerRules(out)
 				.map((file) => readFileSync(join(out, "container", file), "utf8"))
 				.join("\n");
-			assert.match(rules, /`ticket-check <ticket file>`/);
+			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the last ticket's commit, before the final checks \| 1 \|/);
 			assert.match(
 				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
-				/Log line on the review decision/,
+				/gets `Review: after this ticket` in its description before the container starts it/,
 			);
-			assert.match(
-				rendered(out, "container", "context/Dockerfile"),
-				/container\/ticket-check\.sh\s+\/usr\/local\/bin\/ticket-check/,
-			);
+			assert.doesNotMatch(rendered(out, "container", "context/Dockerfile"), /ticket-check/);
 			assert.match(
 				rendered(out, "container", "context/Dockerfile"),
 				/container\/ci-wait\.sh\s+\/usr\/local\/bin\/ci-wait/,
 			);
 			assert.ok(
 				rendered(out, "container", "context/container/ci-wait.sh").includes("headRefOid"),
-			);
-			assert.ok(
-				rendered(out, "container", "context/container/ticket-check.sh").includes(
-					"not done",
-				),
 			);
 		});
 	});
@@ -826,14 +792,14 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				rendered(out, "container", "refs/artifacts.md"),
-				/\| `testing` \| the verification of what a user sees/,
+				/a list of frames, one line each with the criterion and verdict/,
 			);
 		});
 	});
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} container checkpoints, asks through attention, names host items and cuts small tickets`, () => {
+	test(`${name} container checkpoints, ends every turn on the closing message and cuts small tickets`, () => {
 		renderSeats(name, (out) => {
 			const implement = rendered(out, "container", "implement/SKILL.md");
 			assert.match(
@@ -853,14 +819,23 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				.join("\n");
 			assert.match(
 				rules,
-				/A question for the host goes into `attention:` under `status: blocked`, and the turn ends there\. Never a `\w+` dialog here/,
+				/A question for the host goes into `Question:` of the closing message, and the turn ends there\. Never a `\w+` dialog here/,
 			);
-			assert.equal(
-				rendered(out, "container", "refs/artifacts.md").match(
-					/every host action (is )?named in Summary, never counted/g,
-				)?.length,
-				1,
+			assert.ok(
+				rules.includes(
+					"Every turn ends with this message, whatever the turn did:\n\n```text\nChanges: <what changed>\nChecks: <command> -> exit <n> @ <sha7>, <log path under logs/>\nCommits: <sha7> <subject>\nQuestion: <a question for a person, or none>\n```",
+				),
 			);
+			for (const row of [
+				"| Red test | before the code of each behaviour | 1 per behaviour |",
+				"| Ticket tests (changed files and their importers) | after the ticket's code | 1 per ticket, plus reruns while fixing |",
+				"| Review fixes | one batch, each with its own test | 1 |",
+				"| Typecheck and lint of changed files | final tree | 1 |",
+				"| Tests of affected packages | final tree; on the base only the files that failed | 1 |",
+			])
+				assert.ok(rules.includes(row), row);
+			assert.match(rules, /each check covers only the base or the last `@sha` it passed on, up to HEAD/);
+			assert.match(rules, /Gates run with no bash timeout/);
 			assert.match(
 				rendered(out, "container", "to-tickets/SKILL.md"),
 				/Cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer/,
@@ -868,7 +843,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			const ticket = rendered(out, "container", "refs/ticket.md");
 			assert.match(
 				ticket,
-				/progress lives in the tracker and in git; a local copy's `Status:` is the container's working mark/,
+				/progress lives in the tracker and in git\. A local copy's `Status:` is the host's; the container leaves it as it is and ticks each criterion with its evidence/,
 			);
 			assert.doesNotMatch(ticket, /\d/);
 		});
@@ -967,8 +942,8 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			else assert.doesNotMatch(skill, /third argument|one read per tool call|Repeat the call/);
 			assert.match(skill, /The wait ends by recording the settled state/);
 			assert.match(
-				rendered(out, "container", "refs/artifacts.md"),
-				/a check that closes a step: [^|]*a settled CI wait/,
+				rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md"),
+				/`Checks:` repeats per check; `@ <sha7>` is the commit the check passed on/,
 			);
 			const core = rendered(
 				out,
@@ -1031,7 +1006,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(skill, /carries your stop rule/);
 			assert.match(
 				skill,
-				/measure, make one fix, measure again, then stop at `blocked`/,
+				/measure, make one fix, measure again, then end the turn with both numbers in the closing message's `Question:`/,
 			);
 			assert.match(
 				skill,

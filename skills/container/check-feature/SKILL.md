@@ -23,7 +23,7 @@ One question: does this change do what was asked, on the real screens of the run
 
    A required action that cannot be completed is `failed`, even if another action works. Escape does not substitute for a required close button. Missing populated sibling data is a `coverage-gap`, not a pass from component tests. Only findings outside the cumulative criteria are incidental.
 
-4. **Report.** `browser/<run-id>/report.md`, where your seat's rules keep outputs, else beside the repository's `.issues/`, from [report.md](references/report.md), the screenshots beside it. Runbook files touched are named in it. A `passed` criterion is ticked where the task lists it, beside its screenshot path. Done when the report lists every criterion and every file it cites exists.
+4. **Report.** `browser/<run-id>/report.md`, where your seat's rules keep outputs, else beside the repository's `.issues/`, from [report.md](references/report.md), the screenshots beside it. A `passed` criterion is ticked where the task lists it, beside its screenshot path. Done when the report lists every criterion and every file it cites exists.
 
 5. **Cleanup** as [browser.md](references/browser.md) says. Then end with the run's verdict and the report's absolute path.
 

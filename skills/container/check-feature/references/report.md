@@ -1,40 +1,14 @@
 # Browser check
 
-Status: passed | failed | blocked
-Commit: <single repo only: sha7 on branch, base branch@sha7, working tree clean | status and diff hash>
-Repository set: <multiple repos only: every name from repositories.json@full SHA; branch, base SHA, dirty state and diff hash for each>
+Commit: <single repo: sha7 on branch, base branch@sha7, working tree clean | status and diff hash; multiple repos: every name from repositories.json@full SHA with its dirty state>
 Launch: `<command>` from `<working directory>`, answered at <URL>
-Source: <analysis, spec, tickets or diff the criteria came from>
-Runbook: <files edited and why, or none>
 
-A failed required action makes the run `failed`, even when another action works. With no failed criterion, an unfinished required check or coverage gap keeps the run `blocked`. `passed` requires evidence for every cumulative criterion. A later refactor alone removes none.
+## Frames
 
-## Criteria
+- [<file>](<file>) <route>: <criterion>: <verdict><, expected and actual when failed>
 
-| Criterion | Verdict | Evidence |
-| --- | --- | --- |
-| <criterion> | <verdict> | <screenshot, or test command and result> |
+One line per frame, the route the frame shows first. A walk outside every criterion adds a line whose criterion reads `incidental`. In a regression walk the verdicts are `regressed`, `pre-existing` and `coverage-gap`, and a regressed line names the base's behaviour on the same flow.
 
-In a regression walk the table carries a fourth column, `Seam`, and the verdicts `regressed`, `pre-existing`, `coverage-gap`.
-
-## Failures
-
-Grouped by the seam they trace to. Omitted when every criterion passed.
-
-### <seam>
-
-1. <Criterion. Expected, actual, evidence. For a regression: the same flow on the base checkout and what it did there.>
-
-## Incidental findings
-
-<What the walk hit outside every criterion, with the route and the evidence. Or none.>
-
-## Artifacts
-
-Run directory: <absolute file:// link>
-
-| File | Criterion | Shows |
-| --- | --- | --- |
-| [<file>](<file>) | <criterion> | <what to look at> |
+The run is `failed` when any line is, `blocked` when a line is `unreachable` or `coverage-gap` and none failed, `passed` when every cumulative criterion has a `passed` line. A later refactor alone removes none.
 
 Cleanup: browser closed, application stopped, working tree <clean | what was removed>.

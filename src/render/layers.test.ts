@@ -18,8 +18,8 @@ test("every line in skills, principles and refs sits in its own layer", () => {
 });
 
 test("a container skill naming another skill or a mechanic belongs to the container owner", () => {
-	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then run skill `implement` and write `status.md`."), [{ names: "implement, status.md", owner: "sbx/container/sandbox.md" }]);
-	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then set `status: paused`."), [{ names: "status: paused", owner: "sbx/container/sandbox.md" }]);
+	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then run skill `implement` and write `analysis.md`."), [{ names: "implement, analysis.md", owner: "sbx/container/sandbox.md" }]);
+	assert.deepEqual(atSeededLine("skills/container/tdd/SKILL.md", "Then read `project.md`."), [{ names: "project.md", owner: "sbx/container/sandbox.md" }]);
 });
 
 test("a host skill naming a mechanic belongs to the host owner", () => {
@@ -27,7 +27,7 @@ test("a host skill naming a mechanic belongs to the host owner", () => {
 });
 
 test("a principle naming a mechanic belongs to a seat owner", () => {
-	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `attention:`"), [{ names: "attention:", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `spec.md`"), [{ names: "spec.md", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
 });
 
 test("a principle naming a skill one seat lacks belongs to a seat owner", () => {
