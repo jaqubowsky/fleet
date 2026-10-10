@@ -16,4 +16,4 @@ One output: a video a person watches instead of clicking through the change. A b
 
 3. **Replay.** Write the flow as one file and run it with `run-code --filename`: a video is a replay of the settled flow, not the walk that found it. [recording.md](recording.md) carries what that file needs: the screencast size, the pace, the chapters and overlays, and how to check the first recording before keeping it.
 
-4. **File.** The video goes to `browser/<run-id>/walkthrough.webm`, where the walk's report lives, captioned in that run's `report.md` under Artifacts with what happens in order. Cleanup as `browser.md` says. Then print the absolute path and end.
+4. **File.** The video goes to `browser/<run-id>/walkthrough.webm`, where the walk's report lives, with one line in that run's `report.md` frames saying what happens in order. Cleanup as `browser.md` says. Then print the absolute path and end.

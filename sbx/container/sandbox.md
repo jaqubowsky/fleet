@@ -4,7 +4,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Environment
 
-1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Set `status: blocked` and name the failed check and the needed image rebuild and fresh container in `attention:`. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services at `ready-for-host` and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
+1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Name the failed check and the needed image rebuild and fresh container in `Question:` of the closing message. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services before the last closing message of the run and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
 2. Node and the package manager follow the repo's declared versions, and the image's own Node when the repo declares none
 3. Deps install in the background from every lockfile into `/tmp/fleet-install.log` for the primary repo. When `repositories.json` exists, every additional repo has `/tmp/fleet-install-<workspace basename>.log`; check each. Wait for each log's last line:
    - `deps: ready`, which names the Node that ran the install: build once so workspace packages resolve, and report a skipped lockfile
@@ -17,7 +17,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Task directory
 
-1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout and the status contract are in {{refs}}. Read that file, `status.md`, and `repositories.json` when present before your first command. The manifest names each clone's path, base SHA and branch; the host keeps its own authoritative copy. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
+1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory: its layout is in {{refs}}. Read that file, the ticket the order names, and `repositories.json` when present before your first command. The manifest names each clone's path, base SHA and branch; the host keeps its own authoritative copy. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
 2. `project.md`, when present, says how the primary project works; when `repositories.json` exists, read each additional repo's overlay in `projects/<workspace basename>.md` when present and use the matching part of `permissions.md` for each repo
 3. `runbook/` at the root of `$FLEET_ARTIFACTS` holds how this app starts and how its screens drive. The root is shared by tasks for the same repository set and read by the person; a new multi-repository task has its own group root, not the first repo's runbook. Starting the app or a service it needs, for any reason, follows skill `running-the-app`. `gotchas.md` there holds what defies a reasonable assumption about this environment: a gate that dies or flakes here, an action no script takes. A new entry folds into one that describes it; an entry whose failure did not reproduce is deleted
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
@@ -28,45 +28,67 @@ You run in an isolated container. Someone outside watches this session and gives
    Whoever runs it, the analysis included, adds its line to that file for every later session and container on the same base
 6. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:
    - goes into `runbook/gotchas.md` as not runnable here, with the memory it had
-   - goes once into `attention:`, so the host can give the next container more
+   - goes once into the closing message's `Question:`, so the host can give the next container more
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
-8. A question for the host goes into `attention:` under `status: blocked`, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
+8. A question for the host goes into `Question:` of the closing message, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
 
 ## The run
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question under `status: blocked` while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval is written down, as Session handoff says, before implementation starts
-2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first
-3. `implement` works the frontier of `issues/`, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. `ticket-check <ticket file>` closes each ticket
-4. Before the first commit covered by a review decision, name its tickets and the run-or-skip reason in one `status.md` Log line. A later commit outside that scope needs a new decision. A run is `two-axis-review`: `review.md`, evidence in `logs/review-<head-sha7>/`
-5. Work that changes what a user sees is verified in Finish, after any required branch update and the last visible change, against the ticket's observable acceptance criteria and the diff: the way `project.md` names, else the check the change calls for. Open the frames before claiming what the user sees
-6. When a review round or a red check lands on the pull request, `babysit-pr` answers it in `pr.md`, raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
+1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question in the closing message while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval goes into `spec.md` or the ticket, with the user's deciding words and their date, before implementation starts
+2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first. A ticket that needs its own review carries the line `Review: after this ticket`, written now
+3. `implement` works the ticket the order names, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. A ticket stays a plan: at its end, one edit ticks each acceptance criterion with its evidence beside it
+4. A changed requirement goes into its ticket or `spec.md` before the code changes
+5. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 
-The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this and leaves only `status.md`.
+The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this.
 
-An order to see a change before it is built runs `mockup` first. Its hand-over is the Summary, and the steer that answers it goes into the Log.
+An order to see a change before it is built runs `mockup` first; its frames are the hand-over.
 
 An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
 
-## Session handoff
+Every ticket, the final verification and every pull request round start in a fresh session, with one line naming the ticket or the step. Read that file, `spec.md` when it exists, and `git log`; they hold everything an earlier session decided.
 
-Before a context reset, and before analysis turns into implementation, write the approval into `spec.md` or the ticket: the user's deciding words with their date, the accepted phase, the work left and where it stops. Link it from `status.md`, replacing the analysis-only scope it supersedes.
+## Checks
 
-A fresh session reads the `status.md` header, Summary and recent Log turning points, then checks the frontier ticket, that recorded approval and git, and resumes the approved work without asking for it again. An unsettled product choice still blocks the work it decides. If implementation is complete, start from the remaining acceptance criteria and gates. Read supporting documents one at a time, only the sections needed for that unfinished step. Read older Log entries when that step depends on them. Suggest a session handoff at every natural break:
+Each check runs once, where it is cheapest:
 
-{{file:natural-breaks}}
+| Check | When | Times per task |
+| --- | --- | --- |
+| Red test | before the code of each behaviour | 1 per behaviour |
+| Ticket tests (changed files and their importers) | after the ticket's code | 1 per ticket, plus reruns while fixing |
+| Independent review of the whole branch, `two-axis-review` | after the last ticket's commit, before the final checks | 1 |
+| Review fixes | one batch, each with its own test | 1 |
+| Branch update, by the method `## Merge method` in `project.md` names | before the final checks | 1, never repeated by a later session |
+| Typecheck and lint of changed files | final tree | 1 |
+| Tests of affected packages | final tree; on the base only the files that failed | 1 |
+| Verification of what a user sees, the way `project.md` names | final tree, after the last visible change | 1 |
 
-Between natural breaks, work on, even after a context reminder. A ticket runs from its claim to its commit in one session: a review, when one runs, brings its own fresh context, and the fixes need the context that wrote the code.
+- After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
+- A per-ticket review runs only where the ticket carries `Review: after this ticket`
+- Gates run with no bash timeout
+- Open the frames before claiming what the user sees
 
-To suggest it, write `status.md` for the session handoff event in `refs/artifacts.md`, with `attention: session handoff suggested`, and end your turn. The user or the host approves with `{{handoff.command}}`, or steers you on in this session.
+## Closing message
+
+Every turn ends with this message, whatever the turn did:
+
+```text
+Changes: <what changed>
+Checks: <command> -> exit <n> @ <sha7>, <log path under logs/>
+Commits: <sha7> <subject>
+Question: <a question for a person, or none>
+```
+
+`Checks:` repeats per check; `@ <sha7>` is the commit the check passed on. Review findings you reject go under `Changes:` with the reason. A turn with nothing in a slot writes `none` there.
 
 ## Finish
 
 1. Commit unsigned on the task branch
-2. Before final verification, on a branch never pushed, `git fetch origin` once. If the base has advanced, update the branch by the repository's rules: merge where merge commits are allowed, rebase only where linear history requires it. If no update is needed, verify the current HEAD. Record the base and HEAD for the checks that follow. If the base advances during verification, report it to the host instead of updating the branch again. A conflict is resolved, never aborted, with skill `resolving-merge-conflicts`. A fetch that cannot authenticate leaves the branch update to the host: name the base the branch sits on in `attention:` and ask for no credential
-3. A pushed branch follows the stale-base rules of skill `babysit-pr` for whether and how its base needs updating. Where the host signs, signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
-4. With `repositories.json`, finish and commit each repo separately. Run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree. Update every repo's branch, dirty-count and SHA line in `status.md` at each status change. The host imports all branches only after its own preflight; signing and pushing need host approval. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`, when the pull request opens and in every later round that changes it. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
-5. On that recorded tree, run the final visible acceptance, typecheck and lint, and each changed workspace's full suite once through the repository's declared gates. Fixes that run or the review asks for go in as one batch, each proven by its own tests, and the full set runs once more after the batch, not after each fix. Per-ticket regression tests and review gates stay in implementation; they diagnose and prove each fix before commit. A session handoff on the same tree resumes unfinished checks from their logs and reports. The task ends in `status.md` at `ready-for-host` or `blocked`, and a stop the order named before the run's end settles at `paused`, as the status table in `refs/artifacts.md` defines them. The hand-off is the last check this change gets, so the evidence in `status.md` and `review.md` stands on its own. The gate results live in `review.md` under Checks read, or for a ticket without a review in its Log line: each the command you ran, its exit code and the log under `logs/` it points at. Nothing there is committed, so keep code and secrets out
-6. Finish with a clean checkout: committed, or the uncommitted files named in `attention:` with the reason
+2. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted, with skill `resolving-merge-conflicts`. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on in `Question:` and ask for no credential
+3. A pushed branch follows the stale-base rules of skill `babysit-pr`. Where the host signs, signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
+4. With `repositories.json`, finish and commit each repo separately. Run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree. The host imports all branches only after its own preflight; signing and pushing need host approval. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`, when the pull request opens and in every later round that changes it. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
+5. The final checks of the table run on the updated tree, and their lines go into the closing message. Nothing in the task directory is committed, so keep code and secrets out
+6. Finish with a clean checkout: committed, or the uncommitted files named in `Changes:` with the reason

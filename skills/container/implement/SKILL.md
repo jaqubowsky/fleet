@@ -9,7 +9,7 @@ Implement the ticket, spec or analysis you were handed.
 
 ## Process
 
-1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of the tickets where your seat's rules keep them, else `.issues/<feature-slug>/`: the lowest-numbered ticket whose `Status:` is `ready-for-agent` and whose "Blocked by" tickets are all `done`. No tickets: the short run the analysis named is the work.
+1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of the tickets where your seat's rules keep them, else `.issues/<feature-slug>/`: the lowest-numbered ticket with an unticked acceptance criterion whose "Blocked by" tickets are all ticked. No tickets: the short run the analysis named is the work.
 
 2. **Load context.** The shared spec beside the tickets if it exists; the analysis for what the ticket leaves open.
 
@@ -25,7 +25,7 @@ Implement the ticket, spec or analysis you were handed.
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
 
-4. **Claim it.** Set `Status: claimed` in the ticket file and save before implementation.
+4. **Write a changed requirement down first.** A requirement that changes while you build goes into this ticket, or into the spec when it is shared, before the code changes.
 
 5. **Build at the seams the ticket names, else existing public ones.** A failing test first: one seam, one red, one implementation.
 
@@ -37,20 +37,11 @@ Implement the ticket, spec or analysis you were handed.
 
 6. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this ticket.
 
-7. **Review by blast radius.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. Then decide on the review. An independent review runs on the uncommitted diff, with the step 6 logs and the step 5 red logs as its checks, when the diff touches any of these:
-   - a shared seam other code calls
-   - persisted data or its schema
-   - security, credentials or permissions
-   - process control, CI or the build
-   - an external or role-prompt contract
-   - a failure that is expensive or hard to see
-
-   Only a diff that touches none of them takes the gate as its check. An order for a review runs it whatever the diff. Record the decision, run or skipped, with a reason that names only what this diff can break, or why it cannot. A review's findings close as the review says.
+7. **Review where the plan asked for it.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. An independent review of the uncommitted diff, with the step 6 logs and the step 5 red logs as its checks, runs when the ticket carries `Review: after this ticket` or the order asks for one. Every other ticket is covered by the whole-branch review in your seat's Finish. A review's findings close as the review says.
 
 8. **Commit** the work, with the review's fixes when one ran, to the current branch.
 
 9. **Resolve the ticket.**
-    - Tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
-    - Set `Status: done`
+    - In one edit at the end of the ticket, tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
     - Slice-only findings go under a `## Comments` heading at the bottom of the ticket file; a changed shared decision or accepted scope updates the spec
     - Report the command, its exit code, and name anything you did not run and why
