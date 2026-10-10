@@ -17,6 +17,14 @@ Two files come out of it, read by a session that holds the repository and nothin
 
 3. **Cut the slices.** Each ticket is one commit and at most one review. Cut small, so each commit reads as one change: one behaviour per ticket, still a complete path through every layer it touches (schema, API, UI, tests), demoable on its own. Two behaviours on one router and one test file are two tickets, the second blocked by the first. A new ticket also starts where the work reaches a seam the earlier ones never touch, or where one part has to land green before the next can start. Give each ticket its blocking edges: the tickets that must be done before it starts.
 
+   A ticket whose diff will touch any of these carries the line `Review: after this ticket`, written now; every other ticket is covered by the whole-branch review at the end:
+   - a shared seam other code calls
+   - persisted data or its schema
+   - security, credentials or permissions
+   - process control, CI or the build
+   - an external or role-prompt contract
+   - a failure that is expensive or hard to see
+
    A wide refactor (rename a column, retype a shared symbol) breaks thousands of call sites at once, so no slice lands green: sequence it as expand, migrate in batches sized by blast radius, contract. Each batch is a ticket blocked by the expand; the contract is blocked by every batch.
 
 4. **Confirm the split.**

@@ -8,7 +8,6 @@
   "skills": ["~/.pi/skills/shared", "~/.pi/skills/host"],
   "extensions": [
     "{{root}}/pi/extensions.ts",
-    "{{root}}/extensions/handoff-on-error.ts",
     "{{root}}/extensions/statusline.ts",
     "{{root}}/extensions/pi-remote"
   ],

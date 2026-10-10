@@ -41,16 +41,16 @@ board({
     {
       id: "A",
       file: "A.html",
-      title: "Export as a quiet icon in the toolbar",
+      title: "/orders: export as a quiet icon in the toolbar",
     },
     {
       id: "B",
       file: "B.html",
-      title: "A labelled export button leads the toolbar",
+      title: "/orders: a labelled export button leads the toolbar",
       play: [{ name: "open", steps: [{ click: "#export" }] }],
     },
   ],
 });
 ```
 
-A frame opens at 1440×900; `size: { w, h }` opens it at the thing's own size when that is smaller than a page, or at a size the order names. `play` lists the interactions Look runs, each from a fresh load, screenshotted after its last step: `click`, `hover` (a selector), `fill` (`[selector, text]`), `press` (a key), `drag` (`[selector, dx, dy]`), `wait` (ms), `eval` (JS). Each state Scope named that needs an interaction to reach gets one run.
+Every frame is labelled with the route it shows: its `title` opens with that route. A frame opens at 1440×900; `size: { w, h }` opens it at the thing's own size when that is smaller than a page, or at a size the order names. `play` lists the interactions Look runs, each from a fresh load, screenshotted after its last step: `click`, `hover` (a selector), `fill` (`[selector, text]`), `press` (a key), `drag` (`[selector, dx, dy]`), `wait` (ms), `eval` (JS). Each state Scope named that needs an interaction to reach gets one run.

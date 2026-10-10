@@ -46,7 +46,6 @@ export const VOCABULARY: [string, string][] = [
 	["refs.ticket", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.design", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.prose", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
-	["handoff.command", "each kind clears a session with its own command"],
 ];
 const FRAGMENT = /^(?:([a-z]+)\/)?fragments\/(.+)$/;
 

@@ -7,8 +7,6 @@ import {
 	down,
 	exec,
 	execScript,
-	handoff,
-	history,
 	ls,
 	peek,
 	resolveSandbox,
@@ -16,7 +14,6 @@ import {
 } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import { checkoutProbe, commitsProbe, type Sandbox } from "./status.ts";
-import { agentName } from "./name.ts";
 import { KINDS, type Kind, SEATS } from "../harness.ts";
 
 const running = {
@@ -132,64 +129,6 @@ test("steer says when the image predates the harness, and still steers", () => {
 });
 
 for (const harness of Object.values(KINDS)) {
-	test(`${harness.name} handoff takes a stalled command as steered once status.md turns to handoff complete`, async () => {
-		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
-		const agent = agentName(sandbox);
-		const path = `/home/me/.fleet/tasks/household-budget/${sandbox}/status.md`;
-		const command = harness.tokens["handoff.command"];
-		const steerAfter = async (from: string, to: string) => {
-			const io = fakeIo({}, SEATS[harness.name]);
-			io.files[path] = `status: implementing\nattention: ${from}\n`;
-			io.herdr = () => {
-				io.files[path] = `status: implementing\nattention: ${to}\n`;
-				throw new Error("agent_prompt_stalled");
-			};
-			await handoff(row(sandbox, harness, ["/w/household-budget"]), io);
-			return io.lines;
-		};
-		const suggested = "session handoff suggested";
-		const complete = "session handoff complete; fresh session idle";
-
-		assert.deepEqual(await steerAfter(suggested, complete), [
-			`${agent}: steered`,
-		]);
-		await assert.rejects(
-			steerAfter(suggested, suggested),
-			new RegExp(`${command} sent, and status.md shows no context reset`),
-		);
-		await assert.rejects(
-			steerAfter(complete, complete),
-			new RegExp(`${command} sent, and status.md shows no context reset`),
-		);
-	});
-
-	test(`${harness.name} handoff takes its command as steered on the context reset, not on working`, async () => {
-		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
-		const agent = agentName(sandbox);
-		const path = `/home/me/.fleet/tasks/household-budget/${sandbox}/status.md`;
-		const command = harness.tokens["handoff.command"];
-		const suggested = "session handoff suggested";
-		const steerReaching = async (to: string) => {
-			const io = fakeIo({}, SEATS[harness.name]);
-			io.files[path] = `status: implementing\nattention: ${suggested}\n`;
-			io.herdr = (() => {
-				io.files[path] = `status: implementing\nattention: ${to}\n`;
-				return {};
-			}) as typeof io.herdr;
-			await handoff(row(sandbox, harness, ["/w/household-budget"]), io);
-			return io.lines;
-		};
-
-		assert.deepEqual(
-			await steerReaching("session handoff complete; fresh session idle"),
-			[`${agent}: steered`],
-		);
-		await assert.rejects(
-			steerReaching(suggested),
-			new RegExp(`${command} sent, and status.md shows no context reset`),
-		);
-	});
-
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {
 		const agent = `${harness.prefix}webapp-web-1727`;
 		const io = fakeIo(
@@ -706,7 +645,7 @@ test("ls joins sbx, herdr and git state", () => {
 	});
 	assert.equal(
 		ls(io),
-		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch\npi-cv-x          stopped  stopped  ?",
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD\npi-cv-x          stopped  stopped  ?",
 	);
 });
 
@@ -749,7 +688,7 @@ test("ls reads a one-entry manifest as the one-repository row it always printed"
 
 	assert.equal(
 		ls(io),
-		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"pi-webapp-web-1  running  working  web-1  1 uncommitted\n  commits not counted: this clone has no origin/HEAD",
 	);
 });
 
@@ -843,7 +782,7 @@ test("ls names the API when its checkout cannot be probed", () => {
 	assert.match(ls(io), /pi-a\s+failed[\s\S]*acme\/api: API checkout missing/);
 });
 
-test("ls shows a running container's commits and PR, and an idle one past the threshold without a finish as stalled", () => {
+test("ls shows a running container's commits and asks GitHub nothing, even beside an old status.md", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
 			sandboxes: [
@@ -858,19 +797,7 @@ test("ls shows a running container's commits and PR, and an idle one past the th
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 		[`sbx exec pi-a sh -c ${commitsProbe}`]:
 			"task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
-		"gh pr view task --json number,state,statusCheckRollup": {
-			number: 12,
-			state: "OPEN",
-			statusCheckRollup: [
-				{
-					__typename: "CheckRun",
-					name: "test",
-					status: "COMPLETED",
-					conclusion: "SUCCESS",
-				},
-			],
-		},
-		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
+		[`read ${task}/status.md`]: "status: blocked\nattention: owner decision\n",
 		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({
 			at: "2026-09-16T09:30:00Z",
 			tool: "bash",
@@ -881,14 +808,9 @@ test("ls shows a running container's commits and PR, and an idle one past the th
 
 	assert.equal(
 		ls(io),
-		"pi-a  running  idle     task  stalled  up 30m, silent 30m, 1 tool call, last bash\n  commits 2 since origin/main, 2 pushed, 0 unpushed, 1 file +4 -1, latest abc1234 add two; pr #12 open, CI passed",
+		"pi-a  running  idle     task  up 30m, silent 30m, 1 tool call, last bash\n  commits 2 since origin/main, 2 pushed, 0 unpushed, 1 file +4 -1, latest abc1234 add two",
 	);
-	assert.ok(
-		io.calls.some(
-			(c) =>
-				c.join(" ") === "gh /r pr view task --json number,state,statusCheckRollup",
-		),
-	);
+	assert.equal(io.calls.filter((c) => c[0] === "gh").length, 0);
 });
 
 test("ls prints a container whose sandbox fails as failed with its error, and lists the rest", () => {
@@ -917,7 +839,7 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 
 	assert.equal(
 		ls(io),
-		"pi-broken        failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"pi-broken        failed   idle     ?\n  docker daemon failed to start inside the sandbox\npi-webapp-web-1  running  gone     web-1\n  commits not counted: this clone has no origin/HEAD",
 	);
 	assert.ok(
 		!io.calls.some(
@@ -926,116 +848,6 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 				!c.join(" ").includes("git branch --show-current"),
 		),
 	);
-});
-
-const call = (at: string) =>
-	JSON.stringify({ at, tool: "bash", ok: true, agent: "main" });
-const change = (
-	at: string,
-	status: string,
-	attention: string,
-	added: string[] = [],
-	removed: string[] = [],
-	summary?: string,
-) => JSON.stringify({ at, status, attention, summary, added, removed });
-
-function blockedTask(
-	dir: string,
-	status = "status: blocked\nattention: owner decision\n",
-): Record<string, unknown> {
-	return {
-		[`read ${dir}/status.md`]: status,
-		[`read ${dir}/logs/status.jsonl`]: [
-			change("2026-09-16T09:00:00.000Z", "implementing", "none"),
-			change("2026-09-16T09:30:00.400Z", "blocked", "owner decision"),
-			change("2026-09-16T09:40:00.000Z", "blocked", "owner decision", [
-				"- waits on the owner",
-			]),
-		].join("\n"),
-		[`read ${dir}/logs/activity.jsonl`]: [
-			call("2026-09-16T09:20:00Z"),
-			call("2026-09-16T09:30:00.400Z"),
-			call("2026-09-16T09:35:00Z"),
-			call("2026-09-16T09:45:00Z"),
-			call("2026-09-16T09:50:00Z"),
-		].join("\n"),
-	};
-}
-
-test("ls marks a blocked container that keeps making tool calls, counted after the change where status.md turned blocked", () => {
-	const listing = {
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
-			],
-		},
-		"herdr agent list": {
-			result: {
-				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "working" }],
-			},
-		},
-		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
-	};
-
-	assert.match(
-		ls(fakeIo({ ...listing, ...blockedTask(task) })),
-		/^pi-a {2}running {2}working {2}task {2}3 tool calls since blocked {2}up 40m, silent 10m, 5 tool calls, last bash$/m,
-	);
-	assert.doesNotMatch(
-		ls(
-			fakeIo({
-				...listing,
-				...blockedTask(task, "status: implementing\nattention: none\n"),
-			}),
-		),
-		/since blocked/,
-	);
-	assert.doesNotMatch(
-		ls(
-			fakeIo({
-				...listing,
-				...blockedTask(
-					task,
-					"status: blocked\nattention: the agent stopped on an error: rate_limit\n",
-				),
-			}),
-		),
-		/since blocked/,
-	);
-});
-
-test("ls leaves an idle container unmarked while its PR's CI runs", () => {
-	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
-			],
-		},
-		"herdr agent list": {
-			result: {
-				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }],
-			},
-		},
-		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
-		[`sbx exec pi-a sh -c ${commitsProbe}`]:
-			"task\torigin/main\t1\t0\t 1 file changed, 1 insertion(+)\tabc1234 add one",
-		"gh pr view task --json number,state,statusCheckRollup": {
-			number: 12,
-			state: "OPEN",
-			statusCheckRollup: [
-				{ __typename: "CheckRun", name: "test", status: "QUEUED", conclusion: "" },
-			],
-		},
-		[`read ${task}/status.md`]: "status: implementing\nattention: none\n",
-		[`read ${task}/logs/activity.jsonl`]: JSON.stringify({
-			at: "2026-09-16T09:30:00Z",
-			tool: "bash",
-			ok: true,
-			agent: "main",
-		}),
-	});
-
-	assert.doesNotMatch(ls(io), /stalled/);
 });
 
 test("peek shows git state and the pane tail, or says the agent is gone", () => {
@@ -1339,7 +1151,7 @@ test("ls prints a container whose branch the host repo has never seen", () => {
 
 	assert.equal(
 		table,
-		"pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"pi-a  running  gone     web-1  up 30m, silent 8m, 2 tool calls, last bash, 1 failed in a row, $0.42\n  commits not counted: this clone has no origin/HEAD",
 	);
 	assert.ok(!io.calls.some((c) => c[0] === "git" && c[2] === "log"));
 });
@@ -1381,7 +1193,7 @@ test("ls prices a claude container from the transcripts it writes into its task 
 
 	assert.equal(
 		ls(io),
-		"claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $0.01\n  commits not counted: this clone has no origin/HEAD; pr not read: no branch",
+		"claude-a  running  working  web-1  up 1m, silent 1m, 1 tool call, last Edit, $0.01\n  commits not counted: this clone has no origin/HEAD",
 	);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[3] === "node"));
 });
@@ -1446,63 +1258,4 @@ test("ls keeps a stopped two-repo sandbox asleep", () => {
 	assert.match(table, /acme\/one task \? dirty 1{40} \(last known\)/);
 	assert.match(table, /acme\/two task \? dirty 2{40} \(last known\)/);
 	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
-});
-
-test("history lists every status.md change in local time with what changed in it, the log lines it added and those it removed", (t) => {
-	const zone = process.env.TZ;
-	process.env.TZ = "Europe/Warsaw";
-	t.after(() => {
-		if (zone === undefined) delete process.env.TZ;
-		else process.env.TZ = zone;
-	});
-	const decided = "- Decided: 55% wide, because the user chose it; analysis.md";
-	const io = fakeIo({
-		...running,
-		[`read ${task}/logs/status.jsonl`]: [
-			change(
-				"2026-09-23T20:40:13.000Z",
-				"blocked",
-				"choose the grid width",
-				[],
-				[],
-				"WEB-1715 waits on the grid width.",
-			),
-			change("2026-09-23T20:43:06.000Z", "implementing", "none", [decided]),
-			change(
-				"2026-09-23T20:43:58.000Z",
-				"ready-for-host",
-				"none",
-				["- Grid committed; abc1234"],
-				[decided],
-				"The preview is\n55% wide.",
-			),
-		].join("\n"),
-	});
-
-	const out = history("pi-a", "/somewhere/else", io);
-
-	assert.equal(
-		out,
-		[
-			"001  2026-09-23 22:40:13  blocked",
-			"     attention: choose the grid width",
-			"     summary: WEB-1715 waits on the grid width.",
-			"002  2026-09-23 22:43:06  blocked -> implementing",
-			"     attention: none",
-			"     + Decided: 55% wide, because the user chose it; analysis.md",
-			"003  2026-09-23 22:43:58  implementing -> ready-for-host",
-			"     summary: The preview is 55% wide.",
-			"     + Grid committed; abc1234",
-			"     removed: Decided: 55% wide, because the user chose it; analysis.md",
-		].join("\n"),
-	);
-});
-
-test("history of a container already down reads the task directory of the repo it names", () => {
-	const io = fakeIo({ "sbx ls --json": { sandboxes: [] } });
-
-	assert.equal(
-		history("pi-gone", "/w/webapp", io),
-		"/home/me/.fleet/tasks/webapp/pi-gone/logs/status.jsonl: no changes yet; the container adds a line each time status.md changes",
-	);
 });

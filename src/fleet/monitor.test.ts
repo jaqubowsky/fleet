@@ -6,14 +6,7 @@ import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { SEATS } from "../harness.ts";
 import { EVENTS_LOG, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
-import {
-	idleStalled,
-	STALL_MS,
-	taskDirOf,
-	shouldWake,
-	stalled,
-	transition,
-} from "./monitor.ts";
+import { closingLabel, shouldWake, stalled, transition } from "./monitor.ts";
 
 function monitorRuntime(
 	t: TestContext,
@@ -228,11 +221,6 @@ test("a container working past the stall window rings once, then again after the
 	]);
 });
 
-test("an idle container paused at the stop its order named is not stalled, one idle mid-step is", () => {
-	assert.equal(idleStalled("idle", "paused", STALL_MS), false);
-	assert.equal(idleStalled("idle", "implementing", STALL_MS), true);
-});
-
 test("a transition line only when the status changed", () => {
 	assert.equal(transition("working", "idle"), "working -> idle");
 	assert.equal(transition(undefined, "idle"), "? -> idle");
@@ -250,38 +238,12 @@ test("wake on settling, never on going back to work", () => {
 	assert.equal(shouldWake(undefined, "unknown"), false);
 });
 
-test("the task directory follows from the agent's sandbox and its repo", () => {
-	const sandboxes = [
-		{
-			name: "pi-webapp-web-1",
-			agent: "pi",
-			workspaces: ["/Users/me/Work/webapp"],
-		},
-	];
-	assert.equal(
-		taskDirOf(sandboxes, "pi-webapp-web-1", fakeIo({})),
-		"/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
-	);
-	assert.equal(taskDirOf(sandboxes, "someone-else", fakeIo({})), undefined);
-	const io = fakeIo({
-		"read /home/me/.fleet/config/fleet/pi-webapp-web-1.json": JSON.stringify({
-			version: 1,
-			task: "/home/me/.fleet/tasks/groups/a-b-c/pi-webapp-web-1",
-			repositories: ["a", "b", "c"].map((name) => ({
-				repo: `/${name}`,
-				name: `owner/${name}`,
-				base: "main",
-				baseSha: "1".repeat(40),
-				branch: "task",
-				workspace: `/${name}`,
-				served: "",
-			})),
-		}),
-	});
-	assert.equal(
-		taskDirOf(sandboxes, "pi-webapp-web-1", io),
-		"/home/me/.fleet/tasks/groups/a-b-c/pi-webapp-web-1",
-	);
+test("the label reads the last Question line of the closing message, inside the TUI's frame", () => {
+	assert.equal(closingLabel("Commits: none\n│ Question: Which route? │\n> "), "question");
+	assert.equal(closingLabel("⏺ Changes: x\n  Question: none.\n"), "turn ended");
+	assert.equal(closingLabel("Question: Which route?\nQuestion: none"), "turn ended");
+	assert.equal(closingLabel("Question:\n"), "no closing message");
+	assert.equal(closingLabel("API Error: 500"), "no closing message");
 });
 
 test("a wake that lands while the host works waits for its turn to end", async (t) => {
@@ -298,7 +260,7 @@ test("a wake that lands while the host works waits for its turn to end", async (
 	assert.equal(watcher.messages.length, 1);
 	assert.match(
 		watcher.messages[0].message.content,
-		/^\[fleet\] pi-worker: working -> idle\n/,
+		/^\[fleet\] pi-worker: no closing message$/,
 	);
 });
 
@@ -318,6 +280,6 @@ test("a container the host takes down mid-turn arrives after the turn as taken d
 	assert.equal(watcher.messages.length, 1);
 	assert.match(
 		watcher.messages[0].message.content,
-		/^\[fleet\] pi-worker: idle -> taken down\n/,
+		/^\[fleet\] pi-worker: idle -> taken down$/,
 	);
 });

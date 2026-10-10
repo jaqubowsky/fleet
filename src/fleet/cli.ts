@@ -8,8 +8,6 @@ import {
 	copy,
 	down,
 	exec,
-	handoff,
-	history,
 	ls,
 	peek,
 	renderHost,
@@ -54,10 +52,8 @@ const usage = `usage:
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
   ${CLI} stopped <sandbox>                           what stop leaves in the saved tab: a full-screen view of the stopped container until ctrl+c
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
-  ${CLI} handoff <sandbox> [--continue]              approve the session handoff the container suggested: its fresh session starts from the task directory, and --continue sends it the stock continue once it is ready for it
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
-  ${CLI} history <sandbox> [--repo <path>]            every status.md change in order: status, attention, summary, the Log lines it added and any it removed
   ${CLI} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
   ${CLI} land <sandbox> [--branch <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; --branch for one repo only
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
@@ -67,14 +63,13 @@ const usage = `usage:
   ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the tab of a kind that reports its state through a herdr extension: run the container's agent here and hand herdr the state it reports
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
-  --repo <path> picks the repository for up, land, artifacts and a history whose container is gone, and defaults to the current directory; up accepts it repeatedly, primary first; multi-repo land uses the recorded primary`;
+  --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory; up accepts it repeatedly, primary first; multi-repo land uses the recorded primary`;
 
 const NAME_CHECK_MS = 5000;
 
 const BARE = new Set([
 	"apply",
 	"brief",
-	"continue",
 	"force",
 	"push",
 	"sign",
@@ -265,13 +260,6 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const [sandbox, ...text] = rest;
 		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io, root);
 	},
-	async handoff(args) {
-		const { opts, rest } = flags(args, ["continue"]);
-		await handoff(sandboxOf(rest[0]), io, {
-			continue: opts.continue === true,
-			root,
-		});
-	},
 	exec(args) {
 		const { rest } = flags(args, []);
 		const sandbox = sandboxOf(rest[0]);
@@ -285,10 +273,6 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	artifacts(args) {
 		const { opts } = flags(args, ["repo"]);
 		io.log(artifacts(repoOf(opts), io));
-	},
-	history(args) {
-		const { opts, rest } = flags(args, ["repo"]);
-		io.log(history(need(rest[0], "sandbox"), repoOf(opts), io));
 	},
 	land(args) {
 		const { opts, rest } = flags(args, ["repo", "branch", "sign", "push"]);

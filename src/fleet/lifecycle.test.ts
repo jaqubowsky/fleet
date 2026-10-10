@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { KINDS, SEATS } from "../harness.ts";
-import { handoff, ls, peek, start, stop, stopFile, stoppedPane, steer } from "./commands.ts";
+import { ls, peek, start, stop, stopFile, stoppedPane, steer } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import type { Sandbox } from "./status.ts";
 
@@ -19,13 +19,13 @@ for (const kind of Object.values(KINDS)) {
 
 	test(`${kind.name} stop keeps the tab, session and dirty files`, async () => {
 		const io = fakeIo(fixture, SEATS[kind.name]);
-		io.files[`${task}/status.md`] = "status: implementing\nattention: none\n";
+		io.files[`${task}/ticket.md`] = "# Restore projects\n";
 		io.files[`${task}/logs/sessions/s1.jsonl`] = "saved conversation";
 
 		await stop(sandbox, io);
 
 		assert.equal(stoppedPane(sandbox, io), "w1:p7");
-		assert.equal(io.files[`${task}/status.md`], "status: implementing\nattention: none\n");
+		assert.equal(io.files[`${task}/ticket.md`], "# Restore projects\n");
 		assert.equal(io.files[`${task}/logs/sessions/s1.jsonl`], "saved conversation");
 		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` stop ${sandbox.name} `)));
 		assert.deepEqual(io.calls.filter((c) => c[0] === "sbx"), [["sbx", "stop", sandbox.name]]);
@@ -91,14 +91,6 @@ for (const kind of Object.values(KINDS)) {
 
 		assert.match(text, /stopped; checkout not probed/);
 		assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
-	});
-
-	test(`${kind.name} a stopped container rejects a handoff`, async () => {
-		const io = fakeIo(fixture);
-
-		await assert.rejects(handoff(stopped, io), /fleet start/);
-
-		assert.deepEqual(io.calls, []);
 	});
 
 	test(`${kind.name} a failed stop leaves the running agent available`, async () => {

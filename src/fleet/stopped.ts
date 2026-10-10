@@ -1,11 +1,9 @@
-import { fieldsOf } from "../../extensions/status-history.ts";
 import { CLI } from "../harness.ts";
 import { stopFile } from "./commands.ts";
 import type { Io } from "./io.ts";
-import { taskDir } from "./repositories.ts";
 import type { Sandbox } from "./status.ts";
 
-export type StoppedView = { name: string; since?: Date; status?: string; attention?: string };
+export type StoppedView = { name: string; since?: Date };
 
 type Rgb = readonly [number, number, number];
 type Cell = { ch: string; fg?: Rgb; bold?: boolean };
@@ -18,24 +16,8 @@ const AYU = {
 } as const satisfies Record<string, Rgb>;
 
 const CARD_MAX = 72;
-const LABEL = 11;
 const clock = (at: Date) => `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
 const clip = (text: string, room: number) => (text.length > room ? `${text.slice(0, Math.max(0, room - 1))}…` : text);
-
-function wrap(text: string, room: number, lines: number): string[] {
-	const out: string[] = [];
-	let line = "";
-	for (const word of text.split(/\s+/).filter(Boolean)) {
-		if (line && line.length + 1 + word.length > room) {
-			out.push(line);
-			line = "";
-		}
-		line = line ? `${line} ${word}` : word;
-	}
-	if (line) out.push(line);
-	if (out.length <= lines) return out.map((l) => clip(l, room));
-	return [...out.slice(0, lines - 1).map((l) => clip(l, room)), clip(`${out[lines - 1]}…`, room)];
-}
 
 export function keepName(pane: string, name: string, io: Io): void {
 	try {
@@ -45,8 +27,7 @@ export function keepName(pane: string, name: string, io: Io): void {
 }
 
 export function stoppedView(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): StoppedView {
-	const { status, attention } = fieldsOf(io.read(`${taskDir(sandbox.workspaces[0], sandbox.name, io)}/status.md`));
-	return { name: sandbox.name, since: io.stat(stopFile(sandbox, io))?.mtime, status, attention };
+	return { name: sandbox.name, since: io.stat(stopFile(sandbox, io))?.mtime };
 }
 
 function cardRows(view: StoppedView, inner: number): Cell[][] {
@@ -55,19 +36,14 @@ function cardRows(view: StoppedView, inner: number): Cell[][] {
 		const cells = parts.flat().slice(0, inner);
 		return [...cells, ...text(" ".repeat(inner - cells.length))];
 	};
-	const field = (label: string, value: string) => row(text(label.padEnd(LABEL), AYU.ui), text(value, AYU.fg));
 	const since = view.since ? `since ${clock(view.since)}` : "";
 	const heading = "◉ stopped";
-	const attention = view.attention && view.attention !== "none" ? wrap(view.attention, inner - LABEL, 2) : [];
 	const command = `${CLI} start ${view.name}`;
 	return [
 		row(),
 		row(text(heading, AYU.fleet, true), text(" ".repeat(Math.max(1, inner - heading.length - since.length))), text(since, AYU.ui)),
 		row(),
 		row(text(clip(view.name, inner), AYU.fg, true)),
-		row(),
-		...(view.status ? [field("status", view.status)] : []),
-		...attention.map((line, i) => field(i ? "" : "attention", line)),
 		row(),
 		row(text("resume  ", AYU.ui), text(clip(command, inner - 8), AYU.accent, true)),
 		row(),

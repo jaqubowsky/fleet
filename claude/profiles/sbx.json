@@ -2,20 +2,9 @@
   "env": {
     "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
     "CLAUDE_CODE_NO_FLICKER": "1",
-    "FLEET_HANDOFF_TOKENS": "250000"
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "{{compaction.tokens}}"
   },
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /home/agent/fleet/claude/hooks/container.ts stop",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -49,29 +38,6 @@
           }
         ]
       }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "clear",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /home/agent/fleet/claude/hooks/container.ts session-start",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "StopFailure": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node /home/agent/fleet/claude/hooks/container.ts stop-failure",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   },
   "statusLine": {
@@ -92,7 +58,8 @@
   },
   "model": "{{models.sbx}}",
   "effortLevel": "{{thinking.sbx}}",
-  "autoCompactEnabled": false,
+  "advisorModel": "claude-fable-5-1",
+  "autoCompactEnabled": true,
   "remoteControlAtStartup": false,
   "autoMemoryEnabled": false,
   "skipWorkflowUsageWarning": true

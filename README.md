@@ -93,7 +93,7 @@ The host sleeps until a sandbox needs something, then wakes up with what changed
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/host-watch-dark.svg">
-  <img alt="The host wakes when a sandbox finishes, asks a question, stalls, hits the usage limit or fills its context, and handles each" src="docs/host-watch.svg">
+  <img alt="The host wakes when a sandbox finishes, asks a question, stalls or hits the usage limit, and handles each" src="docs/host-watch.svg">
 </picture>
 
 ## Every command passes a guard
@@ -125,13 +125,12 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet stop <sandbox>` | stops the sandbox, keeping its files and herdr tab | ends guest processes; the tab and watch status show `stopped` |
 | `fleet start <sandbox>` | restarts in the saved tab with the last saved session when one exists | starts the sandbox and agent; sends no prompt |
 | `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
-| `fleet watch` | wakes the host when a sandbox needs it | nothing |
+| `fleet watch` | wakes the host when a sandbox settles, with its closing message | nothing |
 | `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
 | `fleet diff [<sandbox>]` | toggles a live diff beside the current container's terminal | opens or closes its Herdr pane; saves the selected file and scroll position in the host cache; reads Git without changing the checkout |
-| `fleet history`, `fleet artifacts` | replay a task's status, list task folders | nothing |
+| `fleet artifacts` | list task folders | nothing |
 | `fleet exec <sandbox> -- <command>` | runs a command inside a sandbox | whatever that command changes there |
 | `fleet copy <src> <dst>` | copies a file in or out of a sandbox | the destination file |
-| `fleet handoff <sandbox>` | starts a fresh session in a sandbox that asked for one | the sandbox agent's session |
 | `fleet land <sandbox> [--push]` | brings the finished branch home | moves your local branch; signs commits per profile, which changes their SHAs; `--push` pushes to GitHub |
 | `fleet down <sandbox> [--force]` | closes the sandbox, keeping its task folder | removes the sandbox; refuses unlanded work, which `--force` throws away |
 | `fleet profile [<repo>] [--apply]` | shows who may push, open and merge pull requests, per repository | with `--apply`: the checkout's git config (signing, HTTPS origin, credential helper) and its Linear MCP registration. Every host session start runs this on its own checkout |
@@ -146,14 +145,14 @@ In a container's Herdr tab, press **Ctrl+B, then D** to toggle its Changes pane.
 
 The pane shows one continuous diff with a heading before each file. Long lines wrap. The mouse wheel scrolls through every file; clicking the file list jumps to that file without hiding the rest. With keyboard focus in the pane, `[` and `]` jump between files, `j` and `k` or the arrow keys scroll, Page Up and Page Down scroll by a page, and Home and End jump to the beginning and end. `s` switches between branch changes and uncommitted changes, and Tab selects a repository. The pane reads changes every two seconds after the previous read finishes, retaining the current file and its scroll offset. Branch changes compare the working tree to the merge base of HEAD and the container's origin base branch, so rebasing does not include unrelated upstream changes. The header names the base. No fetch runs while viewing. `p` pauses reads, `r` refreshes once, and `q` closes the pane. Closing stops its reads and reopening restores the file and scroll position. New untracked files are included; ignored files are excluded. A stopped or removed container leaves the last displayed snapshot and its status, without starting the container. Files larger than 4 MiB show a size notice instead of their contents.
 
-Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in the same tab, not an interrupted tool call or app server. The task's `status.md` stays unchanged. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer, handoff and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
+Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in the same tab, not an interrupted tool call or app server. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
 
 ## Also in the box
 
 - **Several repositories in one task.** Repeat `--repo`, and one `land` brings all of them home.
 - **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox.
 - **Cost per task.** `fleet ls` shows what each sandbox has spent so far.
-- **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone, and `fleet history` replays how its status changed.
+- **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone.
 - **Session retrospectives.** `audit-harness` reads a selected session, defaults to the current one, and proposes the smallest environment changes for observed friction and mistakes. Each proposal includes evidence and cost; nothing is edited.
 - **Your phone as a remote.** Drive pi sessions from your phone over Tailscale, set up as [extensions/pi-remote](extensions/pi-remote/README.md) describes.
 

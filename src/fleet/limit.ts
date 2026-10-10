@@ -1,13 +1,11 @@
-import { STOPPED } from "../../extensions/handoff-on-error.ts";
-
 const RETRY_MS = 30 * 60_000;
 export const RETRIES = 10;
 
 const LIMIT = /rate.?limit|session limit|usage limit/i;
 const RESET = /resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
 
-export function limitStop(attention: string | undefined): boolean {
-	return !!attention?.startsWith(STOPPED) && LIMIT.test(attention);
+export function limitStop(tail: string): boolean {
+	return LIMIT.test(tail);
 }
 
 export function resetAt(text: string, after: Date): Date | undefined {

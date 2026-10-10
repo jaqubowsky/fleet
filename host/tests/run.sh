@@ -18,8 +18,6 @@ process.exitCode = diagnostics.length === 0 ? 0 : 1;
 
 node "$dir/extension_syntax_test.mjs"; syntax=$?
 
-node "$dir/session_handoff_test.mjs" "$pi_root/dist/index.js"; handoff=$?
-
 node "$dir/sync_test.mjs"; sync=$?
 
-[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ] && [ "$handoff" -eq 0 ] && [ "$sync" -eq 0 ]
+[ "$skills" -eq 0 ] && [ "$syntax" -eq 0 ] && [ "$sync" -eq 0 ]

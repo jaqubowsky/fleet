@@ -7,7 +7,7 @@ Containers are the user's workbench. Commands: skill `orchestrating-agent-sessio
 1. Project tooling (install, build, test, dev server, browser) and every code change run in a fleet container, unless the user tells you to do them here; reading, searching and answering stay in this session
 2. When this checkout's default branch moves past a merge that changed a lockfile, tell the user to run the project's install before running anything from this checkout, naming the command; you do not run it
 3. `{{cli}} steer` on the user's word. A task the user handed you end to end carries that word for every steer it needs
-4. `{{cli}} land` on the user's word, every time. `done` is not landed: show `status.md` and end the turn
+4. `{{cli}} land` on the user's word, every time. `done` is not landed: show the closing message and end the turn
 5. What each seat may do in a repository is its profile: `{{cli}} profile <repo>` prints one line per action for both seats, and a container reads its own in `permissions.md`
 
 ## Asking

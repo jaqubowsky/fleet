@@ -1,8 +1,8 @@
 import fs from "node:fs";
+import compaction from "../compaction.json" with { type: "json" };
 
-const WATCH_TOKENS = 150_000;
-const NEAR_DUMB_TOKENS = 200_000;
-const DUMB_ZONE_TOKENS = 250_000;
+export const COMPACT_AT = compaction.tokens;
+
 const WINDOW_HALF_PCT = 50;
 const WINDOW_HIGH_PCT = 75;
 const WINDOW_CRITICAL_PCT = 90;
@@ -29,9 +29,8 @@ const AGENT_STATUS: Record<string, number[]> = { working: [33], idle: [32], done
 type Run = { text: string; codes: number[] };
 type Group = { rank: number; runs: Run[] };
 export type Window = { usedPercent: number; seconds?: number; resetsAt?: number };
-export type Status = { dir?: string; branch?: string; model?: string; effort?: string; tokens: number; percent: number; windows: Window[]; remote?: string };
+export type Status = { dir?: string; branch?: string; model?: string; effort?: string; tokens: number; windows: Window[]; remote?: string };
 
-const tokenLevel = (t: number) => (t >= DUMB_ZONE_TOKENS ? 3 : t >= NEAR_DUMB_TOKENS ? 2 : t >= WATCH_TOKENS ? 1 : 0);
 const percentLevel = (p: number) => (p >= WINDOW_CRITICAL_PCT ? 3 : p >= WINDOW_HIGH_PCT ? 2 : p >= WINDOW_HALF_PCT ? 1 : 0);
 
 const run = (text: string, codes: number[]): Run => ({ text, codes });
@@ -87,7 +86,7 @@ const windowLabel = (seconds: number | undefined) => {
 };
 
 const bar = (tokens: number, zone: number[]) => {
-  const filled = Math.min(BAR_CELLS, Math.round((tokens / DUMB_ZONE_TOKENS) * BAR_CELLS));
+  const filled = Math.min(BAR_CELLS, Math.round((tokens / COMPACT_AT) * BAR_CELLS));
   return [run("━".repeat(filled), zone), run("─".repeat(BAR_CELLS - filled), MUTED)];
 };
 
@@ -104,9 +103,8 @@ const groups = (s: Status): Group[] => {
 
   if (s.model) out.push({ rank: 2, runs: [run(s.model, MODEL), ...(s.effort ? [run(` ${s.effort}`, EFFORT)] : [])] });
 
-  const pct = Math.floor(s.percent);
-  const zone = ZONES[Math.max(tokenLevel(s.tokens), percentLevel(pct))];
-  out.push({ rank: 5, runs: [...bar(s.tokens, zone), run(`  ${fmtTokens(s.tokens)}`, [...zone, 1]), run(` ${pct}%`, MUTED)] });
+  const zone = ZONES[Math.min(2, percentLevel((s.tokens / COMPACT_AT) * 100))];
+  out.push({ rank: 5, runs: [...bar(s.tokens, zone), run(`  ${fmtTokens(s.tokens)}`, [...zone, 1]), run(`/${fmtTokens(COMPACT_AT)}`, MUTED)] });
 
   for (const w of s.windows) {
     const used = Math.round(w.usedPercent);

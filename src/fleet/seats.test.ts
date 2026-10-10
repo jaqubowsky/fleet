@@ -3,15 +3,13 @@ import { EventEmitter } from "node:events";
 import net from "node:net";
 import { test, type TestContext } from "node:test";
 import fleetMonitor from "../../extensions/fleet-monitor.ts";
-import { CONTINUE, KINDS, SEATS } from "../harness.ts";
+import { KINDS, SEATS } from "../harness.ts";
 import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import {
 	artifacts,
 	copy,
 	down,
 	exec,
-	handoff,
-	history,
 	ls,
 	peek,
 	renderHost,
@@ -80,151 +78,6 @@ for (const seat of Object.values(SEATS))
 		});
 	}
 
-const COMPLETE =
-	"status: implementing\nattention: session handoff complete; fresh session idle\n";
-const SUGGESTED =
-	"status: implementing\nattention: session handoff suggested\n";
-
-function handingOff(
-	name: string,
-	kind: (typeof KINDS)[keyof typeof KINDS],
-	seat: (typeof SEATS)[keyof typeof SEATS],
-	after = "idle",
-) {
-	const status = `/home/me/.fleet/tasks/r/${name}/status.md`;
-	const io = fakeIo(
-		{
-			...listed(name, kind.name),
-			"herdr agent list": {
-				result: {
-					agents: [{ name, pane_id: "w1:p2", tab_id: "w1:t2", agent_status: after }],
-				},
-			},
-		},
-		seat,
-	);
-	io.files[status] = SUGGESTED;
-	const herdr = io.herdr;
-	io.herdr = ((args: string[]) => {
-		if (args[1] === "prompt") io.files[status] = COMPLETE;
-		return herdr(args);
-	}) as typeof io.herdr;
-	const prompts = () =>
-		io.calls
-			.filter((c) => c[0] === "herdr" && c[2] === "prompt")
-			.map((c) => c[4]);
-	return { io, prompts };
-}
-
-for (const seat of Object.values(SEATS))
-	for (const kind of Object.values(KINDS)) {
-		const name = `${kind.prefix}a`;
-		const command = kind.tokens["handoff.command"];
-
-		test(`a ${seat.name} seat hands a ${kind.name} container off with its own command alone`, async () => {
-			const { io, prompts } = handingOff(name, kind, seat);
-
-			await handoff(resolveSandbox(name, io), io);
-
-			assert.deepEqual(prompts(), [command]);
-			assert.deepEqual(io.lines, [`${name}: steered`]);
-		});
-
-		test(`a ${seat.name} seat hands a ${kind.name} container off and continues the task`, async () => {
-			const { io, prompts } = handingOff(name, kind, seat);
-
-			await handoff(resolveSandbox(name, io), io, { continue: true });
-
-			assert.deepEqual(
-				prompts(),
-				kind.name === "pi" ? [`${command} ${CONTINUE}`] : [command, CONTINUE],
-			);
-		});
-	}
-
-test("a claude container's continue waits until herdr reports the fresh session idle after /clear", async () => {
-	const name = "claude-a";
-	const { io, prompts } = handingOff(name, KINDS.claude, SEATS.pi);
-	const polls: string[] = ["working", "working", "idle"];
-	const herdr = io.herdr;
-	const order: string[] = [];
-	io.herdr = ((args: string[]) => {
-		order.push(args[1]);
-		return args[1] === "list"
-			? { result: { agents: [{ name, agent_status: polls.shift() }] } }
-			: herdr(args);
-	}) as typeof io.herdr;
-
-	await handoff(resolveSandbox(name, io), io, { continue: true });
-
-	assert.deepEqual(
-		order.filter((call) => call === "prompt" || call === "list"),
-		["prompt", "list", "list", "list", "prompt"],
-	);
-	assert.deepEqual(prompts(), ["/clear", CONTINUE]);
-});
-
-test("a claude container's continue also goes once herdr reports the fresh session done", async () => {
-	const { io, prompts } = handingOff("claude-a", KINDS.claude, SEATS.pi, "done");
-
-	await handoff(resolveSandbox("claude-a", io), io, { continue: true });
-
-	assert.deepEqual(prompts(), ["/clear", CONTINUE]);
-});
-
-test("a handoff says when the container's image predates the harness, once", async () => {
-	const { io } = handingOff("claude-a", KINDS.claude, SEATS.pi);
-	Object.assign(io, {
-		read: (
-			(read) => (path: string) =>
-				path.endsWith("cache/claude/image-stamp") ? "31e3d51\n" : read(path)
-		)(io.read),
-	});
-	const git = io.git;
-	io.git = (args, cwd) =>
-		args.join(" ") === "log -1 --format=%h" ? "f7e7f1a" : git(args, cwd);
-
-	await handoff(resolveSandbox("claude-a", io), io, {
-		continue: true,
-		root: "/root",
-	});
-
-	assert.equal(
-		io.lines.filter((line) =>
-			line.includes("keeps its image until it goes down and up again"),
-		).length,
-		1,
-	);
-});
-
-test("a claude container whose fresh session never turns idle fails naming the sandbox, and gets no continue", async () => {
-	const name = "claude-a";
-	const { io, prompts } = handingOff(
-		name,
-		KINDS.claude,
-		SEATS.claude,
-		"working",
-	);
-
-	await assert.rejects(
-		handoff(resolveSandbox(name, io), io, { continue: true }),
-		/claude-a: .*idle.*continue was not sent/,
-	);
-	assert.deepEqual(prompts(), ["/clear"]);
-});
-
-for (const kind of Object.values(KINDS))
-	test(`handing a ${kind.name} container off fails when status.md shows no context reset`, async () => {
-		const name = `${kind.prefix}a`;
-		const { io } = handingOff(name, kind, SEATS.pi);
-		io.herdr = (() => ({})) as typeof io.herdr;
-
-		await assert.rejects(
-			handoff(resolveSandbox(name, io), io, { continue: true }),
-			/sent, and status.md shows no context reset/,
-		);
-	});
-
 test("the kind comes from the agent sbx reports, whatever the name prefix says", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
@@ -279,7 +132,7 @@ test("a claude- container an earlier fleet put up is listed, steered and taken d
 const seatless = (answers: Record<string, unknown> = {}) =>
 	Object.assign(fakeIo(answers), { seat: undefined });
 
-test("up, steer, handoff, watch and render require a seat, while profile --apply configures both hosts from a plain shell", async () => {
+test("up, steer, watch and render require a seat, while profile --apply configures both hosts from a plain shell", async () => {
 	const io = seatless({
 		...listed("pi-a", "pi"),
 		"read /root/host/repos.json": SAMPLE_PROFILES,
@@ -295,10 +148,6 @@ test("up, steer, handoff, watch and render require a seat, while profile --apply
 		/FLEET_SEAT/,
 	);
 	assert.throws(() => steer(resolveSandbox("pi-a", io), "go", io), /FLEET_SEAT/);
-	await assert.rejects(
-		handoff(resolveSandbox("pi-a", io), io, { continue: true }),
-		/FLEET_SEAT/,
-	);
 	assert.throws(() => watch(paneScope(io, []), io), /FLEET_SEAT/);
 	assert.throws(() => renderHost("/root", io), /FLEET_SEAT/);
 	const applied = permissions({ root: "/root", repo: "/r", apply: true }, io);
@@ -306,7 +155,7 @@ test("up, steer, handoff, watch and render require a seat, while profile --apply
 	assert.ok(!io.calls.some((c) => c[0] === "run" || c[0] === "write"));
 });
 
-test("ls, peek, history, exec, copy, artifacts, land and down run without FLEET_SEAT", () => {
+test("ls, peek, exec, copy, artifacts, land and down run without FLEET_SEAT", () => {
 	const io = seatless({
 		...listed("pi-a", "pi"),
 		"read /root/host/repos.json": SAMPLE_PROFILES,
@@ -316,7 +165,6 @@ test("ls, peek, history, exec, copy, artifacts, land and down run without FLEET_
 
 	ls(io);
 	peek("pi-a", io);
-	history("pi-a", "/r", io);
 	exec("pi-a", ["true"], io);
 	copy("pi-a:/x", "/y", io);
 	artifacts("/r", io);

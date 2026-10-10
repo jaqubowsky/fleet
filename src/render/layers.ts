@@ -12,22 +12,15 @@ const HOST_OWNER = "skills/host/orchestrating-agent-sessions/SKILL.md";
 const SEAT_OWNERS = `${CONTAINER_OWNER} or ${HOST_OWNER}`;
 
 const MECHANICS = [
-	/status\.md/,
-	/attention:/,
 	/analysis\.md/,
 	/spec\.md/,
 	/(?<![.\w])issues\//,
 	/permissions\.md/,
 	/project\.md/,
-	/ready-for-host/,
-	/status: (new|analyzing|implementing|reviewing|testing|paused|pr-open|blocked)\b/,
 	/task director/i,
 	/\$FLEET_ARTIFACTS/,
 	/\$SANDBOX_NAME/,
 	/\{\{refs\}\}/,
-	/natural break/i,
-	/session handoff/i,
-	/ticket-check/,
 	/\{\{cli\}\}/,
 	/\bthe host\b/i,
 ];
