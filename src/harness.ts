@@ -29,7 +29,6 @@ export type Kind = {
 	projectConfig?: string;
 	sbxGuidance?: string;
 	containerSessions?: string;
-	handoffTakesText: boolean;
 	tokens: Record<string, string>;
 };
 
@@ -42,7 +41,7 @@ const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
 export const CONTINUE =
-	"Continue the previous task from its current frontier, following the Session handoff rule in your container instructions.";
+	"Continue the task from where it stopped.";
 
 export const KINDS: Record<AgentName, Kind> = {
 	pi: {
@@ -58,7 +57,6 @@ export const KINDS: Record<AgentName, Kind> = {
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
 		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "pi" },
-		handoffTakesText: true,
 		tokens: {
 			"tool.ask": "ask_user_question",
 			"skill.ingest": "/skill:ingest",
@@ -73,7 +71,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"reload.models": RELOAD_MODELS,
 			"delegation.parallel":
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
-			"handoff.command": "/session-handoff",
+			"fresh.command": "/new",
 			"ci.wait":
 				"pi runs it in the foreground, so give that bash call no timeout or one above 1260 seconds; a steer lands after it returns.",
 			"review.call":
@@ -93,7 +91,6 @@ export const KINDS: Record<AgentName, Kind> = {
 		projectConfig: ".claude",
 		sbxGuidance: "CLAUDE.md",
 		containerSessions: "/home/agent/.claude/projects",
-		handoffTakesText: false,
 		tokens: {
 			"tool.ask": "AskUserQuestion",
 			"skill.ingest": "/ingest",
@@ -109,7 +106,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',
-			"handoff.command": "/clear",
+			"fresh.command": "/clear",
 			"ci.wait":
 				"Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
 			"review.call":

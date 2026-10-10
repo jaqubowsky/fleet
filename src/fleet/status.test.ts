@@ -4,16 +4,13 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import { fakeIo } from "./fake-io.ts";
 import {
 	agentFor,
-	branchFacts,
 	commitFacts,
 	commitsProbe,
 	elapsed,
 	formatRows,
 	parseCheckout,
-	wake,
 } from "./status.ts";
 
 test("checkout probe output parses branch, dirty count and head", () => {
@@ -105,7 +102,7 @@ test("a pushed branch counts its commits from the merge base with origin's defau
 	clone.git("branch", "--set-upstream-to=origin/task");
 	commitFile(clone, "two.txt", 3);
 
-	const line = commitFacts(probe(clone.dir)).line;
+	const line = commitFacts(probe(clone.dir));
 
 	assert.match(line, /^2 since origin\/main, 1 pushed, 1 unpushed, 2 files \+5 -0, latest [0-9a-f]{7,} add two\.txt$/);
 });
@@ -117,7 +114,7 @@ test("an unpushed branch counts every commit as unpushed", (t) => {
 	clone.git("switch", "-qc", "task");
 	commitFile(clone, "one.txt", 2);
 
-	assert.match(commitFacts(probe(clone.dir)).line, /^1 since origin\/main, 0 pushed, 1 unpushed, 1 file \+2 -0, latest/);
+	assert.match(commitFacts(probe(clone.dir)), /^1 since origin\/main, 0 pushed, 1 unpushed, 1 file \+2 -0, latest/);
 });
 
 test("a branch level with origin's default branch has no commits to show", (t) => {
@@ -125,14 +122,14 @@ test("a branch level with origin's default branch has no commits to show", (t) =
 	commitFile(clone, "base.txt", 1);
 	onDefault(clone);
 
-	assert.equal(commitFacts(probe(clone.dir)).line, "none since origin/main");
+	assert.equal(commitFacts(probe(clone.dir)), "none since origin/main");
 });
 
 test("a clone without origin/HEAD says its commits are not counted", (t) => {
 	const clone = repo(t);
 	commitFile(clone, "base.txt", 1);
 
-	assert.equal(commitFacts(probe(clone.dir)).line, "not counted: this clone has no origin/HEAD");
+	assert.equal(commitFacts(probe(clone.dir)), "not counted: this clone has no origin/HEAD");
 });
 
 test("a clone whose branch shares no history with origin's default branch says so", (t) => {
@@ -142,92 +139,14 @@ test("a clone whose branch shares no history with origin's default branch says s
 	clone.git("switch", "-q", "--orphan", "task");
 	commitFile(clone, "other.txt", 1);
 
-	assert.equal(commitFacts(probe(clone.dir)).line, "not counted: no merge base with origin/main");
+	assert.equal(commitFacts(probe(clone.dir)), "not counted: no merge base with origin/main");
 });
 
-test("a branch name that could pass as a gh flag is never handed to gh", () => {
-	const io = fakeIo({ "sbx exec pi-a sh -c": "--repo=other/repo\torigin/main\t0\t0\t\t" });
+test("the latest commit is bounded", () => {
+	const commits = commitFacts(`task\torigin/main\t10\t10\t 3 files changed\tabc1234 ${"c".repeat(500)}`);
 
-	const facts = branchFacts(io, "pi-a", "/r");
-
-	assert.equal(facts.pr, "not read: branch --repo=other/repo is not a plain branch name");
-	assert.ok(!io.calls.some((c) => c[0] === "gh"));
-});
-
-const FACTS = "commits: none since origin/main\n\npr: none";
-
-test("a wake projects status and commits, and no log line the host already saw", () => {
-	const status =
-		"status: ready-for-host\nattention: none\n\n## Summary\nThe fix passes.\nReview is complete; see review.md.\n\n## Log\n- internal detail\n";
-
-	assert.equal(
-		wake(status, FACTS, ["- internal detail"]),
-		"status: ready-for-host\n\ncommits: none since origin/main\n\npr: none",
-	);
-	assert.equal(
-		wake(undefined, FACTS),
-		"status: no status.md\n\ncommits: none since origin/main\n\npr: none",
-	);
-});
-
-test("a wake shows attention only when it calls for a response", () => {
-	const status =
-		"status: blocked\nattention: choose a date format\n\n## Summary\nThe grid needs a date format.\n\n## Log\n";
-
-	assert.match(
-		wake(status, FACTS),
-		/^status: blocked\n\nattention: choose a date format\n\ncommits:/,
-	);
-});
-
-test("a wake counts the log lines written since the previous wake", () => {
-	const status =
-		"status: implementing\nattention: none\n\n## Log\n- Scope set; analysis.md\n- Baseline build passed; logs/initial-build.log\n- Decided: keep the stacked layout under 860 px, because the ticket covers wide screens only; analysis.md\n";
-
-	const result = wake(status, FACTS, ["- Scope set; analysis.md"]);
-
-	assert.equal(
-		result,
-		"status: implementing\n\nlog: 2 new entries in status.md\n\ncommits: none since origin/main\n\npr: none",
-	);
-});
-
-test("a wake counts new log lines without repeating their content", () => {
-	const status = `status: implementing\n\n## Log\n${Array.from({ length: 7 }, (_, i) => `- step ${i + 1}`).join("\n")}\n- ${"x".repeat(500)}\n`;
-
-	const result = wake(status, FACTS);
-
-	assert.match(result, /\n\nlog: 8 entries in status\.md\n\ncommits: none since origin\/main\n\npr: none$/);
-	assert.doesNotMatch(result, /step 4|x{50}/);
-});
-
-test("a first wake counts existing log lines without calling them new", () => {
-	const status = "status: implementing\n\n## Log\n- Scope set; analysis.md\n";
-
-	assert.match(wake(status, FACTS), /\n\nlog: 1 entry in status\.md\n/);
-});
-
-test("a log line written again word for word still reaches the wake", () => {
-	const status =
-		"status: implementing\n\n## Log\n- Gate passed; logs/gate.log\n- Commit a1\n- Gate passed; logs/gate.log\n";
-
-	const result = wake(status, FACTS, [
-		"- Gate passed; logs/gate.log",
-		"- Commit a1",
-	]);
-
-	assert.match(result, /\n\nlog: 1 new entry in status\.md\n\ncommits: none since origin\/main\n\npr: none$/);
-});
-
-test("a wake bounds every status field and the latest commit", () => {
-	const status = `status: ${"s".repeat(500)}\nattention: ${"a".repeat(500)}\n\n## Summary\n${"b".repeat(5000)}\n\n## Log\nsecret log detail\n`;
-	const commits = commitFacts(`task\torigin/main\t10\t10\t 3 files changed\tabc1234 ${"c".repeat(500)}`).line;
-
-	const result = wake(status, `commits: ${commits}\n\npr: none`);
-
-	assert.equal(result.split("\n").length, 7);
-	assert.ok(result.length < 600);
-	assert.doesNotMatch(result, /summary:|next step:|secret log detail|5 c|last:|review:/);
+	assert.ok(commits.length < 200);
+	assert.match(commits, /^10 since origin\/main, 0 pushed, 10 unpushed, 3 files \+0 -0, latest abc1234 c+\.\.\.$/);
 });
 
 test("rows carry the activity projection when the container has one", () => {

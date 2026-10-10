@@ -4,8 +4,6 @@
   "defaultThinkingLevel": "{{thinking.sbx}}",
   "defaultProjectTrust": "always",
   "showCacheMissNotices": true,
-  "sessionHandoff": { "suggestAtTokens": 250000 },
-  "extensions": ["../sbx/extensions/session-handoff.ts"],
   "skills": ["~/.pi/skills"],
   "packages": [
     "npm:pi-web-access@0.33.0",

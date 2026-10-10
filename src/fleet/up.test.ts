@@ -126,9 +126,9 @@ test("up creates the container, switches the branch, starts the install in the b
 		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/repositories.json"],
 		undefined,
 	);
-	assert.doesNotMatch(
+	assert.equal(
 		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/status.md"],
-		/## Repositories/,
+		undefined,
 	);
 	assert.deepEqual(io.calls.at(-1), [
 		"herdr",
@@ -224,16 +224,7 @@ test("up keeps two writable private clones with their own bases", async () => {
 		listed.repositories.map((entry: { baseSha: string }) => entry.baseSha),
 		["3".repeat(40), "4".repeat(40)],
 	);
-	assert.match(io.files[`${task}/status.md`], /base origin\/main 3{40}/);
-	assert.match(io.files[`${task}/status.md`], /base origin\/develop 4{40}/);
-	assert.match(
-		io.files[`${task}/status.md`],
-		/acme\/webapp: web-1 dirty 0 3{40}/,
-	);
-	assert.match(
-		io.files[`${task}/status.md`],
-		/acme\/api: web-1 dirty 0 4{40}/,
-	);
+	assert.equal(io.files[`${task}/status.md`], undefined);
 	assert.match(io.files[`${task}/permissions.md`], /acme\/api/);
 	const copied = io.calls
 		.filter((call) => call[0] === "sbx" && call[1] === "cp")
@@ -1235,17 +1226,11 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 		io.calls.some((c) => c[0] === "mkdir" && c[1] === `${task}/logs/sessions`),
 	);
 	assert.equal(io.files[`${task}/task.md`], undefined);
-	assert.equal(
-		io.files[`${task}/status.md`],
-		"status: new\nattention: none\n\n## Log\n",
-	);
+	assert.equal(io.files[`${task}/status.md`], undefined);
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(run.includes(`PI_CODING_AGENT_SESSION_DIR=${task}/logs/sessions`));
 
-	const again = fakeIo({
-		...base,
-		[`read ${task}/status.md`]: "status: implementing",
-	});
+	const again = fakeIo(base);
 	await up({ repo, label: "web-1", root: "/root" }, again);
 	assert.deepEqual(
 		again.calls

@@ -7,16 +7,14 @@ import { keepName, stoppedScreen, stoppedView } from "./stopped.ts";
 
 const plain = (line: string) => line.replace(/\x1b\[[0-9;]*m/g, "");
 const ACCENT = "\x1b[38;2;255;204;102m";
-const view = { name: "claude-flowmee-flo-1781", since: new Date(2026, 9, 5, 22, 58), status: "ready-for-host", attention: "two host calls from the review" };
+const view = { name: "claude-flowmee-flo-1781", since: new Date(2026, 9, 5, 22, 58) };
 
-test("the stopped tab says what is stopped, since when, where the task stands and how to resume it", () => {
+test("the stopped tab says what is stopped, since when and how to resume it", () => {
 	const text = stoppedScreen(view, { columns: 120, rows: 30 }).map(plain).join("\n");
 
 	assert.match(text, /claude-flowmee-flo-1781/);
 	assert.match(text, /◉ stopped/);
 	assert.match(text, /since 22:58/);
-	assert.match(text, /status\s+ready-for-host/);
-	assert.match(text, /attention\s+two host calls from the review/);
 	assert.match(text, /fleet start claude-flowmee-flo-1781/);
 });
 
@@ -29,7 +27,7 @@ test("only the resume command carries the accent", () => {
 });
 
 test("the panel is a rounded card in the middle of the tab, never wider than a readable column", () => {
-	const lines = stoppedScreen({ ...view, attention: "y".repeat(300) }, { columns: 200, rows: 30 }).map(plain);
+	const lines = stoppedScreen({ ...view, name: "y".repeat(300) }, { columns: 200, rows: 30 }).map(plain);
 
 	const top = lines.findIndex((line) => line.includes("╭"));
 	const bottom = lines.findIndex((line) => line.includes("╰"));
@@ -48,19 +46,13 @@ test("the card leaves the terminal's own background showing, inside and around i
 	assert.equal(plain(lines[2]).trim(), "");
 });
 
-test("a task with no attention leaves the line out", () => {
-	const text = stoppedScreen({ ...view, attention: "none" }, { columns: 120, rows: 30 }).map(plain).join("\n");
-
-	assert.doesNotMatch(text, /attention/);
-});
-
-test("the view reads the task's status.md and the time of the stop", () => {
+test("the view reads the time of the stop, and an old status.md changes nothing", () => {
 	const sandbox = { name: "claude-webapp-a", kind: KINDS.claude, status: "stopped", workspaces: ["/w/webapp"] };
 	const stoppedAt = new Date(2026, 9, 5, 21, 7);
 	const io = fakeIo({ [`stat ${stopFile(sandbox, fakeIo())}`]: { size: 1, mtime: stoppedAt, dir: false } });
 	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/status.md"] = "status: implementing\nattention: none\n";
 
-	assert.deepEqual(stoppedView(sandbox, io), { name: "claude-webapp-a", since: stoppedAt, status: "implementing", attention: "none" });
+	assert.deepEqual(stoppedView(sandbox, io), { name: "claude-webapp-a", since: stoppedAt });
 });
 
 test("the stopped view gives its tab the container's name back whenever herdr has cleared it", () => {

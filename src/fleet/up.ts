@@ -11,7 +11,6 @@ import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import {
 	taskDir,
-	repositoryCheckout,
 	repositoryManifest,
 	saveRepositories,
 } from "./repositories.ts";
@@ -52,12 +51,8 @@ export function staleImage(
 	return `${kind.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${CLI} build --${kind.name} so the container carries today's rules, skills and extensions`;
 }
 
-const TASK_STATUS = "status: new\nattention: none\n\n## Log\n";
-
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);
-	if (io.read(`${dir}/status.md`) === undefined)
-		io.write(`${dir}/status.md`, TASK_STATUS);
 }
 
 export function agentArgs(
@@ -441,19 +436,6 @@ export async function up(
 		);
 		saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
 		if (group) {
-			const status = io.read(`${task}/status.md`) ?? TASK_STATUS;
-			if (!status.includes("## Repositories")) {
-				const snapshots = plans
-					.map((plan) => {
-						const current = repositoryCheckout(io, sandbox, plan.workspace);
-						return `- ${plan.name}: ${current.branch} dirty ${current.dirty} ${current.head} (base origin/${plan.base} ${plan.baseSha})`;
-					})
-					.join("\n");
-				io.write(
-					`${task}/status.md`,
-					status.replace("## Log", `## Repositories\n${snapshots}\n\n## Log`),
-				);
-			}
 			for (const plan of plans.slice(1)) {
 				const otherOverlay = projectOverlay(plan.name, io);
 				if (otherOverlay !== undefined) {

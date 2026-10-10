@@ -291,7 +291,6 @@ class Renderer {
 		this.extra([
 			["sbx/container/.dockerignore", "context/.dockerignore"],
 			["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
-			["sbx/container/ticket-check.sh", "context/container/ticket-check.sh"],
 			["sbx/container/ci-wait.sh", "context/container/ci-wait.sh"],
 		]);
 	}
@@ -358,14 +357,8 @@ function pi(r: Renderer): void {
 			from,
 			`home/agent/${to}`,
 		]),
-		[
-			"extensions/handoff-on-error.ts",
-			"home/agent/extensions/handoff-on-error.ts",
-		],
-		["extensions/status-history.ts", "home/agent/extensions/status-history.ts"],
+		["extensions/activity.ts", "home/agent/extensions/activity.ts"],
 		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
-		["extensions/session-handoff.ts", "context/extensions/session-handoff.ts"],
-		["extensions/status-history.ts", "context/extensions/status-history.ts"],
 		["extensions/container-guard.ts", "home/agent/extensions/container-guard.ts"],
 		["src/guard/container.ts", "home/agent/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/agent/src/guard/argv.ts"],
@@ -405,12 +398,7 @@ function claude(r: Renderer): void {
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
-		[
-			"extensions/handoff-on-error.ts",
-			"home/fleet/extensions/handoff-on-error.ts",
-		],
-		["extensions/status-history.ts", "home/fleet/extensions/status-history.ts"],
-		["extensions/session-handoff.ts", "home/fleet/extensions/session-handoff.ts"],
+		["extensions/activity.ts", "home/fleet/extensions/activity.ts"],
 	]);
 }
 
