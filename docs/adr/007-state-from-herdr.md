@@ -10,7 +10,7 @@ An audit of ten container runs found 9% of container tool calls and about a quar
 
 ## Decision
 
-For pi and Claude, the agent writes no task state. herdr's agent state says whether a container works or has settled, and every turn ends with a four-line closing message: `Changes:`, `Checks:`, `Commits:`, `Question:`. The watch labels each settle from the pane tail (`question`, `turn ended`, `no closing message`), sends the last 15 lines with it, deduplicates on `state_change_seq`, and drops a third identical wake between steers. `fleet ls` and the wake read no pull request. The host starts every ticket, the final verification and every pull request round in a fresh session with `fleet steer --fresh` and one line naming the ticket. The account-limit resume reads the limit from the pane tail.
+For pi and Claude, the agent writes no task state. herdr's agent state says whether a container works or has settled, and every turn ends with a four-line closing message: `Changes:`, `Checks:`, `Commits:`, `Question:`. The watch labels each settle from the pane tail (`question`, `turn ended`, `no closing message`), sends the last 15 lines with it, deduplicates on `state_change_seq`, and drops a third identical wake between steers. `fleet ls` and the wake read no pull request. Nothing replaces the session handoff: a session runs until its task ends, and automatic compaction at 400000 tokens (`src/compaction.json`) is the only bound on its context. Measured on 30 runs, response time stayed flat across context size and a fresh session per commit would cut processed input by at most 20%. The account-limit resume reads the limit from the pane tail.
 
 ## Consequences
 

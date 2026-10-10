@@ -49,8 +49,6 @@ An order to see a change before it is built runs `mockup` first; its frames are 
 
 An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
 
-Every ticket, the final verification and every pull request round start in a fresh session, with one line naming the ticket or the step. Read that file, `spec.md` when it exists, and `git log`; they hold everything an earlier session decided.
-
 ## Checks
 
 Each check runs once, where it is cheapest:

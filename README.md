@@ -124,7 +124,7 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a herdr tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.fleet/tasks/` |
 | `fleet stop <sandbox>` | stops the sandbox, keeping its files and herdr tab | ends guest processes; the tab and watch status show `stopped` |
 | `fleet start <sandbox>` | restarts in the saved tab with the last saved session when one exists | starts the sandbox and agent; sends no prompt |
-| `fleet steer <sandbox> [--fresh] "<text>"` | sends the sandbox agent its next instruction; `--fresh` first starts a new session | nothing outside the sandbox |
+| `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
 | `fleet watch` | wakes the host when a sandbox settles, with its closing message | nothing |
 | `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
 | `fleet diff [<sandbox>]` | toggles a live diff beside the current container's terminal | opens or closes its Herdr pane; saves the selected file and scroll position in the host cache; reads Git without changing the checkout |

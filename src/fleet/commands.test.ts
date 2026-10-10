@@ -7,7 +7,6 @@ import {
 	down,
 	exec,
 	execScript,
-	fresh,
 	ls,
 	peek,
 	resolveSandbox,
@@ -15,7 +14,6 @@ import {
 } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import { checkoutProbe, commitsProbe, type Sandbox } from "./status.ts";
-import { agentName } from "./name.ts";
 import { KINDS, type Kind, SEATS } from "../harness.ts";
 
 const running = {
@@ -131,34 +129,6 @@ test("steer says when the image predates the harness, and still steers", () => {
 });
 
 for (const harness of Object.values(KINDS)) {
-	test(`${harness.name} steer --fresh starts a new session with its own command, then sends the line once idle`, async () => {
-		const sandbox = `${harness.prefix}household-budget-t01-skeleton`;
-		const agent = agentName(sandbox);
-		const io = fakeIo(
-			{
-				"herdr agent list": {
-					result: { agents: [{ name: agent, pane_id: "w1:p1", agent_status: "idle" }] },
-				},
-			},
-			SEATS[harness.name],
-		);
-		const herdr = io.herdr;
-		io.herdr = (<T>(args: string[]) => {
-			if (args[1] === "prompt" && args[3] === harness.tokens["fresh.command"]) {
-				io.calls.push(["herdr", ...args]);
-				throw new Error("agent_prompt_stalled");
-			}
-			return herdr<T>(args);
-		}) as typeof io.herdr;
-
-		await fresh(row(sandbox, harness, ["/w/household-budget"]), "Deliver issues/02-api.md", io);
-
-		assert.deepEqual(
-			io.calls.filter((c) => c[2] === "prompt").map((c) => c[4]),
-			[harness.tokens["fresh.command"], "Deliver issues/02-api.md"],
-		);
-	});
-
 	test(`${harness.name} steer does not resend a stalled prompt`, () => {
 		const agent = `${harness.prefix}webapp-web-1727`;
 		const io = fakeIo(

@@ -428,12 +428,14 @@ test("the stock continue names no session rule", () => {
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} starts every ticket, the final verification and every PR round in a fresh session`, () => {
+	test(`${name} keeps one session for the whole task, with no fresh-session command or rule`, () => {
 		renderSeats(name, (out) => {
-			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+			const texts = (readdirSync(out, { recursive: true }) as string[])
+				.filter((file) => file.endsWith(".md"))
+				.filter((file) => /fresh session|--fresh/.test(readFileSync(join(out, file), "utf8")));
 
-			assert.match(rules, /Every ticket, the final verification and every pull request round start in a fresh session, with one line naming the ticket or the step/);
-			assert.match(rules, /Read that file, `spec\.md` when it exists, and `git log`/);
+			assert.deepEqual(texts, []);
+			assert.equal(KINDS[name].tokens["fresh.command"], undefined);
 		});
 	});
 
