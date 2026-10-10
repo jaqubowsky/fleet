@@ -18,7 +18,7 @@ issues/        NN-<slug>.md, one ticket per commit; a plan, ticked with evidence
 review.md      Review and Required fixes lines, findings, checks read, shared seams
 browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video
 mockup/        index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots
-logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; <skill>-<id>/ evidence
+logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; turns.md, one entry per host wake, from the watch; <skill>-<id>/ evidence
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-base/<sha7>.md`.

@@ -534,14 +534,78 @@ test("a turn that ends without the closing message wakes the host with no closin
 	assert.match(wakes[0], /^\[fleet\] claude-worker: no closing message\n\nError: 529 overloaded/);
 });
 
-test("the pane tail the watch reads is the last 15 lines", (t) => {
+test("the watch reads 60 pane lines and the wake carries the last 15", (t) => {
 	const { io, turn } = settles(t, CLOSED);
 
 	turn();
 
 	assert.ok(
-		io.calls.some((c) => c.join(" ") === "herdr agent read claude-worker --source recent-unwrapped --lines 15"),
+		io.calls.some((c) => c.join(" ") === "herdr agent read claude-worker --source recent-unwrapped --lines 60"),
 	);
+});
+
+const TURNS = "/home/me/.fleet/tasks/webapp/claude-worker/logs/turns.md";
+
+function appending(io: ReturnType<typeof herdr>["io"]) {
+	io.append = (path, line) => {
+		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
+	};
+}
+
+test("a turn ended wake appends its time, its label and the four closing lines to the turn log", (t) => {
+	const closing = "Changes: restore keeps deleted files\nChecks: npm test -> exit 0 @ abc1234, logs/gate-1/test.log\nCommits: abc1234 feat(projects): restore deleted files\nQuestion: none";
+	const { io, turn } = settles(t, `earlier output\n${closing}\n> `);
+	appending(io);
+
+	turn();
+
+	assert.equal(io.files[TURNS], `## 2026-09-16T10:00:00Z turn ended\n\n${closing}\n\n`);
+});
+
+test("the same closing message on a second wake adds nothing to the turn log", (t) => {
+	const { io, turn } = settles(t, "Changes: x\nChecks: none\nCommits: none\nQuestion: none");
+	appending(io);
+
+	turn();
+	turn();
+
+	assert.equal(io.files[TURNS]?.match(/^## /gm)?.length, 1);
+});
+
+test("a no closing message wake appends its label and the last 5 pane lines to the turn log", (t) => {
+	const { io, turn } = settles(t, "one\ntwo\nthree\nfour\nfive\nsix\nAPI Error: 529 overloaded");
+	appending(io);
+
+	turn();
+
+	assert.equal(io.files[TURNS], "## 2026-09-16T10:00:00Z no closing message\n\nthree\nfour\nfive\nsix\nAPI Error: 529 overloaded\n\n");
+});
+
+test("a wake without pane lines logs its label alone", (t: TestContext) => {
+	const { io, intervals } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
+	]);
+	appending(io);
+	watch(() => undefined, io, () => {});
+	const sbx = io.sbx;
+	io.sbx = (args, opts) =>
+		args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts);
+
+	intervals.get(30_000)?.();
+
+	assert.equal(io.files[TURNS], "## 2026-09-16T10:00:00Z idle -> taken down\n\n");
+});
+
+test("a closing message with more check lines than the wake shows still reaches the turn log whole", (t) => {
+	const checks = Array.from({ length: 14 }, (_, i) => `Checks: gate ${i} -> exit 0 @ abc1234, logs/g${i}.log`).join("\n");
+	const closing = `Changes: x\n${checks}\nCommits: abc1234 y\nQuestion: none`;
+	const { io, turn, wakes } = settles(t, closing);
+	appending(io);
+
+	turn();
+
+	assert.ok(io.files[TURNS]?.includes(closing));
+	assert.equal(wakes[0].split("\n\n")[1].split("\n").length, 15);
 });
 
 test("a third wake about the same state without a steer in between is not sent", (t) => {

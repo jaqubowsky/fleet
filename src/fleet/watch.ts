@@ -6,6 +6,7 @@ import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
 import { type Io, seatOf } from "./io.ts";
 import {
 	closingLabel,
+	READ_LINES,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
@@ -16,6 +17,8 @@ import {
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
+import { taskDir } from "./repositories.ts";
+import { repeats, TURNS, turnEntry } from "./turns.ts";
 import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 
 const REFRESH_MS = 30_000;
@@ -149,7 +152,7 @@ export function watch(
 					"--source",
 					"recent-unwrapped",
 					"--lines",
-					String(TAIL_LINES),
+					String(READ_LINES),
 				])
 				.trimEnd();
 		} catch (error) {
@@ -157,10 +160,15 @@ export function watch(
 		}
 	};
 
+	const logTurn = (sandbox: Sandbox, entry: string) => {
+		const file = `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/${TURNS}`;
+		if (!repeats(io.read(file), entry)) io.append(file, entry);
+	};
+
 	const emit = (
 		name: string,
 		change: string,
-		{ key, tail, down }: { key?: string; tail?: string; down?: boolean } = {},
+		{ key, tail = "", down, closing = false }: { key?: string; tail?: string; down?: boolean; closing?: boolean } = {},
 	) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name) && !down) return;
@@ -178,14 +186,15 @@ export function watch(
 				at: io.now().toISOString(),
 			});
 		}
+		if (where) logTurn(where.sandbox, turnEntry(io.now(), change, tail, closing));
 		onWake(
-			wakeLines(name, where?.sandbox.name ?? name, change, tail ?? ""),
+			wakeLines(name, where?.sandbox.name ?? name, change, tail.split("\n").slice(-TAIL_LINES).join("\n")),
 		);
 	};
 
 	const settled = (name: string, state: string) => {
 		const tail = tailOf(name);
-		const label = closingLabel(tail);
+		const label = closingLabel(tail.split("\n").slice(-TAIL_LINES).join("\n"));
 		const limited = label === "no closing message" && state !== "blocked" && limitStop(tail);
 		if (!limited) limits.delete(name);
 		else {
@@ -196,7 +205,7 @@ export function watch(
 			return;
 		}
 		const change = state === "blocked" ? `blocked, ${label}` : label;
-		emit(name, change, { key: `${state} ${label}`, tail });
+		emit(name, change, { key: `${state} ${label}`, tail, closing: label !== "no closing message" });
 	};
 
 	const leave = (
