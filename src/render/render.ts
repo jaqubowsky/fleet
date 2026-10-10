@@ -1,5 +1,5 @@
 import type { Io } from "../fleet/io.ts";
-import { type AgentName, CLI, CONTINUE, KINDS } from "../harness.ts";
+import { type AgentName, CLI, KINDS } from "../harness.ts";
 import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
 
 export type Seat = "host" | "container";
@@ -166,7 +166,6 @@ class Renderer {
 		const tokens: Record<string, string> = {
 			...kind.tokens,
 			cli: CLI,
-			continue: CONTINUE,
 			...this.seats,
 			root,
 			wiki: `${this.io.home}/my-knowledge-base`,

@@ -186,8 +186,9 @@ export function watch(
 	const settled = (name: string, state: string) => {
 		const tail = tailOf(name);
 		const label = closingLabel(tail);
-		if (label !== "no closing message") limits.delete(name);
-		else if (limitStop(tail)) {
+		const limited = label === "no closing message" && state !== "blocked" && limitStop(tail);
+		if (!limited) limits.delete(name);
+		else {
 			if (!limits.has(name)) {
 				const at = io.now();
 				limits.set(name, { at, reset: resetAt(tail, at) });

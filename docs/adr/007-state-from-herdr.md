@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Supersedes [003](003-error-recovery.md); replaces the `status.md` parts of [001](001-stopped-containers.md) and the session-handoff parts of [002](002-final-verification.md).
+Accepted. Supersedes [003](003-error-recovery.md); replaces the `status.md` parts of [001](001-stopped-containers.md), the session-handoff parts of [002](002-final-verification.md), and the final task status in `logs/usage.json` of [005](005-runtime-analytics.md).
 
 ## Context
 
