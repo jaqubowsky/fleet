@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { artifacts, down, history, ls, peek } from "./commands.ts";
+import { artifacts, down, ls, peek } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import { taskDir } from "./repositories.ts";
 
@@ -28,17 +28,17 @@ const answers = {
 	},
 	"herdr agent list": { result: { agents: [] } },
 	"list /home/me/.fleet/config/fleet": ["pi-a.json"],
+	[`stat ${task}/logs`]: { size: 0, dir: true, mtime: new Date(0) },
 	[`stat ${task}/status.md`]: { size: 10, dir: false, mtime: new Date(0) },
 	[`list ${task}`]: ["status.md"],
 	"list /home/me/.fleet/tasks/groups/a-b-c": ["pi-a"],
 	[`stat ${task}`]: { size: 0, dir: true, mtime: new Date(0) },
 };
 
-test("a stopped group's listing and history use its task directory without starting it", () => {
-	const io = fakeIo({ ...answers, [`read ${task}/logs/status.jsonl`]: "" });
+test("a stopped group's listing uses its task directory without starting it", () => {
+	const io = fakeIo(answers);
 	const table = ls(io);
 	const detail = peek("pi-a", io);
-	history("pi-a", "/c", io);
 
 	assert.equal(taskDir("/c", "pi-a", io), task);
 	for (const name of ["a", "b", "c"]) {
@@ -48,7 +48,7 @@ test("a stopped group's listing and history use its task directory without start
 	assert.equal(io.calls.filter((call) => call[0] === "sbx" && call[1] === "exec").length, 0);
 });
 
-test("ls reads PR and CI state for every repository", () => {
+test("ls counts commits for every repository and asks GitHub nothing", () => {
 	const io = fakeIo({
 		...answers,
 		"sbx ls --json": {
@@ -63,26 +63,11 @@ test("ls reads PR and CI state for every repository", () => {
 		if (args[4]?.includes("git rev-list")) return "task\torigin/main\t0\t0\t\t";
 		return result;
 	};
-	const queried: string[] = [];
-	io.gh = (_args, repo) => {
-		queried.push(repo);
-		return JSON.stringify({
-			number: 7,
-			state: "OPEN",
-			statusCheckRollup: [
-				{
-					name: "test",
-					status: repo === "/c" ? "IN_PROGRESS" : "COMPLETED",
-					conclusion: "SUCCESS",
-				},
-			],
-		});
-	};
 
 	const printed = ls(io);
 
-	assert.deepEqual(queried, ["/a", "/b", "/c"]);
-	assert.match(printed, /CI running/);
+	assert.equal(printed.match(/commits none since origin\/main/g)?.length, 3);
+	assert.equal(io.calls.filter((c) => c[0] === "gh").length, 0);
 });
 
 test("artifacts are discoverable through every repository in a group", () => {

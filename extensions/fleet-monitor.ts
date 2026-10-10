@@ -73,7 +73,7 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 			name: "fleet_watch",
 			label: "Fleet watch",
 			description:
-				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked, gone, taken down), working 20 minutes without settling, or idle 20 minutes short of ready-for-host, paused or blocked wakes this session with a [fleet] <agent>: <sandbox> <change> line (the sandbox named only where herdr shortened the agent) carrying a bounded projection of status.md (status, attention, the number of Log lines added since its previous wake), commit counts since origin's default branch, and the pull request with its CI; a settle with the pull request open and CI running wakes nothing unless status.md is blocked or paused. That turn is where you act on it. Pass the sandbox name from ${CLI} ls; empty string = every container.`,
+				`Watch containers beyond the ones this session put up or steered, which are watched by themselves. A container settling (done, idle, blocked) wakes this session with a [fleet] <agent>: <sandbox> <label> line (the sandbox named only where herdr shortened the agent): question, turn ended or no closing message, read from its closing message, followed by the last 15 lines of its pane. Working 20 minutes without settling, gone and taken down wake it too. The same label wakes at most twice between steers. That turn is where you act on it. Pass the sandbox name from ${CLI} ls; empty string = every container.`,
 			promptSnippet: "watch containers; a settling one wakes this session with a [fleet] line",
 			parameters: {
 				type: "object",

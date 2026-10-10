@@ -35,7 +35,7 @@ export type Summary = {
 	usage_scope?: "container_lifetime" | "task_sessions";
 	runtime?: Runtime;
 	tools?: ToolUsage;
-	task?: { status?: string; branch: string; head: string };
+	task?: { branch: string; head: string };
 	runs: Run[];
 	totals: Pick<Run, "requests" | "input" | "cached_input" | "cache_write" | "output" | "reasoning" | "cost" | "compactions">;
 	cache_hit_ratio: number;

@@ -1,50 +1,35 @@
 import net from "node:net";
-import { STOPPED } from "../../extensions/handoff-on-error.ts";
-import {
-	ACTIVITY,
-	fieldsOf,
-	logLines,
-} from "../../extensions/status-history.ts";
-import { activityOf } from "./activity.ts";
-import { activityNow, blockedWork, steer, stoppedPane } from "./commands.ts";
+import { steer, stoppedPane } from "./commands.ts";
 import { CLI, CONTINUE } from "../harness.ts";
 import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
 import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
 import { type Io, seatOf } from "./io.ts";
 import {
-	FAILED_IN_A_ROW,
-	idleStalled,
+	closingLabel,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
 	STALL_MS,
 	stalled,
-	taskDirOf,
+	TAIL_LINES,
 	TERMINAL,
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { groupManifest, repositoryCheckout } from "./repositories.ts";
-import {
-	type Agent,
-	branchFacts,
-	calls,
-	type Sandbox,
-	sandboxes,
-	wake,
-} from "./status.ts";
+import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
-const WAITS_ON_HOST = new Set(["blocked", "paused"]);
+const SAME_WAKES = 2;
 
 type Frame = {
 	event?: string;
-	data?: { pane_id?: string; agent_status?: string };
+	data?: { pane_id?: string; agent_status?: string; state_change_seq?: number };
 };
 type Tracked = { name: string; status: string; since: number; rang: number };
-type Woken = { status: string | undefined; facts: string; at: string };
+type Woken = { key: string; count: number; at: string };
+type LimitStop = { at: Date; reset: Date | undefined };
 
 export function fleetAgents(
 	agents: Agent[],
@@ -78,7 +63,7 @@ export function wakeLines(
 	details: string,
 ): string {
 	const what = sandbox === agent ? change : `${sandbox} ${change}`;
-	return `[fleet] ${agent}: ${what}\n\n${details}`;
+	return `[fleet] ${agent}: ${what}${details ? `\n\n${details}` : ""}`;
 }
 
 export function wakeName(text: string): string | undefined {
@@ -110,16 +95,16 @@ export function watch(
 	const tracked = new Map<string, Tracked>();
 	const settling = new Map<
 		string,
-		{ timer: ReturnType<typeof setTimeout>; from: string | undefined }
+		{
+			timer: ReturnType<typeof setTimeout>;
+			from: string | undefined;
+			seq: number | undefined;
+		}
 	>();
-	const logShown = new Map<string, string[]>();
+	const settledSeq = new Map<string, number>();
 	const woken = new Map<string, Woken>();
-	const deaths = new Map<string, string>();
-	const streaks = new Map<string, string>();
-	const dirs = new Map<
-		string,
-		{ dir: string; sandbox: Sandbox; repo: string }
-	>();
+	const limits = new Map<string, LimitStop>();
+	const dirs = new Map<string, { sandbox: Sandbox }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
 	let stopped = false;
@@ -134,10 +119,8 @@ export function watch(
 	};
 
 	const locate = (name: string, rows: Sandbox[]) => {
-		const dir = taskDirOf(rows, name, io);
-		const row = rows.find((s) => agentName(s.name) === name);
-		if (dir && row)
-			dirs.set(name, { dir, sandbox: row, repo: row.workspaces[0] });
+		const row = rows.find((s) => agentName(s.name) === name && s.workspaces[0]);
+		if (row) dirs.set(name, { sandbox: row });
 		return dirs.get(name);
 	};
 
@@ -153,96 +136,66 @@ export function watch(
 		}
 	};
 
-	const statusOf = (name: string): string | undefined => {
-		const where = dirs.get(name);
-		return where ? io.read(`${where.dir}/status.md`) : undefined;
-	};
+	const isStopped = (sandbox: Sandbox) =>
+		sandbox.status === "stopped" || Boolean(stoppedPane(sandbox, io));
 
-	const factsOf = (name: string): { text: string; running: boolean } => {
-		const where = dirs.get(name);
-		if (!where)
-			return { text: "commits: not counted\n\npr: not read", running: false };
-		if (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io))
-			return { text: "container stopped; checkout not probed", running: false };
-		const manifest = groupManifest(where.sandbox.name, io);
-		if (manifest) {
-			const lines: string[] = [];
-			let running = false;
-			for (const repo of manifest.repositories) {
-				try {
-					const current = repositoryCheckout(io, where.sandbox.name, repo.workspace);
-					const facts = branchFacts(io, where.sandbox.name, repo.repo, repo);
-					running ||= facts.running;
-					lines.push(
-						`${repo.name} ${current.branch} ${current.dirty} dirty ${current.head}\ncommits: ${facts.commits}\npr: ${facts.pr}`,
-					);
-				} catch (error) {
-					lines.push(`${repo.name}: failed: ${String(error).split("\n").at(-1)}`);
-				}
-			}
-			return { text: lines.join("\n\n"), running };
-		}
-		const facts = branchFacts(io, where.sandbox.name, where.repo);
-		return {
-			text: `commits: ${facts.commits}\n\npr: ${facts.pr}`,
-			running: facts.running,
-		};
-	};
-
-	const details = (
-		name: string,
-		status: string | undefined,
-		facts: string,
-	): string => {
-		const where = dirs.get(name);
-		let activity = "";
+	const tailOf = (name: string): string => {
 		try {
-			activity = where ? activityNow(where.dir, io) : "";
+			return io
+				.herdrText([
+					"agent",
+					"read",
+					name,
+					"--source",
+					"recent-unwrapped",
+					"--lines",
+					String(TAIL_LINES),
+				])
+				.trimEnd();
 		} catch (error) {
-			io.log(`[fleet] watch: activity: ${String(error)}`);
+			return `pane not read: ${String(error).split("\n")[0]}`;
 		}
-		const text = wake(status, facts, logShown.get(name));
-		logShown.set(name, logLines(status));
-		const blocked = where ? blockedWork(where.dir, io) : 0;
-		return `${text}${blocked ? `\n\nstill working while blocked: ${calls(blocked)} since status.md turned blocked` : ""}${activity ? `\n\nactivity: ${activity}` : ""}`;
 	};
 
 	const emit = (
 		name: string,
 		change: string,
-		when: { settled?: boolean; unlessCi?: boolean; down?: boolean } = {},
+		{ key, tail, down }: { key?: string; tail?: string; down?: boolean } = {},
 	) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
-		if (closed.has(name) && !when.down) return;
+		if (closed.has(name) && !down) return;
 		const rows = listed();
 		const where = rows ? locate(name, rows) : dirs.get(name);
-		if (!when.down && where && (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io))) return;
-		const status = statusOf(name);
-		const facts = factsOf(name);
-		if (
-			when.unlessCi &&
-			facts.running &&
-			!WAITS_ON_HOST.has(fieldsOf(status).status ?? "")
-		)
-			return;
-		const last = woken.get(name);
-		if (
-			when.settled &&
-			last &&
-			last.status === status &&
-			last.facts === facts.text &&
-			(steered.get(name) ?? "") <= last.at
-		)
-			return;
-		woken.set(name, { status, facts: facts.text, at: io.now().toISOString() });
+		if (!down && where && isStopped(where.sandbox)) return;
+		if (key) {
+			const last = woken.get(name);
+			const repeat =
+				last?.key === key && (steered.get(name) ?? "") <= last.at;
+			if (repeat && last.count >= SAME_WAKES) return;
+			woken.set(name, {
+				key,
+				count: repeat ? last.count + 1 : 1,
+				at: io.now().toISOString(),
+			});
+		}
 		onWake(
-			wakeLines(
-				name,
-				dirs.get(name)?.sandbox.name ?? name,
-				change,
-				details(name, status, facts.text),
-			),
+			wakeLines(name, where?.sandbox.name ?? name, change, tail ?? ""),
 		);
+	};
+
+	const settled = (name: string, state: string) => {
+		const tail = tailOf(name);
+		const label = closingLabel(tail);
+		if (label !== "no closing message") limits.delete(name);
+		else if (limitStop(tail)) {
+			if (!limits.has(name)) {
+				const at = io.now();
+				limits.set(name, { at, reset: resetAt(tail, at) });
+			}
+			return;
+		}
+		const change = state === "blocked" ? `blocked, ${label}` : label;
+		emit(name, change, { key: `${state} ${label}`, tail });
 	};
 
 	const leave = (
@@ -260,7 +213,7 @@ export function watch(
 		report();
 	};
 
-	const settle = (pane: string, from: string | undefined) => {
+	const settle = (pane: string, from: string | undefined, seq: number | undefined) => {
 		const earlier = settling.get(pane);
 		if (earlier) clearTimeout(earlier.timer);
 		const start = earlier?.from ?? from;
@@ -268,10 +221,12 @@ export function watch(
 			settling.delete(pane);
 			const current = tracked.get(pane);
 			if (!current || !TERMINAL.has(current.status)) return;
-			const change = transition(start, current.status);
-			if (change) emit(current.name, change, { settled: true, unlessCi: true });
+			if (!transition(start, current.status)) return;
+			if (seq !== undefined && settledSeq.get(pane) === seq) return;
+			if (seq !== undefined) settledSeq.set(pane, seq);
+			settled(current.name, current.status);
 		}, SETTLE_MS);
-		settling.set(pane, { timer, from: start });
+		settling.set(pane, { timer, from: start, seq });
 	};
 
 	const onFrame = (frame: Frame) => {
@@ -279,12 +234,13 @@ export function watch(
 		const entry = pane ? tracked.get(pane) : undefined;
 		if (!pane || !entry) return;
 		const where = dirs.get(entry.name);
-		const stopped = where && (where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io));
+		const stopped = where && isStopped(where.sandbox);
 		if (!stopped && /pane[._]exited/.test(frame.event ?? "")) {
 			leave(pane, entry, listed(), true);
 			return;
 		}
 		const next = stopped ? "stopped" : frame.data?.agent_status ?? "unknown";
+		const seq = frame.data?.state_change_seq;
 		const previous = entry.status;
 		const change = transition(previous, next);
 		if (!change) return;
@@ -293,13 +249,15 @@ export function watch(
 		tracked.set(pane, { ...entry, status: next, since: now, rang: now });
 		report();
 		if (TERMINAL.has(next)) {
-			if (wakeable || settling.has(pane)) settle(pane, previous);
+			if (wakeable || settling.has(pane)) settle(pane, previous, seq);
 			return;
 		}
 		const pending = settling.get(pane);
 		if (pending) clearTimeout(pending.timer);
 		settling.delete(pane);
-		if (wakeable) emit(entry.name, change, { settled: next === "blocked" });
+		if (!wakeable) return;
+		if (next === "blocked") settled(entry.name, next);
+		else emit(entry.name, change, { key: change });
 	};
 
 	const connect = () => {
@@ -337,20 +295,6 @@ export function watch(
 		});
 	};
 
-	const noticeDeaths = (rows: Sandbox[]) => {
-		for (const t of tracked.values()) {
-			if (t.status !== "working" || !locate(t.name, rows)) continue;
-			const attention = fieldsOf(statusOf(t.name)).attention ?? "";
-			if (!attention.startsWith(STOPPED)) {
-				deaths.delete(t.name);
-				continue;
-			}
-			if (deaths.get(t.name) === attention) continue;
-			deaths.set(t.name, attention);
-			emit(t.name, `${t.status} -> stopped on an error`);
-		}
-	};
-
 	const refresh = () => {
 		if (stopped) return;
 		const wanted = scope();
@@ -384,7 +328,13 @@ export function watch(
 		for (const agent of agents) {
 			const pane = agent.pane_id;
 			if (pane && tracked.has(pane))
-				onFrame({ data: { pane_id: pane, agent_status: agent.agent_status } });
+				onFrame({
+					data: {
+						pane_id: pane,
+						agent_status: agent.agent_status,
+						state_change_seq: agent.state_change_seq,
+					},
+				});
 		}
 		for (const pane of [...tracked.keys()]) {
 			if (agents.some((a) => a.pane_id === pane)) continue;
@@ -400,7 +350,6 @@ export function watch(
 				rang: now,
 			});
 		report();
-		noticeDeaths(rows);
 		if (fresh.length)
 			io.log(
 				`[fleet] watching ${[...tracked.values()].map((t) => `${t.name} ${t.status}`).join(", ")}`,
@@ -408,89 +357,24 @@ export function watch(
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();
 	};
 
-	const noticeFailures = () => {
-		for (const t of tracked.values()) {
-			const where = dirs.get(t.name);
-			if (t.status !== "working" || !where) continue;
-			const activity = activityOf(io.read(`${where.dir}/${ACTIVITY}`));
-			if (
-				!activity?.streakFrom ||
-				activity.streak < FAILED_IN_A_ROW ||
-				streaks.get(t.name) === activity.streakFrom
-			)
-				continue;
-			streaks.set(t.name, activity.streakFrom);
-			emit(t.name, `working, ${activity.streak} tool calls failed in a row`);
-		}
-	};
-
-	const noticeIdle = (now: number) => {
-		const quiet = [...tracked].filter(
-			([, t]) =>
-				t.rang <= t.since && idleStalled(t.status, undefined, now - t.since),
-		);
-		if (!quiet.length) return;
-		const rows = listed();
-		if (!rows) return;
-		for (const [pane, t] of quiet) {
-			if (!locate(t.name, rows)) continue;
-			const status = fieldsOf(statusOf(t.name)).status;
-			tracked.set(pane, { ...t, rang: now });
-			if (!idleStalled(t.status, status, now - t.since)) continue;
-			emit(
-				t.name,
-				`${t.status} ${Math.round((now - t.since) / 60_000)}m at ${status ?? "no status"}, stalled`,
-				{ unlessCi: true },
-			);
-		}
-	};
-
-	const resets = new Map<string, Date | undefined>();
-
 	const noticeLimits = () => {
-		const idle = [...tracked.values()].filter(
-			(t) => t.status === "idle" || t.status === "done",
+		const waiting = [...tracked.values()].filter(
+			(t) => TERMINAL.has(t.status) && limits.has(t.name),
 		);
-		const rows = idle.length ? listed() : undefined;
-		for (const t of idle) {
+		const rows = waiting.length ? listed() : undefined;
+		for (const t of waiting) {
+			const stop = limits.get(t.name);
 			const where = rows && locate(t.name, rows);
-			if (!where || where.sandbox.status === "stopped" || stoppedPane(where.sandbox, io) || !limitStop(fieldsOf(statusOf(t.name)).attention)) continue;
-			const stoppedAt = io.stat(`${where.dir}/status.md`)?.mtime;
-			if (!stoppedAt) continue;
-			const stop = `${t.name}@${stoppedAt.toISOString()}`;
-			if (!resets.has(stop)) {
-				let pane = "";
-				try {
-					pane = io.herdrText([
-						"agent",
-						"read",
-						t.name,
-						"--source",
-						"recent-unwrapped",
-						"--lines",
-						"40",
-					]);
-				} catch (error) {
-					io.log(`[fleet] watch: limit: ${String(error)}`);
-				}
-				resets.set(stop, resetAt(pane, stoppedAt));
-			}
-			const resumes = steersSince(
-				io.read(events) ?? "",
-				t.name,
-				CONTINUE,
-				stoppedAt,
-			);
-			const last = resumes.at(-1);
-			const worked = activityOf(io.read(`${where.dir}/${ACTIVITY}`))?.last;
-			if (last && worked && new Date(worked) > last) continue;
-			const due = resumeDue(stoppedAt, resets.get(stop), resumes);
+			if (!stop || !where || isStopped(where.sandbox)) continue;
+			const resumes = steersSince(io.read(events) ?? "", t.name, CONTINUE, stop.at);
+			const due = resumeDue(stop.at, stop.reset, resumes);
 			if (io.now() < due) continue;
 			if (resumes.length >= RETRIES) {
 				if (io.now().getTime() < due.getTime() + STALL_TICK_MS)
 					emit(
 						t.name,
 						`stopped on the account limit, ${RETRIES} resumes did not take`,
+						{ tail: tailOf(t.name) },
 					);
 				continue;
 			}
@@ -505,9 +389,7 @@ export function watch(
 
 	const ring = () => {
 		noticeLimits();
-		noticeFailures();
 		const now = Date.now();
-		noticeIdle(now);
 		const entries = [...tracked].map(([pane, t]) => ({
 			pane,
 			status: t.status,
@@ -521,6 +403,7 @@ export function watch(
 			emit(
 				t.name,
 				`working ${Math.round((now - t.since) / 60_000)}m without settling`,
+				{ tail: tailOf(t.name) },
 			);
 		}
 	};

@@ -1,15 +1,8 @@
 import { dirname } from "node:path";
-import { CLI, CONTINUE, KINDS, type AgentName } from "../harness.ts";
+import { CLI, KINDS, type AgentName } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
-import { STOPPED } from "../../extensions/handoff-on-error.ts";
-import { COMPLETE } from "../../extensions/session-handoff.ts";
-import {
-	ACTIVITY,
-	changes,
-	fieldsOf,
-	STATUS_LOG,
-} from "../../extensions/status-history.ts";
-import { activityOf, callsSince, projection, toolUsage } from "./activity.ts";
+import { ACTIVITY } from "../../extensions/activity.ts";
+import { activityOf, projection, toolUsage } from "./activity.ts";
 import { render } from "../render/render.ts";
 import {
 	artifactsDir,
@@ -22,13 +15,13 @@ import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
-import { idleStalled, TERMINAL } from "./monitor.ts";
+import { TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { harnessStamp, imageStampPath, resumeAgent, staleImage } from "./up.ts";
 import {
 	agentFor,
-	branchFacts,
 	checkoutProbe,
+	commitsOf,
 	formatRows,
 	parseCheckout,
 	sandboxes,
@@ -62,20 +55,6 @@ export function activityNow(task: string, io: Io): string {
 	);
 }
 
-const justAfter = (at: string) => new Date(Date.parse(at) + 1);
-
-export function blockedWork(task: string, io: Io): number {
-	const { status, attention } = fieldsOf(io.read(`${task}/status.md`));
-	if (status !== "blocked" || attention?.startsWith(STOPPED)) return 0;
-	let from: string | undefined;
-	for (const change of changes(io.read(`${task}/${STATUS_LOG}`)).reverse()) {
-		if (change.status !== "blocked") break;
-		from = change.at;
-	}
-	return from ? callsSince(io.read(`${task}/${ACTIVITY}`), justAfter(from)) : 0;
-}
-
-
 export function ls(io: Io): string {
 	const live = agents(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
@@ -99,15 +78,10 @@ export function ls(io: Io): string {
 				facts: lastLine(error),
 			};
 		}
-		const running = canProbe;
 		const repo = s.workspaces[0];
 		const task = repo ? taskDir(repo, s.name, io) : undefined;
-		const last = task
-			? activityOf(io.read(`${task}/${ACTIVITY}`))?.last
-			: undefined;
-		const facts =
-			running && repo && !manifest ? branchFacts(io, s.name, repo) : undefined;
-		let ciRunning = facts?.running ?? false;
+		const commits =
+			canProbe && repo && !manifest ? commitsOf(io, s.name) : undefined;
 		const checkouts: string[] = [];
 		for (const entry of manifest?.repositories ?? []) {
 			try {
@@ -117,11 +91,7 @@ export function ls(io: Io): string {
 				checkouts.push(
 					`${entry.name} ${current?.branch ?? entry.branch} ${current?.dirty ?? "?"} dirty ${current?.head ?? entry.baseSha}${canProbe ? "" : " (last known)"}`,
 				);
-				if (running) {
-					const facts = branchFacts(io, s.name, entry.repo, entry);
-					ciRunning ||= facts.running;
-					checkouts.push(`commits ${facts.commits}; pr ${facts.pr}`);
-				}
+				if (canProbe) checkouts.push(`commits ${commitsOf(io, s.name, entry)}`);
 			} catch (error) {
 				return {
 					sandbox: s.name,
@@ -139,19 +109,9 @@ export function ls(io: Io): string {
 			agent,
 			branch: checkout.branch,
 			dirty: checkout.dirty,
-			blocked: task ? blockedWork(task, io) : 0,
-			stalled:
-				!ciRunning &&
-				!!last &&
-				idleStalled(
-					agent,
-					fieldsOf(io.read(`${task}/status.md`)).status,
-					io.now().getTime() - new Date(last).getTime(),
-				),
-			activity:
-				task ? activityNow(task, io) : undefined,
+			activity: task ? activityNow(task, io) : undefined,
 			facts:
-				[facts && `commits ${facts.commits}; pr ${facts.pr}`, ...(checkouts ?? [])]
+				[commits && `commits ${commits}`, ...checkouts]
 					.filter(Boolean)
 					.join("\n  ") || undefined,
 		};
@@ -304,24 +264,16 @@ export function steer(
 
 const IDLE_TIMEOUT_MS = 60_000;
 
-export async function handoff(
+export async function fresh(
 	sandbox: Sandbox,
+	text: string,
 	io: Io,
-	options: { continue?: boolean; root?: string } = {},
+	root?: string,
 ): Promise<void> {
 	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
-	const command = sandbox.kind.tokens["handoff.command"];
-	if (sandbox.kind.handoffTakesText)
-		return prompt(
-			sandbox,
-			options.continue ? `${command} ${CONTINUE}` : command,
-			io,
-			{ root: options.root, reset: true },
-		);
-	prompt(sandbox, command, io, { root: options.root, reset: true });
-	if (!options.continue) return;
+	prompt(sandbox, sandbox.kind.tokens["fresh.command"], io, { root, reset: true });
 	await idle(sandbox.name, io);
-	prompt(sandbox, CONTINUE, io);
+	prompt(sandbox, text, io);
 }
 
 async function idle(sandbox: string, io: Io): Promise<void> {
@@ -334,7 +286,7 @@ async function idle(sandbox: string, io: Io): Promise<void> {
 		await io.sleep(1000);
 	}
 	throw new Error(
-		`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the continue was not sent. Inspect ${CLI} peek ${sandbox}, then steer the continue yourself.`,
+		`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the line was not sent. Inspect ${CLI} peek ${sandbox}, then steer it yourself.`,
 	);
 }
 
@@ -351,12 +303,9 @@ function prompt(
 	const stale = root ? staleImage(root, kind, io) : undefined;
 	if (stale)
 		io.log(
-			`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that at its next natural break`,
+			`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that before its next ticket`,
 		);
 	logEvent(io, "steer", agent, text);
-	const handoff =
-		reset && workspaces[0] ? statusOf(workspaces[0], sandbox, io) : undefined;
-	const before = handoff?.();
 	try {
 		io.herdr([
 			"agent",
@@ -375,26 +324,13 @@ function prompt(
 			!error.message.includes("agent_prompt_stalled")
 		)
 			throw error;
-		if (!handoff)
+		if (!reset)
 			throw new Error(
 				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${CLI} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
 				{ cause: error },
 			);
 	}
-	if (handoff && (before === COMPLETE || handoff() !== COMPLETE))
-		throw new Error(
-			`${text} sent, and status.md shows no context reset. Inspect ${CLI} peek ${sandbox}; do not steer again until you know whether the session was cleared.`,
-		);
 	io.log(`${agent}: steered`);
-}
-
-function statusOf(
-	repo: string,
-	sandbox: string,
-	io: Io,
-): () => string | undefined {
-	return () =>
-		fieldsOf(io.read(`${taskDir(repo, sandbox, io)}/status.md`)).attention;
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
@@ -510,7 +446,7 @@ function folderLine(indent: string, dir: string, name: string, io: Io): Line {
 }
 
 function isTask(dir: string, io: Io): boolean {
-	return io.stat(`${dir}/status.md`) !== undefined;
+	return io.stat(`${dir}/logs`)?.dir === true;
 }
 
 export function artifacts(repo: string, io: Io): string {
@@ -567,42 +503,6 @@ function artifactListing(root: string, io: Io): string {
 				: `${l.indent}${l.name}`,
 		),
 	].join("\n");
-}
-
-const two = (n: number) => String(n).padStart(2, "0");
-
-function localTime(iso: string): string {
-	const at = new Date(iso);
-	return `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())} ${two(at.getHours())}:${two(at.getMinutes())}:${two(at.getSeconds())}`;
-}
-
-export function history(sandbox: string, repo: string, io: Io): string {
-	const running = sandboxes(io).find(
-		(s) => s.name === sandbox || agentName(s.name) === sandbox,
-	);
-	const file = `${taskDir(running?.workspaces[0] ?? repo, running?.name ?? sandbox, io)}/${STATUS_LOG}`;
-	const kept = changes(io.read(file));
-	if (!kept.length)
-		return `${file}: no changes yet; the container adds a line each time status.md changes`;
-	const out: string[] = [];
-	let before: Record<string, string | undefined> = { attention: "none" };
-	kept.forEach((change, index) => {
-		const now = {
-			status: change.status,
-			attention: change.attention,
-			summary: change.summary?.replace(/\s+/g, " "),
-		};
-		out.push(
-			`${String(index + 1).padStart(3, "0")}  ${localTime(change.at)}  ${before.status && before.status !== now.status ? `${before.status} -> ` : ""}${now.status ?? "not recorded"}`,
-		);
-		for (const name of ["attention", "summary"] as const)
-			if (now[name] && now[name] !== before[name])
-				out.push(`     ${name}: ${now[name]}`);
-		for (const line of change.added) out.push(`     + ${line.slice(2)}`);
-		for (const line of change.removed) out.push(`     removed: ${line.slice(2)}`);
-		before = now;
-	});
-	return out.join("\n");
 }
 
 function sessionUsage(
@@ -774,7 +674,7 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		summary.runtime = runtime;
 		const tools = toolUsage(io.read(`${task}/${ACTIVITY}`), runtime);
 		if (tools) summary.tools = tools;
-		summary.task = { status: fieldsOf(io.read(`${task}/status.md`)).status, branch: checkout.branch, head: checkout.head };
+		summary.task = { branch: checkout.branch, head: checkout.head };
 		io.write(`${task}/logs/usage.json`, `${JSON.stringify(summary, null, 2)}\n`);
 		io.log(`${sandbox}: usage ${oneLine(summary)} -> ${task}/logs/usage.json`);
 		io.log(runtime.coverage === "complete"

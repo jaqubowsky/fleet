@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Superseded by [007](007-state-from-herdr.md).
 
 ## Context
 
