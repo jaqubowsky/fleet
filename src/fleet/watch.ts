@@ -6,19 +6,18 @@ import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
 import { type Io, seatOf } from "./io.ts";
 import {
 	closingLabel,
-	READ_LINES,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
 	STALL_MS,
 	stalled,
-	TAIL_LINES,
+	shown,
 	TERMINAL,
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { taskDir } from "./repositories.ts";
-import { repeats, TURNS, turnEntry } from "./turns.ts";
+import { READ_LINES, repeats, TURNS, turnEntry } from "./turns.ts";
 import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 
 const REFRESH_MS = 30_000;
@@ -186,21 +185,20 @@ export function watch(
 				at: io.now().toISOString(),
 			});
 		}
+		onWake(wakeLines(name, where?.sandbox.name ?? name, change, shown(tail)));
 		if (where) logTurn(where.sandbox, turnEntry(io.now(), change, tail, closing));
-		onWake(
-			wakeLines(name, where?.sandbox.name ?? name, change, tail.split("\n").slice(-TAIL_LINES).join("\n")),
-		);
 	};
 
 	const settled = (name: string, state: string) => {
 		const tail = tailOf(name);
-		const label = closingLabel(tail.split("\n").slice(-TAIL_LINES).join("\n"));
-		const limited = label === "no closing message" && state !== "blocked" && limitStop(tail);
+		const last = shown(tail);
+		const label = closingLabel(last);
+		const limited = label === "no closing message" && state !== "blocked" && limitStop(last);
 		if (!limited) limits.delete(name);
 		else {
 			if (!limits.has(name)) {
 				const at = io.now();
-				limits.set(name, { at, reset: resetAt(tail, at) });
+				limits.set(name, { at, reset: resetAt(last, at) });
 			}
 			return;
 		}
