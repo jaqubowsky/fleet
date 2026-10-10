@@ -8,7 +8,6 @@ import {
 	copy,
 	down,
 	exec,
-	fresh,
 	ls,
 	peek,
 	renderHost,
@@ -52,7 +51,7 @@ const usage = `usage:
   ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
   ${CLI} stopped <sandbox>                           what stop leaves in the saved tab: a full-screen view of the stopped container until ctrl+c
-  ${CLI} steer <sandbox> [--fresh] <text...>          send the container's agent this text; --fresh first starts a new session with the agent's own command and sends the text once that session is idle
+  ${CLI} steer <sandbox> <text...>                    send the container's agent this text
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   ${CLI} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
@@ -71,7 +70,6 @@ const NAME_CHECK_MS = 5000;
 const BARE = new Set([
 	"apply",
 	"brief",
-	"fresh",
 	"force",
 	"push",
 	"sign",
@@ -257,12 +255,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		process.on("SIGHUP", leave);
 		await new Promise(() => {});
 	},
-	async steer(args) {
-		const { opts, rest } = flags(args, ["fresh"]);
+	steer(args) {
+		const { rest } = flags(args, []);
 		const [sandbox, ...text] = rest;
-		const line = need(text.join(" "), "text");
-		if (opts.fresh === true) await fresh(sandboxOf(sandbox), line, io, root);
-		else steer(sandboxOf(sandbox), line, io, root);
+		steer(sandboxOf(sandbox), need(text.join(" "), "text"), io, root);
 	},
 	exec(args) {
 		const { rest } = flags(args, []);

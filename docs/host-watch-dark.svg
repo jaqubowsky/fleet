@@ -28,5 +28,5 @@
         <text x="620" y="232" class="t">hits the usage limit</text>
         <text x="620" y="256" class="h">resumes it after the reset</text>
         <text x="430" y="312" text-anchor="middle" class="t">fills its context</text>
-        <text x="430" y="334" text-anchor="middle" class="h">approves a fresh session</text>
+        <text x="430" y="334" text-anchor="middle" class="h">compacts it at 400k on its own</text>
       </svg>

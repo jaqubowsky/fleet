@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { KINDS, SEATS } from "../harness.ts";
-import { fresh, ls, peek, start, stop, stopFile, stoppedPane, steer } from "./commands.ts";
+import { ls, peek, start, stop, stopFile, stoppedPane, steer } from "./commands.ts";
 import { fakeIo } from "./fake-io.ts";
 import type { Sandbox } from "./status.ts";
 
@@ -91,14 +91,6 @@ for (const kind of Object.values(KINDS)) {
 
 		assert.match(text, /stopped; checkout not probed/);
 		assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
-	});
-
-	test(`${kind.name} a stopped container rejects a fresh session`, async () => {
-		const io = fakeIo(fixture);
-
-		await assert.rejects(fresh(stopped, "go", io), /fleet start/);
-
-		assert.deepEqual(io.calls, []);
 	});
 
 	test(`${kind.name} a failed stop leaves the running agent available`, async () => {

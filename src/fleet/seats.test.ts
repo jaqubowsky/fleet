@@ -10,7 +10,6 @@ import {
 	copy,
 	down,
 	exec,
-	fresh,
 	ls,
 	peek,
 	renderHost,
@@ -79,113 +78,6 @@ for (const seat of Object.values(SEATS))
 		});
 	}
 
-const LINE = "Deliver issues/02-api.md";
-
-function startingFresh(
-	name: string,
-	kind: (typeof KINDS)[keyof typeof KINDS],
-	seat: (typeof SEATS)[keyof typeof SEATS],
-	after = "idle",
-) {
-	const io = fakeIo(
-		{
-			...listed(name, kind.name),
-			"herdr agent list": {
-				result: {
-					agents: [{ name, pane_id: "w1:p2", tab_id: "w1:t2", agent_status: after }],
-				},
-			},
-		},
-		seat,
-	);
-	const prompts = () =>
-		io.calls
-			.filter((c) => c[0] === "herdr" && c[2] === "prompt")
-			.map((c) => c[4]);
-	return { io, prompts };
-}
-
-for (const seat of Object.values(SEATS))
-	for (const kind of Object.values(KINDS)) {
-		const name = `${kind.prefix}a`;
-
-		test(`a ${seat.name} seat starts a fresh ${kind.name} session with its own command, then sends the line`, async () => {
-			const { io, prompts } = startingFresh(name, kind, seat);
-
-			await fresh(resolveSandbox(name, io), LINE, io);
-
-			assert.deepEqual(prompts(), [kind.tokens["fresh.command"], LINE]);
-		});
-	}
-
-test("the pi command for a fresh session is /new and the claude one /clear", () => {
-	assert.equal(KINDS.pi.tokens["fresh.command"], "/new");
-	assert.equal(KINDS.claude.tokens["fresh.command"], "/clear");
-});
-
-test("the line waits until herdr reports the fresh session idle", async () => {
-	const name = "claude-a";
-	const { io, prompts } = startingFresh(name, KINDS.claude, SEATS.pi);
-	const polls: string[] = ["working", "working", "idle"];
-	const herdr = io.herdr;
-	const order: string[] = [];
-	io.herdr = ((args: string[]) => {
-		order.push(args[1]);
-		return args[1] === "list"
-			? { result: { agents: [{ name, agent_status: polls.shift() }] } }
-			: herdr(args);
-	}) as typeof io.herdr;
-
-	await fresh(resolveSandbox(name, io), LINE, io);
-
-	assert.deepEqual(
-		order.filter((call) => call === "prompt" || call === "list"),
-		["prompt", "list", "list", "list", "prompt"],
-	);
-	assert.deepEqual(prompts(), ["/clear", LINE]);
-});
-
-test("the line also goes once herdr reports the fresh session done", async () => {
-	const { io, prompts } = startingFresh("claude-a", KINDS.claude, SEATS.pi, "done");
-
-	await fresh(resolveSandbox("claude-a", io), LINE, io);
-
-	assert.deepEqual(prompts(), ["/clear", LINE]);
-});
-
-test("a fresh session says when the container's image predates the harness, once", async () => {
-	const { io } = startingFresh("claude-a", KINDS.claude, SEATS.pi);
-	Object.assign(io, {
-		read: (
-			(read) => (path: string) =>
-				path.endsWith("cache/claude/image-stamp") ? "31e3d51\n" : read(path)
-		)(io.read),
-	});
-	const git = io.git;
-	io.git = (args, cwd) =>
-		args.join(" ") === "log -1 --format=%h" ? "f7e7f1a" : git(args, cwd);
-
-	await fresh(resolveSandbox("claude-a", io), LINE, io, "/root");
-
-	assert.equal(
-		io.lines.filter((line) =>
-			line.includes("keeps its image until it goes down and up again"),
-		).length,
-		1,
-	);
-});
-
-test("a container whose fresh session never turns idle fails naming the sandbox, and gets no line", async () => {
-	const name = "claude-a";
-	const { io, prompts } = startingFresh(name, KINDS.claude, SEATS.claude, "working");
-
-	await assert.rejects(
-		fresh(resolveSandbox(name, io), LINE, io),
-		/claude-a: .*idle.*the line was not sent/,
-	);
-	assert.deepEqual(prompts(), ["/clear"]);
-});
-
 test("the kind comes from the agent sbx reports, whatever the name prefix says", () => {
 	const io = fakeIo({
 		"sbx ls --json": {
@@ -240,7 +132,7 @@ test("a claude- container an earlier fleet put up is listed, steered and taken d
 const seatless = (answers: Record<string, unknown> = {}) =>
 	Object.assign(fakeIo(answers), { seat: undefined });
 
-test("up, steer, a fresh steer, watch and render require a seat, while profile --apply configures both hosts from a plain shell", async () => {
+test("up, steer, watch and render require a seat, while profile --apply configures both hosts from a plain shell", async () => {
 	const io = seatless({
 		...listed("pi-a", "pi"),
 		"read /root/host/repos.json": SAMPLE_PROFILES,
@@ -256,10 +148,6 @@ test("up, steer, a fresh steer, watch and render require a seat, while profile -
 		/FLEET_SEAT/,
 	);
 	assert.throws(() => steer(resolveSandbox("pi-a", io), "go", io), /FLEET_SEAT/);
-	await assert.rejects(
-		fresh(resolveSandbox("pi-a", io), LINE, io),
-		/FLEET_SEAT/,
-	);
 	assert.throws(() => watch(paneScope(io, []), io), /FLEET_SEAT/);
 	assert.throws(() => renderHost("/root", io), /FLEET_SEAT/);
 	const applied = permissions({ root: "/root", repo: "/r", apply: true }, io);

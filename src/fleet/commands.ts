@@ -15,7 +15,6 @@ import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
-import { TERMINAL } from "./monitor.ts";
 import { agentName } from "./name.ts";
 import { harnessStamp, imageStampPath, resumeAgent, staleImage } from "./up.ts";
 import {
@@ -262,39 +261,11 @@ export function steer(
 	prompt(sandbox, text, io, { root });
 }
 
-const IDLE_TIMEOUT_MS = 60_000;
-
-export async function fresh(
-	sandbox: Sandbox,
-	text: string,
-	io: Io,
-	root?: string,
-): Promise<void> {
-	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
-	prompt(sandbox, sandbox.kind.tokens["fresh.command"], io, { root, reset: true });
-	await idle(sandbox.name, io);
-	prompt(sandbox, text, io);
-}
-
-async function idle(sandbox: string, io: Io): Promise<void> {
-	const started = io.now().getTime();
-	while (io.now().getTime() - started < IDLE_TIMEOUT_MS) {
-		if (
-			TERMINAL.has(agentFor(agents(io), agentName(sandbox))?.agent_status ?? "")
-		)
-			return;
-		await io.sleep(1000);
-	}
-	throw new Error(
-		`${sandbox}: the fresh session did not report idle within ${IDLE_TIMEOUT_MS / 1000}s, so the line was not sent. Inspect ${CLI} peek ${sandbox}, then steer it yourself.`,
-	);
-}
-
 function prompt(
 	{ name: sandbox, kind, workspaces }: Sandbox,
 	text: string,
 	io: Io,
-	{ root, reset }: { root?: string; reset?: boolean } = {},
+	{ root }: { root?: string } = {},
 ): void {
 	seatOf(io);
 	const row = { name: sandbox, workspaces };
@@ -324,11 +295,10 @@ function prompt(
 			!error.message.includes("agent_prompt_stalled")
 		)
 			throw error;
-		if (!reset)
-			throw new Error(
-				`agent_prompt_stalled: Prompt submission uncertain. Inspect ${CLI} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
-				{ cause: error },
-			);
+		throw new Error(
+			`agent_prompt_stalled: Prompt submission uncertain. Inspect ${CLI} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
+			{ cause: error },
+		);
 	}
 	io.log(`${agent}: steered`);
 }

@@ -18,7 +18,6 @@ You give the container its orders the way the user gives them to you, as a lead 
 - A steer names the outcome, never a skill: "check in the running app that ...". How the work runs (the checks, reviews, commits) is the container's rules' to decide
 - Context pointers carry the supporting material: name the spec, ticket, research notes and relevant commit SHAs the container needs to read, with what each holds. Before steering, check that the files are readable from the container and the commits exist in its clone. Keep the outcome and boundaries in the steer; the linked material stays in its source
 - What a container can deliver, in the words a steer uses: [references/outcomes.md](references/outcomes.md)
-- Every ticket, the final verification and every pull request round start in a fresh session: `{{cli}} steer <sandbox> --fresh` and one line naming the ticket path or the step. What was settled already sits in `spec.md` and the ticket
 
 ```text
 Deliver issues/12-restore.md. Restoring a project brings back only the files deleted with it.
@@ -26,7 +25,7 @@ Deliver issues/12-restore.md. Restoring a project brings back only the files del
 
 ## Driving a task
 
-On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A `turn ended` wake after a ticket's commit is the next ticket's `--fresh` steer; after the last ticket, the final verification's.
+On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A `turn ended` wake after a ticket's commit is the next ticket's steer; after the last ticket, the final verification's.
 
 Stop for the user on a `question` wake whose decision is theirs, and on a decision that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 
@@ -89,7 +88,6 @@ For multiple repositories the same command lands every one, and its last lines g
 - `{{cli}} down` refuses dirty or unlanded work in any private clone of a multi-repository task; in a one-repo task it refuses a dirty tree and commits that reached neither the host repo nor the container's origin. `{{cli}} peek` shows what would go, and `--force` discards either.
 - `{{cli}} land` refuses a container branch that descends neither from the one here nor from its `landed` ref: the container resyncs to `origin/<branch>`. It also refuses a dirty container tree, a detached HEAD, the base branch itself, and a branch checked out here.
 - `{{cli}} land <sandbox> --push` refuses anything that is not a fast-forward.
-- `{{cli}} steer --fresh` fails when the fresh session never turns idle: `{{cli}} peek`, then steer the line yourself once it is idle.
 - `{{cli}} steer` answers `agent_blocked` while a dialog waits in that tab: read the pane, ask the user, answer the dialog, then steer.
 - `{{cli}} up` refuses when it cannot fetch any remote base; it never starts a new branch from a stale local base. Check access or name an existing remote base with `--base`, then retry.
 - `{{cli}} up` ending in `did not become ready` leaves a tab to read: `herdr agent read <pane> --source recent-unwrapped --lines 60`, and report what it printed.

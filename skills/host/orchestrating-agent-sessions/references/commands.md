@@ -10,7 +10,6 @@ Reached from the skill before running a `{{cli}}` command: the row for the opera
 | resume a stopped container | `{{cli}} start <sandbox>` | the agent in its saved tab, with its last saved session when one exists; no prompt sent |
 | what is it doing this minute | `{{cli}} peek <sandbox> [--lines 40]` | each running repo's branch, dirty count, full SHA, status, log, diff and install log, then the pane tail; a stopped container shows only its saved pane, without starting it |
 | send it this | `{{cli}} steer <sandbox> "<text>"` | {{steer.result}} |
-| start the next ticket, the final verification or a pull request round | `{{cli}} steer <sandbox> --fresh "<one line naming the ticket or the step>"` | the container's agent starts a new session with its own command, then gets the line once herdr reports it idle |
 | run something inside | `{{cli}} exec <sandbox> -- <command>` | command output; one quoted argument runs as a shell line, several run as argv |
 | what it left | `{{cli}} artifacts [--repo <path>]` | each task's files with size and age, its folders folded to one line |
 | get one file out | `{{cli}} copy <sandbox>:<path> <local>` | local path |

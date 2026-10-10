@@ -71,7 +71,6 @@ export const KINDS: Record<AgentName, Kind> = {
 			"reload.models": RELOAD_MODELS,
 			"delegation.parallel":
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
-			"fresh.command": "/new",
 			"ci.wait":
 				"pi runs it in the foreground, so give that bash call no timeout or one above 1260 seconds; a steer lands after it returns.",
 			"review.call":
@@ -106,7 +105,6 @@ export const KINDS: Record<AgentName, Kind> = {
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',
-			"fresh.command": "/clear",
 			"ci.wait":
 				"Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
 			"review.call":
