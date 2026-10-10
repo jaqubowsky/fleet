@@ -2,6 +2,7 @@ export const SETTLE_MS = 1000;
 export const STALL_MS = 20 * 60_000;
 export const RING_MS = 15 * 60_000;
 export const TAIL_LINES = 15;
+export const READ_LINES = 60;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
 
