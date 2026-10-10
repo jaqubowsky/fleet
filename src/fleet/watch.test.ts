@@ -19,6 +19,18 @@ const sandboxes = [
 
 const CLOSED = "Changes: none\nChecks: none\nCommits: none\nQuestion: none";
 
+function appending(io: ReturnType<typeof fakeIo>) {
+	io.append = (path, line) => {
+		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
+	};
+}
+
+function leaving(io: ReturnType<typeof fakeIo>) {
+	const sbx = io.sbx;
+	io.sbx = (args, opts) =>
+		args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts);
+}
+
 function herdr(
 	t: TestContext,
 	agents: { name: string; pane_id: string; agent_status: string }[],
@@ -433,11 +445,7 @@ test("a watched container whose sandbox leaves the list wakes once as taken down
 		(text) => wakes.push(text),
 	);
 
-	const sbx = io.sbx;
-	io.sbx = (args, opts) =>
-		args.join(" ") === "ls --json"
-			? JSON.stringify({ sandboxes: [] })
-			: sbx(args, opts);
+	leaving(io);
 	intervals.get(30_000)?.();
 	intervals.get(30_000)?.();
 
@@ -534,7 +542,7 @@ test("a turn that ends without the closing message wakes the host with no closin
 	assert.match(wakes[0], /^\[fleet\] claude-worker: no closing message\n\nError: 529 overloaded/);
 });
 
-test("the watch reads 60 pane lines and the wake carries the last 15", (t) => {
+test("the watch reads 60 pane lines", (t) => {
 	const { io, turn } = settles(t, CLOSED);
 
 	turn();
@@ -546,11 +554,6 @@ test("the watch reads 60 pane lines and the wake carries the last 15", (t) => {
 
 const TURNS = "/home/me/.fleet/tasks/webapp/claude-worker/logs/turns.md";
 
-function appending(io: ReturnType<typeof herdr>["io"]) {
-	io.append = (path, line) => {
-		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
-	};
-}
 
 test("a turn ended wake appends its time, its label and the four closing lines to the turn log", (t) => {
 	const closing = "Changes: restore keeps deleted files\nChecks: npm test -> exit 0 @ abc1234, logs/gate-1/test.log\nCommits: abc1234 feat(projects): restore deleted files\nQuestion: none";
@@ -572,6 +575,16 @@ test("the same closing message on a second wake adds nothing to the turn log", (
 	assert.equal(io.files[TURNS]?.match(/^## /gm)?.length, 1);
 });
 
+test("a pane line that looks like a heading does not defeat the repeat check", (t) => {
+	const { io, turn } = settles(t, "## Plan\nChanges: x\n## Done\nQuestion: none");
+	appending(io);
+
+	turn();
+	turn();
+
+	assert.equal(io.files[TURNS]?.match(/^## \d{4}-/gm)?.length, 1);
+});
+
 test("a no closing message wake appends its label and the last 5 pane lines to the turn log", (t) => {
 	const { io, turn } = settles(t, "one\ntwo\nthree\nfour\nfive\nsix\nAPI Error: 529 overloaded");
 	appending(io);
@@ -587,13 +600,20 @@ test("a wake without pane lines logs its label alone", (t: TestContext) => {
 	]);
 	appending(io);
 	watch(() => undefined, io, () => {});
-	const sbx = io.sbx;
-	io.sbx = (args, opts) =>
-		args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts);
+	leaving(io);
 
 	intervals.get(30_000)?.();
 
 	assert.equal(io.files[TURNS], "## 2026-09-16T10:00:00Z idle -> taken down\n\n");
+});
+
+test("limit text older than the last 15 pane lines leaves the wake to the host", (t) => {
+	const older = ["API Error: rate_limit, resets 11:10pm", ...Array.from({ length: 19 }, (_, i) => `step ${i}`)].join("\n");
+	const { wakes, turn } = settles(t, older);
+
+	turn();
+
+	assert.match(wakes[0] ?? "", /^\[fleet\] claude-worker: no closing message\n/);
 });
 
 test("a closing message with more check lines than the wake shows still reaches the turn log whole", (t) => {
@@ -659,9 +679,7 @@ function limited(t: TestContext, pane: string, stoppedAt: Date) {
 	const dir = "/home/me/.fleet/tasks/webapp/claude-worker";
 	const events = "/home/me/.fleet/tasks/fleet-events.log";
 	fixture.tails["claude-worker"] = pane;
-	io.append = (path, line) => {
-		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
-	};
+	appending(io);
 	let now = stoppedAt;
 	io.now = () => now;
 	const wakes: string[] = [];

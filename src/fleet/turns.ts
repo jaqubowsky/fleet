@@ -1,4 +1,5 @@
 export const TURNS = "logs/turns.md";
+export const READ_LINES = 60;
 const PANE_LINES = 5;
 
 const lastIndex = (lines: string[], word: RegExp) => lines.map((line) => word.test(line)).lastIndexOf(true);
@@ -15,7 +16,7 @@ export function turnEntry(at: Date, label: string, tail: string, closed: boolean
 }
 
 export function repeats(log: string | undefined, entry: string): boolean {
-	const last = log?.split(/^(?=## )/m).at(-1)?.trimEnd();
+	const last = log?.split(/^(?=## \d{4}-\d\d-\d\dT)/m).at(-1)?.trimEnd();
 	const timeless = (text: string) => text.replace(/^## \S+ /, "");
 	return last !== undefined && timeless(last) === timeless(entry.trimEnd());
 }
