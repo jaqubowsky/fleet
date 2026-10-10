@@ -1,6 +1,7 @@
 import fs from "node:fs";
+import compaction from "../compaction.json" with { type: "json" };
 
-export const COMPACT_AT: number = JSON.parse(fs.readFileSync(new URL("../compaction.json", import.meta.url), "utf8")).tokens;
+export const COMPACT_AT = compaction.tokens;
 
 const WINDOW_HALF_PCT = 50;
 const WINDOW_HIGH_PCT = 75;

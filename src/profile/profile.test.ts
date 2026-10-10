@@ -300,11 +300,11 @@ test("the description carries each sentence a seat would otherwise choose by lev
 	);
 	assert.match(
 		human.inside,
-		/^- push `human`: prepare the branch and ask for the push under `attention:`; the person pushes it, and a steer tells you once it is on GitHub$/m,
+		/^- push `human`: prepare the branch and ask for the push in `Question:` of the closing message; the person pushes it, and a steer tells you once it is on GitHub$/m,
 	);
 	assert.match(
 		ownInside,
-		/^- push `auto`: push your own branch to origin, never forced and never the default branch, before `ready-for-host` and at the end of each pull request round$/m,
+		/^- push `auto`: push your own branch to origin, never forced and never the default branch, before the run's last closing message and at the end of each pull request round$/m,
 	);
 	assert.match(
 		ownInside,

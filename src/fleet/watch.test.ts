@@ -687,6 +687,27 @@ test("a closing message after a resume ends the retries and wakes the host", (t:
 	assert.match(wakes[0], /^\[fleet\] claude-worker: turn ended\n/);
 });
 
+test("a crash after a resume wakes the host and ends the retries", (t: TestContext) => {
+	const { at, status, tails, wakes } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
+
+	assert.equal(at(30), 1);
+	status("worker:pane", "working");
+	tails["claude-worker"] = "API Error: 500 Internal Server Error";
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1000);
+
+	assert.equal(at(400), 1);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: no closing message\n\nAPI Error: 500/);
+});
+
+test("a dialog whose pane mentions a rate limit still wakes the host", (t: TestContext) => {
+	const { wakes, status } = settles(t, "rateLimit: 10 per minute\nAllow this command? (y/n)");
+
+	status("worker:pane", "blocked");
+
+	assert.match(wakes[0], /^\[fleet\] claude-worker: blocked, no closing message\n/);
+});
+
 test("resumes another session already sent count against the retries", (t: TestContext) => {
 	const stoppedAt = new Date(2026, 8, 16, 21, 40);
 	const { io, at, events } = limited(t, "API Error: rate_limit", stoppedAt);

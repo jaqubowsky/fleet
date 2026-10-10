@@ -3,9 +3,9 @@ import type { Runtime } from "./events.ts";
 import { STALL_MS } from "./monitor.ts";
 
 type Call = { at: string; tool: string; ok: boolean; agent: string };
-type Streak = { length: number; from: string };
+type Streak = { length: number };
 
-type Activity = { started: string; last: string; calls: number; lastTool: string; streak: number; streakFrom?: string };
+type Activity = { started: string; last: string; calls: number; lastTool: string; streak: number };
 
 function callsOf(jsonl: string | undefined): Call[] {
 	return (jsonl ?? "").split("\n").flatMap((line): Call[] => {
@@ -59,7 +59,7 @@ export function activityOf(jsonl: string | undefined): Activity | undefined {
 	const streaks = new Map<string, Streak>();
 	for (const call of calls) {
 		const current = streaks.get(call.agent);
-		streaks.set(call.agent, call.ok ? { length: 0, from: "" } : { length: (current?.length ?? 0) + 1, from: current?.length ? current.from : call.at });
+		streaks.set(call.agent, { length: call.ok ? 0 : (current?.length ?? 0) + 1 });
 	}
 	const longest = [...streaks.values()].reduce((a, b) => (b.length > a.length ? b : a));
 	const last = calls[calls.length - 1];
@@ -69,12 +69,7 @@ export function activityOf(jsonl: string | undefined): Activity | undefined {
 		calls: calls.length,
 		lastTool: last.tool,
 		streak: longest.length,
-		streakFrom: longest.length ? longest.from : undefined,
 	};
-}
-
-export function callsSince(jsonl: string | undefined, from: Date): number {
-	return callsOf(jsonl).filter((call) => new Date(call.at) >= from).length;
 }
 
 export function projection(activity: Activity | undefined, cost: number | undefined, now: Date): string {
