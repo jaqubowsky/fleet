@@ -17,48 +17,16 @@ const status = (d) => {
     model: d.model?.display_name,
     effort: d.effort?.level,
     tokens: (d.context_window?.total_input_tokens ?? 0) + (d.context_window?.total_output_tokens ?? 0),
-    percent: d.context_window?.used_percentage ?? 0,
     windows,
   };
 };
 
-const DEMO_PAYLOAD = (tok, fiveH) => ({
-  workspace: { current_dir: `${process.env.HOME}/project` },
-  model: { display_name: "Opus 5 (1M context)" },
-  effort: { level: "xhigh" },
-  context_window: {
-    total_input_tokens: tok - 2000,
-    total_output_tokens: 2000,
-    context_window_size: 1_000_000,
-    used_percentage: (tok / 1_000_000) * 100,
-  },
-  rate_limits: {
-    five_hour: { used_percentage: fiveH, resets_at: Math.floor(Date.now() / 1000) + 8040 },
-    seven_day: { used_percentage: 6 },
-  },
+let input = "";
+process.stdin.on("data", (c) => (input += c));
+process.stdin.on("end", () => {
+  let d = {};
+  try {
+    d = JSON.parse(input);
+  } catch {}
+  console.log(statusline(status(d)));
 });
-
-const SCENARIOS = [
-  ["fresh", 82_000, 15],
-  ["watch 150k", 168_000, 62],
-  ["near 200k", 220_000, 81],
-  ["dumb 250k", 270_000, 94],
-];
-
-if (process.argv[2] === "--demo") {
-  console.log();
-  for (const [label, tok, fiveH] of SCENARIOS) {
-    console.log(`  \x1b[2m${label.padEnd(11)}\x1b[0m${statusline(status(DEMO_PAYLOAD(tok, fiveH)))}`);
-  }
-  console.log();
-} else {
-  let input = "";
-  process.stdin.on("data", (c) => (input += c));
-  process.stdin.on("end", () => {
-    let d = {};
-    try {
-      d = JSON.parse(input);
-    } catch {}
-    console.log(statusline(status(d)));
-  });
-}

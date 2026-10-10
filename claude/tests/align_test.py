@@ -47,7 +47,8 @@ check("the guard hook reaches the user settings at an absolute path under this H
 check("no $HOME is left unexpanded", "$HOME" not in json.dumps(data))
 check("the fleet mod is enabled from this checkout's own marketplace folder", data["enabledPlugins"].get("fleet@harness") is True and data["extraKnownMarketplaces"]["harness"]["source"] == {"source": "directory", "path": str(align.REPO / "claude" / "mods")})
 check("no $HARNESS is left unexpanded", "$HARNESS" not in json.dumps(data))
-check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": True}) != [])
+check("the compaction point comes from its one source", data["env"]["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] == str(align.load(align.COMPACTION)["tokens"]))
+check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": False}) != [])
 
 herdr = {"matcher": "^(startup|resume|clear|compact|fork)$", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/herdr-agent-state.sh session"}]}
 stale = {"matcher": "Bash", "hooks": [{"type": "command", "command": str(align.HOME / ".claude" / "hooks" / "guard.sh"), "timeout": 10}]}

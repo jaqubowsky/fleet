@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "disableClaudeAiConnectors": true,
   "agentPushNotifEnabled": true,
-  "autoCompactEnabled": false,
+  "autoCompactEnabled": true,
   "autoMemoryEnabled": false,
   "remoteControlAtStartup": true,
   "skipWorkflowUsageWarning": true,
@@ -14,6 +14,7 @@
   },
   "env": {
     "CLAUDE_CODE_NO_FLICKER": "1",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "{{compaction.tokens}}",
     "FLEET_SEAT": "claude"
   },
   "statusLine": {

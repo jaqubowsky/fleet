@@ -1088,3 +1088,37 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		);
 	});
 }
+
+const compaction = JSON.parse(readFileSync(join(root, "src/compaction.json"), "utf8"));
+
+test("claude host and container compact on their own at the one compaction point, and the container asks fable for advice", () => {
+	const host = JSON.parse(readFileSync(join(root, "claude/profiles/host.json"), "utf8"));
+	renderSeats("claude", (out) => {
+		const container = JSON.parse(rendered(out, "container", "context/settings.json"));
+
+		assert.equal(compaction.tokens, 400_000);
+		assert.equal(host.autoCompactEnabled, true);
+		assert.equal(host.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW, "{{compaction.tokens}}");
+		assert.equal(container.autoCompactEnabled, true);
+		assert.equal(container.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW, "400000");
+		assert.equal(container.advisorModel, "claude-fable-5-1");
+		assert.ok(rendered(out, "container", "home/fleet/src/compaction.json"));
+	});
+});
+
+test("pi knows a 1M window for every codex model its seats use, and both seats compact at about 400k tokens", () => {
+	renderSeats("pi", (out) => {
+		for (const [seat, models, settings] of [
+			["host", "agent/models.json", "agent/settings.json"],
+			["container", "home/agent/models.json", "context/agent-settings.json"],
+		]) {
+			const overrides = JSON.parse(rendered(out, seat, models)).providers["openai-codex"].modelOverrides;
+			for (const model of ["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"])
+				assert.equal(overrides[model]?.contextWindow, compaction.window, `${seat} ${model}`);
+			const { compaction: compacts } = JSON.parse(rendered(out, seat, settings));
+			assert.equal(compacts.enabled, true, seat);
+			assert.ok(Math.abs(1_000_000 - compacts.reserveTokens - 400_000) <= 10_000, `${seat} compacts at ${1_000_000 - compacts.reserveTokens}`);
+		}
+		assert.ok(rendered(out, "container", "home/agent/src/compaction.json"));
+	});
+});
