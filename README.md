@@ -93,7 +93,7 @@ The host sleeps until a sandbox needs something, then wakes up with what changed
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/host-watch-dark.svg">
-  <img alt="The host wakes when a sandbox finishes, asks a question, stalls, hits the usage limit or fills its context, and handles each" src="docs/host-watch.svg">
+  <img alt="The host wakes when a sandbox finishes, asks a question, stalls or hits the usage limit, and handles each" src="docs/host-watch.svg">
 </picture>
 
 ## Every command passes a guard
