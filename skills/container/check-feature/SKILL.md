@@ -16,10 +16,10 @@ One question: does this change do what was asked, on the real screens of the run
 
 3. **Walk.** Every criterion in turn, through the device (`click`, `fill`, `press`, `page.mouse`), never a state set from `eval`. A criterion passes on the change the page shows, never on a command reporting success. A colour is read from the element with `getComputedStyle` in `eval`, never from a cropped screenshot, whose pixels blend with antialiasing and whose crop needs a library the image lacks. Done when every criterion carries a verdict and a screenshot read against it. Verdicts:
    - `passed`
-   - `failed`, with expected, actual and evidence; it is recorded and the walk goes on, since only `blocked` stops it
+   - `failed`, with expected, actual and evidence; the walk records it and goes on to the next criterion
    - `not-implemented`
    - `coverage-gap`: no control this browser can drive
-   - `unreachable`: a blocked run stopped before it
+   - `unreachable`: the run stopped before it
 
    A required action that cannot be completed is `failed`, even if another action works. Escape does not substitute for a required close button. Missing populated sibling data is a `coverage-gap`, not a pass from component tests. Only findings outside the cumulative criteria are incidental.
 

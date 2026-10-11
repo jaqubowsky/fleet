@@ -62,12 +62,12 @@ Every claim in the brief is a file in the evidence directory, quoted. The review
 
 ### 5. Hand back
 
-Read `review.md`. Report Review: complete or incomplete, Required fixes: yes or no, and the finding count per axis with its path. An incomplete assessment or open proven P0/P1 prevents closure. Task readiness still requires the task's acceptance and final gates. Fixes are the main agent's, and this review is the only one. Close each finding:
+Read `review.md`. Report whether it covered its whole range, whether it found a break that must be fixed, and the finding count per axis with its path. The task stays open while the review missed part of its range, or while a proven break of an acceptance line or a correction required before release is unfixed; its acceptance and final gates still decide readiness. Fixes are the main agent's, and this review is the only one. Close each finding:
 
-- one that carries a smallest fix: fix it and close it with its evidence, a test that fails without the fix or a log path and line
-- a `plausible` or `unverified` one whose break no test or trace reproduces: not reproduced, unbuilt
-- a `host:` one: unbuilt, its fix leaves the task
-- a product decision, whether the reviewer wrote it as `host:` or as a smallest fix: a question for the user, not a fix
+- Fix what a test or a trace shows broken, with the smallest fix, and close it with that evidence: a test that fails without the fix, or a log path and line
+- A finding no test or trace reproduces stays unbuilt, closed as not reproduced
+- A fix that would leave the task, into a shared package, a public API or an external contract, is not built here; the closing line says why
+- A product decision goes to the user as a question, however the reviewer worded it
 
 An item under Not covered that names work still to come goes into the file that work starts from. When a fix changed the tree, the gate command runs once more on it. Then `review.md` gets this addendum for those findings:
 

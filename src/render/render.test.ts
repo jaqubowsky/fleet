@@ -859,7 +859,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			const ticket = rendered(out, "container", "refs/ticket.md");
 			assert.match(
 				ticket,
-				/progress lives in the tracker and in git\. A local copy's `Status:` is the host's; the container leaves it as it is and ticks each criterion with its evidence/,
+				/progress lives in the tracker and in git\. The host moves the ticket's state; the container never changes it and ticks each criterion with its evidence/,
 			);
 			assert.doesNotMatch(ticket, /\d/);
 		});
@@ -1022,7 +1022,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(skill, /carries your stop rule/);
 			assert.match(
 				skill,
-				/measure, make one fix, measure again, then end the turn with both numbers in the closing message's `Question:`/,
+				/measure, make one fix, measure again, then end the turn with both numbers in its closing message\. The next step is yours to decide, not the user's/,
 			);
 			assert.match(
 				skill,

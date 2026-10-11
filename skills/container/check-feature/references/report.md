@@ -9,6 +9,6 @@ Launch: `<command>` from `<working directory>`, answered at <URL>
 
 One line per frame, the route the frame shows first. A walk outside every criterion adds a line whose criterion reads `incidental`. In a regression walk the verdicts are `regressed`, `pre-existing` and `coverage-gap`, and a regressed line names the base's behaviour on the same flow.
 
-The run is `failed` when any line is, `blocked` when a line is `unreachable` or `coverage-gap` and none failed, `passed` when every cumulative criterion has a `passed` line. A later refactor alone removes none.
+The run passes only when every cumulative criterion has a frame that passed, and one failed frame fails it. A criterion the run could not reach or drive, with nothing failed, leaves it blocked, so the person sees what it could not prove. A later refactor alone removes no criterion.
 
 Cleanup: browser closed, application stopped, working tree <clean | what was removed>.
