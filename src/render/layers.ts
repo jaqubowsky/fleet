@@ -13,8 +13,6 @@ const SEAT_OWNERS = `${CONTAINER_OWNER} or ${HOST_OWNER}`;
 
 const MECHANICS = [
 	/analysis\.md/,
-	/spec\.md/,
-	/(?<![.\w])issues\//,
 	/permissions\.md/,
 	/project\.md/,
 	/task director/i,
@@ -24,8 +22,6 @@ const MECHANICS = [
 	/\{\{cli\}\}/,
 	/\bthe host\b/i,
 ];
-
-const OWN_OUTPUT: Record<string, RegExp> = { "to-tickets": /spec\.md/ };
 
 function walk(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -62,10 +58,8 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 		skills.filter(
 			(s) => s !== except && new RegExp(`\`${s}\`|skill \`?${s}\\b`).test(line),
 		);
-	const namesMechanic = (line: string, own?: RegExp) =>
-		MECHANICS.flatMap((m) => line.match(m)?.[0] ?? []).filter(
-			(hit) => !own?.test(hit),
-		);
+	const namesMechanic = (line: string) =>
+		MECHANICS.flatMap((m) => line.match(m)?.[0] ?? []);
 	const layerOf = (file: string): Layer | undefined => {
 		const skill = file.match(/^skills\/(container|host|shared)\/([^/]+)\//);
 		if (skill && file !== HOST_OWNER && !file.startsWith(HOST_OWNER.replace("SKILL.md", "references/"))) {
@@ -73,7 +67,7 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 			return {
 				names: (line) => [
 					...namesSkill(line, name),
-					...namesMechanic(line, OWN_OUTPUT[name]),
+					...namesMechanic(line),
 				],
 				owner:
 					seat === "container"

@@ -1,47 +1,43 @@
 ---
 name: implement
-description: 'Building a ticket, spec or analysis into working code, one ticket at a time. Use when the user hands one to implement or asks for the next ticket of a feature.'
+description: 'Building the slices of an analysis Plan into working code, one commit per slice. Use when the user hands a ticket and its analysis to implement.'
 ---
 
 # Implement
 
-Implement the ticket, spec or analysis you were handed.
+Implement the ticket you were handed, slice by slice, as its analysis plans it.
 
 ## Process
 
-1. **Fetch the work.** A ticket path from the user: read it. Otherwise work the **frontier** of the tickets where your seat's rules keep them, else `.issues/<feature-slug>/`: the lowest-numbered ticket with an unticked acceptance criterion whose "Blocked by" tickets are all ticked. No tickets: the short run the analysis named is the work.
+1. **Fetch the work.** The ticket and its analysis. The work is the Plan's slices, in order; the slice in hand is the first one without its commit.
 
-2. **Load context.** The shared spec beside the tickets if it exists; the analysis for what the ticket leaves open.
+2. **Load context.** The ticket's acceptance criteria, and the analysis's Findings and Decisions for what the criteria leave open.
 
 3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require:
 
    ```text
-   Goal: <what this ticket makes work>
+   Goal: <what this slice makes work>
    Boundaries: <what stays untouched>
-   Done-check: <the command that proves this ticket done>, <why it is the right command>
+   Done-check: <the command that proves this slice done>, <why it is the right command>
    ```
 
-   The ticket's acceptance criteria are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. The done-check covers what this diff touches: the tests of the changed files and of the files importing them. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
+   The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. The done-check covers what this diff touches: the tests of the changed files and of the files importing them. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
 
-4. **Write a changed requirement down first.** A requirement that changes while you build goes into this ticket, or into the spec when it is shared, before the code changes.
+4. **Write a changed requirement down first.** A requirement that changes while you build goes into the ticket's criteria, and a changed decision into the analysis's Decisions, before the code changes.
 
-5. **Build at the seams the ticket names, else existing public ones.** A failing test first: one seam, one red, one implementation.
+5. **Build at the seam the slice names, else existing public ones.** A failing test first: one seam, one red, one implementation.
 
-   Commit the first coherent vertical piece before widening. A ticket that still holds a second behaviour once the first works end to end was cut too wide:
-   - the first behaviour takes steps 6-9 as this ticket
-   - the rest, with its acceptance lines, becomes the next ticket, blocked by this one
+   Commit the first coherent vertical piece before widening. A slice that still holds a second behaviour once the first works end to end was cut too wide: split it in the Plan, and the rest becomes the next slice.
 
-   In a short run, or on an order naming this one ticket, the rest stays in this ticket.
+6. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this slice.
 
-6. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this ticket.
+7. **Check the diff against the repository's checklist.** When the repository keeps one for a change (red flags, a definition of done), go through it on the diff. The independent review runs once, over the whole branch, in your seat's Finish.
 
-7. **Review where the plan asked for it.** When the repository keeps a checklist for a change (red flags, a definition of done), go through it on the diff first. An independent review of the uncommitted diff, with the step 6 logs and the step 5 red logs as its checks, runs when the ticket carries `Review: after this ticket` or the order asks for one. Every other ticket is covered by the whole-branch review in your seat's Finish. A review's findings close as the review says.
+8. **Commit** the slice to the current branch, then take the next slice from step 3.
 
-8. **Commit** the work, with the review's fixes when one ran, to the current branch.
-
-9. **Resolve the ticket.**
+9. **Resolve the ticket**, after the last slice.
     - In one edit at the end of the ticket, tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
-    - Slice-only findings go under a `## Comments` heading at the bottom of the ticket file; a changed shared decision or accepted scope updates the spec
+    - Findings outside the criteria go under a `## Comments` heading at the bottom of the ticket file; a changed decision or accepted scope updates the analysis's Decisions
     - Report the command, its exit code, and name anything you did not run and why

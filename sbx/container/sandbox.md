@@ -37,13 +37,12 @@ You run in an isolated container. Someone outside watches this session and gives
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes `analysis.md`; a defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question in the closing message while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval goes into `spec.md` or the ticket, with the user's deciding words and their date, before implementation starts
-2. `to-tickets`, when the analysis named tickets, writes `spec.md` and `issues/` and quotes in `analysis.md` what accepted the split. A split no answer named goes back as that question; a changed split changes `analysis.md` first. A ticket that needs its own review carries the line `Review: after this ticket`, written now
-3. `implement` works the ticket the order names, or the short run's `analysis.md`: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. A ticket stays a plan: at its end, one edit ticks each acceptance criterion with its evidence beside it
-4. A changed requirement goes into its ticket or `spec.md` before the code changes
-5. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
+1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question in the closing message while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval goes into Decisions, with the user's deciding words and their date, before implementation starts
+2. `implement` works the Plan's slices in order: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. At the end, one edit ticks each criterion in `ticket.md` with its evidence beside it
+3. A changed requirement goes into the criteria of `ticket.md`, and a changed decision into Decisions, before the code changes
+4. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 
-The short run, an `analysis.md` that planned one commit, skips step 2; the opening prompt overrides the choice. A prompt with no ticket behind it runs none of this.
+Every task has the same files, built the same way, as {{refs}} lists them. A prompt with no ticket behind it runs none of this.
 
 An order to see a change before it is built runs `mockup` first; its frames are the hand-over.
 
@@ -56,8 +55,8 @@ Each check runs once, where it is cheapest:
 | Check | When | Times per task |
 | --- | --- | --- |
 | Red test | before the code of each behaviour | 1 per behaviour |
-| Ticket tests (changed files and their importers) | after the ticket's code | 1 per ticket, plus reruns while fixing |
-| Independent review of the whole branch, `two-axis-review` | after the last ticket's commit, before the final checks | 1 |
+| Slice tests (changed files and their importers) | after the slice's code | 1 per slice, plus reruns while fixing |
+| Independent review of the whole branch, `two-axis-review` | after the last slice's commit, before the final checks | 1 |
 | Review fixes | one batch, each with its own test | 1 |
 | Branch update, by the method `## Merge method` in `project.md` names | before the final checks | 1, never repeated by a later session |
 | Typecheck and lint of changed files | final tree | 1 |
@@ -65,7 +64,6 @@ Each check runs once, where it is cheapest:
 | Verification of what a user sees, the way `project.md` names | final tree, after the last visible change | 1 |
 
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
-- A per-ticket review runs only where the ticket carries `Review: after this ticket`
 - Gates run with no bash timeout
 - Open the frames before claiming what the user sees
 

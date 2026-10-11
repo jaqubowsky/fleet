@@ -428,6 +428,23 @@ test("the stock continue names no session rule", () => {
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
+	test(`${name} builds every task from one fixed set of files: criteria in the ticket, three analysis sections, a Plan of slices`, () => {
+		renderSeats(name, (out) => {
+			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+			const analyze = rendered(out, "container", "analyze-task/SKILL.md");
+			const artifacts = rendered(out, "container", "refs/artifacts.md");
+
+			assert.match(rules, /`analyze-task` writes the `Acceptance criteria` section of `ticket\.md`/);
+			assert.match(rules, /`analysis\.md` with its three sections: Findings, Decisions, Plan/);
+			assert.match(rules, /The Plan is a numbered list of slices, each one commit naming the criteria it closes/);
+			assert.match(rules, /`implement` works the Plan's slices in order/);
+			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
+			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);
+			assert.match(analyze, /each one commit: what it delivers, the acceptance criteria it closes, and its test seam/);
+			assert.match(artifacts, /analysis\.md {4}Findings, Decisions, Plan/);
+		});
+	});
+
 	test(`${name} keeps one session for the whole task, with no fresh-session command or rule`, () => {
 		renderSeats(name, (out) => {
 			const texts = (readdirSync(out, { recursive: true }) as string[])
@@ -704,7 +721,7 @@ test("with no host Linear server in any profile, the host render writes no mcp.j
 });
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} plans a per-ticket review by blast radius, reviews the whole branch once, and the image carries no ticket check`, () => {
+	test(`${name} reviews the whole branch once, and the image carries no ticket check`, () => {
 		renderSeats(name, (out) => {
 			const promises = (readdirSync(out, { recursive: true }) as string[])
 				.filter((file) => file.endsWith(".md"))
@@ -720,20 +737,16 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				);
 			assert.deepEqual(promises, []);
 			assert.match(
-				rendered(out, "container", "to-tickets/SKILL.md"),
-				/carries the line `Review: after this ticket`, written now/,
-			);
-			assert.match(
 				rendered(out, "container", "implement/SKILL.md"),
-				/runs when the ticket carries `Review: after this ticket` or the order asks for one/,
+				/The independent review runs once, over the whole branch, in your seat's Finish/,
 			);
 			const rules = containerRules(out)
 				.map((file) => readFileSync(join(out, "container", file), "utf8"))
 				.join("\n");
-			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the last ticket's commit, before the final checks \| 1 \|/);
+			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the last slice's commit, before the final checks \| 1 \|/);
 			assert.match(
 				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
-				/gets `Review: after this ticket` in its description before the container starts it/,
+				/Every container run ends on one independent review of its whole branch, in `review\.md`/,
 			);
 			assert.doesNotMatch(rendered(out, "container", "context/Dockerfile"), /ticket-check/);
 			assert.match(
@@ -801,7 +814,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} container checkpoints, ends every turn on the closing message and cuts small tickets`, () => {
+	test(`${name} container checkpoints, ends every turn on the closing message and cuts small slices`, () => {
 		renderSeats(name, (out) => {
 			const implement = rendered(out, "container", "implement/SKILL.md");
 			assert.match(
@@ -810,7 +823,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				implement,
-				/In a short run, or on an order naming this one ticket, the rest stays in this ticket/,
+				/A slice that still holds a second behaviour once the first works end to end was cut too wide: split it in the Plan, and the rest becomes the next slice/,
 			);
 			assert.match(
 				implement,
@@ -830,7 +843,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			for (const row of [
 				"| Red test | before the code of each behaviour | 1 per behaviour |",
-				"| Ticket tests (changed files and their importers) | after the ticket's code | 1 per ticket, plus reruns while fixing |",
+				"| Slice tests (changed files and their importers) | after the slice's code | 1 per slice, plus reruns while fixing |",
 				"| Review fixes | one batch, each with its own test | 1 |",
 				"| Typecheck and lint of changed files | final tree | 1 |",
 				"| Tests of affected packages | final tree; on the base only the files that failed | 1 |",
@@ -974,7 +987,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				skill,
-				/Whether a change earns an independent review is yours, by risk class/,
+				/A further review is yours, by risk class/,
 			);
 			assert.match(skill, /yourself with skill `two-axis-review` over the container's range/);
 			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);

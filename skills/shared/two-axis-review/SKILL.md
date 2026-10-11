@@ -4,7 +4,7 @@ description: 'Independent review of one diff for correctness and engineering qua
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
-Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` where your seat's rules keep it, else beside the repository's `.issues/`.
+Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: does the code fulfil the task, and is it engineered as this repo wants. One `reviewer` sub-agent does both; its context holds the task, the diff and the evidence you collect here, and nothing of how the implementation went. Its output is `review.md` where your seat's rules keep it, else where the user names.
 
 ## Process
 
@@ -52,7 +52,7 @@ Supply these two axes in the review packet:
 {{review.call}} The task text carries, in this order:
 
 1. the range in SHAs
-2. the paths of the analysis, the spec and the tickets that set the task, those that exist; when none does, the prompt that set the task, quoted
+2. the paths of the ticket and the analysis that set the task, those that exist; when none does, the prompt that set the task, quoted
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
 5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline) and the path of `smells.md`
