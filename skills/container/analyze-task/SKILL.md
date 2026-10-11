@@ -9,7 +9,7 @@ description: 'Turning a ticket, bug report or feature request into an evidence-b
 
 Produce an evidence-backed requirements analysis: the accepted specification, the evidenced defects that impair use of the same flow, and worthwhile improvements to the code being touched.
 
-This workflow ends at a proposal; implementation, ticket updates and the work itself start on a separate request. Reproduction tests, harnesses and reversible probes are allowed within existing permissions. Keep diagnostic artifacts identifiable, remove temporary instrumentation before handover, report anything retained. Pass this boundary to every delegated agent.
+This workflow ends at a proposal and the ticket's acceptance criteria; implementation and the work itself start on a separate request. Reproduction tests, harnesses and reversible probes are allowed within existing permissions. Keep diagnostic artifacts identifiable, remove temporary instrumentation before handover, report anything retained. Pass this boundary to every delegated agent.
 
 ## Read the sources before reading the code
 
@@ -78,15 +78,17 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 After the code analysis, report missing knowledge or access honestly.
 
-The reply is the report: the headings below, in this order, one screen in all.
+The reply is the report: the three sections below, in this order, one screen in all. A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed and keeps the same three sections, whatever the size of the task.
 
-A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed.
+Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
 
-### Verdict
+### Findings
+
+#### Verdict
 
 At most three sentences: what the task turns out to be, and whether the ticket's scope holds. For a bug: the symptom the user sees, the cause, the reproduction command and its result. Name the cause, not the layer where you happened to notice it.
 
-### Where it lands
+#### Where it lands
 
 The place the change lands, a route, endpoint, job, command or function, marked as chosen, then every other place that matches the request's words, one line each with what tells it apart.
 
@@ -95,7 +97,7 @@ The place the change lands, a route, endpoint, job, command or function, marked 
 - `/admin/projects` restore action: also restores, admins only
 ```
 
-### What this rests on
+#### What this rests on
 
 One row per finding that changed a decision. Cells are phrases, not sentences. A source that only confirmed a conclusion you already held is not a finding.
 
@@ -103,25 +105,38 @@ One row per finding that changed a decision. Cells are phrases, not sentences. A
 | --- | --- | --- |
 | The SYNCHRONIZER gate is deliberate | review on PR #1910, commit `1114463` | open it in the change that ships delivery |
 
-### Out of scope
+#### Out of scope
 
 One line per item, with the reason.
 
-### Open and unverified
+#### Open and unverified
 
 Open questions with the decision each one blocks. Sources you could not open. Checks proposed but not run. One line each.
 
-### The run and the one question
+### Decisions
 
-The run this analysis calls for, in one line with the reason: tickets, or the short run when the work is one accepted behaviour, one seam and one commit. Under it, the proposed split into tickets and the test seams, one line each. Cite the approving user decision for an accepted run, split or seam. Ask one question containing only unresolved decisions, with an unapproved run, split and seams last. If none remain, state the approved next step.
+What will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is the question below.
+
+### Plan
+
+A numbered list of slices in implementation order, each one commit: what it delivers, the acceptance criteria it closes, and its test seam. A small change has one slice. Every criterion is closed by some slice.
+
+```md
+1. Restore brings back only the files deleted with the project. Closes criteria 1, 2. Seam: `restoreProject` service test
+2. The trash list shows the restored count. Closes criterion 3. Seam: trash page component test
+```
+
+### The one question
+
+Ask one question containing only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. If none remain, state the approved next step.
 
 ```md
 1. <decision>
    - <option> (recommended). Downside: <one>
    - <option>. Downside: <one>
-2. The run, the split and the test seams above
+2. The Plan above
    - as listed (recommended). Downside: <one>
-   - <another split>. Downside: <one>
+   - <another cut>. Downside: <one>
 ```
 
 Define a term before using it, and keep one name per concept across the whole report. State the mechanism instead of naming it; no framing labels ("the key insight", "at its core"), no metaphor standing in for the mechanism.
@@ -132,7 +147,7 @@ Rules for the report:
 - No sentence about your own process. Not "I read", not "this changes my earlier conclusion". State the conclusion that holds now.
 - A finding that needs a paragraph is two findings, or it belongs in Out of scope.
 - At most one small ASCII diagram, and only when the flow has three or more hops and the labels carry the meaning.
-- Detail beyond these slots goes to the ticket.
+- Detail beyond these slots goes to the ticket's criteria or to Decisions.
 
 ## Rationalizations
 

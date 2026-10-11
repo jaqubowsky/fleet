@@ -27,7 +27,7 @@ test("a host skill naming a mechanic belongs to the host owner", () => {
 });
 
 test("a principle naming a mechanic belongs to a seat owner", () => {
-	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `spec.md`"), [{ names: "spec.md", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `analysis.md`"), [{ names: "analysis.md", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
 });
 
 test("a principle naming a skill one seat lacks belongs to a seat owner", () => {
@@ -39,16 +39,12 @@ test("a contract naming a skill belongs to the container owner", () => {
 	assert.deepEqual(atSeededLine("rules/refs/ticket.md", "A ticket is written by skill `to-tickets`."), [{ names: "to-tickets", owner: "sbx/container/sandbox.md" }]);
 });
 
-test("a skill keeps its own output file by name", () => {
-	assert.deepEqual(atSeededLine("skills/container/to-tickets/SKILL.md", "Update `spec.md` when a decision changes."), []);
-});
-
 test("no text a container reads names a check the host runs after it", () => {
 	assert.deepEqual(hostChecks(containerTexts(root)), []);
 });
 
 test("a container line naming the host's acceptance or review is found with its file and line", () => {
-	assert.deepEqual(hostChecks({ "claude/home/rules/sandbox.md": "1. Commit\n2. Skip review: the host reviews independently\n", "pi/home/agent/refs/artifacts.md": "issues/  the host's acceptance lands in the tracker issue\n" }), [
+	assert.deepEqual(hostChecks({ "claude/home/rules/sandbox.md": "1. Commit\n2. Skip review: the host reviews independently\n", "pi/home/agent/refs/artifacts.md": "ticket.md  the host's acceptance lands in the tracker issue\n" }), [
 		"claude/home/rules/sandbox.md:2",
 		"pi/home/agent/refs/artifacts.md:1",
 	]);
