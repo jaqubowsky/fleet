@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { fakeIo } from "../fleet/fake-io.ts";
 import { realIo } from "../fleet/io.ts";
-import { CONTINUE, SEATS, KINDS } from "../harness.ts";
+import { SEATS, KINDS } from "../harness.ts";
 import {
 	PRIVATE_PROFILE,
 	PRIVATE_REPO,
@@ -422,10 +422,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 }
-
-test("the stock continue names no session rule", () => {
-	assert.equal(CONTINUE, "Continue the task from where it stopped.");
-});
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} builds every task from one fixed set of files: criteria in the ticket, three analysis sections, a Plan of slices`, () => {
@@ -1013,10 +1009,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				/tick in the issue each criterion you checked and comment the evidence you looked at beside it/,
 			);
 			assert.doesNotMatch(skill, /acceptance\.md|cannot read or write/);
-			assert.match(
-				skill,
-				/One stopped by the account limit is resumed by the watch with the stock continue/,
-			);
 			assert.match(skill, /keeps running while the session waits out an account limit/);
 			assert.match(skill, /one fix round and one recheck/);
 			assert.match(skill, /carries your stop rule/);

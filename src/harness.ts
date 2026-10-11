@@ -40,9 +40,6 @@ const PROSE_BESIDE_AGENTS = "`refs/prose.md` beside `AGENTS.md`";
 const watchSource = (cli: string, env: string) =>
 	`Only the session that ran \`${cli} up\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
-export const CONTINUE =
-	"Continue the task from where it stopped.";
-
 export const KINDS: Record<AgentName, Kind> = {
 	pi: {
 		name: "pi",
@@ -101,7 +98,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":
-				"Only the session in the herdr pane that ran `fleet up` or `fleet steer` auto-watches that container: the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit, resuming the containers that limit stopped. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
+				"Only the session in the herdr pane that ran `fleet up` or `fleet steer` auto-watches that container: the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',

@@ -1,8 +1,7 @@
 import net from "node:net";
-import { steer, stoppedPane } from "./commands.ts";
-import { CLI, CONTINUE } from "../harness.ts";
-import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
-import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
+import { stoppedPane } from "./commands.ts";
+import { CLI } from "../harness.ts";
+import { EVENTS_LOG, eventAgents, lifecycle } from "./events.ts";
 import { type Io, seatOf } from "./io.ts";
 import {
 	RING_MS,
@@ -29,7 +28,6 @@ type Frame = {
 };
 type Tracked = { name: string; status: string; since: number; rang: number };
 type Woken = { key: string; count: number; at: string };
-type LimitStop = { at: Date; reset: Date | undefined };
 
 export function fleetAgents(
 	agents: Agent[],
@@ -103,7 +101,6 @@ export function watch(
 	>();
 	const settledSeq = new Map<string, number>();
 	const woken = new Map<string, Woken>();
-	const limits = new Map<string, LimitStop>();
 	const dirs = new Map<string, { sandbox: Sandbox }>();
 	let sock: net.Socket | undefined;
 	let connection = 0;
@@ -181,20 +178,8 @@ export function watch(
 		onWake(wakeLines(name, where?.sandbox.name ?? name, change, shown(tail)));
 	};
 
-	const settled = (name: string, state: string) => {
-		const tail = tailOf(name);
-		const last = shown(tail);
-		const limited = state !== "blocked" && !/\bQuestion:\s*\S/.test(last) && limitStop(last);
-		if (!limited) limits.delete(name);
-		else {
-			if (!limits.has(name)) {
-				const at = io.now();
-				limits.set(name, { at, reset: resetAt(last, at) });
-			}
-			return;
-		}
-		emit(name, state, { key: state, tail });
-	};
+	const settled = (name: string, state: string) =>
+		emit(name, state, { key: state, tail: tailOf(name) });
 
 	const leave = (
 		pane: string,
@@ -355,38 +340,7 @@ export function watch(
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();
 	};
 
-	const noticeLimits = () => {
-		const waiting = [...tracked.values()].filter(
-			(t) => TERMINAL.has(t.status) && limits.has(t.name),
-		);
-		const rows = waiting.length ? listed() : undefined;
-		for (const t of waiting) {
-			const stop = limits.get(t.name);
-			const where = rows && locate(t.name, rows);
-			if (!stop || !where || isStopped(where.sandbox)) continue;
-			const resumes = steersSince(io.read(events) ?? "", t.name, CONTINUE, stop.at);
-			const due = resumeDue(stop.at, stop.reset, resumes);
-			if (io.now() < due) continue;
-			if (resumes.length >= RETRIES) {
-				if (io.now().getTime() < due.getTime() + STALL_TICK_MS)
-					emit(
-						t.name,
-						`stopped on the account limit, ${RETRIES} resumes did not take`,
-						{ tail: tailOf(t.name) },
-					);
-				continue;
-			}
-			try {
-				steer(where.sandbox, CONTINUE, io);
-				io.log(`[fleet] ${t.name}: resumed after the account limit`);
-			} catch (error) {
-				io.log(`[fleet] watch: resume ${t.name}: ${String(error)}`);
-			}
-		}
-	};
-
 	const ring = () => {
-		noticeLimits();
 		const now = Date.now();
 		const entries = [...tracked].map(([pane, t]) => ({
 			pane,

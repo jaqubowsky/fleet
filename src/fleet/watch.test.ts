@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import net from "node:net";
 import { test, type TestContext } from "node:test";
-import { CONTINUE, SEATS, KINDS } from "../harness.ts";
+import { SEATS, KINDS } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
 import { fleetAgents, jsonLines, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
@@ -18,12 +18,6 @@ const sandboxes = [
 ];
 
 const CLOSED = "Changes: none\nChecks: none\nCommits: none\nQuestion: none";
-
-function appending(io: ReturnType<typeof fakeIo>) {
-	io.append = (path, line) => {
-		io.files[path] = `${io.files[path] ?? ""}${line}\n`;
-	};
-}
 
 function leaving(io: ReturnType<typeof fakeIo>) {
 	const sbx = io.sbx;
@@ -526,14 +520,6 @@ test("a settle wakes the host with its state and the pane tail", (t) => {
 	assert.deepEqual(wakes, [`[fleet] claude-worker: idle\n\n${tail}`]);
 });
 
-test("a closing message that mentions a rate limit wakes the host", (t) => {
-	const { wakes, turn } = settles(t, "Changes: add a rate limit to login\nQuestion: none");
-
-	turn();
-
-	assert.equal(wakes.length, 1);
-});
-
 test("the watch reads 60 pane lines", (t) => {
 	const { io, turn } = settles(t, CLOSED);
 
@@ -542,15 +528,6 @@ test("the watch reads 60 pane lines", (t) => {
 	assert.ok(
 		io.calls.some((c) => c.join(" ") === "herdr agent read claude-worker --source recent-unwrapped --lines 60"),
 	);
-});
-
-test("limit text older than the last 15 pane lines leaves the wake to the host", (t) => {
-	const older = ["API Error: rate_limit, resets 11:10pm", ...Array.from({ length: 19 }, (_, i) => `step ${i}`)].join("\n");
-	const { wakes, turn } = settles(t, older);
-
-	turn();
-
-	assert.match(wakes[0] ?? "", /^\[fleet\] claude-worker: idle\n/);
 });
 
 test("a wake shows the last 15 pane lines", (t) => {
@@ -603,137 +580,6 @@ test("a wake asks GitHub nothing and carries no pull request line", (t) => {
 
 	assert.equal(io.calls.filter((c) => c[0] === "gh").length, 0);
 	assert.doesNotMatch(wakes[0], /^pr:/m);
-});
-
-function limited(t: TestContext, pane: string, stoppedAt: Date) {
-	const fixture = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
-	]);
-	const { io } = fixture;
-	const dir = "/home/me/.fleet/tasks/webapp/claude-worker";
-	const events = "/home/me/.fleet/tasks/fleet-events.log";
-	fixture.tails["claude-worker"] = pane;
-	appending(io);
-	let now = stoppedAt;
-	io.now = () => now;
-	const wakes: string[] = [];
-	const handle = watch(() => undefined, io, (text) => wakes.push(text));
-	t.after(() => handle.stop());
-	fixture.status("worker:pane", "idle");
-	t.mock.timers.tick(1000);
-	const resumes = () =>
-		io.calls.filter(
-			(c) => c[0] === "herdr" && c[2] === "prompt" && c[4] === CONTINUE,
-		).length;
-	const at = (minutes: number) => {
-		now = new Date(stoppedAt.getTime() + minutes * 60_000);
-		fixture.intervals.get(60_000)?.();
-		return resumes();
-	};
-	return { ...fixture, events, at, dir, wakes };
-}
-
-test("a container stopped by the account limit wakes nobody when it stops", (t) => {
-	const { wakes } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-
-	assert.deepEqual(wakes, []);
-});
-
-test("a manual stop suppresses account-limit retries before the watch refreshes", (t) => {
-	const { io, at, dir } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-	io.files[`${dir}/logs/sandbox-stop.json`] = JSON.stringify({ pane: "worker:pane" });
-
-	const resumes = at(31);
-
-	assert.equal(resumes, 0);
-	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
-});
-
-test("a container stopped by the account limit resumes with the stock continue at the reset time its message gives", (t: TestContext) => {
-	const { at } = limited(
-		t,
-		"You've hit your session limit · resets 11:10pm",
-		new Date(2026, 8, 16, 21, 40),
-	);
-
-	assert.equal(at(89), 0);
-	assert.equal(at(90), 1);
-	assert.equal(at(91), 1);
-});
-
-test("with no reset time the watch retries the continue every 30 minutes and gives up after 10 with one wake", (t: TestContext) => {
-	const { at, wakes } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-
-	assert.equal(at(29), 0);
-	assert.equal(at(30), 1);
-	assert.equal(at(59), 1);
-	for (let n = 2; n <= 10; n++) assert.equal(at(30 * n), n);
-	assert.equal(at(330), 10);
-	assert.equal(at(331), 10);
-	assert.equal(at(400), 10);
-	assert.equal(wakes.filter((w) => /account limit/.test(w)).length, 1);
-	assert.match(
-		wakes.at(-1) ?? "",
-		/^\[fleet\] claude-worker: stopped on the account limit, 10 resumes did not take\n\nAPI Error: rate_limit$/,
-	);
-});
-
-test("the watch never sends the continue to a container that is working or waits on a dialog", async (t: TestContext) => {
-	for (const state of ["working", "blocked", "unknown"])
-		await t.test(state, (st: TestContext) => {
-			const { at, status } = limited(st, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-
-			status("worker:pane", state);
-
-			assert.equal(at(120), 0);
-		});
-});
-
-test("a closing message after a resume ends the retries and wakes the host", (t: TestContext) => {
-	const { at, status, tails, wakes } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-
-	assert.equal(at(30), 1);
-	status("worker:pane", "working");
-	tails["claude-worker"] = CLOSED;
-	status("worker:pane", "idle");
-	t.mock.timers.tick(1000);
-
-	assert.equal(at(400), 1);
-	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: idle\n/);
-});
-
-test("a crash after a resume wakes the host and ends the retries", (t: TestContext) => {
-	const { at, status, tails, wakes } = limited(t, "API Error: rate_limit", new Date(2026, 8, 16, 21, 40));
-
-	assert.equal(at(30), 1);
-	status("worker:pane", "working");
-	tails["claude-worker"] = "API Error: 500 Internal Server Error";
-	status("worker:pane", "idle");
-	t.mock.timers.tick(1000);
-
-	assert.equal(at(400), 1);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: idle\n\nAPI Error: 500/);
-});
-
-test("a dialog whose pane mentions a rate limit still wakes the host", (t: TestContext) => {
-	const { wakes, status } = settles(t, "rateLimit: 10 per minute\nAllow this command? (y/n)");
-
-	status("worker:pane", "blocked");
-
-	assert.match(wakes[0], /^\[fleet\] claude-worker: blocked\n/);
-});
-
-test("resumes another session already sent count against the retries", (t: TestContext) => {
-	const stoppedAt = new Date(2026, 8, 16, 21, 40);
-	const { io, at, events } = limited(t, "API Error: rate_limit", stoppedAt);
-	const sent = (minutes: number) =>
-		`${new Date(stoppedAt.getTime() + minutes * 60_000).toISOString()} w1:host steer claude-worker session= ${JSON.stringify(CONTINUE)}`;
-
-	io.files[events] = `${[sent(30), sent(60), sent(90)].join("\n")}\n`;
-
-	assert.equal(at(119), 0);
-	assert.equal(at(120), 1);
 });
 
 test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
