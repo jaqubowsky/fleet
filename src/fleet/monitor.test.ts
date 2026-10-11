@@ -6,7 +6,7 @@ import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { SEATS } from "../harness.ts";
 import { EVENTS_LOG, logEvent } from "./events.ts";
 import { fakeIo } from "./fake-io.ts";
-import { closingLabel, shouldWake, stalled, transition } from "./monitor.ts";
+import { shouldWake, stalled, transition } from "./monitor.ts";
 
 function monitorRuntime(
 	t: TestContext,
@@ -238,14 +238,6 @@ test("wake on settling, never on going back to work", () => {
 	assert.equal(shouldWake(undefined, "unknown"), false);
 });
 
-test("the label reads the last Question line of the closing message, inside the TUI's frame", () => {
-	assert.equal(closingLabel("Commits: none\n│ Question: Which route? │\n> "), "question");
-	assert.equal(closingLabel("⏺ Changes: x\n  Question: none.\n"), "turn ended");
-	assert.equal(closingLabel("Question: Which route?\nQuestion: none"), "turn ended");
-	assert.equal(closingLabel("Question:\n"), "no closing message");
-	assert.equal(closingLabel("API Error: 500"), "no closing message");
-});
-
 test("a wake that lands while the host works waits for its turn to end", async (t) => {
 	const runtime = monitorRuntime(t);
 	const watcher = runtime.start("session-a");
@@ -260,7 +252,7 @@ test("a wake that lands while the host works waits for its turn to end", async (
 	assert.equal(watcher.messages.length, 1);
 	assert.match(
 		watcher.messages[0].message.content,
-		/^\[fleet\] pi-worker: no closing message$/,
+		/^\[fleet\] pi-worker: idle$/,
 	);
 });
 

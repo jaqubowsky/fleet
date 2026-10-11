@@ -5,7 +5,6 @@ import { limitStop, resetAt, resumeDue, RETRIES } from "./limit.ts";
 import { EVENTS_LOG, eventAgents, lifecycle, steersSince } from "./events.ts";
 import { type Io, seatOf } from "./io.ts";
 import {
-	closingLabel,
 	RING_MS,
 	SETTLE_MS,
 	shouldWake,
@@ -16,14 +15,13 @@ import {
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
-import { taskDir } from "./repositories.ts";
-import { READ_LINES, repeats, TURNS, turnEntry } from "./turns.ts";
 import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
 const SAME_WAKES = 2;
+const READ_LINES = 60;
 
 type Frame = {
 	event?: string;
@@ -159,15 +157,10 @@ export function watch(
 		}
 	};
 
-	const logTurn = (sandbox: Sandbox, entry: string) => {
-		const file = `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/${TURNS}`;
-		if (!repeats(io.read(file), entry)) io.append(file, entry);
-	};
-
 	const emit = (
 		name: string,
 		change: string,
-		{ key, tail = "", down, closing = false }: { key?: string; tail?: string; down?: boolean; closing?: boolean } = {},
+		{ key, tail = "", down }: { key?: string; tail?: string; down?: boolean } = {},
 	) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name) && !down) return;
@@ -186,14 +179,12 @@ export function watch(
 			});
 		}
 		onWake(wakeLines(name, where?.sandbox.name ?? name, change, shown(tail)));
-		if (where) logTurn(where.sandbox, turnEntry(io.now(), change, tail, closing));
 	};
 
 	const settled = (name: string, state: string) => {
 		const tail = tailOf(name);
 		const last = shown(tail);
-		const label = closingLabel(last);
-		const limited = label === "no closing message" && state !== "blocked" && limitStop(last);
+		const limited = state !== "blocked" && !/\bQuestion:\s*\S/.test(last) && limitStop(last);
 		if (!limited) limits.delete(name);
 		else {
 			if (!limits.has(name)) {
@@ -202,8 +193,7 @@ export function watch(
 			}
 			return;
 		}
-		const change = state === "blocked" ? `blocked, ${label}` : label;
-		emit(name, change, { key: `${state} ${label}`, tail, closing: label !== "no closing message" });
+		emit(name, state, { key: state, tail });
 	};
 
 	const leave = (

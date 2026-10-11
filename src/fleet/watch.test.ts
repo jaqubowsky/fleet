@@ -158,16 +158,16 @@ test("a long sandbox name picks the agent herdr named after it", () => {
 	);
 });
 
-test("a wake names the agent, then the full sandbox and its label, before the pane tail", () => {
+test("a wake names the agent, then the full sandbox and its state, before the pane tail", () => {
 	const text = wakeLines(
 		"claude-household-budget-35d0485",
 		"claude-household-budget-t01-skeleton",
-		"turn ended",
+		"idle",
 		"Question: none",
 	);
 	assert.equal(
 		text,
-		"[fleet] claude-household-budget-35d0485: claude-household-budget-t01-skeleton turn ended\n\nQuestion: none",
+		"[fleet] claude-household-budget-35d0485: claude-household-budget-t01-skeleton idle\n\nQuestion: none",
 	);
 	assert.equal(wakeName(text), "claude-household-budget-35d0485");
 });
@@ -200,7 +200,7 @@ test("CLI watch reconciles status and reconnects after a closed stream", (t: Tes
 	);
 	assert.match(
 		io.lines.at(-1) ?? "",
-		/^\[fleet\] claude-webapp-a: turn ended\n\nChanges: none\n/,
+		/^\[fleet\] claude-webapp-a: idle\n\nChanges: none\n/,
 	);
 
 	agents[0].agent_status = "done";
@@ -227,7 +227,7 @@ test("a JSON watch prints each wake and each notice as one line a reader can spl
 	const parsed = io.lines.map((line) => JSON.parse(line));
 	assert.deepEqual(parsed[0], { watching: "claude-webapp-a working" });
 	assert.match(parsed[1].log, /^\[fleet\] watching/);
-	assert.match(parsed.at(-1).wake, /^\[fleet\] claude-webapp-a: turn ended\n\n/);
+	assert.match(parsed.at(-1).wake, /^\[fleet\] claude-webapp-a: idle\n\n/);
 	assert.ok(io.lines.every((line) => !line.includes("\n")));
 });
 
@@ -293,7 +293,7 @@ test("a watch wake names the full sandbox beside herdr's shortened agent", (t: T
 
 	assert.equal(wakes.length, 1);
 	assert.ok(
-		wakes[0].startsWith(`[fleet] ${agent}: ${sandbox} turn ended\n`),
+		wakes[0].startsWith(`[fleet] ${agent}: ${sandbox} idle\n`),
 		wakes[0],
 	);
 });
@@ -316,8 +316,8 @@ test("different containers wake independently while an identical transition stay
 	}
 
 	assert.equal(wakes.length, 2);
-	assert.match(wakes[0], /^\[fleet\] claude-first: turn ended\n\nChanges:/);
-	assert.match(wakes[1], /^\[fleet\] claude-second: turn ended\n\nChanges:/);
+	assert.match(wakes[0], /^\[fleet\] claude-first: idle\n\nChanges:/);
+	assert.match(wakes[1], /^\[fleet\] claude-second: idle\n\nChanges:/);
 	assert.doesNotMatch(wakes[0], /claude-second/);
 });
 
@@ -517,29 +517,21 @@ function settles(t: TestContext, tail: string) {
 	return { ...fixture, wakes, turn };
 }
 
-test("a closing message that asks a question wakes the host with question and the pane tail", (t) => {
+test("a settle wakes the host with its state and the pane tail", (t) => {
 	const tail = "Changes: none\nChecks: none\nCommits: none\nQuestion: Which route?";
 	const { wakes, turn } = settles(t, tail);
 
 	turn();
 
-	assert.deepEqual(wakes, [`[fleet] claude-worker: question\n\n${tail}`]);
+	assert.deepEqual(wakes, [`[fleet] claude-worker: idle\n\n${tail}`]);
 });
 
-test("a closing message without a question wakes the host with turn ended", (t) => {
-	const { wakes, turn } = settles(t, "Changes: fix\nQuestion: none");
+test("a closing message that mentions a rate limit wakes the host", (t) => {
+	const { wakes, turn } = settles(t, "Changes: add a rate limit to login\nQuestion: none");
 
 	turn();
 
-	assert.match(wakes[0], /^\[fleet\] claude-worker: turn ended\n\nChanges: fix\nQuestion: none$/);
-});
-
-test("a turn that ends without the closing message wakes the host with no closing message", (t) => {
-	const { wakes, turn } = settles(t, "Error: 529 overloaded\n> ");
-
-	turn();
-
-	assert.match(wakes[0], /^\[fleet\] claude-worker: no closing message\n\nError: 529 overloaded/);
+	assert.equal(wakes.length, 1);
 });
 
 test("the watch reads 60 pane lines", (t) => {
@@ -552,80 +544,22 @@ test("the watch reads 60 pane lines", (t) => {
 	);
 });
 
-const TURNS = "/home/me/.fleet/tasks/webapp/claude-worker/logs/turns.md";
-
-
-test("a turn ended wake appends its time, its label and the four closing lines to the turn log", (t) => {
-	const closing = "Changes: restore keeps deleted files\nChecks: npm test -> exit 0 @ abc1234, logs/gate-1/test.log\nCommits: abc1234 feat(projects): restore deleted files\nQuestion: none";
-	const { io, turn } = settles(t, `earlier output\n${closing}\n> `);
-	appending(io);
-
-	turn();
-
-	assert.equal(io.files[TURNS], `## 2026-09-16T10:00:00Z turn ended\n\n${closing}\n\n`);
-});
-
-test("the same closing message on a second wake adds nothing to the turn log", (t) => {
-	const { io, turn } = settles(t, "Changes: x\nChecks: none\nCommits: none\nQuestion: none");
-	appending(io);
-
-	turn();
-	turn();
-
-	assert.equal(io.files[TURNS]?.match(/^## /gm)?.length, 1);
-});
-
-test("a pane line that looks like a heading does not defeat the repeat check", (t) => {
-	const { io, turn } = settles(t, "## Plan\nChanges: x\n## Done\nQuestion: none");
-	appending(io);
-
-	turn();
-	turn();
-
-	assert.equal(io.files[TURNS]?.match(/^## \d{4}-/gm)?.length, 1);
-});
-
-test("a no closing message wake appends its label and the last 5 pane lines to the turn log", (t) => {
-	const { io, turn } = settles(t, "one\ntwo\nthree\nfour\nfive\nsix\nAPI Error: 529 overloaded");
-	appending(io);
-
-	turn();
-
-	assert.equal(io.files[TURNS], "## 2026-09-16T10:00:00Z no closing message\n\nthree\nfour\nfive\nsix\nAPI Error: 529 overloaded\n\n");
-});
-
-test("a wake without pane lines logs its label alone", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
-	]);
-	appending(io);
-	watch(() => undefined, io, () => {});
-	leaving(io);
-
-	intervals.get(30_000)?.();
-
-	assert.equal(io.files[TURNS], "## 2026-09-16T10:00:00Z idle -> taken down\n\n");
-});
-
 test("limit text older than the last 15 pane lines leaves the wake to the host", (t) => {
 	const older = ["API Error: rate_limit, resets 11:10pm", ...Array.from({ length: 19 }, (_, i) => `step ${i}`)].join("\n");
 	const { wakes, turn } = settles(t, older);
 
 	turn();
 
-	assert.match(wakes[0] ?? "", /^\[fleet\] claude-worker: no closing message\n/);
+	assert.match(wakes[0] ?? "", /^\[fleet\] claude-worker: idle\n/);
 });
 
-test("a closing message with more check lines than the wake shows still reaches the turn log whole", (t) => {
-	const checks = Array.from({ length: 14 }, (_, i) => `Checks: gate ${i} -> exit 0 @ abc1234, logs/g${i}.log`).join("\n");
-	const closing = `Changes: x\n${checks}\nCommits: abc1234 y\nQuestion: none`;
-	const { io, turn, wakes } = settles(t, closing);
-	appending(io);
+test("a wake shows the last 15 pane lines", (t) => {
+	const tail = Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n");
+	const { turn, wakes } = settles(t, tail);
 
 	turn();
 
-	assert.ok(io.files[TURNS]?.includes(closing));
-	assert.equal(wakes[0].split("\n\n")[1].split("\n").length, 15);
+	assert.equal(wakes[0].split("\n\n")[1], tail.split("\n").slice(-15).join("\n"));
 });
 
 test("a third wake about the same state without a steer in between is not sent", (t) => {
@@ -766,7 +700,7 @@ test("a closing message after a resume ends the retries and wakes the host", (t:
 
 	assert.equal(at(400), 1);
 	assert.equal(wakes.length, 1);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: turn ended\n/);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: idle\n/);
 });
 
 test("a crash after a resume wakes the host and ends the retries", (t: TestContext) => {
@@ -779,7 +713,7 @@ test("a crash after a resume wakes the host and ends the retries", (t: TestConte
 	t.mock.timers.tick(1000);
 
 	assert.equal(at(400), 1);
-	assert.match(wakes[0], /^\[fleet\] claude-worker: no closing message\n\nAPI Error: 500/);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: idle\n\nAPI Error: 500/);
 });
 
 test("a dialog whose pane mentions a rate limit still wakes the host", (t: TestContext) => {
@@ -787,7 +721,7 @@ test("a dialog whose pane mentions a rate limit still wakes the host", (t: TestC
 
 	status("worker:pane", "blocked");
 
-	assert.match(wakes[0], /^\[fleet\] claude-worker: blocked, no closing message\n/);
+	assert.match(wakes[0], /^\[fleet\] claude-worker: blocked\n/);
 });
 
 test("resumes another session already sent count against the retries", (t: TestContext) => {

@@ -32,18 +32,6 @@ export function shown(tail: string): string {
 	return tail.split("\n").slice(-TAIL_LINES).join("\n");
 }
 
-export type Label = "question" | "turn ended" | "no closing message";
-
-export function closingLabel(tail: string): Label {
-	const question = tail
-		.split("\n")
-		.map((line) => line.match(/\bQuestion:\s*(.*?)[\s│|]*$/)?.[1])
-		.filter((answer) => answer !== undefined)
-		.at(-1);
-	if (question === undefined || question === "") return "no closing message";
-	return /^none\.?$/i.test(question) ? "turn ended" : "question";
-}
-
 export function transition(
 	prev: string | undefined,
 	next: string,

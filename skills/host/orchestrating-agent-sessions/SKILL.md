@@ -25,9 +25,9 @@ Deliver the ticket in <task dir>/ticket.md. Restoring a project brings back only
 
 ## Driving a task
 
-On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. The container works every slice of its Plan and its final checks in one run, so a `turn ended` wake is either a finished run, with the final checks in its closing message, or a stop to steer on.
+On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. The container works every slice of its Plan and its final checks in one run, so a settle is either a finished run, with the final checks in its closing message, or a stop to steer on.
 
-Stop for the user on a `question` wake whose decision is theirs, and on a decision that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
+Stop for the user on a decision that is theirs, and on one that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 
 ## Coordinating a project
 
@@ -80,7 +80,7 @@ For multiple repositories the same command lands every one, and its last lines g
 
 {{file:watching}}
 
-- `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed. A `no closing message` settle or `unknown` usually means the container's agent waits on something in the background, a sub-agent or a long command; `{{cli}} peek` tells that from a crash before you act on it.
+- `blocked` means a dialog waits for the user in that tab. `gone` means the pane or tab closed. A settle without a closing message, or `unknown`, usually means the container's agent waits on something in the background, a sub-agent or a long command; `{{cli}} peek` tells that from a crash before you act on it.
 - Steer, then the wake: the same sequence for a container you watch and one you drive end to end.
 
 ## When it refuses
