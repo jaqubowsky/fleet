@@ -300,7 +300,7 @@ test("the description carries each sentence a seat would otherwise choose by lev
 	);
 	assert.match(
 		human.inside,
-		/^- push `human`: prepare the branch and ask for the push in `Question:` of the closing message; the person pushes it, and a steer tells you once it is on GitHub$/m,
+		/^- push `human`: prepare the branch and ask for the push as an open question of the closing message; the person pushes it, and a steer tells you once it is on GitHub$/m,
 	);
 	assert.match(
 		ownInside,

@@ -49,15 +49,15 @@ Only unresolved threads (`isResolved == false`) are read: a bot resolves the thr
 
 2. **Fix in one batch.** The job triggers on push, so a second push costs another CI run and another bot pass. Conflicts first, then the findings you accepted, then the failures you can diagnose without a fresh run. A failure in code outside your diff is a stale base, which has its own section below.
 
-3. **Record the round** in the closing message, under `Changes:`, one line per finding, each carrying its thread id and a verdict a person can paste as it stands:
+3. **Record the round** in the closing message, one line per finding, each carrying its thread id and a verdict a person can paste as it stands:
 
 ```text
-Changes: PR #2077 round 3, head 03ed324
+PR #2077 round 3, head 03ed324
   PRRT_kwDOabc fixed: the fallback assigned multi-rate totals to the first rate; the guard now rejects the import instead.
   PRRT_kwDOdef rejected: the tolerance the bot compares belongs to the renderer, not the importer, and both read 0.01 after this change.
 ```
 
-1. **Commit, push where your seat may, and hand back.** A round that changes what a user sees rechecks the affected acceptance criteria in the running app after its last visible change; open the frames and link the browser report to the new head before calling those criteria passed. A test-only round needs no new browser walk. The number and URL head the round's `Changes:`. A body that has to change is rewritten whole, the way the pull request was opened, and goes through `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`, because `gh pr edit` queries the retired Projects (classic) field and fails. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so.
+1. **Commit, push where your seat may, and hand back.** A round that changes what a user sees rechecks the affected acceptance criteria in the running app after its last visible change; open the frames and link the browser report to the new head before calling those criteria passed. A test-only round needs no new browser walk. The number and URL head the round's closing message. A body that has to change is rewritten whole, the way the pull request was opened, and goes through `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`, because `gh pr edit` queries the retired Projects (classic) field and fails. Report commits, fixes, rejections and what still blocks. A round that changed nothing says so.
 
 ## A stale base
 

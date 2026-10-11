@@ -4,7 +4,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Environment
 
-1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Name the failed check and the needed image rebuild and fresh container in `Question:` of the closing message. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services before the last closing message of the run and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
+1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Name the failed check, and the image rebuild and fresh container it needs, as an open question of the closing message. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services before the last closing message of the run and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
 2. Node and the package manager follow the repo's declared versions, and the image's own Node when the repo declares none
 3. Deps install in the background from every lockfile into `/tmp/fleet-install.log` for the primary repo. When `repositories.json` exists, every additional repo has `/tmp/fleet-install-<workspace basename>.log`; check each. Wait until each log says the install is ready, failed or stalled; until then its last line names the step still running. A ready install names the Node it ran with: build once so workspace packages resolve, and report a skipped lockfile. A failed or stalled install, or a log that never appeared, leaves the step it names to you, the install or the `## Setup` block of `project.md`: run it once yourself and say so
 4. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
@@ -25,16 +25,16 @@ You run in an isolated container. Someone outside watches this session and gives
    Whoever runs it, the analysis included, adds its line to that file for every later session and container on the same base
 6. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:
    - goes into `runbook/gotchas.md` as not runnable here, with the memory it had
-   - goes once into the closing message's `Question:`, so the host can give the next container more
+   - goes once into the closing message's open questions, so the host can give the next container more
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
-8. A question for the host goes into `Question:` of the closing message, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
+8. A question for the host goes into the open questions of the closing message, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
 
 ## The run
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends on one question in the closing message while a decision is still open. An order to deliver end to end answers it, all but a product decision nothing settled; that approval goes into Decisions, with the user's deciding words and their date, before implementation starts
+1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. Implementation starts only once each is answered and the answer is in Decisions, with the user's deciding words and their date. An order to deliver end to end answers all but a product decision nothing settled
 2. `implement` works the Plan's slices in order: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. At the end, one edit ticks each criterion in `ticket.md` with its evidence beside it
 3. A changed requirement goes into the criteria of `ticket.md`, and a changed decision into Decisions, before the code changes
 4. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
@@ -66,22 +66,19 @@ Each check runs once, where it is cheapest:
 
 ## Closing message
 
-Every turn ends with this message, whatever the turn did:
+Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; and last, only when there are any, the open questions as a list.
 
 ```text
-Changes: <what changed>
-Checks: <command> -> exit <n> @ <sha7>, <log path under logs/>
-Commits: <sha7> <subject>
-Question: <a question for a person, or none>
+check                        result  commit   log
+format and lint of the diff  pass    9d290c9  logs/gate-20261011T182717/format-lint.log
+tests of affected packages   pass    9d290c9  logs/gate-20261011T182717/web.log
 ```
-
-`Checks:` repeats per check; `@ <sha7>` is the commit the check passed on. Review findings you reject go under `Changes:` with the reason. A turn with nothing in a slot writes `none` there.
 
 ## Finish
 
 1. Commit unsigned on the task branch
-2. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted, with skill `resolving-merge-conflicts`. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on in `Question:` and ask for no credential
+2. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted, with skill `resolving-merge-conflicts`. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
 3. A pushed branch follows the stale-base rules of skill `babysit-pr`. Where the host signs, signing rewrites your commits, so once the host has pushed, `git fetch origin && git reset --hard origin/<branch>` before you touch anything
 4. With `repositories.json`, finish and commit each repo separately. Run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree. The host imports all branches only after its own preflight; signing and pushing need host approval. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`, when the pull request opens and in every later round that changes it. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
-5. The final checks of the table run on the updated tree, and their lines go into the closing message. Nothing in the task directory is committed, so keep code and secrets out
-6. Finish with a clean checkout: committed, or the uncommitted files named in `Changes:` with the reason
+5. The final checks of the table run on the updated tree, and their rows go into the closing message. Nothing in the task directory is committed, so keep code and secrets out
+6. Finish with a clean checkout: committed, or the uncommitted files named in the closing message with the reason

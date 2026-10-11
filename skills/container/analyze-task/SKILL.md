@@ -115,7 +115,7 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### Decisions
 
-What will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is the question below.
+What will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is an open question below.
 
 ### Plan
 
@@ -126,7 +126,7 @@ A numbered list of slices in implementation order, each one commit: what it deli
 2. The trash list shows the restored count. Closes criterion 3. Seam: trash page component test
 ```
 
-The reply ends on one question, outside the three sections; the written copy leaves it out. Ask one question containing only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. If none remain, state the approved next step.
+The reply ends with the open questions as a list, outside the three sections; the written copy leaves them out. List only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. With none open, state the approved next step.
 
 ```md
 1. <decision>

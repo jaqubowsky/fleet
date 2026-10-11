@@ -834,11 +834,11 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				.join("\n");
 			assert.match(
 				rules,
-				/A question for the host goes into `Question:` of the closing message, and the turn ends there\. Never a `\w+` dialog here/,
+				/A question for the host goes into the open questions of the closing message, and the turn ends there\. Never a `\w+` dialog here/,
 			);
 			assert.ok(
 				rules.includes(
-					"Every turn ends with this message, whatever the turn did:\n\n```text\nChanges: <what changed>\nChecks: <command> -> exit <n> @ <sha7>, <log path under logs/>\nCommits: <sha7> <subject>\nQuestion: <a question for a person, or none>\n```",
+					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; and last, only when there are any, the open questions as a list.",
 				),
 			);
 			for (const row of [
@@ -959,7 +959,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(skill, /The wait ends by recording the settled state/);
 			assert.match(
 				rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md"),
-				/`Checks:` repeats per check; `@ <sha7>` is the commit the check passed on/,
+				/the checks as an ASCII table of result, the commit each passed on and its log/,
 			);
 			const core = rendered(
 				out,
