@@ -4,6 +4,6 @@ A watched container settling in herdr (`idle`, `done`, or `blocked` on a dialog)
 
 - A container working 20 minutes without settling wakes you with `working <n>m without settling` and the last thing it said, and again while it goes on
 - One taken down, by `{{cli}} down` from any session or by its sandbox leaving `sbx ls`, wakes you once with `<prev> -> taken down`; a closed pane, with `<prev> -> gone`
-- Between two steers, a settle whose message its last wake already carried, as after compacting while idle, does not reach you, and the same state reaches you at most twice
+- Between two steers, an `idle` or `done` whose message its last wake already carried, as after compacting while idle, does not reach you, and the same state reaches you at most twice
 
 `{{cli}} ls` shows each container's branch, dirty count, commits since the merge base with origin's default branch, and its activity. The wake turn is one line, the agent and what its message says, then either the next steer or the end of the turn. Going back to work is silent.

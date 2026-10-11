@@ -155,9 +155,11 @@ export function watch(
 		const message = said && where ? lastSaid(where.sandbox) : "";
 		if (key) {
 			const last = woken.get(name);
-			const repeat =
-				last?.key === key && (steered.get(name) ?? "") <= last.at;
-			if (repeat && (last.count >= SAME_WAKES || (TERMINAL.has(key) && last.message === message))) return;
+			const unsteered = last !== undefined && (steered.get(name) ?? "") <= last.at;
+			const repeat = unsteered && last.key === key;
+			const unchanged =
+				unsteered && TERMINAL.has(key) && TERMINAL.has(last.key) && last.message === message;
+			if ((repeat && last.count >= SAME_WAKES) || unchanged) return;
 			woken.set(name, {
 				key,
 				message,

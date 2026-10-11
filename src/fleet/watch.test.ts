@@ -543,6 +543,17 @@ test("a settle that says nothing new since the last wake, as after compacting wh
 	assert.deepEqual(wakes, [`[fleet] claude-worker: idle\n\n${REPORT}`]);
 });
 
+test("a done after an idle with the same message wakes nobody", (t) => {
+	const { wakes, turn, status } = settles(t, REPORT);
+
+	turn();
+	status("worker:pane", "working");
+	status("worker:pane", "done");
+	t.mock.timers.tick(1000);
+
+	assert.equal(wakes.length, 1);
+});
+
 test("a second dialog wakes the host even when the agent said nothing new", (t) => {
 	const { wakes, status } = settles(t, REPORT);
 
