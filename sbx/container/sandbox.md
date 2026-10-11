@@ -56,12 +56,12 @@ Each check runs once, where it is cheapest:
 | --- | --- | --- |
 | Red test | before the code of each behaviour | 1 per behaviour |
 | Slice tests (changed files and every test that imports them) | after the slice's code | 1 per slice, plus reruns while fixing |
-| Independent review of the whole branch, `two-axis-review` | after the last slice's commit, before the final checks | 1 |
+| Branch update, by the method `## Merge method` in `project.md` names | after the last slice's commit | 1, never repeated by a later session |
+| Independent review of the whole branch, `two-axis-review` | after the branch update | 1 |
+| Typecheck and lint of changed files | alongside the review, with no app running | 1 |
+| Tests of affected packages | alongside the review, with no app running; on the base only the files that failed | 1 |
 | Review fixes | one batch, each with its own test | 1 |
-| Branch update, by the method `## Merge method` in `project.md` names | before the final checks | 1, never repeated by a later session |
-| Typecheck and lint of changed files | final tree | 1 |
-| Tests of affected packages | final tree; on the base only the files that failed | 1 |
-| Verification of what a user sees, the way `project.md` names | final tree, after the last visible change | 1 |
+| Verification of what a user sees, the way `project.md` names | last, on the final tree; then stop the app and its services | 1 |
 
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
 - Gates run with no bash timeout

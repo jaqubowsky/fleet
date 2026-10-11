@@ -463,7 +463,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 			assert.match(finish, /`git merge-base --is-ancestor origin\/<base> HEAD` exiting 0 means no update/);
 			assert.match(finish, /by the method `## Merge method` in `project\.md` names/);
-			assert.match(rules, /\| Branch update, by the method `## Merge method` in `project\.md` names \| before the final checks \| 1, never repeated by a later session \|/);
+			assert.match(rules, /\| Branch update, by the method `## Merge method` in `project\.md` names \| after the last slice's commit \| 1, never repeated by a later session \|/);
 		});
 	});
 
@@ -743,7 +743,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			const rules = containerRules(out)
 				.map((file) => readFileSync(join(out, "container", file), "utf8"))
 				.join("\n");
-			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the last slice's commit, before the final checks \| 1 \|/);
+			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the branch update \| 1 \|/);
 			assert.match(
 				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
 				/Every container run ends on one independent review of its whole branch, in `review\.md`/,
@@ -845,8 +845,9 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				"| Red test | before the code of each behaviour | 1 per behaviour |",
 				"| Slice tests (changed files and every test that imports them) | after the slice's code | 1 per slice, plus reruns while fixing |",
 				"| Review fixes | one batch, each with its own test | 1 |",
-				"| Typecheck and lint of changed files | final tree | 1 |",
-				"| Tests of affected packages | final tree; on the base only the files that failed | 1 |",
+				"| Typecheck and lint of changed files | alongside the review, with no app running | 1 |",
+				"| Tests of affected packages | alongside the review, with no app running; on the base only the files that failed | 1 |",
+				"| Verification of what a user sees, the way `project.md` names | last, on the final tree; then stop the app and its services | 1 |",
 			])
 				assert.ok(rules.includes(row), row);
 			assert.match(rules, /each check covers only the base or the last `@sha` it passed on, up to HEAD/);
