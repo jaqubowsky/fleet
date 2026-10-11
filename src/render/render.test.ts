@@ -825,6 +825,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				implement,
 				/name the acceptance line most likely to be false and make the check that would catch it the first red of step 5/,
 			);
+			assert.match(
+				implement,
+				/A file inside a workspace package is also imported through the package's name: rebuild the package when its `main` points at build output, then run every test that imports that name, in every workspace/,
+			);
 			const rules = containerRules(out)
 				.map((file) => readFileSync(join(out, "container", file), "utf8"))
 				.join("\n");
@@ -839,7 +843,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			for (const row of [
 				"| Red test | before the code of each behaviour | 1 per behaviour |",
-				"| Slice tests (changed files and every test that imports them) | after the slice's code | 1 per slice, plus reruns while fixing |",
+				"| Slice tests (changed files and every test that imports them, by path or by package name) | after the slice's code | 1 per slice, plus reruns while fixing |",
 				"| Review fixes | one batch, each with its own test | 1 |",
 				"| Typecheck and lint of changed files | alongside the review, with no app running | 1 |",
 				"| Tests of affected packages | alongside the review, with no app running; on the base only the files that failed | 1 |",

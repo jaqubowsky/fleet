@@ -21,7 +21,7 @@ Implement the ticket you were handed, slice by slice, as its analysis plans it.
    Done-check: <the command that proves this slice done>, <why it is the right command>
    ```
 
-   The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. Each commit is green on its own: the done-check covers the tests of the changed files and every test that imports them, anywhere in the repository. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
+   The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. Each commit is green on its own: the done-check covers the tests of the changed files and every test that imports them, anywhere in the repository. A file inside a workspace package is also imported through the package's name: rebuild the package when its `main` points at build output, then run every test that imports that name, in every workspace. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
 

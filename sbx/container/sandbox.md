@@ -52,7 +52,7 @@ Each check runs once, where it is cheapest:
 | Check | When | Times per task |
 | --- | --- | --- |
 | Red test | before the code of each behaviour | 1 per behaviour |
-| Slice tests (changed files and every test that imports them) | after the slice's code | 1 per slice, plus reruns while fixing |
+| Slice tests (changed files and every test that imports them, by path or by package name) | after the slice's code | 1 per slice, plus reruns while fixing |
 | Branch update, by the method `## Merge method` in `project.md` names | after the last slice's commit | 1, never repeated by a later session |
 | Independent review of the whole branch, `two-axis-review` | after the branch update | 1 |
 | Typecheck and lint of changed files | alongside the review, with no app running | 1 |
