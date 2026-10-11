@@ -23,7 +23,7 @@ logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 
-- `analysis.md` is a snapshot anchored to the analyzed commit; a later analysis replaces it
+- the Findings of `analysis.md` are anchored to the analyzed commit; its Decisions and Plan change in place
 - a changed requirement updates the criteria in `ticket.md`; a changed decision updates Decisions in `analysis.md`
 - `review.md` covers only its named range, and that review's findings close in its addendum. A new review replaces it, and the one it replaces moves into its `logs/review-<head-sha7>/`
 - each `browser/<run-id>/report.md` records one browser run, cleanup included; a new run gets a new directory

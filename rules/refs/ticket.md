@@ -1,7 +1,7 @@
-# <NN>: <Ticket title>
+# <Ticket title>
 
 Status: ready-for-agent
-Blocked by: <NN>-<slug>.md, or "None, can start immediately"
+Blocked by: <ticket key>, or "None, can start immediately"
 
 <Describe who is affected, what fails today, and one concrete example or source. Use a Problem heading when this needs more than a paragraph.>
 
@@ -31,4 +31,4 @@ Each criterion is an invariant whose expected result comes from the ticket, not 
 
 In a tracker, the heading's title is the issue title, its key is the only number, `Status:` is the issue's workflow state, and `Blocked by:` is the tracker's blocking relation with landed blockers left out. The local copy puts the heading and working `Status:` back above the description. Its full text remains available to a container without tracker access.
 
-A ticket holds the plan, never progress: progress lives in the tracker and in git. A local copy's `Status:` is the host's; the container leaves it as it is and ticks each criterion with its evidence.
+A ticket holds the requirement and its criteria, never progress: progress lives in the tracker and in git. A local copy's `Status:` is the host's; the container leaves it as it is and ticks each criterion with its evidence.
