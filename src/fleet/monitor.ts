@@ -1,7 +1,6 @@
 export const SETTLE_MS = 1000;
 export const STALL_MS = 20 * 60_000;
 export const RING_MS = 15 * 60_000;
-const TAIL_LINES = 15;
 export const TERMINAL = new Set(["done", "idle"]);
 const WAKE = new Set(["done", "idle", "blocked"]);
 
@@ -26,10 +25,6 @@ export function stalled(
 				now - e.rang >= ringMs,
 		)
 		.map((e) => e.pane);
-}
-
-export function shown(tail: string): string {
-	return tail.split("\n").slice(-TAIL_LINES).join("\n");
 }
 
 export function transition(

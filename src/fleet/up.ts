@@ -9,6 +9,7 @@ import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
 import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
+import { claudeProject, sessionsDir } from "./sessions.ts";
 import {
 	taskDir,
 	repositoryManifest,
@@ -756,16 +757,6 @@ function seedProjectConfig(
 	io.log(
 		`${sandbox}: copied ${paths.length} ignored path(s) under ${dir} from the host checkout`,
 	);
-}
-
-function sessionsDir(task: string, kind: Kind, workspace: string): string {
-	return kind.containerSessions
-		? `${task}/logs/sessions/${basename(kind.containerSessions)}/${claudeProject(workspace)}`
-		: `${task}/logs/sessions`;
-}
-
-function claudeProject(workspace: string): string {
-	return workspace.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
 function linkSessions(

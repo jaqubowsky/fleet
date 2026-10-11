@@ -9,18 +9,18 @@ import {
 	shouldWake,
 	STALL_MS,
 	stalled,
-	shown,
 	TERMINAL,
 	transition,
 } from "./monitor.ts";
 import { agentName } from "./name.ts";
+import { taskDir } from "./repositories.ts";
+import { lastMessage, sessionsDir } from "./sessions.ts";
 import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
 const SAME_WAKES = 2;
-const READ_LINES = 60;
 
 type Frame = {
 	event?: string;
@@ -136,28 +136,16 @@ export function watch(
 	const isStopped = (sandbox: Sandbox) =>
 		sandbox.status === "stopped" || Boolean(stoppedPane(sandbox, io));
 
-	const tailOf = (name: string): string => {
-		try {
-			return io
-				.herdrText([
-					"agent",
-					"read",
-					name,
-					"--source",
-					"recent-unwrapped",
-					"--lines",
-					String(READ_LINES),
-				])
-				.trimEnd();
-		} catch (error) {
-			return `pane not read: ${String(error).split("\n")[0]}`;
-		}
+	const lastSaid = (sandbox: Sandbox): string => {
+		const workspace = sandbox.workspaces[0];
+		const task = taskDir(workspace, sandbox.name, io);
+		return lastMessage(sessionsDir(task, sandbox.kind, workspace), io) ?? "";
 	};
 
 	const emit = (
 		name: string,
 		change: string,
-		{ key, tail = "", down }: { key?: string; tail?: string; down?: boolean } = {},
+		{ key, said, down }: { key?: string; said?: boolean; down?: boolean } = {},
 	) => {
 		const { closed, steered } = lifecycle(io.read(events) ?? "");
 		if (closed.has(name) && !down) return;
@@ -175,11 +163,11 @@ export function watch(
 				at: io.now().toISOString(),
 			});
 		}
-		onWake(wakeLines(name, where?.sandbox.name ?? name, change, shown(tail)));
+		onWake(wakeLines(name, where?.sandbox.name ?? name, change, said && where ? lastSaid(where.sandbox) : ""));
 	};
 
 	const settled = (name: string, state: string) =>
-		emit(name, state, { key: state, tail: tailOf(name) });
+		emit(name, state, { key: state, said: true });
 
 	const leave = (
 		pane: string,
@@ -355,7 +343,7 @@ export function watch(
 			emit(
 				t.name,
 				`working ${Math.round((now - t.since) / 60_000)}m without settling`,
-				{ tail: tailOf(t.name) },
+				{ said: true },
 			);
 		}
 	};

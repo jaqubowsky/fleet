@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from "claude-code";
 type Line = { wake?: string; log?: string; watching?: string };
 
 const WATCH_DESCRIPTION =
-	"Watch containers beyond the ones this herdr pane put up or steered, which are watched by themselves. A watched container settling or working on without settling wakes this session with a [fleet] <agent>: <state> turn carrying the last 15 lines of its pane. Pass the sandbox names fleet ls prints; an empty string watches every container.";
+	"Watch containers beyond the ones this herdr pane put up or steered, which are watched by themselves. A watched container settling or working on without settling wakes this session with a [fleet] <agent>: <state> turn carrying the last message of its session transcript. Pass the sandbox names fleet ls prints; an empty string watches every container.";
 
 const AGENT_STATUS: Record<string, string> = { working: "yellow", idle: "green", done: "green", blocked: "red", exited: "red", gone: "red" };
 

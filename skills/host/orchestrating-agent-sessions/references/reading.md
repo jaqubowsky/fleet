@@ -4,7 +4,7 @@ Reached from the skill for a question about a task: the one file that answers it
 
 | Question | Read |
 | --- | --- |
-| where is it, does it need anyone | its last closing message: the wake's pane tail, or `{{cli}} peek` |
+| where is it, does it need anyone | its last closing message: the wake, or `{{cli}} peek` |
 | what happened, in order | `git log` in the container; each turn's closing message is in the session transcripts under `logs/sessions/` |
 | which commits | `{{cli}} ls` for each repo's branch, dirty count and full SHA; `repositories.json` records each repo's base and branch, `refs/fleet/<sandbox>/<repo>/landed` in the host repo is the container head last landed, and `git log <base>..<branch>` shows the host history after land |
 | what did the analysis find | `analysis.md` |

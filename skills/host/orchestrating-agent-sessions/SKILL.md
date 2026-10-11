@@ -54,7 +54,7 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 
 ## Reading a task
 
-A `[fleet]` line or a question about a task starts at the closing message in its pane tail, then the one file that answers it.
+A `[fleet]` line or a question about a task starts at the closing message the wake carries, then the one file that answers it.
 
 The table of which file answers which question, and where a multi-repository task keeps its clones: [references/reading.md](references/reading.md).
 
