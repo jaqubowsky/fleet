@@ -15,10 +15,10 @@ export function installScript(setup?: string): string {
 		"fi",
 		'limit=""; command -v timeout >/dev/null && limit="timeout 1200"',
 		"find . -maxdepth 6 -type f \\( -name yarn.lock -o -name pnpm-lock.yaml -o -name package-lock.json \\) \\",
-		"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | sort | while read -r lock; do",
+		"  -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' 2>/dev/null | sort | while read -r lock; do",
 		'  root="$(dirname "$lock")"',
 		'  [ -f "$root/package.json" ] || continue',
-		'  echo "deps: $root"',
+		'  echo "deps: installing in $root"',
 		'  log="${TMPDIR:-/tmp}/deps-$(echo "$root" | tr \'/.\' \'__\').log"',
 		'  ( cd "$root" && case "$(basename "$lock")" in',
 		"      pnpm-lock.yaml) npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile ;;",
@@ -28,13 +28,13 @@ export function installScript(setup?: string): string {
 		"done",
 		"for script in prisma:generate generate codegen; do",
 		`  node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" 2>/dev/null || continue`,
-		'  echo "deps: $script"',
+		'  echo "deps: running $script"',
 		'  npm run "$script" >/tmp/deps-generate.log 2>&1 || tail -20 /tmp/deps-generate.log',
 		"  break",
 		"done",
 		...(setup
 			? [
-					'echo "deps: setup"',
+					'echo "deps: running setup"',
 					`setup=$(cat <<'FLEET_SETUP'\n${setup}\nFLEET_SETUP\n)`,
 					'bash -ec "$setup" || { echo "deps: failed in setup with exit $?"; exit 1; }',
 				]

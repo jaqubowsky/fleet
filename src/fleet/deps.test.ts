@@ -22,7 +22,7 @@ test("install script runs a declared generator before it reports ready", () => {
 });
 
 
-async function run(files: Record<string, string>, tools: Record<string, string> = {}, setup?: string) {
+async function run(files: Record<string, string>, tools: Record<string, string> = {}, setup?: string, before?: (workspace: string) => void) {
 	const { mkdtempSync, writeFileSync, mkdirSync, readFileSync, chmodSync } =
 		await import("node:fs");
 	const { tmpdir } = await import("node:os");
@@ -43,9 +43,10 @@ async function run(files: Record<string, string>, tools: Record<string, string> 
 	}
 	for (const [name, body] of Object.entries(files))
 		writeFileSync(join(workspace, name), body);
+	before?.(workspace);
 	let log: string;
 	try {
-		log = execFileSync("bash", ["-c", installScript(setup)], {
+		log = execFileSync("bash", ["-c", `exec 2>&1\n${installScript(setup)}`], {
 			env: {
 				...process.env,
 				WORKSPACE_DIR: workspace,
@@ -94,7 +95,32 @@ test("an install that fails names its root and exit instead of leaving the log m
 test("a setup command runs after the install and logs before ready", async () => {
 	const { log } = await run({}, {}, "echo browsers installed");
 
-	assert.match(log, /deps: setup\nbrowsers installed\ndeps: ready/);
+	assert.match(log, /deps: running setup\nbrowsers installed\ndeps: ready/);
+});
+
+test("an install under way says what it is doing, so its line never reads as an end state", async () => {
+	const { log } = await run(
+		{ "package.json": "{}", "package-lock.json": "{}" },
+		{ npm: "#!/bin/sh\nexit 0\n" },
+	);
+
+	assert.match(log, /^deps: installing in \.$/m);
+});
+
+test("a directory the lockfile search cannot read leaves no error in the log", async () => {
+	const { chmodSync, mkdirSync } = await import("node:fs");
+	const { join } = await import("node:path");
+	let locked = "";
+
+	const { log } = await run({}, {}, undefined, (workspace) => {
+		locked = join(workspace, "locked");
+		mkdirSync(locked);
+		chmodSync(locked, 0o000);
+	});
+	chmodSync(locked, 0o755);
+
+	assert.doesNotMatch(log, /Permission denied/);
+	assert.match(log, /deps: ready/);
 });
 
 test("a failing setup command ends the log as a failed install", async () => {
