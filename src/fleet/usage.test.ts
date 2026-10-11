@@ -93,6 +93,31 @@ test("a Claude transcript is priced from its tokens", () => {
 	assert.ok(Math.abs(summary.totals.cost - (4 + 2 + 0.2 + 2.5 + 4 + 2)) < 1e-9, String(summary.totals.cost));
 });
 
+test("an advisor's answer inside a Claude turn is priced at the advisor's model", () => {
+	const transcript = JSON.stringify({
+		type: "assistant",
+		timestamp: "2026-09-23T12:00:00Z",
+		message: {
+			id: "a",
+			role: "assistant",
+			model: "claude-sonnet-5-5",
+			usage: {
+				input_tokens: 1_000_000,
+				output_tokens: 0,
+				iterations: [
+					{ type: "message", input_tokens: 1_000_000, output_tokens: 0 },
+					{ type: "advisor_message", model: "claude-opus-5-5", input_tokens: 1_000_000, output_tokens: 100_000 },
+				],
+			},
+			content: [],
+		},
+	});
+
+	const summary = summarize(parseEntries(transcript));
+
+	assert.ok(Math.abs(summary.totals.cost - (2 + 4 + 2)) < 1e-9, String(summary.totals.cost));
+});
+
 test("usage survives an empty or broken transcript", () => {
 	assert.deepEqual(summarize(parseEntries("")).runs, []);
 	assert.deepEqual(summarize(parseEntries("{not json\n")).runs, []);

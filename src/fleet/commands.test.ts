@@ -300,6 +300,29 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
+test("down counts each message once when a resumed session repeats the one before it", () => {
+	const turn = (id: string, at: string) =>
+		JSON.stringify({ type: "assistant", timestamp: at, message: { id, role: "assistant", model: "claude-opus-5-5", usage: { input_tokens: 1_000_000 }, content: [] } });
+	const file = { size: 10, mtime: new Date(0), dir: false };
+	const dir = `${task}/logs/sessions/--r--`;
+	const io = fakeIo({
+		...running,
+		...sessions,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		[`list ${dir}`]: ["first.jsonl", "resumed.jsonl"],
+		[`stat ${dir}/first.jsonl`]: file,
+		[`stat ${dir}/resumed.jsonl`]: file,
+		[`read ${dir}/first.jsonl`]: turn("a", "2026-09-21T12:02:02Z"),
+		[`read ${dir}/resumed.jsonl`]: [turn("a", "2026-09-21T12:02:02Z"), turn("b", "2026-09-21T12:30:00Z")].join("\n"),
+	});
+
+	down("pi-a", {}, io);
+
+	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
+	assert.equal(usage.totals.requests, 2);
+	assert.equal(usage.totals.cost, 8);
+});
+
 test("down excludes a stopped night from running time", () => {
 	const io = fakeIo({
 		...running,

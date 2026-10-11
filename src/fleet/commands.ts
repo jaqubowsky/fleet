@@ -489,8 +489,9 @@ function sessionUsage(
 	if (!files.length) return undefined;
 	const firstAt = (session: ReturnType<typeof parseEntries>) =>
 		session.find((e) => e.timestamp)?.timestamp ?? "";
+	const seen = new Set<string>();
 	const entries = files
-		.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? ""))
+		.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? "", seen))
 		.sort((a, b) => firstAt(a).localeCompare(firstAt(b)))
 		.flat().filter((entry) =>
 			(!from || !!entry.timestamp && Date.parse(entry.timestamp) >= Date.parse(from)) &&
