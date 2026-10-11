@@ -1106,7 +1106,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 const compaction = JSON.parse(readFileSync(join(root, "src/compaction.json"), "utf8"));
 
-test("claude host and container compact on their own at the one compaction point, and the container asks fable for advice", () => {
+test("claude host and container compact on their own at the one compaction point, and the container asks opus for advice", () => {
 	const host = JSON.parse(readFileSync(join(root, "claude/profiles/host.json"), "utf8"));
 	renderSeats("claude", (out) => {
 		const container = JSON.parse(rendered(out, "container", "context/settings.json"));
@@ -1116,7 +1116,7 @@ test("claude host and container compact on their own at the one compaction point
 		assert.equal(host.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW, "{{compaction.tokens}}");
 		assert.equal(container.autoCompactEnabled, true);
 		assert.equal(container.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW, "400000");
-		assert.equal(container.advisorModel, "claude-fable-5-1");
+		assert.equal(container.advisorModel, "claude-opus-5-5");
 		assert.ok(rendered(out, "container", "home/fleet/src/compaction.json"));
 	});
 });
