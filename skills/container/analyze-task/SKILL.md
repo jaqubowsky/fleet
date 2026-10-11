@@ -126,9 +126,7 @@ A numbered list of slices in implementation order, each one commit: what it deli
 2. The trash list shows the restored count. Closes criterion 3. Seam: trash page component test
 ```
 
-### The one question
-
-Ask one question containing only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. If none remain, state the approved next step.
+The reply ends on one question, outside the three sections; the written copy leaves it out. Ask one question containing only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. If none remain, state the approved next step.
 
 ```md
 1. <decision>

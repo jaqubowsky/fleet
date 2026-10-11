@@ -82,7 +82,7 @@ An item under Not covered that names work still to come goes into the file that 
 - Unreviewed: <each file a fix added outside `changed.txt`, or none>
 ```
 
-Checks after commit or rebase keep their detail in check logs or a new browser run report. The Range stays pinned to the diff the reviewer inspected. A fix that reaches files the reviewer never saw closes here too: the Unreviewed line names them, and the next review covers its own ticket's diff or a range the user names.
+Checks after commit or rebase keep their detail in check logs or a new browser run report. The Range stays pinned to the diff the reviewer inspected. A fix that reaches files the reviewer never saw closes here too: the Unreviewed line names them, and the next review covers the delta from the reviewed head, or a range the user names.
 
 ## Done
 

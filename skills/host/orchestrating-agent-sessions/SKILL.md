@@ -25,7 +25,7 @@ Deliver the ticket in <task dir>/ticket.md. Restoring a project brings back only
 
 ## Driving a task
 
-On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. A `turn ended` wake after a ticket's commit is the next ticket's steer; after the last ticket, the final verification's.
+On a task the user handed you end to end: steer with the order in your own words, act on each wake (Watching below), repeat. The container works every slice of its Plan and its final checks in one run, so a `turn ended` wake is either a finished run, with the final checks in its closing message, or a stop to steer on.
 
 Stop for the user on a `question` wake whose decision is theirs, and on a decision that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 

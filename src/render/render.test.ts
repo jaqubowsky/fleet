@@ -738,7 +738,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.deepEqual(promises, []);
 			assert.match(
 				rendered(out, "container", "implement/SKILL.md"),
-				/The independent review runs once, over the whole branch, in your seat's Finish/,
+				/The independent review runs once, over the whole branch, as your seat's Checks table orders it/,
 			);
 			const rules = containerRules(out)
 				.map((file) => readFileSync(join(out, "container", file), "utf8"))
