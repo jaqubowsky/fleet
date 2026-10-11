@@ -67,7 +67,7 @@ test("an account limit the claude agent stopped on is its last message", () => {
 	assert.equal(message, "You've hit your weekly limit · resets Oct 2, 8am (UTC)");
 });
 
-test("a pi turn that failed names its stop reason after what it said", () => {
+test("a pi turn that failed names its stop reason after the last thing it said", () => {
 	const io = sessions({
 		"s.jsonl": [
 			pi([{ type: "text", text: "Done." }]),
@@ -78,7 +78,7 @@ test("a pi turn that failed names its stop reason after what it said", () => {
 
 	const message = lastMessage(DIR, io);
 
-	assert.equal(message, "stopped on error: 429 rate limit");
+	assert.equal(message, "Checking the build\n\nstopped on error: 429 rate limit");
 });
 
 test("the newest session holds the last message", () => {

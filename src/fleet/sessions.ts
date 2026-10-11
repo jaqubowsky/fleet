@@ -33,22 +33,26 @@ export function lastMessage(dir: string, io: Io): string | undefined {
 }
 
 function said(jsonl: string): string | undefined {
-	for (const line of jsonl.split("\n").reverse()) {
-		let entry: Line;
+	const replies = jsonl.split("\n").flatMap((line) => {
 		try {
-			entry = JSON.parse(line);
+			const entry: Line = JSON.parse(line);
+			return entry.message?.role === "assistant" ? [entry.message] : [];
 		} catch {
-			continue;
+			return [];
 		}
-		const message = entry.message;
-		if (message?.role !== "assistant") continue;
-		const text = (message.content ?? [])
-			.flatMap((part) => (part.type === "text" && part.text?.trim() ? [part.text.trim()] : []))
-			.join("\n");
-		const stop = FAILED.has(message.stopReason ?? "")
-			? `stopped on ${message.stopReason}${message.errorMessage ? `: ${message.errorMessage}` : ""}`
-			: "";
-		const both = [text, stop].filter(Boolean).join("\n\n");
-		if (both) return both;
-	}
+	});
+	const text = replies
+		.map((reply) =>
+			(reply.content ?? [])
+				.flatMap((part) => (part.type === "text" && part.text?.trim() ? [part.text.trim()] : []))
+				.join("\n"),
+		)
+		.filter(Boolean)
+		.at(-1);
+	const last = replies.at(-1);
+	const stop =
+		last && FAILED.has(last.stopReason ?? "")
+			? `stopped on ${last.stopReason}${last.errorMessage ? `: ${last.errorMessage}` : ""}`
+			: undefined;
+	return [text, stop].filter(Boolean).join("\n\n") || undefined;
 }
