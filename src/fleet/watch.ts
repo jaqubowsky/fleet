@@ -27,7 +27,7 @@ type Frame = {
 	data?: { pane_id?: string; agent_status?: string; state_change_seq?: number };
 };
 type Tracked = { name: string; status: string; since: number; rang: number };
-type Woken = { key: string; count: number; at: string };
+type Woken = { key: string; message: string; count: number; at: string };
 
 export function fleetAgents(
 	agents: Agent[],
@@ -152,18 +152,20 @@ export function watch(
 		const rows = listed();
 		const where = rows ? locate(name, rows) : dirs.get(name);
 		if (!down && where && isStopped(where.sandbox)) return;
+		const message = said && where ? lastSaid(where.sandbox) : "";
 		if (key) {
 			const last = woken.get(name);
 			const repeat =
 				last?.key === key && (steered.get(name) ?? "") <= last.at;
-			if (repeat && last.count >= SAME_WAKES) return;
+			if (repeat && (last.count >= SAME_WAKES || (TERMINAL.has(key) && last.message === message))) return;
 			woken.set(name, {
 				key,
+				message,
 				count: repeat ? last.count + 1 : 1,
 				at: io.now().toISOString(),
 			});
 		}
-		onWake(wakeLines(name, where?.sandbox.name ?? name, change, said && where ? lastSaid(where.sandbox) : ""));
+		onWake(wakeLines(name, where?.sandbox.name ?? name, change, message));
 	};
 
 	const settled = (name: string, state: string) =>

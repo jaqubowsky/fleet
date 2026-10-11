@@ -534,20 +534,53 @@ test("a pi container wakes the host with the last message of its own session", (
 	assert.deepEqual(wakes, ["[fleet] pi-worker: idle\n\nChecked the trace; nothing to change."]);
 });
 
-test("a third wake about the same state without a steer in between is not sent", (t) => {
+test("a settle that says nothing new since the last wake, as after compacting while idle, wakes nobody", (t) => {
 	const { wakes, turn } = settles(t, REPORT);
 
 	turn();
 	turn();
+
+	assert.deepEqual(wakes, [`[fleet] claude-worker: idle\n\n${REPORT}`]);
+});
+
+test("a second dialog wakes the host even when the agent said nothing new", (t) => {
+	const { wakes, status } = settles(t, REPORT);
+
+	status("worker:pane", "blocked");
+	status("worker:pane", "working");
+	status("worker:pane", "blocked");
+
+	assert.equal(wakes.length, 2);
+});
+
+test("a steer lets the same message wake the host again", (t) => {
+	const { io, wakes, turn } = settles(t, REPORT);
+
+	turn();
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
+		'2099-01-01T00:00:00.000Z w1:host steer claude-worker session= "go on"\n';
 	turn();
 
 	assert.equal(wakes.length, 2);
 });
 
-test("a steer after two identical wakes lets the next one through", (t) => {
-	const { io, wakes, turn } = settles(t, REPORT);
+test("a third wake about the same state without a steer in between is not sent", (t) => {
+	const { said, wakes, turn } = settles(t, "first");
 
 	turn();
+	said["claude-worker"] = "second";
+	turn();
+	said["claude-worker"] = "third";
+	turn();
+
+	assert.equal(wakes.length, 2);
+});
+
+test("a steer after two wakes about the same state lets the next one through", (t) => {
+	const { io, said, wakes, turn } = settles(t, "first");
+
+	turn();
+	said["claude-worker"] = "second";
 	turn();
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
 		'2099-01-01T00:00:00.000Z w1:host steer claude-worker session= "go on"\n';
