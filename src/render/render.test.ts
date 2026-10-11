@@ -843,7 +843,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			for (const row of [
 				"| Red test | before the code of each behaviour | 1 per behaviour |",
-				"| Slice tests (changed files and their importers) | after the slice's code | 1 per slice, plus reruns while fixing |",
+				"| Slice tests (changed files and every test that imports them) | after the slice's code | 1 per slice, plus reruns while fixing |",
 				"| Review fixes | one batch, each with its own test | 1 |",
 				"| Typecheck and lint of changed files | final tree | 1 |",
 				"| Tests of affected packages | final tree; on the base only the files that failed | 1 |",
