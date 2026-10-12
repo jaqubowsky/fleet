@@ -136,3 +136,25 @@ test("a setup line that fails before the last one still ends the log as a failed
 	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in setup with exit 1$/);
 	assert.doesNotMatch(log, /deps: ready/);
 });
+
+for (const [lock, tool] of [["pnpm-lock.yaml", "pnpm"], ["package-lock.json", "npm"]]) {
+	test(`a ${tool} install waits longer and retries more than ${tool}'s defaults on a slow registry`, async () => {
+		const { log } = await run(
+			{ "package.json": "{}", [lock]: "{}" },
+			{ [tool]: '#!/bin/sh\necho "args: $*"\nexit 9\n' },
+		);
+
+		const args = log.match(/^args: (.*)$/m)?.[1] ?? "";
+		assert.ok(Number(args.match(/--fetch-timeout=(\d+)/)?.[1]) > 300000, args);
+		assert.ok(Number(args.match(/--fetch-retries=(\d+)/)?.[1]) > 2, args);
+	});
+}
+
+test("a yarn install keeps yarn's own fetch settings", async () => {
+	const { log } = await run(
+		{ "package.json": "{}", "yarn.lock": "" },
+		{ yarn: '#!/bin/sh\necho "args: $*"\nexit 9\n' },
+	);
+
+	assert.match(log, /^args: install --frozen-lockfile$/m);
+});
