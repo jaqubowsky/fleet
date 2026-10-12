@@ -1,6 +1,6 @@
 # Task directory
 
-One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. A single repo uses `~/.fleet/tasks/<repo>/<sandbox>/`; a new multi-repository task uses `~/.fleet/tasks/groups/<repo-names>-<hash>/<sandbox>/`. The group hash comes from the sorted full GitHub repository names, not commits or argument order. Older tasks retain their recorded path or the primary repo's path when their manifest has none. `{{cli}} up` creates it, `{{cli}} down` keeps it. It carries the work between skills, between sessions and to the host: what the next reader needs is in a file here or in git. The state of the work is herdr's and git's: the agent writes no status file, and each turn ends with the closing message its container rule shows.
+One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. A task uses `~/.fleet/tasks/<primary repo>/<sandbox>/`, for one repository or several. Older tasks retain the path their manifest records, a `groups/` root included. `{{cli}} up` creates it, `{{cli}} down` keeps it. It carries the work between skills, between sessions and to the host: what the next reader needs is in a file here or in git. The state of the work is herdr's and git's: the agent writes no status file, and each turn ends with the closing message its container rule shows.
 
 ## Files
 
@@ -19,7 +19,7 @@ mockup/        on an order for one: index.html, the task's one board, and board.
 logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; <skill>-<id>/ evidence
 ```
 
-`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, holds shared app-start and screen-driving instructions such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-base/<sha7>.md`.
+`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions, such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-base/<sha7>.md`. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 

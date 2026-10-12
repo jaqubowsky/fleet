@@ -5,7 +5,7 @@ description: 'Fleet containers: put one up, steer it, read its task directory, l
 
 # Fleet containers
 
-One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; one task directory holds the repository set's state and the skills' work. A single repo uses `~/.fleet/tasks/<repo>/<sandbox>/`; new multi-repository tasks use `~/.fleet/tasks/groups/<repo-names>-<hash>/<sandbox>/` and the group's own runbook. Existing tasks keep their paths. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
+One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; one task directory holds the repository set's state and the skills' work, at `~/.fleet/tasks/<primary repo>/<sandbox>/` for one repository or several. Every repository keeps its own runbook at `~/.fleet/tasks/<repo>/runbook`, and a multi-repository container writes to each. Existing tasks keep their recorded paths. When this session may steer is in the Fleet section of your rules; the directory's layout is {{refs}}.
 
 Each `{{cli}}` command, its flags and what to report from it: [references/commands.md](references/commands.md). Read the row for the operation before you run it.
 
