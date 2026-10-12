@@ -5,7 +5,7 @@ description: 'Start and stop the app in this container through the shared runboo
 
 # Running the app
 
-Every repository has its own runbook, shared by every container that works on it, and wiring between repositories sits in the runbook of the repository that calls the other. A start that lives only in this task's notes dies with this container, and the next one works it out again.
+Every repository has its own runbook, shared by every container that works on it. A start that lives only in this task's notes dies with this container, and the next one works it out again.
 
 ## Start
 
