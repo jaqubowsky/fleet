@@ -9,7 +9,7 @@ Accepted. Replaces the group roots that `88271e6` introduced for multi-repositor
 Since `88271e6`, a multi-repository task lived under `~/.fleet/tasks/groups/<repo-names>-<hash>/` with a runbook of its own. That commit recorded only that "a new multi-repository task has its own group root, not the first repo's runbook". In FLO-1895 the cost showed:
 
 - Knowledge about flowMEE alone was already in `~/.fleet/tasks/flowMEE/runbook`, but the container could not read it. That knowledge was the web typecheck OOM, the `openapi.json` drift and the `API_DOMAIN_ADDRESS` pin.
-- The run spent about 24 minutes rediscovering it.
+- The run spent about 12 minutes rediscovering the OOM and another 12 on 403s from the production address the pin avoids, as the audit of 2026-10-12 recorded.
 - The group runbook then filled with flowMEE facts and the processor's base results, and the host copied them back by hand.
 
 Every tool surveyed keeps operational knowledge per repository: AGENTS.md, Claude Code, OpenHands, Copilot, Codespaces and Devin.
