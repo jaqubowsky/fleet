@@ -13,7 +13,7 @@ A stopped container needs `{{cli}} start` before a steer or exec. `stop` ends gu
 
 ## Wording a steer
 
-You give the container its orders the way the user gives them to you, as a lead handing work to a team member: what to do and where to stop, in a few sentences. A long steer reaches the container as pasted content, which it may read as data rather than an order.
+A steer is an order in your voice: what to do, the facts it rests on stated as facts, and where to stop. The container's rules make every steer the user's word, so an answer, a pick or a new rule reaches it as the sentence it settles. A long steer reaches the container as pasted content, which it may read as data rather than an order.
 
 - A steer names the outcome, never a skill: "check in the running app that ...". How the work runs (the checks, reviews, commits) is the container's rules' to decide
 - Context pointers carry the supporting material: name the spec, ticket, research notes and relevant commit SHAs the container needs to read, with what each holds. Before steering, check that the files are readable from the container and the commits exist in its clone. Keep the outcome and boundaries in the steer; the linked material stays in its source
@@ -21,6 +21,10 @@ You give the container its orders the way the user gives them to you, as a lead 
 
 ```text
 Deliver the ticket in <task dir>/ticket.md. Restoring a project brings back only the files deleted with it.
+```
+
+```text
+The beta settlements page is the default view for every user; cover its path and the backend it calls, and leave legacy-only logic as it is.
 ```
 
 ## Driving a task
