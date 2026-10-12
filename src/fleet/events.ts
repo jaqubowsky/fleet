@@ -75,7 +75,7 @@ export function eventAgents(log: string, owner: { sessionId?: string; pane?: str
 	const seen = new Set<string>();
 	for (const line of log.split("\n")) {
 		const [, pane, kind, agent, session] = line.split(" ");
-		if (!agent || (kind !== "up" && kind !== "steer" && kind !== "down")) continue;
+		if (!agent || (kind !== "up" && kind !== "steer" && kind !== "start" && kind !== "down")) continue;
 		const mine = kind !== "down" && (owner.sessionId ? session === `session=${encodeURIComponent(owner.sessionId)}` : pane === owner.pane);
 		if (mine) seen.add(agent);
 		else if (kind === "down" || !owner.sessionId) seen.delete(agent);

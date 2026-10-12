@@ -75,16 +75,17 @@ test("a missing creation leaves runtime unavailable", () => {
 	assert.equal(runtime.running_ms, undefined);
 });
 
-test("stop and start do not change watch ownership", () => {
+test("the session that starts a stopped container owns it, and a stop changes no ownership", () => {
 	const log = [
 		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
 		"2026-09-16T10:00:01Z w1:p up worker session=a",
 		"2026-09-16T10:30:00Z w2:p stop worker session=b",
-		"2026-09-16T11:00:00Z w2:p start worker session=b",
+		"2026-09-16T11:00:00Z - start worker session=c",
 	].join("\n");
 
 	assert.deepEqual(eventAgents(log, { sessionId: "a" }), ["worker"]);
 	assert.deepEqual(eventAgents(log, { sessionId: "b" }), []);
+	assert.deepEqual(eventAgents(log, { sessionId: "c" }), ["worker"]);
 	assert.deepEqual([...lifecycle(log).closed], []);
 });
 
