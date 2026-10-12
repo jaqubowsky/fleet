@@ -137,18 +137,38 @@ test("a setup line that fails before the last one still ends the log as a failed
 	assert.doesNotMatch(log, /deps-end: ready/);
 });
 
-for (const [lock, tool] of [["pnpm-lock.yaml", "pnpm"], ["package-lock.json", "npm"]]) {
-	test(`a ${tool} install waits longer and retries more than ${tool}'s defaults on a slow registry`, async () => {
-		const { log } = await run(
-			{ "package.json": "{}", [lock]: "{}" },
-			{ [tool]: '#!/bin/sh\necho "args: $*"\nexit 9\n' },
-		);
+test("an npm install waits longer and retries more than npm's defaults on a slow registry", async () => {
+	const { log } = await run(
+		{ "package.json": "{}", "package-lock.json": "{}" },
+		{ npm: '#!/bin/sh\necho "args: $*"\nexit 9\n' },
+	);
 
-		const args = log.match(/^args: (.*)$/m)?.[1] ?? "";
-		assert.ok(Number(args.match(/--fetch-timeout=(\d+)/)?.[1]) > 300000, args);
-		assert.ok(Number(args.match(/--fetch-retries=(\d+)/)?.[1]) > 2, args);
-	});
-}
+	const args = log.match(/^args: (.*)$/m)?.[1] ?? "";
+	assert.ok(Number(args.match(/--fetch-timeout=(\d+)/)?.[1]) > 300000, args);
+	assert.ok(Number(args.match(/--fetch-retries=(\d+)/)?.[1]) > 2, args);
+});
+
+test("a pnpm that refuses fetch flags, as pnpm 12 does, installs with longer timeouts and more retries", async () => {
+	const { readFileSync } = await import("node:fs");
+	let workspace = "";
+	const { log } = await run(
+		{ "package.json": "{}", "pnpm-lock.yaml": "{}" },
+		{
+			pnpm: [
+				"#!/bin/sh",
+				'for arg; do case "$arg" in --fetch-*) echo "error: unexpected argument \'$arg\' found"; exit 2;; esac; done',
+				'echo "timeout=$PNPM_CONFIG_FETCH_TIMEOUT retries=$PNPM_CONFIG_FETCH_RETRIES" > fetch-settings',
+			].join("\n"),
+		},
+		undefined,
+		(dir) => (workspace = dir),
+	);
+	const settings = readFileSync(`${workspace}/fetch-settings`, "utf8");
+
+	assert.match(log, /deps-end: ready/);
+	assert.ok(Number(settings.match(/timeout=(\d+)/)?.[1]) > 300000, settings);
+	assert.ok(Number(settings.match(/retries=(\d+)/)?.[1]) > 2, settings);
+});
 
 test("a yarn install keeps yarn's own fetch settings", async () => {
 	const { log } = await run(

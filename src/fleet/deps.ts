@@ -22,7 +22,7 @@ export function installScript(setup?: string): string {
 		'  echo "deps: installing in $root"',
 		'  log="${TMPDIR:-/tmp}/deps-$(echo "$root" | tr \'/.\' \'__\').log"',
 		'  ( cd "$root" && case "$(basename "$lock")" in',
-		"      pnpm-lock.yaml) npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile $fetch ;;",
+		"      pnpm-lock.yaml) PNPM_CONFIG_FETCH_TIMEOUT=600000 PNPM_CONFIG_FETCH_RETRIES=5 npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile ;;",
 		"      package-lock.json) npm_config_ignore_scripts=false $limit npm ci $fetch ;;",
 		"      yarn.lock) if grep -q '^__metadata:' yarn.lock; then YARN_ENABLE_SCRIPTS=true $limit yarn install --immutable; else npm_config_ignore_scripts=false $limit yarn install --frozen-lockfile; fi ;;",
 		'    esac ) >"$log" 2>&1 || { status=$?; tail -30 "$log"; if [ "$status" = 124 ]; then echo "deps-end: stalled past 20 minutes in $root"; else echo "deps-end: failed in $root with exit $status"; fi; exit 1; }',
