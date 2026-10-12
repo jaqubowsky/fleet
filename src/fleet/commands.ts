@@ -16,7 +16,7 @@ import { isAncestor, landedRef } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { agentName } from "./name.ts";
-import { harnessStamp, imageStampPath, resumeAgent, staleImage } from "./up.ts";
+import { harnessStamp, imageStampPath, resumeAgent, staleSandbox } from "./up.ts";
 import {
 	agentFor,
 	checkoutProbe,
@@ -242,6 +242,8 @@ export async function start(sandbox: Sandbox, root: string, io: Io): Promise<voi
 	const pane = stoppedPane(sandbox, io);
 	if (!pane) throw new Error(`${sandbox.name}: no saved stopped tab; use ${CLI} up to attach it`);
 	if (sandbox.status !== "stopped") throw new Error(`${sandbox.name}: already ${sandbox.status}; inspect its tab before starting again`);
+	const stale = staleSandbox(sandbox, root, io);
+	if (stale) io.log(stale);
 	io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
 	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT]);
 	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
@@ -262,20 +264,17 @@ export function steer(
 }
 
 function prompt(
-	{ name: sandbox, kind, workspaces }: Sandbox,
+	row: Sandbox,
 	text: string,
 	io: Io,
 	{ root }: { root?: string } = {},
 ): void {
 	seatOf(io);
-	const row = { name: sandbox, workspaces };
+	const sandbox = row.name;
 	if (stoppedPane(row, io)) throw new Error(`${sandbox}: stopped; run ${CLI} start ${sandbox} first`);
 	const agent = agentName(sandbox);
-	const stale = root ? staleImage(root, kind, io) : undefined;
-	if (stale)
-		io.log(
-			`${stale}; ${sandbox} keeps its image until it goes down and up again, so do that before its next ticket`,
-		);
+	const stale = root ? staleSandbox(row, root, io) : undefined;
+	if (stale) io.log(stale);
 	logEvent(io, "steer", agent, text);
 	try {
 		io.herdr([

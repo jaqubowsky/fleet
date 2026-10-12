@@ -107,25 +107,45 @@ test("steer logs the prompt before sending it", () => {
 	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
-test("steer says when the image predates the harness, and still steers", () => {
-	const stale = fakeIo({
+const builtStamp = "/home/me/.fleet/tasks/r/pi-webapp-web-1/logs/image-stamp";
+
+test("steer names a sandbox built from an older harness, and still steers", () => {
+	const io = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
-		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
+		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
+		[`read ${builtStamp}`]: "31e3d51\n",
 	});
-	const fresh = fakeIo({
+
+	steer(row("pi-webapp-web-1"), "go", io, "/root");
+
+	assert.match(
+		io.lines[0],
+		/^pi-webapp-web-1 was built from harness 31e3d51, and the harness is now f7e7f1a: .*down and up again/,
+	);
+	assert.ok(io.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
+});
+
+test("steer says a sandbox with no recorded stamp came from an unknown harness", () => {
+	const io = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
 	});
 
-	steer(row("pi-webapp-web-1"), "go", stale, "/root");
-	steer(row("pi-webapp-web-1"), "go", fresh, "/root");
+	steer(row("pi-webapp-web-1"), "go", io, "/root");
 
-	assert.match(
-		stale.lines[0],
-		/built from 31e3d51, and the harness is now f7e7f1a: run fleet build --pi.*pi-webapp-web-1 keeps its image until it goes down and up again/,
-	);
-	assert.ok(stale.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
-	assert.deepEqual(fresh.lines, ["pi-webapp-web-1: steered"]);
+	assert.match(io.lines[0], /^pi-webapp-web-1 was built from an unknown harness, and the harness is now f7e7f1a/);
+});
+
+test("steer stays quiet for a sandbox built from the current harness, even when the image is older", () => {
+	const io = fakeIo({
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
+		[`read ${builtStamp}`]: "f7e7f1a\n",
+	});
+
+	steer(row("pi-webapp-web-1"), "go", io, "/root");
+
+	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
 for (const harness of Object.values(KINDS)) {

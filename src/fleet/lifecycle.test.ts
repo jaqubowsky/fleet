@@ -73,6 +73,16 @@ for (const kind of Object.values(KINDS)) {
 		assert.equal(io.calls.filter((c) => c.includes("prompt") || c.includes("create")).length, 0);
 	});
 
+	test(`${kind.name} start names a sandbox built from an older harness`, async () => {
+		const io = fakeIo({ ...fixture, "git log -1 --format=%h": "f7e7f1a" }, SEATS[kind.name]);
+		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
+		io.files[`${task}/logs/image-stamp`] = "31e3d51\n";
+
+		await start(stopped, "/harness", io);
+
+		assert.match(io.lines[0], new RegExp(`^${sandbox.name} was built from harness 31e3d51, and the harness is now f7e7f1a`));
+	});
+
 	test(`${kind.name} listing a pending stop does not probe the guest`, () => {
 		const io = fakeIo({ ...fixture, "sbx ls --json": { sandboxes: [{ ...sandbox, agent: kind.name }] } });
 		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });

@@ -52,6 +52,21 @@ export function staleImage(
 	return `${kind.image} was built from ${built ?? "a harness this command never stamped"}, and the harness is now ${current}: run ${CLI} build --${kind.name} so the container carries today's rules, skills and extensions`;
 }
 
+function builtStampPath(task: string): string {
+	return `${task}/logs/image-stamp`;
+}
+
+export function staleSandbox(
+	sandbox: Sandbox,
+	root: string,
+	io: Io,
+): string | undefined {
+	const built = io.read(builtStampPath(taskDir(sandbox.workspaces[0], sandbox.name, io)))?.trim();
+	const current = harnessStamp(root, sandbox.kind, io);
+	if (built === current) return undefined;
+	return `${sandbox.name} was built from ${built ? `harness ${built}` : "an unknown harness"}, and the harness is now ${current}: it keeps that image until it goes down and up again, so do that before its next ticket`;
+}
+
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);
 }
@@ -289,6 +304,8 @@ export async function up(
 				);
 		}
 		create(input, sandbox, profile, kind, io, task);
+		const built = io.read(imageStampPath(kind, io));
+		if (built) io.write(builtStampPath(task), built);
 		logEvent(io, "created", agent);
 		let locks: number;
 		try {

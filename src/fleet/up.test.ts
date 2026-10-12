@@ -1697,6 +1697,21 @@ test("up says when the image predates the harness it would carry", async () => {
 	assert.ok(!fresh.lines.some((line) => /built from/.test(line)));
 });
 
+test("up records in the task directory the image stamp it created the sandbox from", async () => {
+	const io = fakeIo({
+		...base,
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
+	});
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.equal(
+		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/logs/image-stamp"],
+		"31e3d51\n",
+	);
+});
+
 test("up binds the token, Linear server and resources of the repository's profile, and writes and prints what they allow", async () => {
 	const io = fakeIo(base);
 
