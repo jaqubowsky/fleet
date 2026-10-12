@@ -314,7 +314,7 @@ test("a single-repository sandbox mounts no other runbook", async () => {
 	assert.ok(!run.some((arg) => arg.endsWith("/runbook")), run.join(" "));
 });
 
-test("two clones of the same GitHub repository are refused before the sandbox is created", async () => {
+test("two clones of the same GitHub repository are refused before anything is created", async () => {
 	const copy = "/Users/me/Copy/webapp";
 	const io = fakeIo(base);
 
@@ -323,7 +323,7 @@ test("two clones of the same GitHub repository are refused before the sandbox is
 		/a multi-repository task needs distinct GitHub origins/,
 	);
 
-	assert.equal(io.calls.filter((call) => call[0] === "sbx" && call[1] === "run").length, 0);
+	assert.deepEqual(io.calls.filter((call) => call[0] === "mkdir" || (call[0] === "sbx" && call[1] === "run")), []);
 });
 
 test("up isolates colliding checkout names and writes no group runbook", async () => {

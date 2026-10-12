@@ -266,7 +266,7 @@ export async function up(
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const found = findPane(io, basename(input.repo), agent, kind);
 	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
-	layoutTask(task, io);
+	if (existing) layoutTask(task, io);
 	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
 		throw new Error(`${sandbox} already exists with different repositories`);
 	if (!existing) {
@@ -308,6 +308,7 @@ export async function up(
 					`${plan.name}: a shared sandbox needs the same Linear binding for every repository`,
 				);
 		}
+		layoutTask(task, io);
 		create(input, sandbox, profile, kind, io, task);
 		const built = io.read(imageStampPath(kind, io));
 		if (built) io.write(builtStampPath(task), built);
