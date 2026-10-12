@@ -38,6 +38,20 @@ test("down follows the target sandbox's level, not the caller's checkout", () =>
 	);
 });
 
+test("down that cannot list sandboxes names the failed listing", () => {
+	const timedOut = () => {
+		throw new Error("spawnSync sbx ETIMEDOUT");
+	};
+
+	const verdict = downPermission("fleet down pi-harness-demo", (sandbox) =>
+		sandboxDownTarget(sandbox, "/nonexistent", "/nonexistent", timedOut),
+	);
+
+	assert.equal(verdict?.decision, "deny");
+	assert.match(verdict?.reason ?? "", /sbx ls --json/);
+	assert.match(verdict?.reason ?? "", /ETIMEDOUT/);
+});
+
 test("down reads the target workspace profile instead of the host checkout", (t) => {
 	const root = mkdtempSync(join(tmpdir(), "down-profile-"));
 	t.after(() => rmSync(root, { recursive: true, force: true }));

@@ -42,7 +42,15 @@ export function downPermission(
 			reason:
 				"An agent cannot force-close a container; only the person runs fleet down --force.",
 		};
-	const target = lookup(match[2]);
+	let target: DownTarget | undefined;
+	try {
+		target = lookup(match[2]);
+	} catch (error) {
+		return {
+			decision: "deny",
+			reason: `No host down permission could be read for ${match[2]}: ${(error as Error).message}.`,
+		};
+	}
 	if (target?.level === "auto")
 		return {
 			decision: "allow",
@@ -75,8 +83,8 @@ export function sandboxDownTarget(
 	let listed: { sandboxes?: { name?: string; workspaces?: string[] }[] };
 	try {
 		listed = JSON.parse(list()) as typeof listed;
-	} catch {
-		return undefined;
+	} catch (error) {
+		throw new Error(`sbx ls --json failed: ${(error as Error).message}`);
 	}
 	const entry = listed.sandboxes?.find(
 		(item) =>
