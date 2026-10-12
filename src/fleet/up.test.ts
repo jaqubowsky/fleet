@@ -1983,7 +1983,7 @@ test("up runs the overlay's Setup sh block after the install, and the plain inst
 		"the setup command does not follow the install",
 	);
 	assert.ok(
-		setup < script.indexOf("deps: ready"),
+		setup < script.indexOf("deps-end: ready"),
 		"the setup command runs after ready is reported",
 	);
 	assert.doesNotMatch(script, /Playwright needs|--squash/);

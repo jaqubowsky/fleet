@@ -13,7 +13,7 @@ test("install script picks the frozen install per lockfile and invents no env of
 
 test("install script runs a declared generator before it reports ready", () => {
 	const generate = installScript().indexOf("prisma:generate");
-	const ready = installScript().indexOf("deps: ready");
+	const ready = installScript().indexOf("deps-end: ready");
 
 	assert.ok(generate !== -1, "the script runs no code generation");
 	assert.ok(generate < ready, "code generation runs after the script reports ready");
@@ -69,7 +69,7 @@ async function run(files: Record<string, string>, tools: Record<string, string> 
 test("a repository that declares no node version still installs", async () => {
 	const { log, calls } = await run({});
 
-	assert.match(log, /deps: ready/);
+	assert.match(log, /deps-end: ready/);
 	assert.equal(calls, "", "fnm is not asked for a version nothing declares");
 	assert.match(log.trim().split("\n").at(-1)!, /node v\d+/);
 });
@@ -77,7 +77,7 @@ test("a repository that declares no node version still installs", async () => {
 test("a repository that declares a node version goes through fnm", async () => {
 	const { log, calls } = await run({ ".nvmrc": "24.20.0\n" });
 
-	assert.match(log, /deps: ready/);
+	assert.match(log, /deps-end: ready/);
 	assert.match(calls, /use --install-if-missing/);
 });
 
@@ -88,14 +88,14 @@ test("an install that fails names its root and exit instead of leaving the log m
 	);
 
 	assert.match(log, /registry down/);
-	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in \. with exit 3$/);
-	assert.doesNotMatch(log, /deps: ready/);
+	assert.match(log.trim().split("\n").at(-1)!, /^deps-end: failed in \. with exit 3$/);
+	assert.doesNotMatch(log, /deps-end: ready/);
 });
 
 test("a setup command runs after the install and logs before ready", async () => {
 	const { log } = await run({}, {}, "echo browsers installed");
 
-	assert.match(log, /deps: running setup\nbrowsers installed\ndeps: ready/);
+	assert.match(log, /deps: running setup\nbrowsers installed\ndeps-end: ready/);
 });
 
 test("an install under way says what it is doing, so its line never reads as an end state", async () => {
@@ -120,21 +120,21 @@ test("a directory the lockfile search cannot read leaves no error in the log", a
 	chmodSync(locked, 0o755);
 
 	assert.doesNotMatch(log, /Permission denied/);
-	assert.match(log, /deps: ready/);
+	assert.match(log, /deps-end: ready/);
 });
 
 test("a failing setup command ends the log as a failed install", async () => {
 	const { log } = await run({}, {}, "echo no browsers\nexit 4");
 
-	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in setup with exit 4$/);
-	assert.doesNotMatch(log, /deps: ready/);
+	assert.match(log.trim().split("\n").at(-1)!, /^deps-end: failed in setup with exit 4$/);
+	assert.doesNotMatch(log, /deps-end: ready/);
 });
 
 test("a setup line that fails before the last one still ends the log as a failed install", async () => {
 	const { log } = await run({}, {}, "false\necho ok");
 
-	assert.match(log.trim().split("\n").at(-1)!, /^deps: failed in setup with exit 1$/);
-	assert.doesNotMatch(log, /deps: ready/);
+	assert.match(log.trim().split("\n").at(-1)!, /^deps-end: failed in setup with exit 1$/);
+	assert.doesNotMatch(log, /deps-end: ready/);
 });
 
 for (const [lock, tool] of [["pnpm-lock.yaml", "pnpm"], ["package-lock.json", "npm"]]) {
@@ -158,3 +158,20 @@ test("a yarn install keeps yarn's own fetch settings", async () => {
 
 	assert.match(log, /^args: install --frozen-lockfile$/m);
 });
+
+const endings: [string, Parameters<typeof run>, RegExp][] = [
+	["ready", [{}], /^deps-end: ready on node v\d+/],
+	["failed in a root", [{ "package.json": "{}", "package-lock.json": "{}" }, { npm: "#!/bin/sh\nexit 3\n" }], /^deps-end: failed in \. with exit 3$/],
+	["failed in setup", [{}, {}, "exit 4"], /^deps-end: failed in setup with exit 4$/],
+	["stalled", [{ "package.json": "{}", "package-lock.json": "{}" }, { npm: "#!/bin/sh\nexit 124\n" }], /^deps-end: stalled past 20 minutes in \.$/],
+];
+
+for (const [ending, args, last] of endings) {
+	test(`an install that ends ${ending} says so on the one line that carries the end prefix`, async () => {
+		const { log } = await run(...args);
+
+		const lines = log.trim().split("\n");
+		assert.match(lines.at(-1)!, last);
+		assert.deepEqual(lines.slice(0, -1).filter((line) => line.includes("deps-end:")), []);
+	});
+}

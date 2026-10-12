@@ -25,7 +25,7 @@ export function installScript(setup?: string): string {
 		"      pnpm-lock.yaml) npm_config_ignore_scripts=false $limit pnpm install --frozen-lockfile $fetch ;;",
 		"      package-lock.json) npm_config_ignore_scripts=false $limit npm ci $fetch ;;",
 		"      yarn.lock) if grep -q '^__metadata:' yarn.lock; then YARN_ENABLE_SCRIPTS=true $limit yarn install --immutable; else npm_config_ignore_scripts=false $limit yarn install --frozen-lockfile; fi ;;",
-		'    esac ) >"$log" 2>&1 || { status=$?; tail -30 "$log"; if [ "$status" = 124 ]; then echo "deps: stalled past 20 minutes in $root"; else echo "deps: failed in $root with exit $status"; fi; exit 1; }',
+		'    esac ) >"$log" 2>&1 || { status=$?; tail -30 "$log"; if [ "$status" = 124 ]; then echo "deps-end: stalled past 20 minutes in $root"; else echo "deps-end: failed in $root with exit $status"; fi; exit 1; }',
 		"done",
 		"for script in prisma:generate generate codegen; do",
 		`  node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" 2>/dev/null || continue`,
@@ -37,9 +37,9 @@ export function installScript(setup?: string): string {
 			? [
 					'echo "deps: running setup"',
 					`setup=$(cat <<'FLEET_SETUP'\n${setup}\nFLEET_SETUP\n)`,
-					'bash -ec "$setup" || { echo "deps: failed in setup with exit $?"; exit 1; }',
+					'bash -ec "$setup" || { echo "deps-end: failed in setup with exit $?"; exit 1; }',
 				]
 			: []),
-		'echo "deps: ready on node $(node --version) at $(command -v node)"',
+		'echo "deps-end: ready on node $(node --version) at $(command -v node)"',
 	].join("\n");
 }
