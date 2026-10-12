@@ -42,7 +42,7 @@ export function harnessStamp(root: string, kind: Kind, io: Io): string {
 		: commit;
 }
 
-export function staleImage(
+function staleImage(
 	root: string,
 	kind: Kind,
 	io: Io,
@@ -65,7 +65,8 @@ export function staleSandbox(
 	const built = io.read(builtStampPath(taskDir(sandbox.workspaces[0], sandbox.name, io)))?.trim();
 	const current = harnessStamp(root, sandbox.kind, io);
 	if (built === current) return undefined;
-	return `${sandbox.name} was built from ${built ? `harness ${built}` : "an unknown harness"}, and the harness is now ${current}: it keeps that image until it goes down and up again, so do that before its next ticket`;
+	const build = staleImage(root, sandbox.kind, io) ? `run ${CLI} build --${sandbox.kind.name}, then ` : "";
+	return `${sandbox.name} was built from ${built ? `harness ${built}` : "an unknown harness"}, and the harness is now ${current}: ${build}take it down and up again before its next ticket, since it keeps its image until then`;
 }
 
 function layoutTask(dir: string, io: Io): void {
@@ -307,6 +308,7 @@ export async function up(
 		create(input, sandbox, profile, kind, io, task);
 		const built = io.read(imageStampPath(kind, io));
 		if (built) io.write(builtStampPath(task), built);
+		else io.remove(builtStampPath(task));
 		logEvent(io, "created", agent);
 		let locks: number;
 		try {
@@ -595,9 +597,8 @@ function create(
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
 	const runbooks = input.repos?.length
-		? [input.repo, ...input.repos]
-				.map((repo) => `${artifactsDir(repo, io)}/runbook`)
-				.filter((dir) => io.stat(dir)?.dir)
+		? [...new Set([input.repo, ...input.repos].map((repo) => `${artifactsDir(repo, io)}/runbook`))]
+				.filter((dir) => dir !== `${artifacts}/runbook` && io.stat(dir)?.dir)
 		: [];
 	io.sbx([
 		"run",

@@ -252,19 +252,59 @@ test("a group sandbox mounts each member repository's own runbook read-only", as
 			"4".repeat(40),
 		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
 	});
-	const sbx = io.sbx;
-	io.sbx = (args, opts) => {
-		const printed = sbx(args, opts);
-		if (args[0] === "exec" && args[4]?.startsWith('cd "$1" && printf'))
-			return `web-1\t0\t${(args.at(-1) === "/tmp/fleet-repos/api" ? "4" : "3").repeat(40)}`;
-		return printed;
-	};
 
 	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
 
 	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
 	assert.ok(run.includes("/home/me/.fleet/tasks/webapp/runbook:ro"), run.join(" "));
 	assert.ok(!run.some((arg) => arg.includes("/tasks/api/")), run.join(" "));
+});
+
+test("two members sharing a checkout name mount their runbook once", async () => {
+	const other = "/Users/me/Other/webapp";
+	const io = fakeIo({
+		...base,
+		[`git ${other} remote get-url origin`]: "git@github.com:acme/api.git",
+		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/2-webapp rev-parse refs/fleet/base":
+			"2".repeat(40),
+		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
+	});
+
+	await up({ repo, repos: [other], label: "web-1", root: "/root" }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	assert.equal(run.filter((arg) => arg === "/home/me/.fleet/tasks/webapp/runbook:ro").length, 1);
+});
+
+test("a group task recorded under its first repository keeps its own runbook writable", async () => {
+	const api = "/Users/me/Work/api";
+	const io = fakeIo({
+		...base,
+		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
+		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
+			"4".repeat(40),
+		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
+		"stat /home/me/.fleet/tasks/api/runbook": { size: 0, mtime: new Date(0), dir: true },
+	});
+	io.files[manifestPath("pi-webapp-web-1", io)] = JSON.stringify({
+		version: 1,
+		task: "/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
+		repositories: [repo, api].map((path) => ({
+			repo: path,
+			name: "",
+			base: "main",
+			baseSha: "",
+			branch: "web-1",
+			workspace: path,
+			served: "",
+		})),
+	});
+
+	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	assert.ok(!run.includes("/home/me/.fleet/tasks/webapp/runbook:ro"), run.join(" "));
+	assert.ok(run.includes("/home/me/.fleet/tasks/api/runbook:ro"), run.join(" "));
 });
 
 test("a single-repository sandbox mounts no other runbook", async () => {
@@ -1746,6 +1786,15 @@ test("up records in the task directory the image stamp it created the sandbox fr
 		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/logs/image-stamp"],
 		"31e3d51\n",
 	);
+});
+
+test("up with no image stamp leaves no stamp from an earlier container in the task directory", async () => {
+	const io = fakeIo(base);
+	io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/logs/image-stamp"] = "31e3d51\n";
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.equal(io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/logs/image-stamp"], undefined);
 });
 
 test("up binds the token, Linear server and resources of the repository's profile, and writes and prints what they allow", async () => {

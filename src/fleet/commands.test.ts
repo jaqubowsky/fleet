@@ -125,6 +125,18 @@ test("steer names a sandbox built from an older harness, and still steers", () =
 	assert.ok(io.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
 });
 
+test("steer asks for a build first when the image is older than the harness too", () => {
+	const io = fakeIo({
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
+		[`read ${builtStamp}`]: "31e3d51\n",
+	});
+
+	steer(row("pi-webapp-web-1"), "go", io, "/root");
+
+	assert.match(io.lines[0], /^pi-webapp-web-1 was built from harness 31e3d51, .*fleet build --pi.*down and up again/);
+});
+
 test("steer says a sandbox with no recorded stamp came from an unknown harness", () => {
 	const io = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
