@@ -326,13 +326,13 @@ test("an empty scope asks herdr and sbx nothing", (t: TestContext) => {
 	assert.deepEqual(io.calls, []);
 });
 
-test("a watch with nothing to follow says how to follow a container this pane did not start", (t: TestContext) => {
+test("a watch with nothing to follow says how to follow a container this session did not put up, start or steer", (t: TestContext) => {
 	const { io } = herdr(t, []);
 
 	watch(() => [], io);
 
 	assert.deepEqual(io.lines, [
-		"[fleet] watching nothing yet; fleet up adds containers within 30s, and fleet watch <sandbox> follows one this pane did not start",
+		"[fleet] watching nothing yet; fleet up adds containers within 30s, and fleet watch <sandbox> follows one this session did not put up, start or steer",
 	]);
 });
 

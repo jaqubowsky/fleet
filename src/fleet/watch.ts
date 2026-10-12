@@ -350,7 +350,7 @@ export function watch(
 	refresh();
 	if (!tracked.size)
 		io.log(
-			`[fleet] watching nothing yet; ${CLI} up adds containers within ${REFRESH_MS / 1000}s, and ${CLI} watch <sandbox> follows one this pane did not start`,
+			`[fleet] watching nothing yet; ${CLI} up adds containers within ${REFRESH_MS / 1000}s, and ${CLI} watch <sandbox> follows one this session did not put up, start or steer`,
 		);
 	const timers = [
 		setInterval(refresh, REFRESH_MS),

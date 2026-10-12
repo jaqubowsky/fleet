@@ -17,9 +17,8 @@ function monitorRuntime(
 	herdr: unknown = { result: { agents } },
 ) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
-	const previousOwner = h.sessionIdEnv ? process.env[h.sessionIdEnv] : undefined;
+	const previousOwner = process.env[h.sessionIdEnv];
 	t.after(() => {
-		if (!h.sessionIdEnv) return;
 		if (previousOwner === undefined) delete process.env[h.sessionIdEnv];
 		else process.env[h.sessionIdEnv] = previousOwner;
 	});
