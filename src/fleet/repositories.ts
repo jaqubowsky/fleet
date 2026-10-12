@@ -1,7 +1,4 @@
-import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute } from "node:path";
-import { repoName } from "../profile/profile.ts";
-import { slug } from "./name.ts";
 import type { Io } from "./io.ts";
 import { FLEET } from "./home.ts";
 import { parseCheckout } from "./status.ts";
@@ -26,25 +23,6 @@ export function artifactsDir(repo: string, io: Io): string {
 	return `${io.home}/${FLEET.tasks}/${basename(repo)}`;
 }
 
-function groupArtifactsDir(repos: string[], io: Io): string {
-	const names = repos
-		.map((repo) =>
-			repoName(io.git(["remote", "get-url", "origin"], repo)).toLowerCase(),
-		)
-		.sort();
-	if (names.some((name) => !name) || new Set(names).size !== names.length)
-		throw new Error("a multi-repository task needs distinct GitHub origins");
-	const label = names
-		.map((name) => slug(name.split("/").at(-1)!).slice(0, 48))
-		.join("--")
-		.slice(0, 140);
-	const hash = createHash("sha256")
-		.update(names.join("\0"))
-		.digest("hex")
-		.slice(0, 12);
-	return `${io.home}/${FLEET.tasks}/groups/${label}-${hash}`;
-}
-
 export function taskDir(
 	repo: string,
 	sandbox: string,
@@ -62,10 +40,7 @@ export function taskDir(
 			`${sandbox} is recorded for different repositories in ${manifestPath(sandbox, io)}; take another label, or remove that file once its task is done`,
 		);
 	if (manifest) return manifest.task;
-	const root = repos?.length
-		? groupArtifactsDir([repo, ...repos], io)
-		: artifactsDir(repo, io);
-	return `${root}/${sandbox}`;
+	return `${artifactsDir(repo, io)}/${sandbox}`;
 }
 
 export function manifestPath(sandbox: string, io: Io): string {

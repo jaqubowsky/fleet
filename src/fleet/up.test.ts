@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { manifestPath, taskDir } from "./repositories.ts";
+import { manifestPath } from "./repositories.ts";
 import { SEATS, KINDS } from "../harness.ts";
 import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import {
@@ -213,11 +213,8 @@ test("up keeps two writable private clones with their own bases", async () => {
 	);
 	assert.ok(manifestFile);
 	const task = dirname(manifestFile);
-	assert.match(
-		task,
-		/^\/home\/me\/\.fleet\/tasks\/groups\/[^/]+\/pi-webapp-web-1$/,
-	);
-	assert.ok(run.includes(`FLEET_ARTIFACTS=${dirname(task)}`));
+	assert.equal(task, "/home/me/.fleet/tasks/webapp/pi-webapp-web-1");
+	assert.ok(run.includes("FLEET_ARTIFACTS=/home/me/.fleet/tasks/webapp"));
 	const listed = JSON.parse(io.files[manifestFile]);
 	assert.equal(listed.task, task);
 	assert.deepEqual(
@@ -243,52 +240,52 @@ test("up keeps two writable private clones with their own bases", async () => {
 	assert.match(apiInstall.at(-1)!, /pnpm install --frozen-lockfile/);
 });
 
-test("a group sandbox mounts each member repository's own runbook read-only", async () => {
+test("a multi-repository sandbox mounts each other repository's runbook read-write, created before the sandbox", async () => {
 	const api = "/Users/me/Work/api";
 	const io = fakeIo({
 		...base,
 		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
 			"4".repeat(40),
-		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
 	});
 
 	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
 
 	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
-	assert.ok(run.includes("/home/me/.fleet/tasks/webapp/runbook:ro"), run.join(" "));
-	assert.ok(!run.some((arg) => arg.includes("/tasks/api/")), run.join(" "));
+	assert.ok(run.includes("/home/me/.fleet/tasks/api/runbook"), run.join(" "));
+	assert.ok(!run.some((arg) => arg.endsWith(":ro")), run.join(" "));
+	assert.ok(!run.includes("/home/me/.fleet/tasks/webapp/runbook"), run.join(" "));
+	const made = io.calls.findIndex((call) => call[0] === "mkdir" && call[1] === "/home/me/.fleet/tasks/api/runbook");
+	assert.ok(made >= 0 && made < io.calls.indexOf(run), "the runbook exists before the sandbox mounts it");
 });
 
-test("two members sharing a checkout name mount their runbook once", async () => {
+test("a member sharing the primary's checkout name adds no runbook mount", async () => {
 	const other = "/Users/me/Other/webapp";
 	const io = fakeIo({
 		...base,
 		[`git ${other} remote get-url origin`]: "git@github.com:acme/api.git",
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/2-webapp rev-parse refs/fleet/base":
 			"2".repeat(40),
-		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
 	});
 
 	await up({ repo, repos: [other], label: "web-1", root: "/root" }, io);
 
 	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
-	assert.equal(run.filter((arg) => arg === "/home/me/.fleet/tasks/webapp/runbook:ro").length, 1);
+	assert.ok(!run.some((arg) => arg.endsWith("/runbook")), run.join(" "));
+	assert.equal(run.filter((arg) => arg === "/home/me/.fleet/tasks/webapp").length, 1, run.join(" "));
 });
 
-test("a group task recorded under its first repository keeps its own runbook writable", async () => {
+test("a task recorded under a group root mounts every repository's runbook", async () => {
 	const api = "/Users/me/Work/api";
 	const io = fakeIo({
 		...base,
 		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
 		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
 			"4".repeat(40),
-		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
-		"stat /home/me/.fleet/tasks/api/runbook": { size: 0, mtime: new Date(0), dir: true },
 	});
 	io.files[manifestPath("pi-webapp-web-1", io)] = JSON.stringify({
 		version: 1,
-		task: "/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
+		task: "/home/me/.fleet/tasks/groups/api--webapp-1/pi-webapp-web-1",
 		repositories: [repo, api].map((path) => ({
 			repo: path,
 			name: "",
@@ -303,23 +300,33 @@ test("a group task recorded under its first repository keeps its own runbook wri
 	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
 
 	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
-	assert.ok(!run.includes("/home/me/.fleet/tasks/webapp/runbook:ro"), run.join(" "));
-	assert.ok(run.includes("/home/me/.fleet/tasks/api/runbook:ro"), run.join(" "));
+	assert.ok(run.includes("FLEET_ARTIFACTS=/home/me/.fleet/tasks/groups/api--webapp-1"), run.join(" "));
+	assert.ok(run.includes("/home/me/.fleet/tasks/webapp/runbook"), run.join(" "));
+	assert.ok(run.includes("/home/me/.fleet/tasks/api/runbook"), run.join(" "));
 });
 
 test("a single-repository sandbox mounts no other runbook", async () => {
-	const io = fakeIo({
-		...base,
-		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
-	});
+	const io = fakeIo(base);
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
-	assert.ok(!run.some((arg) => arg.endsWith(":ro")), run.join(" "));
+	assert.ok(!run.some((arg) => arg.endsWith("/runbook")), run.join(" "));
 });
 
-test("up isolates colliding checkout names and shares an order-independent group runbook", async () => {
+test("two clones of the same GitHub repository are refused before the sandbox is created", async () => {
+	const copy = "/Users/me/Copy/webapp";
+	const io = fakeIo(base);
+
+	await assert.rejects(
+		up({ repo, repos: [copy], label: "web-1", root: "/root" }, io),
+		/a multi-repository task needs distinct GitHub origins/,
+	);
+
+	assert.equal(io.calls.filter((call) => call[0] === "sbx" && call[1] === "run").length, 0);
+});
+
+test("up isolates colliding checkout names and writes no group runbook", async () => {
 	const repos = [
 		repo,
 		"/Users/me/Two/webapp",
@@ -347,10 +354,7 @@ test("up isolates colliding checkout names and shares an order-independent group
 	await up({ repo, repos: repos.slice(1), label: "web-1", root: "/root" }, io);
 
 	const manifest = JSON.parse(io.files[manifestPath("pi-webapp-web-1", io)]);
-	assert.match(
-		manifest.task,
-		/^\/home\/me\/\.fleet\/tasks\/groups\/[^/]{1,180}\/pi-webapp-web-1$/,
-	);
+	assert.equal(manifest.task, "/home/me/.fleet/tasks/webapp/pi-webapp-web-1");
 	assert.equal(manifest.repositories.length, 4);
 	assert.equal(
 		new Set(
@@ -378,16 +382,7 @@ test("up isolates colliding checkout names and shares an order-independent group
 		)
 		.map((call) => call[4]);
 	assert.equal(new Set(bundles).size, 3);
-	assert.ok(io.files[`${dirname(manifest.task)}/runbook/README.md`]);
-	const reversed = {
-		...io,
-		read: (path: string) =>
-			path.includes("/.fleet/config/fleet/") ? undefined : io.read(path),
-	};
-	assert.equal(
-		dirname(taskDir(repos[2], "another", reversed, [repos[3], repos[1], repo])),
-		dirname(manifest.task),
-	);
+	assert.equal(io.files[`${dirname(manifest.task)}/runbook/README.md`], undefined);
 });
 
 test("up refuses incompatible group credential or Linear bindings before creation", async () => {

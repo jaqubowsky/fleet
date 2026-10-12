@@ -121,8 +121,11 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 		throw new Error("fleet up needs distinct repository paths");
 	const workspaceNames = repos.map((repo) => slug(basename(repo)).slice(0, 100));
 	const allocated = new Set([workspaceNames[0]]);
+	const names = repos.map((repo) => repoName(io.git(["remote", "get-url", "origin"], repo)));
+	if (repos.length > 1 && (names.some((name) => !name) || new Set(names.map((name) => name.toLowerCase())).size !== names.length))
+		throw new Error("a multi-repository task needs distinct GitHub origins");
 	return repos.map((repo, index) => {
-		const name = repoName(io.git(["remote", "get-url", "origin"], repo));
+		const name = names[index];
 		const base =
 			input.bases?.[index] ??
 			input.base ??
@@ -388,20 +391,6 @@ export async function up(
 				`${sandbox}: setup failed and the container was removed\n${(error as Error).message}`,
 			);
 		}
-		if (group) {
-			const runbook = `${dirname(task)}/runbook`;
-			io.mkdir(runbook);
-			if (io.read(`${runbook}/README.md`) === undefined)
-				io.write(
-					`${runbook}/README.md`,
-					`# Repository group\n\n${plans
-						.map((plan) => `- ${plan.name}`)
-						.sort()
-						.join(
-							"\n",
-						)}\n\nRecord verified test startup commands in run.md and run.sh here. Each task's repositories.json supplies its checkout paths, branches and base SHAs.\n`,
-				);
-		}
 		const resources = {
 			memory: input.memory ?? profile.resources.memory,
 			cpus: input.cpus ?? profile.resources.cpus,
@@ -596,10 +585,9 @@ function create(
 	const codex = h.codex
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
-	const runbooks = input.repos?.length
-		? [...new Set([input.repo, ...input.repos].map((repo) => `${artifactsDir(repo, io)}/runbook`))]
-				.filter((dir) => dir !== `${artifacts}/runbook` && io.stat(dir)?.dir)
-		: [];
+	const runbooks = [...new Set([input.repo, ...(input.repos ?? [])].map((repo) => `${artifactsDir(repo, io)}/runbook`))]
+		.filter((dir) => dir !== `${artifacts}/runbook`);
+	for (const dir of runbooks) io.mkdir(dir);
 	io.sbx([
 		"run",
 		"-d",
@@ -642,7 +630,7 @@ function create(
 		input.repo,
 		artifacts,
 		cache,
-		...runbooks.map((dir) => `${dir}:ro`),
+		...runbooks,
 		...(h.agentArgs.length ? ["--", ...h.agentArgs] : []),
 	]);
 }
