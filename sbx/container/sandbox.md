@@ -56,7 +56,7 @@ Each check runs once, where it is cheapest:
 | Branch update, by the method `## Merge method` in `project.md` names | after the last slice's commit | 1, never repeated by a later session |
 | Independent review of the whole branch, `two-axis-review` | after the branch update | 1 |
 | Typecheck and lint of changed files | alongside the review, with no app running | 1 |
-| Tests of affected packages | alongside the review, with no app running; on the base only the files that failed | 1 |
+| Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |
 | Review fixes | one batch, each with its own test | 1 |
 | Verification of what a user sees, the way `project.md` names | last, on the final tree; then stop the app and its services | 1 |
 
@@ -71,7 +71,7 @@ Every turn ends with a report: what changed, with each review finding you reject
 ```text
 check                        result  commit   log
 format and lint of the diff  pass    9d290c9  logs/gate-20261011T182717/format-lint.log
-tests of affected packages   pass    9d290c9  logs/gate-20261011T182717/web.log
+slice tests                  pass    9d290c9  logs/gate-20261011T182717/web.log
 ```
 
 ## Finish
