@@ -243,6 +243,42 @@ test("up keeps two writable private clones with their own bases", async () => {
 	assert.match(apiInstall.at(-1)!, /pnpm install --frozen-lockfile/);
 });
 
+test("a group sandbox mounts each member repository's own runbook read-only", async () => {
+	const api = "/Users/me/Work/api";
+	const io = fakeIo({
+		...base,
+		[`git ${api} remote get-url origin`]: "git@github.com:acme/api.git",
+		"sbx exec pi-webapp-web-1 git -C /tmp/fleet-repos/api rev-parse refs/fleet/base":
+			"4".repeat(40),
+		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
+	});
+	const sbx = io.sbx;
+	io.sbx = (args, opts) => {
+		const printed = sbx(args, opts);
+		if (args[0] === "exec" && args[4]?.startsWith('cd "$1" && printf'))
+			return `web-1\t0\t${(args.at(-1) === "/tmp/fleet-repos/api" ? "4" : "3").repeat(40)}`;
+		return printed;
+	};
+
+	await up({ repo, repos: [api], label: "web-1", root: "/root" }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	assert.ok(run.includes("/home/me/.fleet/tasks/webapp/runbook:ro"), run.join(" "));
+	assert.ok(!run.some((arg) => arg.includes("/tasks/api/")), run.join(" "));
+});
+
+test("a single-repository sandbox mounts no other runbook", async () => {
+	const io = fakeIo({
+		...base,
+		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
+	});
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	assert.ok(!run.some((arg) => arg.endsWith(":ro")), run.join(" "));
+});
+
 test("up isolates colliding checkout names and shares an order-independent group runbook", async () => {
 	const repos = [
 		repo,

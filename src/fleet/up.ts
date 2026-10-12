@@ -11,6 +11,7 @@ import { agentName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import { claudeProject, sessionsDir } from "./sessions.ts";
 import {
+	artifactsDir,
 	taskDir,
 	repositoryManifest,
 	saveRepositories,
@@ -593,6 +594,11 @@ function create(
 	const codex = h.codex
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
+	const runbooks = input.repos?.length
+		? [input.repo, ...input.repos]
+				.map((repo) => `${artifactsDir(repo, io)}/runbook`)
+				.filter((dir) => io.stat(dir)?.dir)
+		: [];
 	io.sbx([
 		"run",
 		"-d",
@@ -635,6 +641,7 @@ function create(
 		input.repo,
 		artifacts,
 		cache,
+		...runbooks.map((dir) => `${dir}:ro`),
 		...(h.agentArgs.length ? ["--", ...h.agentArgs] : []),
 	]);
 }
