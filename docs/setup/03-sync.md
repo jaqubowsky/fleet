@@ -8,7 +8,7 @@ The render owns whole directories and makes them match this repository on every 
 
 In `~/.claude/settings.json` it writes only the keys `claude/profiles/host.json` names, and keeps the person's own hook entries beside the repository's.
 
-It links `host/herdr.toml` as herdr's config, `~/.config/herdr/config.toml`, in place of any config the person had; tell them, since the repository's one sets its own theme and sounds.
+It links `host/herdr.toml` as herdr's config, `~/.config/herdr/config.toml`, in place of any config the person had; tell them, since the repository's one sets its own theme and sounds. Herdr UI follows that link: a shared setting saved in its Settings window lands in `host/herdr.toml` in this repository, and a personal one belongs in its own `~/.config/herdr/config-gpui.local.toml`.
 
 Everything fleet keeps on the Mac lives under `~/.fleet`: `config/` from step 2, `tasks/` with one folder per sandbox, `cache/<agent>/`, `backups/` and `state/`.
 

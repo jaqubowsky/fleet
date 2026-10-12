@@ -21,6 +21,7 @@ Ask the person which agents they will use: Claude Code, pi, or both. Install at 
 ```bash
 brew trust docker/tap && brew install docker/tap/sbx    # Docker Sandboxes, free locally
 brew install herdr                                      # terminal workspace the agents run in
+brew install penso/tap/herdr-gpui                       # Herdr UI, a native window on the same herdr daemon, if they want one
 npm install -g @earendil-works/pi-coding-agent          # pi, if they use it
 curl -fsSL https://claude.ai/install.sh | bash          # Claude Code, if they use it; updates itself
 ```
@@ -41,6 +42,7 @@ Person:
 ## Check
 
 - `command -v sbx herdr` prints two paths, and `command -v claude pi` prints the path of each agent the person chose
+- with Herdr UI: `open -a Herdr` shows the herdr tabs; it reads the same `~/.config/herdr/config.toml` as the terminal client
 - `sbx ls` answers without an authentication error; if not, the person signs in to sbx again
 - with pi: `test -f ~/.pi/agent/auth.json && echo ok` prints `ok`; if not, the login above is missing
 - with Claude Code: `test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`; if not, the plugin above is missing

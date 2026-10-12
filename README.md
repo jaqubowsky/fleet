@@ -70,7 +70,7 @@ cd ~/fleet && claude
 
 Then tell your agent: **"read SETUP.md and set me up"**. It checks what you have, asks what it can't know, and ends by starting and stopping one test sandbox.
 
-After setup you work from [herdr](https://github.com/herdrdev/herdr): open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own herdr tab started.
+After setup you work from [herdr](https://github.com/herdrdev/herdr): open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own herdr tab started. [Herdr UI](https://github.com/penso/herdr-gpui) shows the same tabs in a native window, if you prefer one to the terminal.
 
 Rather do it by hand? Follow the same steps yourself: [`SETUP.md`](SETUP.md) lists them, one file each.
 
