@@ -2,6 +2,19 @@
 
 Both formats are JSONL, one object per line. Never `cat` a file: sizes reach 8 MB. Pipe through `jq` and slice with `.[0:N]`. Use jq's `input_line_number` before filtering to preserve source lines; numbering the filtered output does not identify transcript lines.
 
+## Finding the sessions
+
+Every store at once, by modification time and size; filter on the day, or grep a sandbox name for one task's transcripts:
+
+```bash
+setopt nullglob
+stat -f '%Sm %z %N' -t '%F_%T' ~/.claude/projects/*/*.jsonl ~/.pi/agent/sessions/*/*.jsonl \
+  ~/.fleet/tasks/*/*/logs/sessions/*.jsonl ~/.fleet/tasks/*/*/logs/sessions/projects/*/*.jsonl \
+  | awk '$1 ~ /^<YYYY-MM-DD>/' | sort
+```
+
+Transcript timestamps are UTC; git commit times are local. Convert before saying whether a session ran before or after a commit.
+
 ## pi (`~/.pi/agent/sessions`, `~/.fleet/tasks/*/pi-*/logs/sessions`)
 
 First line is `{"type":"session","cwd":...}`; `model_change` names provider and model. Messages sit under `.message` with `role` in `user`, `assistant`, `toolResult`.
