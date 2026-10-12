@@ -628,7 +628,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	});
 }
 
-test("the claude host watches the containers its own pane put up or steered last", () => {
+test("the claude host watches the containers its own session put up, started or steered", () => {
 	renderSeats("claude", (out) => {
 		const rules = (readdirSync(`${out}/host`, { recursive: true }) as string[])
 			.filter((file) => file.endsWith(".md"))
@@ -637,7 +637,7 @@ test("the claude host watches the containers its own pane put up or steered last
 
 		assert.match(
 			rules,
-			/the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane/,
+			/inside herdr or not: the harness puts the session ID in `CLAUDE_CODE_SESSION_ID` on every command, the event carries it, and the fleet mod holds `fleet watch` under that ID/,
 		);
 		assert.doesNotMatch(rules, /Monitor/);
 		assert.doesNotMatch(rules, /watches every `claude-` container/);

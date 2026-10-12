@@ -83,9 +83,9 @@ test("the session that starts a stopped container owns it, and a stop changes no
 		"2026-09-16T11:00:00Z - start worker session=c",
 	].join("\n");
 
-	assert.deepEqual(eventAgents(log, { sessionId: "a" }), ["worker"]);
-	assert.deepEqual(eventAgents(log, { sessionId: "b" }), []);
-	assert.deepEqual(eventAgents(log, { sessionId: "c" }), ["worker"]);
+	assert.deepEqual(eventAgents(log, "a"), ["worker"]);
+	assert.deepEqual(eventAgents(log, "b"), []);
+	assert.deepEqual(eventAgents(log, "c"), ["worker"]);
 	assert.deepEqual([...lifecycle(log).closed], []);
 });
 
@@ -97,9 +97,9 @@ test("two Pi sessions sharing a pane only adopt their own events", () => {
 	logEvent(b, "steer", "worker-b", "continue");
 	const log = [...a.calls, ...b.calls].map((call) => call[2]).join("\n");
 
-	assert.deepEqual(eventAgents(log, { sessionId: "session-a" }), ["worker-a"]);
-	assert.deepEqual(eventAgents(log, { sessionId: "session-b" }), ["worker-b"]);
-	assert.deepEqual(eventAgents(log, { sessionId: "" }), []);
+	assert.deepEqual(eventAgents(log, "session-a"), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, "session-b"), ["worker-b"]);
+	assert.deepEqual(eventAgents(log, ""), []);
 });
 
 test("legacy and ownerless events never cause automatic watching", () => {
@@ -110,8 +110,8 @@ test("legacy and ownerless events never cause automatic watching", () => {
 		"not a line",
 	].join("\n");
 
-	assert.deepEqual(eventAgents(log, { sessionId: "w1:host" }), []);
-	assert.deepEqual(eventAgents(log, { sessionId: "" }), []);
+	assert.deepEqual(eventAgents(log, "w1:host"), []);
+	assert.deepEqual(eventAgents(log, ""), []);
 });
 
 test("the shell Pi session id reaches event logging", (t) => {
@@ -126,13 +126,21 @@ test("the shell Pi session id reaches event logging", (t) => {
 	assert.match(append.mock.calls[0].arguments[1], / session=shell-session$/);
 });
 
-test("a harness without a shell session id owns events by pane", () => {
-	const log = [
-		"2026-09-16T10:00:00.000Z w1:host up worker-a session=",
-		"2026-09-16T10:01:00.000Z w2:other up worker-b session=",
-	].join("\n");
+test("a claude host outside herdr logs its Claude Code session id", (t) => {
+	const previous = { session: process.env.CLAUDE_CODE_SESSION_ID, pane: process.env.HERDR_PANE_ID };
+	process.env.CLAUDE_CODE_SESSION_ID = "claude-session";
+	delete process.env.HERDR_PANE_ID;
+	t.after(() => {
+		for (const [name, value] of [["CLAUDE_CODE_SESSION_ID", previous.session], ["HERDR_PANE_ID", previous.pane]] as const)
+			if (value === undefined) delete process.env[name];
+			else process.env[name] = value;
+	});
+	const io = realIo("/home/me", SEATS.claude);
+	const append = t.mock.method(io, "append", (_path: string, _line: string) => {});
 
-	assert.deepEqual(eventAgents(log, { pane: "w1:host" }), ["worker-a"]);
+	logEvent(io, "start", "worker-a");
+
+	assert.match(append.mock.calls[0].arguments[1], / - start worker-a session=claude-session$/);
 });
 
 test("a harness that watches through its CLI logs events in its writable fleet cache", () => {
@@ -156,21 +164,7 @@ test("a container taken down is closed until it comes up again", () => {
 
 	assert.deepEqual([...closed], ["worker-a"]);
 	assert.equal(steered.get("worker-a"), "2026-09-16T10:01:00.000Z");
-	assert.deepEqual(eventAgents(log, { sessionId: "s" }), ["worker-b"]);
-});
-
-test("a pane owns a container while its latest up or steer came from that pane", () => {
-	const log = [
-		"2026-09-16T10:00:00.000Z w1:host up worker-a session=",
-		"2026-09-16T10:01:00.000Z w2:other up worker-b session=",
-		"2026-09-16T10:02:00.000Z w1:host up worker-c session=",
-		'2026-09-16T10:03:00.000Z w2:other steer worker-c session= "go"',
-		"2026-09-16T10:04:00.000Z w1:host up worker-d session=",
-		"2026-09-16T10:05:00.000Z w2:other down worker-d session=",
-	].join("\n");
-
-	assert.deepEqual(eventAgents(log, { pane: "w1:host" }), ["worker-a"]);
-	assert.deepEqual(eventAgents(log, { pane: "w2:other" }), ["worker-b", "worker-c"]);
+	assert.deepEqual(eventAgents(log, "s"), ["worker-b"]);
 });
 
 test("a Pi session keeps a container it put up after another session steers it, until it is taken down", () => {
@@ -181,6 +175,6 @@ test("a Pi session keeps a container it put up after another session steers it, 
 		"2026-09-16T10:03:00.000Z w2:other down worker-b session=session-b",
 	].join("\n");
 
-	assert.deepEqual(eventAgents(log, { sessionId: "session-a" }), ["worker-a"]);
-	assert.deepEqual(eventAgents(log, { sessionId: "session-b" }), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, "session-a"), ["worker-a"]);
+	assert.deepEqual(eventAgents(log, "session-b"), ["worker-a"]);
 });

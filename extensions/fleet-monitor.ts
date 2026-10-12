@@ -17,7 +17,7 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 		let every = false;
 		let watcher: ReturnType<typeof watch> | undefined;
 
-		const owned = () => eventAgents(io.read(log) ?? "", seat.owner === "session" ? { sessionId } : { pane: io.pane });
+		const owned = () => eventAgents(io.read(log) ?? "", sessionId);
 		const scope = () => (every ? undefined : [...named, ...owned()]);
 		let running = false;
 		const held: string[] = [];
@@ -101,14 +101,14 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 		pi.on("session_start", (_event: unknown, ctx: any) => {
 			sessionId = ctx.sessionManager?.getSessionId?.();
 			process.env.FLEET_SEAT = seat.name;
-			if (sessionId && seat.sessionIdEnv) process.env[seat.sessionIdEnv] = sessionId;
+			if (sessionId) process.env[seat.sessionIdEnv] = sessionId;
 			ui = ctx.ui ?? ui;
 			restart();
 			watchFile(log, { interval: LOG_POLL_MS }, refresh);
 		});
 		pi.on("tool_call", (event: { toolName: string; input: { command?: unknown } }) => {
 			const command = event.input?.command;
-			if (event.toolName !== "bash" || !sessionId || !seat.sessionIdEnv || typeof command !== "string" || !fleetCommand.test(command)) return;
+			if (event.toolName !== "bash" || !sessionId || typeof command !== "string" || !fleetCommand.test(command)) return;
 			event.input.command = `export FLEET_SEAT=${seat.name} ${seat.sessionIdEnv}=${JSON.stringify(sessionId)}; ${command}`;
 			return { input: event.input };
 		});

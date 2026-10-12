@@ -7,24 +7,27 @@ const TYPED = { origin: { kind: "composer" }, presentation: { isFullscreen: fals
 const wake = (agent: string, change: string) =>
 	`${JSON.stringify({ wake: `[fleet] ${agent}: ${change}\n\nstatus: done` })}\n`;
 
-function engine(on: On, lines: string[]) {
+function engine(on: On, lines: string[], session = { id: "s1" }) {
 	const spawned: string[][] = [];
+	const envs: (Record<string, string> | undefined)[] = [];
 	const submitted: string[] = [];
 	on("session.start", ($, e) => ({ cwd: e.cwd }));
 	on("tool.register", ($, e) => ({ value: { tool: `mcp__fleet__${e.name}` } }));
 	on("command.register", ($, e) => ({ value: { command: e.name } }));
 	on("process.spawn", async function* ($, e) {
 		spawned.push([...e.argv]);
+		envs.push(e.env && { ...e.env });
 		for (const text of lines) yield { stream: "stdout" as const, text };
 		return { value: { code: 0, signal: null } };
 	});
+	on("session.id", () => ({ value: session.id }));
 	on("turn.start", ($, e) => ({ turnId: e.turnId }));
 	on("turn.complete", ($, e) => ({ text: e.answer, reason: "answer" }));
 	on("prompt.submit", ($, e) => {
 		submitted.push(e.text);
 		return { text: e.text };
 	});
-	return { spawned, submitted };
+	return { spawned, envs, submitted };
 }
 
 test("a wake while the session is idle starts a turn with the wake", async ($, on) => {
@@ -114,4 +117,24 @@ test("the model's watch tool follows the names it passes", async ($, on) => {
 
 	expect(called.text).toBe("fleet: watching claude-a");
 	expect(spawned.at(-1)).toEqual(["fleet", "watch", "--json", "claude-a"]);
+});
+
+test("the watch runs under this session's id, so fleet follows what this session put up, started or steered", async ($, on) => {
+	const { envs } = engine(on, []);
+
+	await $.session.start(SESSION);
+
+	expect(envs).toEqual([{ CLAUDE_CODE_SESSION_ID: "s1" }]);
+});
+
+test("a turn under a new session id, as after /clear, follows that session's containers", async ($, on) => {
+	const session = { id: "s1" };
+	const { spawned, envs } = engine(on, [], session);
+	await $.session.start(SESSION);
+
+	session.id = "s2";
+	await $.turn.start({ text: "go", turnId: "t1" });
+
+	expect(spawned).toEqual([["fleet", "watch", "--json"], ["fleet", "watch", "--json"]]);
+	expect(envs.at(-1)).toEqual({ CLAUDE_CODE_SESSION_ID: "s2" });
 });

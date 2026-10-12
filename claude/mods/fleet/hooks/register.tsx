@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from "claude-code";
 type Line = { wake?: string; log?: string; watching?: string };
 
 const WATCH_DESCRIPTION =
-	"Watch containers beyond the ones this herdr pane put up or steered, which are watched by themselves. A watched container settling or working on without settling wakes this session with a [fleet] <agent>: <state> turn carrying the last message of its session transcript. Pass the sandbox names fleet ls prints; an empty string watches every container.";
+	"Watch containers beyond the ones this session put up, started or steered, which are watched by themselves. A watched container settling or working on without settling wakes this session with a [fleet] <agent>: <state> turn carrying the last message of its session transcript. Pass the sandbox names fleet ls prints; an empty string watches every container.";
 
 const AGENT_STATUS: Record<string, string> = { working: "yellow", idle: "green", done: "green", blocked: "red", exited: "red", gone: "red" };
 
@@ -15,6 +15,8 @@ const watcher = {
 	running: false,
 	held: [] as string[],
 	said: new Set<string>(),
+	session: "",
+	args: [] as string[],
 };
 
 function send($: EngineInterface, text: string) {
@@ -34,10 +36,15 @@ function heard($: EngineInterface, line: Line) {
 	else send($, line.wake);
 }
 
-function follow($: EngineInterface, args: string[]) {
+async function follow($: EngineInterface, args: string[]) {
 	watcher.stop?.();
 	watcher.said.clear();
-	const child = $.process.spawn({ argv: ["fleet", "watch", "--json", ...args] });
+	watcher.args = args;
+	watcher.session = await $.session.id();
+	const child = $.process.spawn({
+		argv: ["fleet", "watch", "--json", ...args],
+		env: { CLAUDE_CODE_SESSION_ID: watcher.session },
+	});
 	watcher.stop = () => void child.return(undefined as never);
 	void (async () => {
 		let buffer = "";
@@ -55,21 +62,21 @@ function follow($: EngineInterface, args: string[]) {
 	})();
 }
 
-function watch($: EngineInterface, text: string) {
+async function watch($: EngineInterface, text: string) {
 	const names = text.trim().split(/[\s,]+/).filter(Boolean);
-	follow($, names.length ? names : ["--every"]);
+	await follow($, names.length ? names : ["--every"]);
 	return names.length ? `fleet: watching ${names.join(", ")}` : "fleet: watching every container";
 }
 
-function unwatch($: EngineInterface) {
-	follow($, []);
+async function unwatch($: EngineInterface) {
+	await follow($, []);
 	return "fleet: stopped";
 }
 
 export const register: Register = (on) => {
 	on("session.start", async ($, e, next) => {
 		const started = await next(e);
-		follow($, []);
+		await follow($, []);
 		await $.tool.register({
 			name: "watch",
 			description: WATCH_DESCRIPTION,
@@ -87,11 +94,11 @@ export const register: Register = (on) => {
 		});
 		await $.tool.register({
 			name: "unwatch",
-			description: "Stop the watch started by mcp__fleet__watch; the containers this pane put up or steered stay watched.",
+			description: "Stop the watch started by mcp__fleet__watch; the containers this session put up, started or steered stay watched.",
 		});
 		await $.command.register({
 			name: "fleet-watch",
-			description: "Watch containers beyond the ones this pane put up or steered; no names watches every container",
+			description: "Watch containers beyond the ones this session put up, started or steered; no names watches every container",
 			argumentHint: "[sandbox...]",
 		});
 		await $.command.register({
@@ -101,16 +108,16 @@ export const register: Register = (on) => {
 		return started;
 	});
 
-	on("tool.call", { tool: "mcp__fleet__watch" }, ($, e) => {
-		const text = watch($, String((e as { agents?: unknown }).agents ?? ""));
+	on("tool.call", { tool: "mcp__fleet__watch" }, async ($, e) => {
+		const text = await watch($, String((e as { agents?: unknown }).agents ?? ""));
 		return { result: text, text };
 	});
-	on("tool.call", { tool: "mcp__fleet__unwatch" }, ($) => {
-		const text = unwatch($);
+	on("tool.call", { tool: "mcp__fleet__unwatch" }, async ($) => {
+		const text = await unwatch($);
 		return { result: text, text };
 	});
-	on("command.run", { command: "fleet-watch" }, ($, e) => ({ text: watch($, e.args) }));
-	on("command.run", { command: "fleet-unwatch" }, ($) => ({ text: unwatch($) }));
+	on("command.run", { command: "fleet-watch" }, async ($, e) => ({ text: await watch($, e.args) }));
+	on("command.run", { command: "fleet-unwatch" }, async ($) => ({ text: await unwatch($) }));
 
 	on("ui.render", { component: "SessionMode" }, async ($, e, next) => {
 		const drawn = await next(e);
@@ -141,6 +148,7 @@ export const register: Register = (on) => {
 
 	on("turn.start", async ($, e, next) => {
 		watcher.running = true;
+		if (watcher.session && (await $.session.id()) !== watcher.session) await follow($, watcher.args);
 		return next(e);
 	});
 	on("turn.complete", async ($, e, next) => {

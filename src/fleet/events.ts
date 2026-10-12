@@ -70,15 +70,14 @@ export function runtimeOf(log: string | undefined, agent: string, finished: Date
 	return runtime;
 }
 
-export function eventAgents(log: string, owner: { sessionId?: string; pane?: string }): string[] {
-	if (!owner.sessionId && !owner.pane) return [];
+export function eventAgents(log: string, sessionId: string | undefined): string[] {
+	if (!sessionId) return [];
 	const seen = new Set<string>();
 	for (const line of log.split("\n")) {
-		const [, pane, kind, agent, session] = line.split(" ");
+		const [, , kind, agent, session] = line.split(" ");
 		if (!agent || (kind !== "up" && kind !== "steer" && kind !== "start" && kind !== "down")) continue;
-		const mine = kind !== "down" && (owner.sessionId ? session === `session=${encodeURIComponent(owner.sessionId)}` : pane === owner.pane);
-		if (mine) seen.add(agent);
-		else if (kind === "down" || !owner.sessionId) seen.delete(agent);
+		if (kind === "down") seen.delete(agent);
+		else if (session === `session=${encodeURIComponent(sessionId)}`) seen.add(agent);
 	}
 	return [...seen];
 }

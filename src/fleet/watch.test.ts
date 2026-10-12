@@ -5,7 +5,7 @@ import { test, type TestContext } from "node:test";
 import { SEATS, KINDS } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
 import { agentName } from "./name.ts";
-import { fleetAgents, jsonLines, paneScope, wakeLines, wakeName, watch } from "./watch.ts";
+import { fleetAgents, jsonLines, sessionScope, wakeLines, wakeName, watch } from "./watch.ts";
 
 const agents = [
 	{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
@@ -621,44 +621,52 @@ test("a wake asks GitHub nothing and carries no pull request line", (t) => {
 	assert.doesNotMatch(wakes[0], /^pr:/m);
 });
 
-test("CLI watch follows the containers its pane owns, and named ones beside them", () => {
-	const io = fakeIo({}, SEATS.claude);
+test("CLI watch outside herdr follows the containers its session put up, started or steered, and named ones beside them", () => {
+	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "-", sessionId: "s1" });
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] = [
-		"2026-09-16T10:00:00.000Z w1:host up claude-mine session=",
-		"2026-09-16T10:01:00.000Z w2:other up claude-theirs session=",
-		"2026-09-16T10:02:00.000Z w2:other up claude-named session=",
+		"2026-09-16T10:00:00.000Z - up claude-mine session=s1",
+		"2026-09-16T10:01:00.000Z - up claude-theirs session=s2",
+		"2026-09-16T10:02:00.000Z - start claude-started session=s1",
+		'2026-09-16T10:03:00.000Z - steer claude-steered session=s1 "go"',
+		"2026-09-16T10:04:00.000Z - up claude-named session=s2",
 	].join("\n");
 
-	assert.deepEqual(paneScope(io, [])(), ["claude-mine"]);
-	assert.deepEqual(paneScope(io, ["claude-named"])(), [
+	assert.deepEqual(sessionScope(io, ["claude-named"])(), [
 		"claude-named",
 		"claude-mine",
+		"claude-started",
+		"claude-steered",
 	]);
 });
 
-test("a container steered from another pane leaves the watch without a wake", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+test("a container a session put up outside herdr wakes that session when it settles, and another's does not", (t: TestContext) => {
+	const { io, status } = herdr(t, [
+		{ name: "claude-mine", pane_id: "mine:pane", agent_status: "working" },
+		{ name: "claude-theirs", pane_id: "theirs:pane", agent_status: "working" },
 	]);
-	const log = "/home/me/.fleet/tasks/fleet-events.log";
-	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up claude-worker session=";
+	Object.assign(io, { pane: "-", sessionId: "s1" });
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] = [
+		"2026-09-16T10:00:00.000Z - up claude-mine session=s1",
+		"2026-09-16T10:01:00.000Z - up claude-theirs session=s2",
+	].join("\n");
 	const wakes: string[] = [];
-	watch(paneScope(io, []), io, (text) => wakes.push(text));
+	const handle = watch(sessionScope(io, []), io, (text) => wakes.push(text));
+	t.after(() => handle.stop());
 
-	io.files[log] +=
-		'\n2026-09-16T10:01:00.000Z w2:other steer claude-worker session= "go"';
-	intervals.get(30_000)?.();
+	status("mine:pane", "idle");
+	status("theirs:pane", "idle");
+	t.mock.timers.tick(1000);
 
-	assert.deepEqual(wakes, []);
+	assert.deepEqual(wakes, [`[fleet] claude-mine: idle\n\n${REPORT}`]);
 });
 
-test("CLI watch outside a herdr pane follows only the containers it names", () => {
-	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "-" });
+test("CLI watch with no session follows only the containers it names", () => {
+	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "w1:host" });
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		"2026-09-16T10:00:00.000Z - up claude-shell session=";
+		"2026-09-16T10:00:00.000Z w1:host up claude-pane session=";
 
-	assert.deepEqual(paneScope(io, [])(), []);
-	assert.deepEqual(paneScope(io, ["claude-named"])(), ["claude-named"]);
+	assert.deepEqual(sessionScope(io, [])(), []);
+	assert.deepEqual(sessionScope(io, ["claude-named"])(), ["claude-named"]);
 });
 
 

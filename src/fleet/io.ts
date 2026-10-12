@@ -108,7 +108,7 @@ export function realIo(home: string, seat?: Seat): Io {
 		seat,
 		tmp: process.env.TMPDIR ?? "/tmp",
 		pane: process.env.HERDR_PANE_ID ?? "-",
-		sessionId: seat?.sessionIdEnv ? process.env[seat.sessionIdEnv] : undefined,
+		sessionId: seat ? process.env[seat.sessionIdEnv] : undefined,
 		env: (name) => process.env[name] || undefined,
 	};
 }

@@ -21,7 +21,7 @@ import { fakeIo } from "./fake-io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { up } from "./up.ts";
-import { paneScope, watch } from "./watch.ts";
+import { sessionScope, watch } from "./watch.ts";
 
 const log = `/home/me/${EVENTS_LOG}`;
 const listed = (name: string, agent: string) => ({
@@ -148,7 +148,7 @@ test("up, steer, watch and render require a seat, while profile --apply configur
 		/FLEET_SEAT/,
 	);
 	assert.throws(() => steer(resolveSandbox("pi-a", io), "go", io), /FLEET_SEAT/);
-	assert.throws(() => watch(paneScope(io, []), io), /FLEET_SEAT/);
+	assert.throws(() => watch(sessionScope(io, []), io), /FLEET_SEAT/);
 	assert.throws(() => renderHost("/root", io), /FLEET_SEAT/);
 	const applied = permissions({ root: "/root", repo: "/r", apply: true }, io);
 	assert.match(applied, /commit\.gpgsign .* -> false/);
@@ -203,13 +203,13 @@ function herdrSocket(t: TestContext) {
 	};
 }
 
-test("a claude seat's pane-owned watch wakes on a pi container it put up", (t) => {
+test("a claude seat's session-owned watch wakes on a pi container it put up", (t) => {
 	const settle = herdrSocket(t);
-	const io = fakeIo(listed("pi-a", "pi"), SEATS.claude);
-	io.files[log] = "2026-09-16T10:00:00.000Z w1:host up pi-a session=";
+	const io = Object.assign(fakeIo(listed("pi-a", "pi"), SEATS.claude), { sessionId: "s1" });
+	io.files[log] = "2026-09-16T10:00:00.000Z - up pi-a session=s1";
 	const wakes: string[] = [];
 
-	watch(paneScope(io, []), io, (text) => wakes.push(text));
+	watch(sessionScope(io, []), io, (text) => wakes.push(text));
 	settle();
 
 	assert.match(wakes[0] ?? "", /^\[fleet\] pi-a:/);

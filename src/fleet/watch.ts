@@ -44,14 +44,9 @@ export function fleetAgents(
 	);
 }
 
-export function paneScope(io: Io, named: string[]): () => string[] {
+export function sessionScope(io: Io, named: string[]): () => string[] {
 	const events = `${io.home}/${EVENTS_LOG}`;
-	return () => [
-		...named,
-		...eventAgents(io.read(events) ?? "", {
-			pane: io.pane === "-" ? undefined : io.pane,
-		}),
-	];
+	return () => [...named, ...eventAgents(io.read(events) ?? "", io.sessionId)];
 }
 
 export function wakeLines(

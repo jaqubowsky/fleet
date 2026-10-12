@@ -14,7 +14,7 @@ const DIVERGENCES: Divergence[] = [
 		where:
 			/^skills\/host\/orchestrating-agent-sessions\/SKILL\.md: Only the session (that ran|in the herdr pane that ran)/,
 		reason:
-			"a pi seat owns a container by its session ID and watches it in-process, a claude seat owns it by its herdr pane and its fleet mod holds `fleet watch`",
+			"both seats own a container by session ID; pi's monitor sets that ID and watches in-process, claude's ID comes from Claude Code and its fleet mod holds `fleet watch`",
 	},
 	{
 		where:

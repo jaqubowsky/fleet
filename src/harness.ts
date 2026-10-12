@@ -4,13 +4,12 @@ export const CLI = "fleet";
 
 export type Seat = {
 	name: AgentName;
-	owner: "session" | "pane";
-	sessionIdEnv?: string;
+	sessionIdEnv: string;
 };
 
 export const SEATS: Record<AgentName, Seat> = {
-	pi: { name: "pi", owner: "session", sessionIdEnv: "PI_SESSION_ID" },
-	claude: { name: "claude", owner: "pane" },
+	pi: { name: "pi", sessionIdEnv: "PI_SESSION_ID" },
+	claude: { name: "claude", sessionIdEnv: "CLAUDE_CODE_SESSION_ID" },
 };
 
 export type Kind = {
@@ -98,7 +97,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":
-				"Only the session in the herdr pane that ran `fleet up` or `fleet steer` auto-watches that container: the fleet mod holds `fleet watch` for the session's life, following the containers whose latest `fleet up` or `fleet steer` came from this pane and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
+				"Only the session that ran `fleet up`, `fleet start` or `fleet steer` auto-watches that container, inside herdr or not: the harness puts the session ID in `CLAUDE_CODE_SESSION_ID` on every command, the event carries it, and the fleet mod holds `fleet watch` under that ID for the session's life, following the containers this session put up, started or steered and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',
