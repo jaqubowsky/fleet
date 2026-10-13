@@ -7,7 +7,6 @@ import { sendReviewNotes } from "./review-notes.ts";
 const NAME = "claude-app-task";
 const TASK = `/home/me/.fleet/tasks/app/${NAME}`;
 const PATCH = `/home/me/.fleet/cache/diff/${NAME}.patch`;
-const SENT = `${PATCH}.notes.json`;
 const NOTES = {
 	comments: [
 		{ noteId: "user:1", source: "user", filePath: "src/a.ts", hunkIndex: 0, newRange: [12, 14], body: "rename this", author: "user" },
@@ -28,6 +27,7 @@ function containerTab(answers: Record<string, unknown> = {}) {
 }
 
 const steers = (io: ReturnType<typeof fakeIo>) => io.calls.filter((c) => c[0] === "herdr" && c[1] === "agent" && c[2] === "prompt").map((c) => c[4]);
+const removed = (io: ReturnType<typeof fakeIo>) => io.calls.filter((c) => c[0] === "hunk" && c[2] === "comment" && c[3] === "rm").map((c) => c.slice(4, 6));
 
 test("the notes shortcut lives in Herdr prefix mode", () => {
 	const config = readFileSync(new URL("../../host/herdr.toml", import.meta.url), "utf8");
@@ -50,22 +50,18 @@ test("the notes written in the diff pane reach the agent through a file its stee
 	assert.deepEqual(steers(io), [`Address the person's review notes in ${TASK}/review-notes.md, under its last heading.`]);
 });
 
-test("a note already sent does not go again, and an edited one does", () => {
+test("the sent notes leave the diff pane, a reply before the note it answers", () => {
 	const io = containerTab();
-	io.files[SENT] = JSON.stringify(["user:1\nrename this", "user:2\nwhy"]);
 
 	sendReviewNotes(undefined, undefined, io);
 
-	const written = io.files[`${TASK}/review-notes.md`];
-	assert.doesNotMatch(written, /rename this/);
-	assert.match(written, /why removed\?/);
+	assert.deepEqual(removed(io), [["s1", "user:2"], ["s1", "user:1"]]);
 });
 
-test("with no new notes the agent is not steered", () => {
-	const io = containerTab();
-	io.files[SENT] = JSON.stringify(["user:1\nrename this", "user:2\nwhy\nremoved?"]);
+test("with no notes in the pane the agent is not steered", () => {
+	const io = containerTab({ "hunk session comment list s1 --type user --json": { comments: [] } });
 
-	assert.throws(() => sendReviewNotes(undefined, undefined, io), /no new review notes/);
+	assert.throws(() => sendReviewNotes(undefined, undefined, io), /no review notes/);
 	assert.deepEqual(steers(io), []);
 });
 
@@ -79,7 +75,7 @@ test("without the container's diff pane open nothing is sent", () => {
 test("a later round lands under its own heading below the earlier ones", () => {
 	const first = containerTab({ "hunk session comment list s1 --type user --json": { comments: [NOTES.comments[0]] } });
 	sendReviewNotes(undefined, undefined, first);
-	const second = containerTab();
+	const second = containerTab({ "hunk session comment list s1 --type user --json": { comments: [NOTES.comments[1]] } });
 	Object.assign(second.files, first.files);
 
 	sendReviewNotes(undefined, undefined, second);
@@ -99,11 +95,11 @@ test("a press in herdr's own shell, where no host session sets FLEET_SEAT, still
 	assert.equal(steers(io).length, 1);
 });
 
-test("a steer herdr refuses leaves the notes file and the sent list as they were", () => {
+test("a steer herdr refuses leaves the notes file and the pane as they were", () => {
 	const io = containerTab({ "herdr agent prompt": new Error("herdr agent prompt failed (1)\nagent_blocked") });
 	io.files[`${TASK}/review-notes.md`] = "# Review notes\n";
 
 	assert.throws(() => sendReviewNotes(undefined, undefined, io), /agent_blocked/);
 	assert.equal(io.files[`${TASK}/review-notes.md`], "# Review notes\n");
-	assert.equal(io.files[SENT], undefined);
+	assert.deepEqual(removed(io), []);
 });

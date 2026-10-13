@@ -25,13 +25,9 @@ export function sendReviewNotes(name: string | undefined, paneId: string | undef
 	const session = sessions.find((s) => s.sourceLabel === patch);
 	if (!session) throw new Error(`Open ${sandbox.name}'s Changes pane with Ctrl+B then D and write notes there with c`);
 	const { comments = [] } = JSON.parse(io.hunk(["session", "comment", "list", session.sessionId, "--type", "user", "--json"])) as { comments?: Note[] };
-	const sentPath = `${patch}.notes.json`;
-	const sent = new Set<string>(JSON.parse(io.read(sentPath) ?? "[]"));
-	const key = (note: Note) => `${note.noteId}\n${note.body}`;
-	const fresh = comments.filter((note) => !sent.has(key(note)));
-	if (!fresh.length) throw new Error(`${sandbox.name}: no new review notes in its Changes pane`);
+	if (!comments.length) throw new Error(`${sandbox.name}: no review notes in its Changes pane`);
 	const file = `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/review-notes.md`;
-	const round = [`## ${io.now().toISOString()}`, "", ...fresh.map((note) => `- ${where(note)}: ${note.body.replace(/\s+/g, " ").trim()}`)].join("\n");
+	const round = [`## ${io.now().toISOString()}`, "", ...comments.map((note) => `- ${where(note)}: ${note.body.replace(/\s+/g, " ").trim()}`)].join("\n");
 	const before = io.read(file);
 	io.write(file, `${before ?? HEADER}\n${round}\n`);
 	try {
@@ -41,5 +37,5 @@ export function sendReviewNotes(name: string | undefined, paneId: string | undef
 		else io.write(file, before);
 		throw error;
 	}
-	io.write(sentPath, JSON.stringify([...sent, ...fresh.map(key)]));
+	for (const note of [...comments].reverse()) io.hunk(["session", "comment", "rm", session.sessionId, note.noteId, "--json"]);
 }
