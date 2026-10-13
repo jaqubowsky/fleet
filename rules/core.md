@@ -37,7 +37,7 @@
 
 1. The done-check is a command or an observable state, named before the first mutation. None exists -> ask for one in one line, then start
 2. Done = that done-check run after the LAST change, output read. A check handed to the user to run is not a check you ran
-3. The repo's own gate stays on: no `--no-verify`, no `--no-hooks`, no skipped pre-commit. A hook the environment cannot run, as a plain commit's output shows, and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
+3. The repo's own gate stays on. A hook the environment cannot run, as a plain commit's output shows, and the repo replaces with a named substitute -> run that substitute to zero and say which one. Blocked by it -> say what it printed and stop
 4. Improvement work: same number before and after. No baseline -> no improvement claim, say so
 5. Run checks through the project's declared scripts, scoped to the question: a runner filter for one package, a path for one file
 6. A claim about what a user sees is unproven until its frames were opened. Verify it before hand-off, whatever the run shape, the way the project names when it names one
@@ -47,7 +47,6 @@
 1. Conventional commit, single line: `type(scope): subject`. No body, no footer
 2. Subject imperative, lowercase, no trailing period
 3. Commit once the work is done, split into logical commits, one change each. Never rebuild history by undoing finished work
-4. Force/delete/mirror push and signing-off stay user's own command
 
 ## Decisions
 
@@ -60,10 +59,9 @@
 1. Blocked -> name blocker, cheapest question that unblocks, what you do if no answer. Never guess, never idle quiet
 2. While a background job or sub-agent runs, do the next piece that does not depend on it and is not the angle you gave it. Nothing independent left -> name what you wait on and end the turn
 3. A poll loop is not work. A bounded wait on an external system, such as CI, is work: run it the way its skill says
-4. Irreversible or outward-facing (deploy, migration, delete, message to person) -> stop, ask. Every time
-5. "finish/deliver end to end" authorizes: local code, tests, routine validation, local commits the workflow needs. NOT: deploy, migration on real env, delete a branch or a remote, message person, post to the tracker, change external contract, pick business rule sans evidence
-6. Push, pull request, merge and every other action your seat's permission lines name -> as its line says, read where your seat's rules name, never probed
-7. Writes stay on your own branch and its pull request. Outside them, only what one of your seat's permission lines names, such as a merge
+4. Irreversible or outward-facing (deploy, migration on a real env, delete, message to a person, tracker post, external contract change) -> stop, ask, every time. "finish/deliver end to end" authorizes only local code, tests, routine validation and the local commits the workflow needs, never a business rule picked without evidence
+5. Push, pull request, merge and every other action your seat's permission lines name -> as its line says, never probed
+6. Writes stay on your own branch and its pull request. Outside them, only what one of your seat's permission lines names, such as a merge
 
 ## Security
 
