@@ -90,3 +90,20 @@ test("a later round lands under its own heading below the earlier ones", () => {
 	assert.doesNotMatch(rounds[1], /rename this/);
 	assert.match(rounds[1], /why removed\?/);
 });
+
+test("a press in herdr's own shell, where no host session sets FLEET_SEAT, still reaches the agent", () => {
+	const io = Object.assign(containerTab(), { seat: undefined });
+
+	sendReviewNotes(undefined, undefined, io);
+
+	assert.equal(steers(io).length, 1);
+});
+
+test("a steer herdr refuses leaves the notes file and the sent list as they were", () => {
+	const io = containerTab({ "herdr agent prompt": new Error("herdr agent prompt failed (1)\nagent_blocked") });
+	io.files[`${TASK}/review-notes.md`] = "# Review notes\n";
+
+	assert.throws(() => sendReviewNotes(undefined, undefined, io), /agent_blocked/);
+	assert.equal(io.files[`${TASK}/review-notes.md`], "# Review notes\n");
+	assert.equal(io.files[SENT], undefined);
+});

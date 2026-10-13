@@ -1,4 +1,4 @@
-import { steer } from "./commands.ts";
+import { promptAgent } from "./commands.ts";
 import { diffPatchPath } from "./diff-view.ts";
 import type { Io } from "./io.ts";
 import { taskDir } from "./repositories.ts";
@@ -32,7 +32,14 @@ export function sendReviewNotes(name: string | undefined, paneId: string | undef
 	if (!fresh.length) throw new Error(`${sandbox.name}: no new review notes in its Changes pane`);
 	const file = `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/review-notes.md`;
 	const round = [`## ${io.now().toISOString()}`, "", ...fresh.map((note) => `- ${where(note)}: ${note.body.replace(/\s+/g, " ").trim()}`)].join("\n");
-	io.write(file, `${io.read(file) ?? HEADER}\n${round}\n`);
-	steer(sandbox, `Address the person's review notes in ${file}, under its last heading.`, io);
+	const before = io.read(file);
+	io.write(file, `${before ?? HEADER}\n${round}\n`);
+	try {
+		promptAgent(sandbox, `Address the person's review notes in ${file}, under its last heading.`, io);
+	} catch (error) {
+		if (before === undefined) io.remove(file);
+		else io.write(file, before);
+		throw error;
+	}
 	io.write(sentPath, JSON.stringify([...sent, ...fresh.map(key)]));
 }

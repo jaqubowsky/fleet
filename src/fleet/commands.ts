@@ -259,17 +259,17 @@ export function steer(
 	io: Io,
 	root?: string,
 ): void {
-	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
-	prompt(sandbox, text, io, { root });
+	seatOf(io);
+	promptAgent(sandbox, text, io, { root });
 }
 
-function prompt(
+export function promptAgent(
 	row: Sandbox,
 	text: string,
 	io: Io,
 	{ root }: { root?: string } = {},
 ): void {
-	seatOf(io);
+	if (row.status === "stopped") throw new Error(`${row.name}: stopped; run ${CLI} start ${row.name} first`);
 	const sandbox = row.name;
 	if (stoppedPane(row, io)) throw new Error(`${sandbox}: stopped; run ${CLI} start ${sandbox} first`);
 	const agent = agentName(sandbox);
