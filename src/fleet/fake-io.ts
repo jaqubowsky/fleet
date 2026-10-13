@@ -81,6 +81,11 @@ export function fakeIo(
 			calls.push(["write", path]);
 			files[path] = body;
 		},
+		rename: (from, to) => {
+			calls.push(["rename", from, to]);
+			files[to] = files[from];
+			delete files[from];
+		},
 		copy: (from, to) => {
 			calls.push(["copy", from, to]);
 			const body = files[from] ?? (answer(`read ${from}`) as string | undefined);

@@ -4,11 +4,12 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { DIFF_PROBE, diffSnapshot, toggleDiff, type DiffPosition, type DiffSnapshot } from "./diff.ts";
-import { clickedDiffFile, diffDocument, diffOffset, diffInput, diffScreen, plainDiff, scrollDiff } from "./diff-view.ts";
+import { DIFF_PROBE, containerPatch, toggleDiff } from "./diff.ts";
+import { diffView } from "./diff-view.ts";
 import { fakeIo } from "./fake-io.ts";
 
-const position: DiffPosition = { repository: "", scope: "task", path: "", offset: 0 };
+const RUNNING = { "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "running", workspaces: ["/app"] }] } };
+const PATCH = "/home/me/.fleet/cache/diff/pi-app-task.patch";
 
 test("the diff shortcut stays inside Herdr prefix mode", () => {
 	const config = readFileSync(new URL("../../host/herdr.toml", import.meta.url), "utf8");
@@ -56,43 +57,46 @@ test("the second toggle closes only the recorded diff pane", () => {
 test("a stopped container is never executed to read its changes", () => {
 	const io = fakeIo({ "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] } });
 
-	const result = diffSnapshot("pi-app-task", position, io);
+	const patch = containerPatch("pi-app-task", io);
 
-	assert.equal(result.status, "Container stopped");
+	assert.equal(patch, undefined);
 	assert.equal(io.calls.some(c => c[0] === "sbx" && c[1] === "exec"), false);
 });
 
-test("the first snapshot sends no empty sbx command arguments", () => {
-	const io = fakeIo({
-		"sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "running", workspaces: ["/app"] }] },
-		"sbx exec": JSON.stringify({ files: [], patch: "" }),
-	});
+test("a removed container has no changes to read", () => {
+	const io = fakeIo({ "sbx ls": { sandboxes: [] } });
 
-	diffSnapshot("pi-app-task", position, io);
+	assert.equal(containerPatch("pi-app-task", io), undefined);
+});
+
+test("the first read sends no empty sbx command arguments", () => {
+	const io = fakeIo({ ...RUNNING, "sbx exec": "" });
+
+	containerPatch("pi-app-task", io);
 
 	const call = io.calls.find(c => c[0] === "sbx" && c[1] === "exec")!;
 	assert.equal(call.includes(""), false);
 });
 
-test("a removed container leaves an explicit state", () => {
-	const io = fakeIo({ "sbx ls": { sandboxes: [] } });
-
-	const result = diffSnapshot("pi-app-task", position, io);
-
-	assert.equal(result.status, "Container removed");
-});
-
-test("a repository choice reads that private checkout", () => {
+test("every repository of a task is read from its private checkout, its paths under its own name", () => {
 	const io = fakeIo({
 		"sbx ls": { sandboxes: [{ name: "claude-app-task", agent: "claude", status: "running", workspaces: ["/app"] }] },
 		"read /home/me/.fleet/config/fleet/claude-app-task.json": JSON.stringify({ version: 1, task: "/task", repositories: ["app", "api"].map(name => ({ repo: `/${name}`, workspace: `/private/${name}`, name, base: "main", baseSha: "abc", branch: "task", served: name })) }),
-		"sbx exec": JSON.stringify({ files: [], patch: "" }),
+		"sbx exec": "",
 	});
 
-	const result = diffSnapshot("claude-app-task", { ...position, repository: "/api" }, io);
+	containerPatch("claude-app-task", io);
 
-	assert.equal(result.repository, "/api");
-	assert.deepEqual(JSON.parse(io.calls.find(c => c[0] === "sbx" && c[1] === "exec")!.at(-1)!), { workspace: "/private/api", scope: "task", base: "refs/remotes/origin/main" });
+	assert.deepEqual(io.calls.filter(c => c[0] === "sbx" && c[1] === "exec").map(c => JSON.parse(c.at(-1)!)), [
+		{ workspace: "/private/app", base: "refs/remotes/origin/main", prefix: "app/" },
+		{ workspace: "/private/api", base: "refs/remotes/origin/main", prefix: "api/" },
+	]);
+});
+
+test("terminal escapes in repository content never reach the viewer", () => {
+	const io = fakeIo({ ...RUNNING, "sbx exec": "+safe\x1b]52;c;ZXZpbA==\x07\x1b[2Jtext\r\n+\tindented\n" });
+
+	assert.equal(containerPatch("pi-app-task", io), "+safe]52;c;ZXZpbA==[2Jtext\n+\tindented\n");
 });
 
 test("task changes survive commits and include new untracked files without staging", t => {
@@ -117,17 +121,18 @@ test("task changes survive commits and include new untracked files without stagi
 	writeFileSync(join(dir, "new dir", "a file.txt"), "untracked change\n");
 	writeFileSync(join(dir, ".env"), "secret\n");
 	const index = readFileSync(join(dir, ".git/index"));
-	const probe = (scope: string) => JSON.parse(execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, scope })], { encoding: "utf8" })) as DiffSnapshot;
+	const probe = (prefix: string) => execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "", prefix })], { encoding: "utf8" });
 
-	const task = probe("task");
-	const uncommitted = probe("uncommitted");
+	const plain = probe("");
+	const prefixed = probe("app/");
 
-	assert.match(task.patch, /\+committed change/);
-	assert.match(task.patch, /\+untracked change/);
-	assert.deepEqual(task.files.map(f => f.path), ["file.txt", "new dir/a file.txt"]);
-	assert.deepEqual(uncommitted.files.map(f => f.path), ["new dir/a file.txt"]);
-	assert.match(uncommitted.patch, /\+untracked change/);
-	assert.ok(task.files[1].line > task.files[0].line);
+	assert.match(plain, /^diff --git a\/file\.txt b\/file\.txt$/m);
+	assert.match(plain, /\+committed change/);
+	assert.match(plain, /^diff --git a\/new dir\/a file\.txt b\/new dir\/a file\.txt$/m);
+	assert.match(plain, /\+untracked change/);
+	assert.doesNotMatch(plain, /secret/);
+	assert.match(prefixed, /^\+\+\+ b\/app\/file\.txt$/m);
+	assert.match(prefixed, /^\+\+\+ b\/app\/new dir\/a file\.txt\t?$/m);
 	assert.deepEqual(readFileSync(join(dir, ".git/index")), index);
 });
 
@@ -161,95 +166,56 @@ test("rebasing excludes main changes while keeping branch and uncommitted work",
 	git("switch", "-q", "feature");
 	writeFileSync(join(dir, "uncommitted.txt"), "still working\n");
 
-	const result = JSON.parse(execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, scope: "task", base: "refs/remotes/origin/main" })], { encoding: "utf8" })) as DiffSnapshot;
+	const patch = execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "refs/remotes/origin/main", prefix: "" })], { encoding: "utf8" });
 
-	assert.deepEqual(result.files.map(f => f.path), ["feature.txt", "uncommitted.txt"]);
+	assert.deepEqual([...patch.matchAll(/^diff --git a\/(\S+)/gm)].map(m => m[1]), ["feature.txt", "uncommitted.txt"]);
 });
 
-test("clicking a visible file selects its path", () => {
-	const snapshot: DiffSnapshot = { status: "Live", repository: "", repositories: [], files: Array.from({ length: 12 }, (_, i) => ({ path: `file-${i}.ts`, status: "M", line: i })), patch: "" };
-	const selected = { ...position, path: "file-8.ts" };
+test("the view shows the container's changes in hunk and swaps in each new read whole", async t => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const answers: Record<string, unknown> = { ...RUNNING, "sbx exec": "diff --git a/one b/one\n" };
+	const io = fakeIo(answers);
+	let quit: (code: number) => void = () => {};
+	io.launch = (command, args) => {
+		io.calls.push(["launch", command, ...args]);
+		return new Promise(resolve => { quit = resolve; });
+	};
 
-	const path = clickedDiffFile(snapshot, selected, 5, 30);
+	const closed = diffView("pi-app-task", io);
+	const first = io.files[PATCH];
+	answers["sbx exec"] = "diff --git a/two b/two\n";
+	t.mock.timers.tick(2000);
+	quit(0);
+	await closed;
 
-	assert.equal(path, "file-4.ts");
-	assert.equal(clickedDiffFile(snapshot, selected, 3, 30), undefined);
-	assert.equal(clickedDiffFile(snapshot, selected, 10, 30), undefined);
+	assert.ok(io.calls.some(c => c.join(" ") === `launch hunk patch ${PATCH} --watch`));
+	assert.equal(first, "diff --git a/one b/one\n");
+	assert.equal(io.files[PATCH], "diff --git a/two b/two\n");
+	assert.ok(io.calls.some(c => c.join(" ") === `rename ${PATCH}.next ${PATCH}`));
 });
 
-test("mouse packets never become file-switching keyboard input", () => {
-	const first = diffInput("\x1b[<0;12;");
+test("a stopped container keeps its last changes on screen", async t => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	const io = fakeIo({ "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] } });
+	io.files[PATCH] = "diff --git a/kept b/kept\n";
+	let quit: (code: number) => void = () => {};
+	io.launch = () => new Promise(resolve => { quit = resolve; });
 
-	const next = diffInput(first.pending + "5M\x1b[<0;12;5m\x1b[<65;9;20Mj");
+	const closed = diffView("pi-app-task", io);
+	t.mock.timers.tick(2000);
+	quit(0);
+	await closed;
 
-	assert.equal(first.keys, "");
-	assert.deepEqual(next.clicks, [{ button: 0, column: 12, row: 5 }, { button: 65, column: 9, row: 20 }]);
-	assert.equal(next.keys, "j");
-	assert.equal(next.pending, "");
+	assert.equal(io.files[PATCH], "diff --git a/kept b/kept\n");
+	assert.equal(io.calls.some(c => c[0] === "sbx" && c[1] === "exec"), false);
 });
 
-test("terminal escapes in repository content cannot control the view", () => {
-	const malicious = "text\x1b[2J\x1b]52;c;c2VjcmV0\x07\nnext\rline";
+test("quitting hunk closes the diff pane", async () => {
+	const io = fakeIo({ ...RUNNING, "sbx exec": "" });
+	io.pane = "w1:p2";
+	io.launch = async () => 0;
 
-	const safe = plainDiff(malicious);
+	await diffView("pi-app-task", io);
 
-	assert.equal(safe, "text\nnextline");
-});
-
-const continuous: DiffSnapshot = {
-	status: "Live", repositories: [], repository: "", base: "origin/main",
-	files: [{ path: "one.ts", status: "M", line: 0 }, { path: "two.ts", status: "M", line: 7 }],
-	patch: "diff --git a/one.ts b/one.ts\nindex old..new\n--- a/one.ts\n+++ b/one.ts\n@@ -1 +1 @@\n-before one\n+after one\ndiff --git a/two.ts b/two.ts\nindex old..new\n--- a/two.ts\n+++ b/two.ts\n@@ -1 +1 @@\n-before two\n+after two\n",
-};
-
-test("one document shows both files with separate headings", () => {
-	const document = diffDocument(continuous, continuous.patch, 80);
-
-	const text = plainDiff(document.lines.join("\n"));
-
-	assert.match(text, /1\/2  M  one\.ts[\s\S]*\+after one[\s\S]*2\/2  M  two\.ts[\s\S]*\+after two/);
-	assert.doesNotMatch(text, /diff --git|index old/);
-});
-
-test("scrolling crosses a file boundary without selecting another file", () => {
-	const document = diffDocument(continuous, continuous.patch, 80);
-
-	const next = scrollDiff(document, { ...position, path: "one.ts" }, document.files[1].line);
-	const previous = scrollDiff(document, next, -1);
-
-	assert.equal(next.path, "two.ts");
-	assert.equal(next.offset, 0);
-	assert.equal(previous.path, "one.ts");
-	assert.equal(diffOffset(document, previous), document.files[1].line - 1);
-});
-
-test("updating an earlier file does not move the reader out of the current file", () => {
-	const document = diffDocument(continuous, continuous.patch, 80);
-	const reading = { ...position, path: "two.ts", offset: 3 };
-	const changed = { ...continuous, files: [continuous.files[0], { ...continuous.files[1], line: 8 }], patch: continuous.patch.replace("+after one\n", "+after one\n+another line\n") };
-
-	const updated = diffDocument(changed, changed.patch, 80);
-
-	assert.equal(updated.lines[diffOffset(updated, reading)], document.lines[diffOffset(document, reading)]);
-	assert.equal(diffOffset(updated, reading), diffOffset(document, reading) + 1);
-});
-
-test("long colored lines wrap without losing their contents", () => {
-	const snapshot = { ...continuous, files: [continuous.files[0]], patch: "@@ -0,0 +1 @@\n+abcdefghijklmnopqrstuvwxyz\n" };
-
-	const document = diffDocument(snapshot, "@@ -0,0 +1 @@\n\x1b[32m+abcdefghijklmnopqrstuvwxyz\x1b[0m\n", 12);
-	const rows = document.lines.map(plainDiff);
-
-	assert.ok(rows.every(row => row.length <= 12));
-	assert.match(rows.join(""), /\+abcdefghijklmnopqrstuvwxyz/);
-});
-
-test("the view retains the selected file and scroll offset across redraws", () => {
-	const snapshot: DiffSnapshot = { status: "Live", repositories: [], repository: "", files: [{ path: "a.ts", status: "M", line: 0 }], patch: "" };
-
-	const screen = plainDiff(diffScreen(snapshot, { ...position, path: "a.ts", offset: 2 }, ["first", "second", "third"], "Updated", false, 80, 15));
-
-	assert.match(screen, /> M a.ts/);
-	assert.match(screen, /third/);
-	assert.doesNotMatch(screen, /first|second/);
+	assert.ok(io.calls.some(c => c.join(" ") === "herdr pane close w1:p2"));
 });

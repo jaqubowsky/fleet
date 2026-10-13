@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Seat } from "../harness.ts";
 
@@ -11,6 +11,7 @@ export type Io = {
 	gh(args: string[], cwd: string): string;
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
+	rename(from: string, to: string): void;
 	copy(from: string, to: string): void;
 	remove(path: string): void;
 	list(dir: string): string[];
@@ -65,6 +66,7 @@ export function realIo(home: string, seat?: Seat): Io {
 		gh: (args, cwd) => shell("gh", args, { cwd, quiet: true, timeoutMs: 30_000 }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),
+		rename: (from, to) => renameSync(from, to),
 		copy: (from, to) => {
 			copyFileSync(from, to);
 			chmodSync(to, statSync(from).mode);

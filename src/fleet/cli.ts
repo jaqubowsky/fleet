@@ -18,7 +18,7 @@ import {
 	stoppedPane,
 } from "./commands.ts";
 import { init } from "./init.ts";
-import { diffSnapshot, toggleDiff } from "./diff.ts";
+import { toggleDiff } from "./diff.ts";
 import { diffView } from "./diff-view.ts";
 import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
@@ -80,7 +80,6 @@ const BARE = new Set([
 	"json",
 	"every",
 	"view",
-	"snapshot",
 ]);
 
 export function flags(
@@ -211,12 +210,9 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		io.log(ls(io));
 	},
 	async diff(args) {
-		const { opts, rest } = flags(args, ["pane", "view", "snapshot", "scope", "repo"]);
-		if (opts.view) await diffView(need(rest[0], "sandbox"), root, io);
-		else if (opts.snapshot) {
-			if (opts.scope !== undefined && !["task", "uncommitted"].includes(String(opts.scope))) throw new Error("scope must be task or uncommitted");
-			io.log(JSON.stringify(diffSnapshot(need(rest[0], "sandbox"), { repository: String(opts.repo ?? ""), scope: String(opts.scope ?? "task") }, io)));
-		} else toggleDiff(rest[0], opts.pane as string | undefined, root, io);
+		const { opts, rest } = flags(args, ["pane", "view"]);
+		if (opts.view) await diffView(need(rest[0], "sandbox"), io);
+		else toggleDiff(rest[0], opts.pane as string | undefined, root, io);
 	},
 	pr(args) {
 		const { opts, rest } = flags(args, ["pane"]);
