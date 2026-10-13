@@ -1,8 +1,7 @@
 import { dirname, resolve } from "node:path";
-import { agentName } from "./name.ts";
 import type { Io } from "./io.ts";
 import { repositoryManifest } from "./repositories.ts";
-import { sandboxes, type Agent } from "./status.ts";
+import { sandboxes, tabContainer } from "./status.ts";
 
 export type DiffFile = { path: string; status: string; line: number };
 export type DiffSnapshot = {
@@ -78,13 +77,8 @@ export function toggleDiff(name: string | undefined, paneId: string | undefined,
 			return;
 		}
 	}
-	const all = sandboxes(io);
-	const agents = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
-	const tabs = io.herdr<{ result: { tabs: { tab_id: string; label: string }[] } }>(["tab", "list", "--workspace", current.workspace_id]).result.tabs;
-	const tab = tabs.find(t => t.tab_id === current.tab_id);
-	const matches = all.filter(s => name ? s.name === name || agentName(s.name) === name : agents.some(a => a.tab_id === current.tab_id && a.name === agentName(s.name)) || tab?.label === agentName(s.name));
-	if (matches.length !== 1) throw new Error("Select a Fleet container tab, or run fleet diff <sandbox> from the target pane");
-	const sandbox = matches[0];
+	const sandbox = tabContainer(name, current, io);
+	if (!sandbox) throw new Error("Select a Fleet container tab, or run fleet diff <sandbox> from the target pane");
 	const panel = io.herdr<{ result: { pane: Pane } }>(["pane", "split", current.pane_id, "--direction", "right", "--ratio", "0.6", "--no-focus"]).result.pane;
 	io.mkdir(dirname(statePath));
 	io.write(statePath, JSON.stringify({ pane: panel.pane_id, tab: current.tab_id }));

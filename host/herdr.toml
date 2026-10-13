@@ -28,3 +28,8 @@ focus_agent = "prefix+alt+1..9"
 key = "prefix+d"
 type = "shell"
 command = "fleet diff"
+
+[[keys.command]]
+key = "prefix+u"
+type = "shell"
+command = "fleet pr"

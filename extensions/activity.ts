@@ -15,7 +15,7 @@ export function recordPullRequest(taskDirectory: string, command: string, output
 	const opened = command.includes("gh pr create") ? [...output.matchAll(PULL_REQUEST_URL)].at(-1) : undefined;
 	if (!opened) return;
 	mkdirSync(join(taskDirectory, "logs"), { recursive: true });
-	writeFileSync(join(taskDirectory, PULL_REQUEST), JSON.stringify({ number: Number(opened[1]) }));
+	writeFileSync(join(taskDirectory, PULL_REQUEST), JSON.stringify({ number: Number(opened[1]), url: opened[0] }));
 }
 
 export default function (pi: any) {

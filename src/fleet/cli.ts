@@ -24,6 +24,7 @@ import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { repositoryManifest } from "./repositories.ts";
+import { openPullRequest } from "./pull-request.ts";
 import { relay } from "./relay.ts";
 import { loadProfiles } from "../profile/profile.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
@@ -47,6 +48,7 @@ const usage = `usage:
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
   ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
   ${CLI} diff [<sandbox>] [--pane <id>]              toggle the live Changes pane in the current Herdr tab; Ctrl+B then D
+  ${CLI} pr [<sandbox>] [--pane <id>]                open the pull request the container in the current Herdr tab opened; Ctrl+B then U
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
   ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
@@ -215,6 +217,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			if (opts.scope !== undefined && !["task", "uncommitted"].includes(String(opts.scope))) throw new Error("scope must be task or uncommitted");
 			io.log(JSON.stringify(diffSnapshot(need(rest[0], "sandbox"), { repository: String(opts.repo ?? ""), scope: String(opts.scope ?? "task") }, io)));
 		} else toggleDiff(rest[0], opts.pane as string | undefined, root, io);
+	},
+	pr(args) {
+		const { opts, rest } = flags(args, ["pane"]);
+		openPullRequest(rest[0], opts.pane as string | undefined, io);
 	},
 	peek(args) {
 		const { opts, rest } = flags(args, ["lines"]);

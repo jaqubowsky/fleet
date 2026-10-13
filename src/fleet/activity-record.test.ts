@@ -54,7 +54,7 @@ test("pi notes the pull request its gh pr create opened", (t) => {
 
 	handlers.get("tool_result")?.({ toolName: "bash", input: { command: "gh pr create --fill" }, content: [{ type: "text", text: "https://github.com/acme/webapp/pull/2390\n" }], isError: false });
 
-	assert.deepEqual(JSON.parse(readFileSync(join(dir, "logs/pull-request.json"), "utf8")), { number: 2390 });
+	assert.deepEqual(JSON.parse(readFileSync(join(dir, "logs/pull-request.json"), "utf8")), { number: 2390, url: "https://github.com/acme/webapp/pull/2390" });
 });
 
 test("a pull request another gh command printed is not the container's own", (t) => {

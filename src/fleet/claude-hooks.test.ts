@@ -44,5 +44,5 @@ test("the pull request gh pr create opened lands in the task directory", (t) => 
 
 	hook("post-tool-use", JSON.stringify({ tool_name: "Bash", tool_input: { command: "gh pr list --head flo-1933 --json number; gh pr create --fill" }, tool_response: { stdout: "[]\nhttps://github.com/acme/webapp/pull/2390" } }));
 
-	assert.deepEqual(JSON.parse(readFileSync(join(task, "logs/pull-request.json"), "utf8")), { number: 2390 });
+	assert.deepEqual(JSON.parse(readFileSync(join(task, "logs/pull-request.json"), "utf8")), { number: 2390, url: "https://github.com/acme/webapp/pull/2390" });
 });
