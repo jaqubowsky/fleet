@@ -19,7 +19,14 @@ mockup/        on an order for one: index.html, the task's one board, and board.
 logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; <skill>-<id>/ evidence
 ```
 
-`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions, such as `run.sh`, `run.md`, `features/<screen>.md`, `gotchas.md` or `gate-base/<sha7>.md`. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`.
+`runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`. Every task on that repository reads it before it starts, so it holds rules, and the run that found a rule keeps the record of finding it:
+
+- a fact goes where its scope is: starting the app in `run.sh` and `run.md`, one screen in `features/<screen>.md`, what defies a reasonable assumption about the environment, such as a gate that dies or flakes there or an action no script takes, in `gotchas.md`
+- each entry states today's design: the symptom, the cause, the fix or the command. Dates, ticket ids, commit SHAs, counts and log paths stay in the task's `logs/` and closing message
+- one entry per cause: search the runbook first, and edit the entry the fact belongs to
+- an entry the code or a script has made untrue, or whose failure did not reproduce, comes out in the edit that finds it
+
+`gate-base/<sha7>.md` is the one record there: one commit's gate results, in the form the container rules give it.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 
