@@ -26,6 +26,7 @@ import { permissions } from "./permissions.ts";
 import { repositoryManifest } from "./repositories.ts";
 import { openPullRequest } from "./pull-request.ts";
 import { relay } from "./relay.ts";
+import { sendReviewNotes } from "./review-notes.ts";
 import { loadProfiles } from "../profile/profile.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
 import { agentName } from "./name.ts";
@@ -49,6 +50,7 @@ const usage = `usage:
   ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
   ${CLI} diff [<sandbox>] [--pane <id>]              toggle the live Changes pane in the current Herdr tab; Ctrl+B then D
   ${CLI} pr [<sandbox>] [--pane <id>]                open the pull request the container in the current Herdr tab opened; Ctrl+B then U
+  ${CLI} notes [<sandbox>] [--pane <id>]             send the notes written in the container's Changes pane to its agent; Ctrl+B then M
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
   ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
   ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
@@ -217,6 +219,10 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	pr(args) {
 		const { opts, rest } = flags(args, ["pane"]);
 		openPullRequest(rest[0], opts.pane as string | undefined, io);
+	},
+	notes(args) {
+		const { opts, rest } = flags(args, ["pane"]);
+		sendReviewNotes(rest[0], opts.pane as string | undefined, io);
 	},
 	peek(args) {
 		const { opts, rest } = flags(args, ["lines"]);

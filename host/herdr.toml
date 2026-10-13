@@ -33,3 +33,8 @@ command = "fleet diff"
 key = "prefix+u"
 type = "shell"
 command = "fleet pr"
+
+[[keys.command]]
+key = "prefix+m"
+type = "shell"
+command = "fleet notes"

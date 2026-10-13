@@ -76,6 +76,10 @@ export function fakeIo(
 			calls.push(["gh", cwd, ...args]);
 			return text(`gh ${args.join(" ")}`);
 		},
+		hunk: (args) => {
+			calls.push(["hunk", ...args]);
+			return text(`hunk ${args.join(" ")}`);
+		},
 		read: (path) => files[path] ?? (answer(`read ${path}`) as string | undefined),
 		write: (path, body) => {
 			calls.push(["write", path]);

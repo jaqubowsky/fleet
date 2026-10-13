@@ -5,8 +5,12 @@ import type { Io } from "./io.ts";
 
 const READ_MS = 2000;
 
+export function diffPatchPath(name: string, io: Io): string {
+	return `${io.home}/${FLEET.cache}/diff/${name}.patch`;
+}
+
 export async function diffView(name: string, io: Io): Promise<void> {
-	const patch = `${io.home}/${FLEET.cache}/diff/${name}.patch`;
+	const patch = diffPatchPath(name, io);
 	io.mkdir(dirname(patch));
 	let shown = io.read(patch);
 	const show = () => {
