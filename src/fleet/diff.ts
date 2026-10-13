@@ -29,9 +29,9 @@ for (const file of files) {
     try { body = git(['diff', ...options, '--no-index', '--', '/dev/null', path]); }
     catch (error) { if (error.status !== 1) throw error; body = error.stdout; }
   } else body = git(['diff', ...options, base, '--', path]);
-  patch += body.trimEnd() + '\n';
+  patch += body.endsWith('\n') ? body : body + '\n';
 }
-process.stdout.write(patch);
+process.stdout.write(JSON.stringify(patch));
 `;
 
 export function containerPatch(name: string, io: Io): string | undefined {
@@ -41,7 +41,7 @@ export function containerPatch(name: string, io: Io): string | undefined {
 		? repositories.map(r => ({ workspace: r.workspace, base: `refs/remotes/origin/${r.base}`, prefix: repositories.length > 1 ? `${basename(r.repo)}/` : "" }))
 		: [{ workspace: "", base: "", prefix: "" }];
 	return reads
-		.map(read => io.sbx(["exec", name, "node", "-e", DIFF_PROBE, JSON.stringify(read)], { quiet: true, timeoutMs: 15_000 }))
+		.map(read => JSON.parse(io.sbx(["exec", name, "node", "-e", DIFF_PROBE, JSON.stringify(read)], { quiet: true, timeoutMs: 15_000 })) as string)
 		.join("")
 		.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
 }

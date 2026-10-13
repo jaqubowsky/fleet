@@ -70,7 +70,7 @@ test("a removed container has no changes to read", () => {
 });
 
 test("the first read sends no empty sbx command arguments", () => {
-	const io = fakeIo({ ...RUNNING, "sbx exec": "" });
+	const io = fakeIo({ ...RUNNING, "sbx exec": JSON.stringify("") });
 
 	containerPatch("pi-app-task", io);
 
@@ -82,7 +82,7 @@ test("every repository of a task is read from its private checkout, its paths un
 	const io = fakeIo({
 		"sbx ls": { sandboxes: [{ name: "claude-app-task", agent: "claude", status: "running", workspaces: ["/app"] }] },
 		"read /home/me/.fleet/config/fleet/claude-app-task.json": JSON.stringify({ version: 1, task: "/task", repositories: ["app", "api"].map(name => ({ repo: `/${name}`, workspace: `/private/${name}`, name, base: "main", baseSha: "abc", branch: "task", served: name })) }),
-		"sbx exec": "",
+		"sbx exec": JSON.stringify(""),
 	});
 
 	containerPatch("claude-app-task", io);
@@ -94,7 +94,7 @@ test("every repository of a task is read from its private checkout, its paths un
 });
 
 test("terminal escapes in repository content never reach the viewer", () => {
-	const io = fakeIo({ ...RUNNING, "sbx exec": "+safe\x1b]52;c;ZXZpbA==\x07\x1b[2Jtext\r\n+\tindented\n" });
+	const io = fakeIo({ ...RUNNING, "sbx exec": JSON.stringify("+safe\x1b]52;c;ZXZpbA==\x07\x1b[2Jtext\r\n+\tindented\n") });
 
 	assert.equal(containerPatch("pi-app-task", io), "+safe]52;c;ZXZpbA==[2Jtext\n+\tindented\n");
 });
@@ -121,7 +121,7 @@ test("task changes survive commits and include new untracked files without stagi
 	writeFileSync(join(dir, "new dir", "a file.txt"), "untracked change\n");
 	writeFileSync(join(dir, ".env"), "secret\n");
 	const index = readFileSync(join(dir, ".git/index"));
-	const probe = (prefix: string) => execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "", prefix })], { encoding: "utf8" });
+	const probe = (prefix: string): string => JSON.parse(execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "", prefix })], { encoding: "utf8" }));
 
 	const plain = probe("");
 	const prefixed = probe("app/");
@@ -134,6 +134,33 @@ test("task changes survive commits and include new untracked files without stagi
 	assert.match(prefixed, /^\+\+\+ b\/app\/file\.txt$/m);
 	assert.match(prefixed, /^\+\+\+ b\/app\/new dir\/a file\.txt\t?$/m);
 	assert.deepEqual(readFileSync(join(dir, ".git/index")), index);
+});
+
+test("a change that ends on a blank line keeps it, so hunk can count every hunk", t => {
+	const dir = mkdtempSync(join(tmpdir(), "fleet-diff-blank-"));
+	t.after(() => rmSync(dir, { recursive: true, force: true }));
+	const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, encoding: "utf8" });
+	git("init", "-q");
+	git("config", "user.name", "Diff test");
+	git("config", "user.email", "diff@example.test");
+	git("config", "commit.gpgsign", "false");
+	writeFileSync(join(dir, "a.txt"), "one\ntwo\n\n");
+	writeFileSync(join(dir, "b.txt"), "three\nfour\n\n");
+	git("add", ".");
+	git("commit", "-qm", "base");
+	git("update-ref", "refs/remotes/origin/main", "HEAD");
+	git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
+	writeFileSync(join(dir, "a.txt"), "ONE\ntwo\n\n");
+	writeFileSync(join(dir, "b.txt"), "THREE\nfour\n\n");
+	const stdout = execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "", prefix: "" })], { encoding: "utf8" });
+	const io = fakeIo({ ...RUNNING, "sbx exec": stdout.trim() });
+
+	const patch = containerPatch("pi-app-task", io)!;
+
+	assert.deepEqual(patch.split(/^(?=diff --git )/m).map(stanza => stanza.slice(stanza.indexOf("@@"))), [
+		"@@ -1,3 +1,3 @@\n-one\n+ONE\n two\n \n",
+		"@@ -1,3 +1,3 @@\n-three\n+THREE\n four\n \n",
+	]);
 });
 
 test("rebasing excludes main changes while keeping branch and uncommitted work", t => {
@@ -166,14 +193,14 @@ test("rebasing excludes main changes while keeping branch and uncommitted work",
 	git("switch", "-q", "feature");
 	writeFileSync(join(dir, "uncommitted.txt"), "still working\n");
 
-	const patch = execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "refs/remotes/origin/main", prefix: "" })], { encoding: "utf8" });
+	const patch: string = JSON.parse(execFileSync(process.execPath, ["-e", DIFF_PROBE, JSON.stringify({ workspace: dir, base: "refs/remotes/origin/main", prefix: "" })], { encoding: "utf8" }));
 
 	assert.deepEqual([...patch.matchAll(/^diff --git a\/(\S+)/gm)].map(m => m[1]), ["feature.txt", "uncommitted.txt"]);
 });
 
 test("the view shows the container's changes in hunk and swaps in each new read whole", async t => {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
-	const answers: Record<string, unknown> = { ...RUNNING, "sbx exec": "diff --git a/one b/one\n" };
+	const answers: Record<string, unknown> = { ...RUNNING, "sbx exec": JSON.stringify("diff --git a/one b/one\n") };
 	const io = fakeIo(answers);
 	let quit: (code: number) => void = () => {};
 	io.launch = (command, args) => {
@@ -183,7 +210,7 @@ test("the view shows the container's changes in hunk and swaps in each new read 
 
 	const closed = diffView("pi-app-task", io);
 	const first = io.files[PATCH];
-	answers["sbx exec"] = "diff --git a/two b/two\n";
+	answers["sbx exec"] = JSON.stringify("diff --git a/two b/two\n");
 	t.mock.timers.tick(2000);
 	quit(0);
 	await closed;
@@ -211,7 +238,7 @@ test("a stopped container keeps its last changes on screen", async t => {
 });
 
 test("quitting hunk closes the diff pane", async () => {
-	const io = fakeIo({ ...RUNNING, "sbx exec": "" });
+	const io = fakeIo({ ...RUNNING, "sbx exec": JSON.stringify("") });
 	io.pane = "w1:p2";
 	io.launch = async () => 0;
 
