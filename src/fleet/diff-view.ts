@@ -30,7 +30,7 @@ export async function diffView(name: string, io: Io): Promise<void> {
 	};
 	reading = setTimeout(read, READ_MS);
 	try {
-		await io.launch("hunk", ["patch", patch, "--watch"]);
+		await io.launch("hunk", ["patch", patch, "--watch", "--mode", "split", "--sidebar", "--wrap", "--theme", "ayu-mirage"]);
 	} finally {
 		clearTimeout(reading);
 	}

@@ -188,7 +188,7 @@ test("the view shows the container's changes in hunk and swaps in each new read 
 	quit(0);
 	await closed;
 
-	assert.ok(io.calls.some(c => c.join(" ") === `launch hunk patch ${PATCH} --watch`));
+	assert.ok(io.calls.some(c => c.join(" ") === `launch hunk patch ${PATCH} --watch --mode split --sidebar --wrap --theme ayu-mirage`));
 	assert.equal(first, "diff --git a/one b/one\n");
 	assert.equal(io.files[PATCH], "diff --git a/two b/two\n");
 	assert.ok(io.calls.some(c => c.join(" ") === `rename ${PATCH}.next ${PATCH}`));
