@@ -1,15 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { argvsOf } from "./argv.ts";
+import { gitCall } from "./git.ts";
 
-const GIT = /^(\S*\/)?git$/;
-const GIT_VALUED = new Set([
-	"-C",
-	"-c",
-	"--git-dir",
-	"--work-tree",
-	"--namespace",
-	"--config-env",
-]);
 const PUSH_VALUED = new Set([
 	"-o",
 	"--push-option",
@@ -17,9 +9,13 @@ const PUSH_VALUED = new Set([
 	"--exec",
 ]);
 const EVERY_BRANCH = /^--(all|branches|mirror)$/;
+const FORCED = /^(-\w*[fd]\w*|--(for|de|m|pru)[\w-]*(=.*)?|[+:].+)$/;
+const REWRITES_PUSH = /^remote\..+\.(mirror|push)$/;
 const MOVES_TARGET = /^(switch|checkout|symbolic-ref|config|branch|remote)$/;
 const SUBSTITUTED = /\$\(|\x60|(^|[\s|;&])xargs\s/;
 const EVERYTHING = "*";
+const FORCE =
+	"A force, delete or mirror push rewrites what other people already hold, so it stays the person's own command: name it as an open question of the closing message.";
 
 function git(cwd: string, ...args: string[]): string | undefined {
 	try {
@@ -30,19 +26,6 @@ function git(cwd: string, ...args: string[]): string | undefined {
 	} catch {
 		return undefined;
 	}
-}
-
-type GitCall = { configured: boolean; subcommand: string; args: string[] };
-
-function gitCall(argv: string[]): GitCall | undefined {
-	if (!GIT.test(argv[0] ?? "")) return undefined;
-	let configured = false;
-	let i = 1;
-	while (argv[i]?.startsWith("-")) {
-		configured ||= /^(-c|--config-env)/.test(argv[i]);
-		i += GIT_VALUED.has(argv[i]) ? 2 : 1;
-	}
-	return { configured, subcommand: argv[i] ?? "", args: argv.slice(i + 1) };
 }
 
 function destinations(
@@ -87,6 +70,13 @@ export function pushRefusal(
 	const calls = argvs.map(gitCall).filter((call) => call !== undefined);
 	const pushes = calls.filter((call) => call.subcommand === "push");
 	const pushArgvs = argvs.filter((argv) => gitCall(argv)?.subcommand === "push");
+	if (
+		calls.some(
+			({ subcommand, args }) =>
+				subcommand === "config" && args.some((arg) => REWRITES_PUSH.test(arg)),
+		)
+	)
+		return FORCE;
 	if (!pushes.length) return undefined;
 	if (mode === "host-only")
 		return "Two-repository container pushes stay on the host; request a separate fleet land --push approval.";
@@ -116,6 +106,8 @@ export function pushRefusal(
 			),
 		)
 	)
-		return undefined;
+		return pushes.some(({ args }) => args.some((arg) => FORCED.test(arg)))
+			? FORCE
+			: undefined;
 	return `A container never pushes to origin's default branch ${base}, whatever push level the profile gives it: work reaches ${base} through a pull request. ${current && current !== base ? `Push your own branch: \`git push -u origin ${current}\`.` : "Switch to your own branch first: `git switch -c <name>`, named after the task."}`;
 }

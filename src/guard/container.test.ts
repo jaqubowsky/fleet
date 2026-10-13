@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { pushRefusal } from "./container.ts";
+import { cases } from "./corpus.ts";
 import containerGuard from "../../extensions/container-guard.ts";
 
 function clone(branch: string, base = "main"): string {
@@ -71,6 +72,18 @@ test("in a container on its own branch, a push of that branch and every other co
 		"ls",
 	])
 		assert.equal(pushRefusal(command, dir), undefined, command);
+});
+
+test("in a container on its own branch, no spelling of a force, delete or mirror push passes", () => {
+	const dir = clone("web-1");
+
+	const passed = cases("cases-force.tsv")
+		.filter((c) => c.want === "deny")
+		.filter((c) => pushRefusal(c.subject, dir) === undefined)
+		.map((c) => c.subject);
+
+	assert.deepEqual(passed, []);
+	assert.match(pushRefusal("git push -f origin web-1", dir) ?? "", /force, delete or mirror/);
 });
 
 test("a push the guard cannot place, because the same command moves HEAD, changes config or computes the target, is refused", () => {

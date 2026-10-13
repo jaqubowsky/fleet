@@ -155,6 +155,7 @@ test("every container carries the default-branch push guard with the modules it 
 		"extensions/container-guard.ts",
 		"src/guard/container.ts",
 		"src/guard/argv.ts",
+		"src/guard/git.ts",
 		"src/guard/translate.ts",
 	]) {
 		guard[`read /root/${file}`] = `${file}\n`;
@@ -178,10 +179,11 @@ test("every container carries the default-branch push guard with the modules it 
 		"extensions/container-guard.ts",
 		"src/guard/container.ts",
 		"src/guard/argv.ts",
+		"src/guard/git.ts",
 		"src/guard/translate.ts",
 	])
 		assert.equal(pi.files[`/stage/home/agent/${file}`], `${file}\n`, file);
-	for (const file of ["src/guard/container.ts", "src/guard/argv.ts"])
+	for (const file of ["src/guard/container.ts", "src/guard/argv.ts", "src/guard/git.ts"])
 		assert.equal(claude.files[`/stage/home/fleet/${file}`], `${file}\n`, file);
 	for (const io of [pi, claude])
 		assert.deepEqual(

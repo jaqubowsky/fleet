@@ -367,6 +367,7 @@ function pi(r: Renderer): void {
 		["extensions/container-guard.ts", "home/agent/extensions/container-guard.ts"],
 		["src/guard/container.ts", "home/agent/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/agent/src/guard/argv.ts"],
+		["src/guard/git.ts", "home/agent/src/guard/git.ts"],
 		["src/guard/translate.ts", "home/agent/src/guard/translate.ts"],
 		["extensions/statusline.ts", "home/agent/extensions/statusline.ts"],
 		["src/statusline/statusline.ts", "home/agent/src/statusline/statusline.ts"],
@@ -405,6 +406,7 @@ function claude(r: Renderer): void {
 		["claude/hooks/container.ts", "home/fleet/claude/hooks/container.ts"],
 		["src/guard/container.ts", "home/fleet/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/fleet/src/guard/argv.ts"],
+		["src/guard/git.ts", "home/fleet/src/guard/git.ts"],
 		["extensions/activity.ts", "home/fleet/extensions/activity.ts"],
 	]);
 }
