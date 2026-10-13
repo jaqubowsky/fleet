@@ -1,5 +1,6 @@
 import type { Profile } from "../profile/profile.ts";
 import { argvsOf, hostCommands, programs, scan } from "./argv.ts";
+import { hooksRefusal } from "./git.ts";
 
 export type HostLevels = Pick<
 	Profile["host"],
@@ -282,6 +283,8 @@ export function decide(
 	for (const [rule, reason] of BASH_RULES) {
 		if (hit(rule)) return deny(reason);
 	}
+	const skipped = hooksRefusal(subject);
+	if (skipped) return deny(skipped);
 
 	const segments = hostCommands(scanned);
 	if (

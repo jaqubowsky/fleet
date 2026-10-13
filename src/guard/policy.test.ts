@@ -233,6 +233,11 @@ test("where the host may not push, no spelling of a host push passes, and a cont
 	);
 });
 
+test("skipping the repository's own hooks is refused on the host", () => {
+	assert.deepEqual(run("cases-hooks.tsv"), []);
+	assert.deepEqual(run("cases-hooks.tsv", PRIVATE), []);
+});
+
 test("no spelling of a force, delete or mirror push passes, whether the person confirms the push or nobody does", () => {
 	const auto = at(PRIVATE);
 

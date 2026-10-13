@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { pushRefusal } from "./container.ts";
 import { cases } from "./corpus.ts";
+import { hooksRefusal } from "./git.ts";
 import containerGuard from "../../extensions/container-guard.ts";
 
 function clone(branch: string, base = "main"): string {
@@ -84,6 +85,14 @@ test("in a container on its own branch, no spelling of a force, delete or mirror
 
 	assert.deepEqual(passed, []);
 	assert.match(pushRefusal("git push -f origin web-1", dir) ?? "", /force, delete or mirror/);
+});
+
+test("skipping the repository's own hooks is refused in a container", () => {
+	const wrong = cases("cases-hooks.tsv")
+		.filter((c) => (hooksRefusal(c.subject) === undefined) !== (c.want === "allow"))
+		.map((c) => `${c.want} expected: ${c.subject}`);
+
+	assert.deepEqual(wrong, []);
 });
 
 test("a push the guard cannot place, because the same command moves HEAD, changes config or computes the target, is refused", () => {
@@ -194,6 +203,7 @@ test("the claude container hook denies a push to the default branch and stays si
 	assert.equal(denied.permissionDecision, "deny");
 	assert.match(denied.permissionDecisionReason, /default branch main/);
 	assert.equal(hook("git push -u origin web-1"), "");
+	assert.match(hook("git commit --no-verify -m x"), /hooks/);
 	mkdirSync(join(task, "claude-a"));
 	writeFileSync(join(task, "claude-a/repositories.json"), "{}");
 	t.after(() => rmSync(task, { recursive: true, force: true }));
@@ -268,6 +278,15 @@ test("the pi container extension blocks a push to the default branch, only insid
 			{ cwd: dir },
 		),
 		undefined,
+	);
+	assert.match(
+		(
+			inside?.(
+				{ toolName: "bash", input: { command: "git commit --no-verify -m x" } },
+				{ cwd: dir },
+			) as { reason: string }
+		).reason,
+		/hooks/,
 	);
 	assert.equal(
 		inside?.({ toolName: "read", input: { path: "a" } }, { cwd: dir }),

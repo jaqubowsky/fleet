@@ -1,0 +1,18 @@
+# Skipping the repository's own hooks is refused on every seat, in the spellings git accepts.
+deny	Bash	git commit --no-verify -m wip
+deny	Bash	git commit -n -m wip
+deny	Bash	git commit -an -m wip
+deny	Bash	git commit -anm wip
+deny	Bash	git commit --no-veri -m wip
+deny	Bash	git push --no-verify origin feat
+deny	Bash	git merge --no-verify main
+deny	Bash	git -C /tmp/x commit --no-verify -m wip
+deny	Bash	git add -A && git commit --no-verify -m wip
+deny	Bash	bash -c 'git commit --no-verify -m wip'
+allow	Bash	git commit -m wip
+allow	Bash	git commit -am wip
+allow	Bash	git commit -mn
+allow	Bash	git commit -m "mention --no-verify in the docs"
+allow	Bash	git commit --amend --no-edit
+allow	Bash	git log -n 5
+allow	Bash	grep -rn -- --no-verify src
