@@ -5,11 +5,13 @@ import { relay } from "./relay.ts";
 
 const TASK = "/home/me/.fleet/tasks/webapp/pi-webapp-a";
 const STATE = `${TASK}/logs/agent-state.json`;
+const PULL_REQUEST = `${TASK}/logs/pull-request.json`;
 const LISTED = { "sbx ls --json": { sandboxes: [{ name: "pi-webapp-a", agent: "pi", status: "running", workspaces: ["/w/webapp"] }] } };
 
-function running(t: TestContext) {
+function running(t: TestContext, files: Record<string, string> = {}) {
 	t.mock.timers.enable({ apis: ["setInterval"] });
 	const io = fakeIo(LISTED);
+	Object.assign(io.files, files);
 	const launched: string[][] = [];
 	let finish: (code: number) => void = () => {};
 	io.launch = (command, args) => {
@@ -24,7 +26,8 @@ function running(t: TestContext) {
 		t.mock.timers.tick(500);
 	};
 	const reports = () => io.calls.filter((c) => c[0] === "herdr" && c[1] === "pane" && c[2] === "report-agent").map((c) => c.slice(3));
-	return { io, launched, exited, report, reports, finish: (code: number) => finish(code) };
+	const tokens = () => io.calls.filter((c) => c[0] === "herdr" && c[1] === "pane" && c[2] === "report-metadata").map((c) => c.slice(3));
+	return { io, launched, exited, report, reports, tokens, finish: (code: number) => finish(code) };
 }
 
 test("each new state the container reports reaches herdr for the relay's own pane", async (t: TestContext) => {
@@ -99,4 +102,40 @@ test("a report herdr refuses goes again on the next read", async (t: TestContext
 		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "working", "--seq", "7"],
 		["w1:host", "--source", "fleet:pi", "--agent", "pi", "--state", "working", "--seq", "7"],
 	]);
+});
+
+test("the pull request the container opened reaches herdr once, as its pane's pr token", async (t: TestContext) => {
+	const agent = running(t);
+
+	agent.io.files[PULL_REQUEST] = JSON.stringify({ number: 2390 });
+	t.mock.timers.tick(500);
+	t.mock.timers.tick(500);
+	agent.finish(0);
+	await agent.exited;
+
+	assert.deepEqual(agent.tokens(), [["w1:host", "--source", "fleet:pr", "--token", "pr=#2390"]]);
+});
+
+test("a pull request noted before a stop reaches herdr again when the relay starts", async (t: TestContext) => {
+	const agent = running(t, { [PULL_REQUEST]: JSON.stringify({ number: 2390 }) });
+
+	t.mock.timers.tick(500);
+	agent.finish(0);
+	await agent.exited;
+
+	assert.deepEqual(agent.tokens(), [["w1:host", "--source", "fleet:pr", "--token", "pr=#2390"]]);
+	assert.ok(!agent.io.calls.some((c) => c[0] === "remove" && c[1] === PULL_REQUEST));
+});
+
+test("the container can hand herdr nothing but a pull request number as the pr token", async (t: TestContext) => {
+	const agent = running(t);
+
+	for (const body of [JSON.stringify({ number: "2390 --clear-title" }), JSON.stringify({ number: -1 }), JSON.stringify({ number: 1.5 }), JSON.stringify({ number: 0 }), "null", "#2390", JSON.stringify({ number: 2391 })]) {
+		agent.io.files[PULL_REQUEST] = body;
+		t.mock.timers.tick(500);
+	}
+	agent.finish(0);
+	await agent.exited;
+
+	assert.deepEqual(agent.tokens(), [["w1:host", "--source", "fleet:pr", "--token", "pr=#2391"]]);
 });

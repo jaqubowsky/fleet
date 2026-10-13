@@ -1634,14 +1634,14 @@ for (const [h, integration, command] of [
 	});
 }
 
-test("up of a claude container starts claude straight through sbx run and copies no herdr integration", async () => {
+test("up of a claude container starts claude through the relay and copies no herdr integration", async () => {
 	const io = fakeIo(base, SEATS.claude);
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	assert.equal(
 		io.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1",
+		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1",
 	);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
@@ -1666,7 +1666,7 @@ test("up of a claude container links claude's transcript store into the task dir
 	assert.ok(made >= 0 && made < linked && linked < started, order.join("\n"));
 	assert.equal(
 		io.calls[started][4],
-		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1",
+		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1",
 	);
 });
 
@@ -1681,7 +1681,7 @@ test("up of a claude container continues the conversation its task directory hol
 
 	assert.equal(
 		io.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=claude sbx run --name claude-webapp-web-1 -- --continue",
+		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1 -- --continue",
 	);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });

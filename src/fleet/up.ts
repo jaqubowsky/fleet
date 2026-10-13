@@ -513,10 +513,7 @@ export async function up(
 }
 
 function runAgent(sandbox: string, task: string, pane: string, kind: Kind, args: string, root: string, io: Io): void {
-	const command = kind.herdrIntegration
-		? `${root}/bin/${CLI} relay ${sandbox} ${task}`
-		: `sbx run --name ${sandbox}`;
-	io.herdr(["pane", "run", pane, `HERDR_AGENT=${kind.name} ${command}${args ? ` -- ${args}` : ""}`]);
+	io.herdr(["pane", "run", pane, `HERDR_AGENT=${kind.name} ${root}/bin/${CLI} relay ${sandbox} ${task}${args ? ` -- ${args}` : ""}`]);
 }
 
 export async function resumeAgent(sandbox: Sandbox, task: string, pane: string, root: string, io: Io): Promise<void> {

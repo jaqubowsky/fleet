@@ -60,7 +60,7 @@ const usage = `usage:
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
-  ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the tab of a kind that reports its state through a herdr extension: run the container's agent here and hand herdr the state it reports
+  ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the container's tab: run the container's agent here and hand herdr the state it reports and the pull request it opened
 
   <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory; up accepts it repeatedly, primary first; multi-repo land uses the recorded primary`;

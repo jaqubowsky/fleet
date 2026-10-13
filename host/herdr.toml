@@ -1,14 +1,15 @@
 onboarding = false
 
 [ui]
-status_indicators = "symbols"
+status_indicators = "dots"
 agent_panel_sort = "priority"
+tab_bar_position = "top"
 
 [ui.sidebar.agents]
-rows = [["state_icon", "workspace", "tab"], ["agent", "$step"]]
+rows = [["state_icon", "workspace", "tab"], ["agent"], ["state_text", { token = "$pr", fg = "#50fa7b", bold = true }]]
 
 [ui.sidebar.spaces]
-rows = [["state_icon", "workspace", "$fleet"], ["branch", "git_status"]]
+rows = [["state_icon", "workspace"], ["branch", "git_status"]]
 
 [ui.sound]
 enabled = true

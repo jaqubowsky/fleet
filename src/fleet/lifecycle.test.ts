@@ -67,7 +67,7 @@ for (const kind of Object.values(KINDS)) {
 		assert.ok(closed >= 0 && closed < io.calls.indexOf(launched!), "the stopped view closes before the agent starts");
 		assert.equal(launched?.[3], "w1:p7");
 		assert.match(launched?.[4] ?? "", new RegExp(kind.resume));
-		assert.ok(launched?.[4].includes(kind.herdrIntegration ? `/harness/bin/fleet relay ${sandbox.name} ${task}` : `sbx run --name ${sandbox.name}`));
+		assert.ok(launched?.[4].includes(`/harness/bin/fleet relay ${sandbox.name} ${task}`));
 		assert.equal(stoppedPane(sandbox, io), undefined);
 		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` start ${sandbox.name} `)));
 		assert.equal(io.calls.filter((c) => c.includes("prompt") || c.includes("create")).length, 0);

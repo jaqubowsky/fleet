@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { record } from "../../extensions/activity.ts";
+import { record, recordPullRequest } from "../../extensions/activity.ts";
 
 type HookInput = {
 	tool_name?: string;
 	tool_input?: { command?: string };
+	tool_response?: { stdout?: string };
 	cwd?: string;
 	agent_id?: string;
 };
@@ -50,10 +51,17 @@ if (
 	} else if (event === "post-tool-use" || event === "post-tool-use-failure")
 		try {
 			const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
-			record(join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME), {
+			const task = join(process.env.FLEET_ARTIFACTS, process.env.SANDBOX_NAME);
+			record(task, {
 				tool: input.tool_name ?? "?",
 				ok: event === "post-tool-use",
 				agent: input.agent_id,
 			});
+			if (input.tool_name === "Bash")
+				recordPullRequest(
+					task,
+					input.tool_input?.command ?? "",
+					input.tool_response?.stdout ?? "",
+				);
 		} catch {}
 }
