@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { pushRefusal } from "./container.ts";
+import { pushRefusal, refusal } from "./container.ts";
 import { cases } from "./corpus.ts";
 import { hooksRefusal } from "./git.ts";
 import containerGuard from "../../extensions/container-guard.ts";
@@ -93,6 +93,30 @@ test("skipping the repository's own hooks is refused in a container", () => {
 		.map((c) => `${c.want} expected: ${c.subject}`);
 
 	assert.deepEqual(wrong, []);
+});
+
+test("a pkill -f or pgrep -f that would match its own shell is refused, and a bracketed pattern passes", () => {
+	const dir = clone("web-1");
+
+	for (const command of [
+		"pkill -f vite",
+		'pkill -f "vite --port 5173"',
+		"pgrep -f dev-stack",
+		"sudo pkill -f vite",
+		"pkill -9 -f vite",
+		"pkill -fx vite",
+		"pkill --full vite",
+		"until ! pgrep -f dev-stack; do :; done",
+	])
+		assert.match(refusal(command, dir) ?? "", /own shell/, command);
+	for (const command of [
+		"pkill -f '[v]ite --port 5173'",
+		"pgrep -f '[d]ev-stack up'",
+		"pkill vite",
+		"pgrep -x node",
+		"grep -f patterns.txt notes",
+	])
+		assert.equal(refusal(command, dir), undefined, command);
 });
 
 test("a push the guard cannot place, because the same command moves HEAD, changes config or computes the target, is refused", () => {
@@ -204,6 +228,7 @@ test("the claude container hook denies a push to the default branch and stays si
 	assert.match(denied.permissionDecisionReason, /default branch main/);
 	assert.equal(hook("git push -u origin web-1"), "");
 	assert.match(hook("git commit --no-verify -m x"), /hooks/);
+	assert.match(hook("pkill -f vite"), /own shell/);
 	mkdirSync(join(task, "claude-a"));
 	writeFileSync(join(task, "claude-a/repositories.json"), "{}");
 	t.after(() => rmSync(task, { recursive: true, force: true }));
@@ -287,6 +312,15 @@ test("the pi container extension blocks a push to the default branch, only insid
 			) as { reason: string }
 		).reason,
 		/hooks/,
+	);
+	assert.match(
+		(
+			inside?.(
+				{ toolName: "bash", input: { command: "pkill -f vite" } },
+				{ cwd: dir },
+			) as { reason: string }
+		).reason,
+		/own shell/,
 	);
 	assert.equal(
 		inside?.({ toolName: "read", input: { path: "a" } }, { cwd: dir }),

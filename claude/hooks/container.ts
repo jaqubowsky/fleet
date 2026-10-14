@@ -13,16 +13,17 @@ type HookInput = {
 async function refusal(stdin: string): Promise<string | undefined> {
 	try {
 		const input = JSON.parse(stdin) as HookInput;
-		const { pushRefusal } = await import("../../src/guard/container.ts");
-		const { hooksRefusal } = await import("../../src/guard/git.ts");
+		const { refusal } = await import("../../src/guard/container.ts");
 		const policy =
 			Number(process.env.FLEET_REPOSITORIES) > 1
 				? ("host-only" as const)
 				: undefined;
-		const command = input.tool_input?.command ?? "";
 		return input.tool_name === "Bash"
-			? (hooksRefusal(command) ??
-					pushRefusal(command, input.cwd ?? process.cwd(), policy))
+			? refusal(
+					input.tool_input?.command ?? "",
+					input.cwd ?? process.cwd(),
+					policy,
+				)
 			: undefined;
 	} catch (error) {
 		return `The container guard failed, so this call does not run: ${(error as Error).message}`;

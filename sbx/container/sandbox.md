@@ -11,7 +11,7 @@ You run in an isolated container. Someone outside watches this session and gives
 5. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one
 6. `sudo` works, so install any tool the repo does not declare, and name in your report what you added
 7. Every repo's ignored `.env*` files, `node_modules` excluded, are copied from its host checkout at creation. A missing test config stays missing: name it instead of using a production env as the test source
-8. Wait on a background command by the line its log ends on, or by the notification of a background run. `pgrep -f` and `pkill -f` match the shell running them when the pattern comes from the same command line, so such a wait never ends and such a kill ends your own shell
+8. Wait on a background command by the line its log ends on, or by the notification of a background run
 
 ## Task directory
 

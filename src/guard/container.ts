@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { argvsOf } from "./argv.ts";
-import { gitCall } from "./git.ts";
+import { gitCall, hooksRefusal } from "./git.ts";
 
 const PUSH_VALUED = new Set([
 	"-o",
@@ -14,6 +14,10 @@ const REWRITES_PUSH = /^remote\..+\.(mirror|push)$/;
 const MOVES_TARGET = /^(switch|checkout|symbolic-ref|config|branch|remote)$/;
 const SUBSTITUTED = /\$\(|\x60|(^|[\s|;&])xargs\s/;
 const EVERYTHING = "*";
+const PROCESS_MATCH = /^(\S*\/)?p(kill|grep)$/;
+const FULL = /^(-[A-Za-z0-9]*f[A-Za-z0-9]*|--full)$/;
+const SELF_MATCH =
+	"pkill -f and pgrep -f match the shell running this command, whose own command line holds the pattern: the kill ends your own shell and the wait never ends. Start the pattern with a bracket class, as in `pkill -f '[v]ite --port 5173'`, or use the PID the start step recorded.";
 const FORCE =
 	"A force, delete or mirror push rewrites what other people already hold, so it stays the person's own command: name it as an open question of the closing message.";
 
@@ -110,4 +114,27 @@ export function pushRefusal(
 			? FORCE
 			: undefined;
 	return `A container never pushes to origin's default branch ${base}, whatever push level the profile gives it: work reaches ${base} through a pull request. ${current && current !== base ? `Push your own branch: \`git push -u origin ${current}\`.` : "Switch to your own branch first: `git switch -c <name>`, named after the task."}`;
+}
+
+function selfMatchRefusal(command: string): string | undefined {
+	return argvsOf(command).some((argv) => {
+		if (!PROCESS_MATCH.test(argv[0] ?? "")) return false;
+		const args = argv.slice(1);
+		const pattern = args.filter((arg) => !arg.startsWith("-")).at(-1);
+		return args.some((arg) => FULL.test(arg)) && !pattern?.startsWith("[");
+	})
+		? SELF_MATCH
+		: undefined;
+}
+
+export function refusal(
+	command: string,
+	cwd: string,
+	mode?: "host-only",
+): string | undefined {
+	return (
+		hooksRefusal(command) ??
+		selfMatchRefusal(command) ??
+		pushRefusal(command, cwd, mode)
+	);
 }
