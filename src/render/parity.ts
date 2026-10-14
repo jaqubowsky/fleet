@@ -24,9 +24,9 @@ const DIVERGENCES: Divergence[] = [
 	},
 	{
 		where:
-			/^skills\/shared\/two-axis-review\/SKILL\.md: One (foreground `Agent`|`reviewer`) call/,
+			/^skills\/shared\/two-axis-review\/SKILL\.md: One (`Agent`|`reviewer`) call/,
 		reason:
-			"claude's foreground Agent returns the report for the caller to write; pi's asynchronous reviewer writes the report and wakes the session on completion",
+			"claude's background Agent hands its report to the caller in the task notification, for the caller to write; pi's asynchronous reviewer writes the report itself and wakes the session on completion",
 	},
 	{
 		where:

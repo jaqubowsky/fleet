@@ -104,7 +104,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"ci.wait":
 				"Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
 			"review.call":
-				'One foreground `Agent` call with `subagent_type: "reviewer"`, so this turn waits for it; its final message is `review.md`, and you write it to the absolute path unchanged.',
+				'One `Agent` call with `subagent_type: "reviewer"`. It runs in the background: leave the working tree untouched until its task notification arrives, and continue other read-only work or end the turn. The notification carries its final message, which is `review.md`; write it to the absolute path unchanged.',
 		},
 	},
 };
