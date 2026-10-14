@@ -35,7 +35,7 @@ Implement the ticket you were handed, slice by slice, as its analysis plans it.
 
 7. **Check the diff against the repository's checklist.** When the repository keeps one for a change (red flags, a definition of done), go through it on the diff. The independent review runs once, over the whole branch, as your seat's Checks table orders it.
 
-8. **Commit** the slice to the current branch, then take the next slice from step 3.
+8. **Commit** the slice to the current branch, its changed files run through the repository's formatter first so formatting never needs a commit of its own, then take the next slice from step 3.
 
 9. **Resolve the ticket**, after your seat's final checks.
     - In one edit at the end of the ticket, tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
