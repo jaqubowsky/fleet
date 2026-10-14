@@ -98,10 +98,12 @@ RUN printf 'ignore-scripts=true\nmin-release-age=7\nsave-exact=true\n' > /home/a
  && printf 'minimumReleaseAge: 10080\nblockExoticSubdeps: true\n' > /home/agent/.config/pnpm/config.yaml
 
 RUN sudo apt-get update \
- && sudo apt-get install -y --no-install-recommends fd-find jq \
+ && sudo apt-get install -y --no-install-recommends fd-find iproute2 jq patch \
  && sudo rm -rf /var/lib/apt/lists/* \
  && sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd \
- && jq --version
+ && jq --version \
+ && ss --version \
+ && patch --version
 
 ARG GH_KEYRING_SHA256=6084d5d7bd8e288441e0e94fc6275570895da18e6751f70f057485dc2d1a811b
 
