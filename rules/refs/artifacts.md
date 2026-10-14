@@ -26,7 +26,7 @@ logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent
 - one entry per cause: search the runbook first, and edit the entry the fact belongs to
 - an entry the code or a script has made untrue, or whose failure did not reproduce, comes out in the edit that finds it
 
-`gate-base/<sha7>.md` is the one record there: one commit's gate results, in the form the container rules give it.
+`gate-base/` holds the one kind of record there, in the form the container rules give it: `<sha7>.md` for one commit's gate results, `container-<stamp>-<lockfile>.md` for the failures the container itself causes.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 
