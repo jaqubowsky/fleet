@@ -6,6 +6,7 @@ link_ignored() {
   git -C "$root" ls-files --others --ignored --exclude-standard --directory -z | while IFS= read -r -d '' path; do
     path="${path%/}"
     case "$path" in "$linked"/*) continue ;; esac
+    case "${path##*/}" in node_modules | .env*) ;; *) continue ;; esac
     mkdir -p "$dest/$(dirname "$path")"
     rm -rf "${dest:?}/$path"
     ln -s "$root/$path" "$dest/$path"

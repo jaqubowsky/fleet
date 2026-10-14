@@ -21,7 +21,7 @@ You run in an isolated container. Someone outside watches this session and gives
 4. Installed skill bodies live at `~/.pi/skills/<name>/SKILL.md` and `~/.claude/skills/<name>/SKILL.md`; use the path for the current harness. They do not live under `agent/`
 5. Attribute each failure by name: it is the base's only when that same test fails on a finished base run with the same command, config, lockfile and generated inputs. A red base never covers a new failure, even at an equal count. A run that did not finish, or ran on other inputs, is unverified. `runbook/gate-base/<base sha7>.md` holds that commit's results, one line per command: exit code, failing tests by name, counts per file, log path; a line counts only for the same command and inputs. A failure it does not list runs on the base as that failing test file alone, with the same command; a whole suite there repeats the full pass to learn one fact:
    - on this checkout while it is still clean at the base commit
-   - otherwise in `base-worktree <base-commit>`, which builds `/tmp/base` with deps, env files and generated code linked in. A build output under suspicion is shared through those links, so rebuild it there first
+   - otherwise in `base-worktree <base-commit>`, which builds `/tmp/base` with deps and env files linked in. Generated code and build output stay the base's own: generate and build there the way the runbook does before the run
 
    Whoever runs it, the analysis included, adds its line to that file for every later session and container on the same base
 6. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:

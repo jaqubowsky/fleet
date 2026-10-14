@@ -24,19 +24,35 @@ function linkIgnored(root: string, dest: string): void {
 	assert.equal(run.status, 0, run.stderr);
 }
 
-test("an ignored directory nested in an untracked one links once and leaves the source tree intact", () => {
-	const { root, dest } = repo("apps/api/src/generated/prisma/\n");
-	mkdirSync(join(root, "apps/api/src/generated/prisma"), { recursive: true });
-	writeFileSync(join(root, "apps/api/src/generated/prisma/index.js"), "client");
-	writeFileSync(join(root, "apps/api/src/index.ts"), "tracked");
-	spawnSync("git", ["-C", root, "add", "apps/api/src/index.ts"]);
+test("an ignored dependency directory nested in the tree links once and leaves the source tree intact", () => {
+	const { root, dest } = repo("node_modules/\n");
+	mkdirSync(join(root, "apps/api/node_modules/x"), { recursive: true });
+	writeFileSync(join(root, "apps/api/node_modules/x/index.js"), "dep");
+	writeFileSync(join(root, "apps/api/src.ts"), "tracked");
+	spawnSync("git", ["-C", root, "add", "apps/api/src.ts"]);
 
 	linkIgnored(root, dest);
 
-	assert.equal(readFileSync(join(root, "apps/api/src/generated/prisma/index.js"), "utf8"), "client");
-	assert.ok(!lstatSync(join(root, "apps/api/src/generated/prisma")).isSymbolicLink());
-	assert.equal(readlinkSync(join(dest, "apps/api/src/generated")), join(root, "apps/api/src/generated"));
-	assert.equal(readFileSync(join(dest, "apps/api/src/generated/prisma/index.js"), "utf8"), "client");
+	assert.equal(readFileSync(join(root, "apps/api/node_modules/x/index.js"), "utf8"), "dep");
+	assert.ok(!lstatSync(join(root, "apps/api/node_modules")).isSymbolicLink());
+	assert.equal(readlinkSync(join(dest, "apps/api/node_modules")), join(root, "apps/api/node_modules"));
+});
+
+test("generated code and build output stay the base's own, so a base run never uses the branch's", () => {
+	const { root, dest } = repo("node_modules/\n.env*\napps/api/src/generated/\ndist/\n");
+	mkdirSync(join(root, "node_modules"), { recursive: true });
+	mkdirSync(join(root, "apps/api/src/generated/prisma"), { recursive: true });
+	mkdirSync(join(root, "packages/shared/dist"), { recursive: true });
+	writeFileSync(join(root, "apps/api/.env.test"), "test");
+	writeFileSync(join(root, "a.ts"), "tracked");
+	spawnSync("git", ["-C", root, "add", "a.ts"]);
+
+	linkIgnored(root, dest);
+
+	assert.equal(readlinkSync(join(dest, "node_modules")), join(root, "node_modules"));
+	assert.equal(readlinkSync(join(dest, "apps/api/.env.test")), join(root, "apps/api/.env.test"));
+	assert.throws(() => lstatSync(join(dest, "apps/api/src/generated")));
+	assert.throws(() => lstatSync(join(dest, "packages/shared/dist")));
 });
 
 test("sibling ignored paths each get their own link and tracked files stay out", () => {
