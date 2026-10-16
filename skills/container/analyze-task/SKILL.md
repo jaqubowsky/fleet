@@ -33,7 +33,7 @@ Cite every source that changed a conclusion: issue URL, or `path:line`.
 
 User amendments define the current scope. A recommendation in a comment does not. A recorded ADR is overturned deliberately and in writing, never by silence. Where a source contradicts the code, quote both and say which wins: the code and the accepted user scope take precedence.
 
-If a source is unavailable, request its contents, continue independent code discovery, and label the conclusions provisional.
+When the sources leave unclear what the task asks, or the one that would settle it does not open, end the turn on that open question before you investigate. Any other source that does not open is named, and the conclusions it could change are labeled provisional.
 
 ## Choose the investigation path
 
@@ -46,8 +46,6 @@ Choose from the described behavior, not from the issue label or title. State the
 | Both in one request | Diagnose the defect first, then the `explorer` trace for the new behavior; keep causes, fixes and additions distinguishable |
 
 Stop before the fix. Present the reproduced symptom, the reproduction command and its result, the supported cause, and the proposed fix with its verification. Blocked reproduction is an incomplete diagnosis, never a fix. Static code reading alone is not a confirmed diagnosis.
-
-If expected behavior is genuinely unclear, ask for it while gathering independent evidence. Do not guess a product requirement in order to classify a bug.
 
 ## Trace the current behavior
 
