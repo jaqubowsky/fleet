@@ -16,7 +16,7 @@ The repository's own `*` entry in `host/repos.json` uses `env:GH_TOKEN`. A perso
 
 Person, for each token name the profiles use:
 
-1. Create a fine-grained token on GitHub, limited to the repositories it covers: contents read, and pull requests write where the profile gives the sandbox `pr: auto`. Where `container.push` is `auto`, `fleet up` refuses a token that sees any other private repository
+1. Create a fine-grained token on GitHub, limited to the repositories it covers: contents read, Actions read and commit statuses read, which `ci-wait` reads, and pull requests write where the profile gives the sandbox `pr: auto`. Where `container.push` is `auto`, `fleet up` refuses a token that sees any other private repository. A repository whose token holds other permissions names them under `## Token` in its overlay, which the container reads as `project.md`
 2. In their own terminal, run `fleet tokens set <name>` and paste it. It reads the token with echo off and stores it in the keychain, so it lands in no argument list and no shell history. After rotating a token, run it again with the same name
 
 The guard refuses `fleet tokens` to agents. An agent can still use a token within its scopes, so give each only what its repositories need.

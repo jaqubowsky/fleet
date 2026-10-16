@@ -6,6 +6,8 @@
 
 ## Setup
 
+## Token
+
 ## Merge method
 
 ## Tracker transitions
