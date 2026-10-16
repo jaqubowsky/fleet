@@ -62,7 +62,7 @@ Each check runs once, where it is cheapest:
 | End-to-end suite, where the project has one | the changed path's specs after its slice; the full suite on the final tree | 1 per slice, plus 1 |
 | Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |
 
-- After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
+- After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, and the frames the change alters, picked by diffing the output first
 - Gates run with no bash timeout
 - Open the frames before claiming what the user sees
 
