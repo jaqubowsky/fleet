@@ -6,7 +6,7 @@
     "fleet": "bin/fleet"
   },
   "scripts": {
-    "test": "node --test 'src/*/*.test.ts' && host/tests/run.sh && python3 claude/tests/align_test.py",
+    "test": "playwright-core install chromium-headless-shell && node --test 'src/*/*.test.ts' && host/tests/run.sh && python3 claude/tests/align_test.py",
     "check": "tsc --noEmit",
     "test:remote": "node --test src/remote/*.test.ts",
     "test:remote-integration": "node --test src/remote/extension.test.ts"
