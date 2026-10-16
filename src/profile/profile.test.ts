@@ -312,7 +312,7 @@ test("the description carries each sentence a seat would otherwise choose by lev
 	);
 	assert.match(
 		ownHost,
-		/^- linear `write`: read and write Linear through `linear-private`; move states, file not-started issues, tick the criteria you saw hold and post the acceptance comment by judgment, and say what you posted$/m,
+		/^- linear `write`: read and write Linear through `linear-private`; move states, file not-started issues and tick the criteria you saw hold, and say what you posted$/m,
 	);
 	assert.match(
 		ownHost,

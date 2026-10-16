@@ -218,7 +218,7 @@ export function hostLinearServers(profiles: Profiles): Record<string, string> {
 const WRITES = {
 	container: "write only what you were told to",
 	host:
-		"move states, file not-started issues, tick the criteria you saw hold and post the acceptance comment by judgment",
+		"move states, file not-started issues and tick the criteria you saw hold",
 };
 
 const linear = (entry: Host | Container, seat: keyof typeof WRITES): string =>

@@ -1012,7 +1012,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(skill, /resumes from the tracker and `[a-z]+ ls`/);
 			assert.match(
 				skill,
-				/tick in the issue each criterion you checked and comment the evidence you looked at beside it/,
+				/tick in the issue each criterion you checked, then move its state/,
 			);
 			assert.doesNotMatch(skill, /acceptance\.md|cannot read or write/);
 			assert.match(skill, /keeps running while the session waits out an account limit/);
