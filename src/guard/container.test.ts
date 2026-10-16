@@ -109,6 +109,8 @@ test("a pkill -f or pgrep -f whose pattern matches its own command is refused, a
 		"until ! pgrep -f dev-stack; do :; done",
 		"pkill -f '[v]ite --port 5183'; nohup vite --port 5183 > /tmp/vite.log 2>&1 &",
 		"pkill -f '[n]ext start'; sleep 1; next start -p 3000",
+		'P=vite; pkill -f "$P"',
+		"pkill -f ${PATTERN}",
 	])
 		assert.match(refusal(command, dir) ?? "", /own shell/, command);
 	for (const command of [
@@ -119,6 +121,7 @@ test("a pkill -f or pgrep -f whose pattern matches its own command is refused, a
 		"grep -f patterns.txt notes",
 		'pgrep -af "run[.]sh start"',
 		"pkill -f '^next-server'",
+		"pkill -f '[v]ite$'",
 	])
 		assert.equal(refusal(command, dir), undefined, command);
 });

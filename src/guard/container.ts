@@ -16,6 +16,7 @@ const SUBSTITUTED = /\$\(|\x60|(^|[\s|;&])xargs\s/;
 const EVERYTHING = "*";
 const PROCESS_MATCH = /^(\S*\/)?p(kill|grep)$/;
 const FULL = /^(-[A-Za-z0-9]*f[A-Za-z0-9]*|--full)$/;
+const EXPANDED = /\$[\w{(]|`/;
 const SELF_MATCH =
 	"pkill -f and pgrep -f match the shell running this command, whose own command line holds the whole command: when the pattern matches any of its text, the kill ends your own shell and the wait never ends. Write a pattern the command's own text misses, as in `pkill -f '[v]ite --port 5173'`, and start the process again in a separate command, or use the PID the start step recorded.";
 const FORCE =
@@ -117,6 +118,7 @@ export function pushRefusal(
 }
 
 function matchesItself(pattern: string, command: string): boolean {
+	if (EXPANDED.test(pattern)) return true;
 	try {
 		return new RegExp(pattern).test(command);
 	} catch {
