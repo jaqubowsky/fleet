@@ -74,3 +74,21 @@ test("the claude image knows only the marketplace its staged plugin comes from",
 	});
 });
 
+test("the claude image's typescript server answers its first query from the whole project", () => {
+	const home = join(mkdtempSync(join(tmpdir(), "stage-")), "home");
+
+	const stage = stageFrom(home);
+
+	assert.deepEqual(
+		staged(stage, "marketplaces/claude-plugins-official/.claude-plugin/marketplace.json").plugins,
+		[
+			{ name: "pyright-lsp", lspServers: { pyright: { command: "pyright-langserver" } } },
+			{
+				name: "typescript-lsp",
+				lspServers: {
+					typescript: { ...SERVER, initializationOptions: { tsserver: { useSyntaxServer: "never" } } },
+				},
+			},
+		],
+	);
+});

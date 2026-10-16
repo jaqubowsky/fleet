@@ -6,6 +6,11 @@ mkdir -p "$PLUGINS/marketplaces" "$PLUGINS/cache/$MARKET"
 cp -R "$HOME/.claude/plugins/marketplaces/$MARKET" "$PLUGINS/marketplaces/"
 cp -R "$HOME/.claude/plugins/cache/$MARKET/$LSP" "$PLUGINS/cache/$MARKET/"
 find "$PLUGINS" -name .in_use -type d -delete
+CATALOG="$PLUGINS/marketplaces/$MARKET/.claude-plugin/marketplace.json"
+jq --arg lsp "$LSP" \
+   '(.plugins[] | select(.name == $lsp) | .lspServers.typescript.initializationOptions) = {tsserver: {useSyntaxServer: "never"}}' \
+   "$CATALOG" > "$CATALOG.next"
+mv "$CATALOG.next" "$CATALOG"
 jq --arg market "$MARKET" --arg loc "/home/agent/.claude/plugins/marketplaces/$MARKET" \
    '{($market): (.[$market] | .installLocation = $loc | .autoUpdate = false)}' \
    "$HOME/.claude/plugins/known_marketplaces.json" > "$PLUGINS/known_marketplaces.json"
