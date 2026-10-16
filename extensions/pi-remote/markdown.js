@@ -97,7 +97,7 @@ function node(token) {
 		case "html":
 			return [text(token.text)];
 		case "text":
-			return token.tokens ? inline(token.tokens) : [prose(token.text)];
+			return token.tokens ? inline(token.tokens) : [prose(token.raw)];
 		case "escape":
 			return [prose(token.text)];
 		case "em":
