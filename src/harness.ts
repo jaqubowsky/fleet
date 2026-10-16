@@ -56,6 +56,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		tokens: {
 			"tool.ask": "ask_user_question",
 			"skill.ingest": "/skill:ingest",
+			skills: "`~/.pi/skills/<name>/SKILL.md`, never under `agent/`",
 			refs: REFS_BESIDE_AGENTS,
 			"refs.ci": CI_BESIDE_AGENTS,
 			"refs.ticket": TICKET_BESIDE_AGENTS,
@@ -89,6 +90,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		tokens: {
 			"tool.ask": "AskUserQuestion",
 			"skill.ingest": "/ingest",
+			skills: "`~/.claude/skills/<name>/SKILL.md`",
 			refs: "`~/.claude/refs/artifacts.md`",
 			"refs.ci": "`~/.claude/refs/ci.md`",
 			"refs.ticket": "`~/.claude/refs/ticket.md`",

@@ -41,6 +41,7 @@ export const VOCABULARY: [string, string][] = [
 	["root", "the harness checkout sits at a different path per machine"],
 	["tool.ask", "each harness names its question tool"],
 	["skill.ingest", "pi prefixes a skill command with /skill:, claude does not"],
+	["skills", "pi keeps skill bodies in ~/.pi/skills, apart from its agent/ directory, claude in ~/.claude/skills"],
 	["refs", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.ci", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],
 	["refs.ticket", "pi reads refs beside AGENTS.md, claude under ~/.claude/refs"],

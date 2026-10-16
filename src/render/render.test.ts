@@ -837,7 +837,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				implement,
-				/name the acceptance line most likely to be false and make the check that would catch it the first red of step 5/,
+				/name the acceptance line most likely to be false and make the check that would catch it the first red of step 4/,
 			);
 			assert.match(
 				implement,

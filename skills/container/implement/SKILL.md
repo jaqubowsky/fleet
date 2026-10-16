@@ -13,31 +13,23 @@ Implement the ticket you were handed, slice by slice, as its analysis plans it.
 
 2. **Load context.** The ticket's acceptance criteria, and the analysis's Findings and Decisions for what the criteria leave open.
 
-3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require:
+3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require, the done-check with why it is the right command.
 
-   ```text
-   Goal: <what this slice makes work>
-   Boundaries: <what stays untouched>
-   Done-check: <the command that proves this slice done>, <why it is the right command>
-   ```
+   The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. Each commit is green on its own: the done-check covers the tests of the changed files and every test that imports them, anywhere in the repository. A file inside a workspace package is also imported through the package's name: rebuild the package when its `main` points at build output, then run every test that imports that name, in every workspace. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 5 runs, so name it now, not later.
 
-   The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. Each commit is green on its own: the done-check covers the tests of the changed files and every test that imports them, anywhere in the repository. A file inside a workspace package is also imported through the package's name: rebuild the package when its `main` points at build output, then run every test that imports that name, in every workspace. Typecheck and lint cover the whole branch diff, so they run once, in your seat's Finish. This is the check step 6 runs, so name it now, not later.
+   Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 4: a suite that only passes is not evidence.
 
-   Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 5: a suite that only passes is not evidence.
-
-4. **Write a changed requirement down first.** A requirement that changes while you build goes into the ticket's criteria, and a changed decision into the analysis's Decisions, before the code changes.
-
-5. **Build at the seam the slice names, else existing public ones.** A failing test first: one seam, one red, one implementation.
+4. **Build at the seam the slice names, else existing public ones.** A failing test first: one seam, one red, one implementation.
 
    Commit the first coherent vertical piece before widening. A slice that still holds a second behaviour once the first works end to end was cut too wide: split it in the Plan, and the rest becomes the next slice.
 
-6. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this slice.
+5. **Run the gate.** Run the step 3 check once on the finished tree and keep its output as a log. The whole task's final checks belong to your seat's Finish, not to this slice.
 
-7. **Check the diff against the repository's checklist.** When the repository keeps one for a change (red flags, a definition of done), go through it on the diff. The independent review runs once, over the whole branch, as your seat's Checks table orders it.
+6. **Check the diff against the repository's checklist.** When the repository keeps one for a change (red flags, a definition of done), go through it on the diff. The independent review runs once, over the whole branch, as your seat's Checks table orders it.
 
-8. **Commit** the slice to the current branch, its changed files run through the repository's formatter first so formatting never needs a commit of its own, then take the next slice from step 3.
+7. **Commit** the slice to the current branch, its changed files run through the repository's formatter first so formatting never needs a commit of its own, then take the next slice from step 3.
 
-9. **Resolve the ticket**, after your seat's final checks.
+8. **Resolve the ticket**, after your seat's final checks.
     - In one edit at the end of the ticket, tick each acceptance criterion beside its evidence: the test that proves it, or the log path and line that shows it. A criterion nothing here proved stays unticked, with the reason. A criterion about what a user sees is ticked only after checking the running app on the final visible change and opening its frame
     - Findings outside the criteria go under a `## Comments` heading at the bottom of the ticket file; a changed decision or accepted scope updates the analysis's Decisions
     - Report the command, its exit code, and name anything you did not run and why
