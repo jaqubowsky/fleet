@@ -21,7 +21,7 @@ RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp
 
 ENV FNM_DIR=/home/agent/.fnm
 ENV FNM_VERSION_FILE_STRATEGY=recursive
-ENV FNM_RESOLVE_ENGINES=true
+ENV FNM_RESOLVE_ENGINES=false
 ENV FNM_COREPACK_ENABLED=true
 
 ARG FNM_VERSION=v1.39.0

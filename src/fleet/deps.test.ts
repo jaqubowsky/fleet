@@ -81,6 +81,13 @@ test("a repository that declares a node version goes through fnm", async () => {
 	assert.match(calls, /use --install-if-missing/);
 });
 
+test("a repository that pins node only through engines installs on the image's node", async () => {
+	const { log, calls } = await run({ "package.json": '{"engines":{"node":">=20"}}' });
+
+	assert.match(log, /deps-end: ready/);
+	assert.equal(calls, "", "fnm is not asked for a version only engines names");
+});
+
 test("an install that fails names its root and exit instead of leaving the log mid-run", async () => {
 	const { log } = await run(
 		{ "package.json": "{}", "package-lock.json": "{}" },

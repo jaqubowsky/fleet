@@ -9,7 +9,7 @@ export function installScript(setup?: string): string {
 	return [
 		"set -eu",
 		'cd "$WORKSPACE_DIR"',
-		"if [ -f .nvmrc ] || [ -f .node-version ] || node -e \"process.exit(require('./package.json').engines?.node ? 0 : 1)\" 2>/dev/null; then",
+		"if [ -f .nvmrc ] || [ -f .node-version ]; then",
 		'  eval "$(fnm env --shell bash)"',
 		"  fnm use --install-if-missing >/dev/null",
 		"fi",
