@@ -6,8 +6,8 @@ mkdir -p "$PLUGINS/marketplaces" "$PLUGINS/cache/$MARKET"
 cp -R "$HOME/.claude/plugins/marketplaces/$MARKET" "$PLUGINS/marketplaces/"
 cp -R "$HOME/.claude/plugins/cache/$MARKET/$LSP" "$PLUGINS/cache/$MARKET/"
 find "$PLUGINS" -name .in_use -type d -delete
-jq --arg loc "/home/agent/.claude/plugins/marketplaces/$MARKET" \
-   '.[] |= (.installLocation = $loc | .autoUpdate = false)' \
+jq --arg market "$MARKET" --arg loc "/home/agent/.claude/plugins/marketplaces/$MARKET" \
+   '{($market): (.[$market] | .installLocation = $loc | .autoUpdate = false)}' \
    "$HOME/.claude/plugins/known_marketplaces.json" > "$PLUGINS/known_marketplaces.json"
 jq --arg id "$LSP@$MARKET" \
    --arg path "/home/agent/.claude/plugins/cache/$MARKET/$LSP/$LSP_VERSION" \
