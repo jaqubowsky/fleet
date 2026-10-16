@@ -23,6 +23,7 @@
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
 8. A screen, component or layout drawn or built -> {{refs.design}} first
+{{file:symbols}}
 
 ## Architecture
 

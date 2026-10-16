@@ -6,6 +6,11 @@ type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{
+		where: /^rules\/core\.md: 9\. A definition, reference, caller or type/,
+		reason:
+			"claude's typescript-lsp plugin gives it a deferred `LSP` tool; pi has no language server tool",
+	},
+	{
 		where: /^rules\/delegation\.md: 1\. "Parallel" =/,
 		reason:
 			"pi starts runs in the background, claude sends several background `Agent` calls in one message",
