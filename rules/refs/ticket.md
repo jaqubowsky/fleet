@@ -13,7 +13,7 @@ Blocked by: <ticket key>, or "None, can start immediately"
 
 ## Out of scope
 
-- <What a reader could expect this ticket to touch and it leaves alone, with the reason>, or "None".
+- <What a reader could expect this ticket to touch, or its result to contain, and it leaves out, with the reason>, or "None".
 
 ## Open questions
 
@@ -27,7 +27,7 @@ Blocked by: <ticket key>, or "None, can start immediately"
 
 The title states the change in a few words, imperative, the way it reads on a board: "Restore only the files deleted with a project", never the symptom.
 
-Each criterion is an invariant whose expected result comes from the ticket, not from the current code. Write it in the ticket's language, in the form that reads clearest, Given/When/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases rather than more happy paths. An earlier feature as a whole is guarded by its own tests, so a criterion names only the part of it the changed path reaches. A screen change is a normal criterion: name its original source, mounted route, organization or role, operated control and expected transition. The browser check uses that target and the diff, then records the opened frame as evidence. Do not add a separate visual checklist.
+Each criterion is an invariant whose expected result comes from the ticket, not from the current code. Write it in the ticket's language, in the form that reads clearest, Given/When/Then, an example input with its result, or a rule with its value, and spend the lines on boundary cases rather than more happy paths. An earlier feature as a whole is guarded by its own tests, so a criterion names only the part of it the changed path reaches. A criterion names who meets the result and where, such as a screen's original source, mounted route, organization or role, operated control and expected transition. Its check uses that target and the diff, then records what it opened as evidence. Do not add a separate visual checklist.
 
 In a tracker, the heading's title is the issue title, its key is the only number, `Status:` is the issue's workflow state, and `Blocked by:` is the tracker's blocking relation with landed blockers left out. The local copy puts the heading and working `Status:` back above the description. Its full text remains available to a container without tracker access.
 

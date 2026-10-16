@@ -49,7 +49,7 @@ Stop before the fix. Present the reproduced symptom, the reproduction command an
 
 ## Trace the current behavior
 
-Bind each screen criterion to the original request and its user amendments: original source, mounted route, organization or role, operated control and expected transition. A derived ticket's route is a claim to check against those sources. Carry the source and target beside the criterion into the ticket.
+Bind each criterion's target, in the form of {{refs.ticket}}, to the original request and its user amendments. A derived ticket's target is a claim to check against those sources. Carry the source and target beside the criterion into the ticket.
 
 Follow that mounted entry point through selection and state, validation, API, backend effects, and the user-visible outcome. Check callers, feature flags, permissions and alternative paths. Separate active code from unmounted or legacy code. Cover success, failure, cancellation, retry, empty selection and partial validity where relevant. Read the existing tests.
 
