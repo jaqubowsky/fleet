@@ -70,4 +70,11 @@ deny	Bash	D=host; sed -i s/none/auto/ $D/*.json
 deny	Bash	D=/tmp; for D in host; do sed -i s/none/auto/ $D/*; done
 deny	Bash	D=/tmp; D=host; sed -i s/none/auto/ $D/*
 deny	Bash	D=/tmp; read D; sed -i s/none/auto/ $D/*
+deny	Bash	S=/tmp true; cd host$S; sed -i s/none/auto/ *
+deny	Bash	(S=/tmp); cd host$S; sed -i s/none/auto/ *
+deny	Bash	false && S=/tmp; cd host$S; sed -i s/none/auto/ *
+deny	Bash	if false; then S=/tmp; fi; cd host$S; sed -i s/none/auto/ *
+deny	Bash	echo 'x; S=/tmp;'; cd host$S; sed -i s/none/auto/ *
+deny	Bash	S=/tmp | true; cd host$S; sed -i s/none/auto/ *
+deny	Bash	S=/tmp & cd host$S; sed -i s/none/auto/ *
 allow	Write	~/.fleet/config/projects/acme/app.md

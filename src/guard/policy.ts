@@ -185,7 +185,9 @@ const MAY_NAME_PROFILES =
 const READS_PROFILES =
 	/^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)/;
 const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
-const ASSIGNMENT = /(?<=^|[\s;&|(])(\w+)=([\w./:@%+,~-]+)(?=[\s;&|)]|$)/g;
+const LEAD_END =
+	/&&|\|\||[|&(){}'"`]|\$\(|\b(if|then|else|elif|fi|for|select|while|until|do|done|case|esac|function|coproc)\b/;
+const ASSIGNMENT = /(?<=^|[;\n])[ \t]*(\w+)=([\w./:@%+,~-]+)[ \t]*(?=[;\n]|$)/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
 
 const RECURSIVE_RM = command(
@@ -206,16 +208,27 @@ function literal(text: string): string {
 		.replace(/['"\\]/g, "");
 }
 
+function leadingStatements(text: string): string {
+	const end = LEAD_END.exec(text);
+	if (!end) return text;
+	if (end[0] === "&&") return text.slice(0, end.index);
+	const last = Math.max(
+		text.lastIndexOf(";", end.index),
+		text.lastIndexOf("\n", end.index),
+	);
+	return text.slice(0, last + 1);
+}
+
 function expanded(text: string): string {
-	return [...text.matchAll(ASSIGNMENT)].reduce(
-		(done, [assignment, name, value]) => {
+	return [...leadingStatements(text).matchAll(ASSIGNMENT)].reduceRight(
+		(done, { 0: assignment, 1: name, 2: value, index }) => {
 			const reference = new RegExp(String.raw`\$${name}\b|\$\{${name}\}`, "g");
-			const mentions = done.match(new RegExp(String.raw`\b${name}\b`, "g"));
-			const references = done.match(reference);
+			const mentions = text.match(new RegExp(String.raw`\b${name}\b`, "g"));
+			const references = text.match(reference);
 			if ((mentions?.length ?? 0) - (references?.length ?? 0) !== 1)
 				return done;
 
-			const after = done.indexOf(assignment) + assignment.length;
+			const after = index + assignment.length;
 			return done.slice(0, after) + done.slice(after).replace(reference, value);
 		},
 		text,
