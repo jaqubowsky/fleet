@@ -43,7 +43,7 @@ RUN case "$(dpkg --print-architecture)" in \
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
 
-ARG PLAYWRIGHT_CLI_VERSION=0.1.20
+ARG PLAYWRIGHT_CLI_VERSION=0.1.22
 
 RUN sudo npm install -g --prefix /usr/local/share/npm-global "@playwright/cli@$PLAYWRIGHT_CLI_VERSION" \
  && sudo -E /usr/local/share/npm-global/bin/playwright-cli install-browser --with-deps chromium \

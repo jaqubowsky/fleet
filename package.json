@@ -12,13 +12,13 @@
     "test:remote-integration": "node --test src/remote/extension.test.ts"
   },
   "dependencies": {
-    "@highlightjs/cdn-assets": "11.9.0",
-    "marked": "18.0.5",
+    "@highlightjs/cdn-assets": "11.12.0",
+    "marked": "18.1.0",
     "qrcode-terminal": "0.12.0"
   },
   "devDependencies": {
-    "@playwright/cli": "0.1.20",
-    "@types/node": "26.6.0",
+    "@playwright/cli": "0.1.22",
+    "@types/node": "26.6.4",
     "@types/qrcode-terminal": "0.12.2",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"
