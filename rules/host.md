@@ -4,7 +4,7 @@
 
 Containers are the user's workbench. Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only, which drives every container whichever agent runs in it.
 
-1. Project tooling (install, build, test, dev server, browser) and every code change run in a fleet container, unless the user tells you to do them here; reading, searching and answering stay in this session
+1. Project tooling (install, build, test, dev server, browser) and every change to a project's code run in a fleet container, unless the user tells you to do them here; reading, searching, answering and edits to runbooks, project overlays and `{{root}}` stay in this session
 2. When this checkout's default branch moves past a merge that changed a lockfile, tell the user to run the project's install before running anything from this checkout, naming the command; you do not run it
 3. `{{cli}} steer` on the user's word. A task the user handed you end to end carries that word for every steer it needs
 4. `{{cli}} land` on the user's word, every time. A container that finished is not landed: show its closing message and end the turn
