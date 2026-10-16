@@ -1,9 +1,9 @@
 ARG NODE_MAJOR=24
-ARG NODE_VERSION=24.20.0-1nodesource1
+ARG NODE_VERSION=24.21.0-1nodesource1
 ARG NODESOURCE_GPG_SHA256=7a96b125f721c99e07d3f45b279adbd6884ec4f3f06750f6b54df40cfae36836
-ARG NPM_VERSION=12.0.2
+ARG NPM_VERSION=12.2.0
 ARG TYPESCRIPT_VERSION=7.0.2
-ARG TS_LANGUAGE_SERVER_VERSION=6.0.0
+ARG TS_LANGUAGE_SERVER_VERSION=6.0.2
 
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp/nodesource.key \
  && gpg --dearmor < /tmp/nodesource.key > /tmp/nodesource.gpg \
@@ -87,7 +87,7 @@ RUN printf '%s\n' \
 
 ENV BASH_ENV=/etc/fnm-bash-env.sh
 
-ARG JSCPD_VERSION=5.2.0
+ARG JSCPD_VERSION=5.4.1
 
 RUN sudo npm install -g --prefix /usr/local/share/npm-global "jscpd@$JSCPD_VERSION" \
  && jscpd --version
