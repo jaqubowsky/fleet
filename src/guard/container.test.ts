@@ -95,7 +95,7 @@ test("skipping the repository's own hooks is refused in a container", () => {
 	assert.deepEqual(wrong, []);
 });
 
-test("a pkill -f or pgrep -f that would match its own shell is refused, and a bracketed pattern passes", () => {
+test("a pkill -f or pgrep -f whose pattern matches its own command is refused, and one that misses it passes", () => {
 	const dir = clone("web-1");
 
 	for (const command of [
@@ -107,6 +107,8 @@ test("a pkill -f or pgrep -f that would match its own shell is refused, and a br
 		"pkill -fx vite",
 		"pkill --full vite",
 		"until ! pgrep -f dev-stack; do :; done",
+		"pkill -f '[v]ite --port 5183'; nohup vite --port 5183 > /tmp/vite.log 2>&1 &",
+		"pkill -f '[n]ext start'; sleep 1; next start -p 3000",
 	])
 		assert.match(refusal(command, dir) ?? "", /own shell/, command);
 	for (const command of [
@@ -115,6 +117,8 @@ test("a pkill -f or pgrep -f that would match its own shell is refused, and a br
 		"pkill vite",
 		"pgrep -x node",
 		"grep -f patterns.txt notes",
+		'pgrep -af "run[.]sh start"',
+		"pkill -f '^next-server'",
 	])
 		assert.equal(refusal(command, dir), undefined, command);
 });

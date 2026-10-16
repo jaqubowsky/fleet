@@ -17,7 +17,7 @@ const EVERYTHING = "*";
 const PROCESS_MATCH = /^(\S*\/)?p(kill|grep)$/;
 const FULL = /^(-[A-Za-z0-9]*f[A-Za-z0-9]*|--full)$/;
 const SELF_MATCH =
-	"pkill -f and pgrep -f match the shell running this command, whose own command line holds the pattern: the kill ends your own shell and the wait never ends. Start the pattern with a bracket class, as in `pkill -f '[v]ite --port 5173'`, or use the PID the start step recorded.";
+	"pkill -f and pgrep -f match the shell running this command, whose own command line holds the whole command: when the pattern matches any of its text, the kill ends your own shell and the wait never ends. Write a pattern the command's own text misses, as in `pkill -f '[v]ite --port 5173'`, and start the process again in a separate command, or use the PID the start step recorded.";
 const FORCE =
 	"A force, delete or mirror push rewrites what other people already hold, so it stays the person's own command: name it as an open question of the closing message.";
 
@@ -116,12 +116,23 @@ export function pushRefusal(
 	return `A container never pushes to origin's default branch ${base}, whatever push level the profile gives it: work reaches ${base} through a pull request. ${current && current !== base ? `Push your own branch: \`git push -u origin ${current}\`.` : "Switch to your own branch first: `git switch -c <name>`, named after the task."}`;
 }
 
+function matchesItself(pattern: string, command: string): boolean {
+	try {
+		return new RegExp(pattern).test(command);
+	} catch {
+		return true;
+	}
+}
+
 function selfMatchRefusal(command: string): string | undefined {
 	return argvsOf(command).some((argv) => {
 		if (!PROCESS_MATCH.test(argv[0] ?? "")) return false;
 		const args = argv.slice(1);
 		const pattern = args.filter((arg) => !arg.startsWith("-")).at(-1);
-		return args.some((arg) => FULL.test(arg)) && !pattern?.startsWith("[");
+		return (
+			args.some((arg) => FULL.test(arg)) &&
+			matchesItself(pattern ?? "", command)
+		);
 	})
 		? SELF_MATCH
 		: undefined;
