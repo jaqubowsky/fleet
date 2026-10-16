@@ -82,13 +82,13 @@ export function eventAgents(log: string, sessionId: string | undefined): string[
 	return [...seen];
 }
 
-export function lifecycle(log: string): { closed: Set<string>; steered: Map<string, string> } {
-	const closed = new Set<string>();
+export function lifecycle(log: string): { closed: Map<string, string>; steered: Map<string, string> } {
+	const closed = new Map<string, string>();
 	const steered = new Map<string, string>();
 	for (const line of log.split("\n")) {
-		const [at, , kind, agent] = line.split(" ");
+		const [at, , kind, agent, session = ""] = line.split(" ");
 		if (!agent) continue;
-		if (kind === "down") closed.add(agent);
+		if (kind === "down") closed.set(agent, decodeURIComponent(session.replace(/^session=/, "")));
 		if (kind === "up") closed.delete(agent);
 		if (kind === "steer") steered.set(agent, at);
 	}

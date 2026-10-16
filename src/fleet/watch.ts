@@ -174,11 +174,13 @@ export function watch(
 		rows: Sandbox[] | undefined,
 		exited: boolean,
 	) => {
+		const closer = lifecycle(io.read(events) ?? "").closed.get(entry.name);
 		const down =
-			lifecycle(io.read(events) ?? "").closed.has(entry.name) ||
+			closer !== undefined ||
 			(rows !== undefined && !rows.some((s) => agentName(s.name) === entry.name));
-		if (down) emit(entry.name, `${entry.status} -> taken down`, { down });
-		else if (exited) emit(entry.name, `${entry.status} -> gone`);
+		const own = Boolean(io.sessionId) && closer === io.sessionId;
+		if (down && !own) emit(entry.name, `${entry.status} -> taken down`, { down });
+		else if (!down && exited) emit(entry.name, `${entry.status} -> gone`);
 		tracked.delete(pane);
 		report();
 	};

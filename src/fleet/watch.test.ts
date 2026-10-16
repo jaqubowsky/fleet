@@ -428,6 +428,33 @@ test("a container a down closes wakes once as taken down, never with its last se
 	assert.match(wakes[0], /^\[fleet\] claude-worker: idle -> taken down$/);
 });
 
+test("a container this session takes down wakes nobody", (t: TestContext) => {
+	const { io, status, sockets } = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	io.sessionId = "host-a";
+	const wakes: string[] = [];
+	watch(
+		() => undefined,
+		io,
+		(text) => wakes.push(text),
+	);
+
+	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
+		"2026-09-16T10:05:00.000Z w1:host down claude-worker session=host-a\n";
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1100);
+	for (const socket of sockets)
+		socket.emit(
+			"data",
+			Buffer.from(
+				`${JSON.stringify({ event: "pane.exited", data: { pane_id: "worker:pane" } })}\n`,
+			),
+		);
+
+	assert.deepEqual(wakes, []);
+});
+
 test("a watched container whose sandbox leaves the list wakes once as taken down while its pane stays", (t: TestContext) => {
 	const { io, intervals } = herdr(t, [
 		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },

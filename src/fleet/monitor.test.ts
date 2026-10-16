@@ -255,7 +255,7 @@ test("a wake that lands while the host works waits for its turn to end", async (
 	);
 });
 
-test("a container the host takes down mid-turn arrives after the turn as taken down, and its held settle never does", async (t) => {
+test("a container the host takes down mid-turn wakes nobody after the turn, its held settle included", async (t) => {
 	const runtime = monitorRuntime(t);
 	const watcher = runtime.start("session-a");
 	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
@@ -264,6 +264,22 @@ test("a container the host takes down mid-turn arrives after the turn as taken d
 	runtime.settle();
 	runtime.events(
 		"2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a",
+	);
+	runtime.exit();
+	watcher.handlers.agent_end();
+
+	assert.deepEqual(watcher.messages, []);
+});
+
+test("a container another session takes down mid-turn arrives after the turn as taken down, and its held settle never does", async (t) => {
+	const runtime = monitorRuntime(t);
+	const watcher = runtime.start("session-a");
+	await watcher.tools.fleet_watch.execute("call", { agents: "pi-worker" });
+
+	watcher.handlers.agent_start();
+	runtime.settle();
+	runtime.events(
+		"2026-09-16T10:05:00.000Z w2:other down pi-worker session=session-b",
 	);
 	runtime.exit();
 	watcher.handlers.agent_end();

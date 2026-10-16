@@ -86,7 +86,7 @@ test("the session that starts a stopped container owns it, and a stop changes no
 	assert.deepEqual(eventAgents(log, "a"), ["worker"]);
 	assert.deepEqual(eventAgents(log, "b"), []);
 	assert.deepEqual(eventAgents(log, "c"), ["worker"]);
-	assert.deepEqual([...lifecycle(log).closed], []);
+	assert.deepEqual([...lifecycle(log).closed.keys()], []);
 });
 
 test("two Pi sessions sharing a pane only adopt their own events", () => {
@@ -162,7 +162,7 @@ test("a container taken down is closed until it comes up again", () => {
 
 	const { closed, steered } = lifecycle(log);
 
-	assert.deepEqual([...closed], ["worker-a"]);
+	assert.deepEqual([...closed.keys()], ["worker-a"]);
 	assert.equal(steered.get("worker-a"), "2026-09-16T10:01:00.000Z");
 	assert.deepEqual(eventAgents(log, "s"), ["worker-b"]);
 });
