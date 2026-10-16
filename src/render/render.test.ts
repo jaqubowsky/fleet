@@ -1014,7 +1014,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				skill,
 				/tick in the issue each criterion you checked, then move its state/,
 			);
-			assert.match(skill, /the issue's description and its comments into the task directory/);
+			assert.match(skill, /its description, comments, attachments, linked documents and related issues into `ticket.md`/);
 			assert.doesNotMatch(skill, /acceptance\.md|cannot read or write/);
 			assert.match(skill, /keeps running while the session waits out an account limit/);
 			assert.match(skill, /one fix round and one recheck/);
