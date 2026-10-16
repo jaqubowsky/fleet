@@ -4,7 +4,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Environment
 
-1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Name the failed check, and the image rebuild and fresh container it needs, as an open question of the closing message. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. Stop the services before the last closing message of the run and verify the ports are closed; a native-service runbook is valid when the project explicitly supplies one
+1. If the task needs services, check `docker info` before using compose. The Docker-enabled image starts an inner daemon; a missing daemon means this container cannot run a Docker-based test. Name the failed check, and the image rebuild and fresh container it needs, as an open question of the closing message. With Docker available, start only the test services through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file and wait for their healthchecks. A service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. The services and the app stay up between turns. A native-service runbook is valid when the project explicitly supplies one
 2. Node and the package manager follow the repo's declared versions, and the image's own Node when the repo declares none
 3. Deps install in the background from every lockfile into `/tmp/fleet-install.log` for the primary repo. When `repositories.json` exists, every additional repo has `/tmp/fleet-install-<workspace basename>.log`; check each. Wait until each log has a line starting `deps-end: `, for example with `grep -q '^deps-end: '`; no progress line carries that prefix. Until then its last `deps: ` line names the step still running. `deps-end: ready` names the Node the install ran with: build once so workspace packages resolve, and report a skipped lockfile. `deps-end: failed` or `deps-end: stalled`, or a log that never appeared, leaves the step it names to you, the install or the `## Setup` block of `project.md`: run it once yourself and say so
 4. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
@@ -59,7 +59,7 @@ Each check runs once, where it is cheapest:
 | Typecheck and lint of changed files | alongside the review, with no app running | 1 |
 | Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |
 | Review fixes | one batch, each with its own test | 1 |
-| Verification of what a user sees, the way `project.md` names | last, on the final tree; then stop the app and its services | 1 |
+| Verification of what a user sees, the way `project.md` names | last, on the final tree | 1 |
 
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
 - Gates run with no bash timeout

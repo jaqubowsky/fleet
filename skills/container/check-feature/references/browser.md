@@ -57,4 +57,4 @@ After cleanup, from the scratch log of this run and not from memory, in English:
 
 ## Cleanup
 
-`playwright-cli close`, then the app stops the way it was started. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it in every repository, and a multi-repository report still names the complete set of SHAs that actually ran. Publication, pushes and merges stay with the person.
+`playwright-cli close`; the app stays up. The lines this run added to `/etc/sandbox-persistent.sh` come out. `git status --porcelain` comes back as clean as the checkout proof recorded it in every repository, and a multi-repository report still names the complete set of SHAs that actually ran. Publication, pushes and merges stay with the person.

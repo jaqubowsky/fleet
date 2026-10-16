@@ -11,4 +11,4 @@ One line per frame, the route the frame shows first. A walk outside every criter
 
 The run passes only when every cumulative criterion has a frame that passed, and one failed frame fails it. A criterion the run could not reach or drive, with nothing failed, leaves it blocked, so the person sees what it could not prove. A later refactor alone removes no criterion.
 
-Cleanup: browser closed, application stopped, working tree <clean | what was removed>.
+Cleanup: browser closed, working tree <clean | what was removed>.
