@@ -185,6 +185,7 @@ const MAY_NAME_PROFILES =
 const READS_PROFILES =
 	/^\s*(\[|test|cd|cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|echo|printf|git(\s+-\S+(\s+[^-]\S*)?)*\s+(status|diff|log|show|blame|add|commit))(\s|$)/;
 const EXPANSION = /\$\{[^}]*\}|\$\w*|\[[^\]]*\]|\{[^}]*\}/g;
+const ASSIGNMENT = /(?<=^|[\s;&|(])(\w+)=([\w./:@%+,~-]+)(?=[\s;&|)]|$)/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
 
 const RECURSIVE_RM = command(
@@ -205,8 +206,24 @@ function literal(text: string): string {
 		.replace(/['"\\]/g, "");
 }
 
+function expanded(text: string): string {
+	return [...text.matchAll(ASSIGNMENT)].reduce(
+		(done, [assignment, name, value]) => {
+			const reference = new RegExp(String.raw`\$${name}\b|\$\{${name}\}`, "g");
+			const mentions = done.match(new RegExp(String.raw`\b${name}\b`, "g"));
+			const references = done.match(reference);
+			if ((mentions?.length ?? 0) - (references?.length ?? 0) !== 1)
+				return done;
+
+			const after = done.indexOf(assignment) + assignment.length;
+			return done.slice(0, after) + done.slice(after).replace(reference, value);
+		},
+		text,
+	);
+}
+
 function namesProfiles(text: string, host: Host): boolean {
-	const plain = literal(text);
+	const plain = literal(expanded(text));
 	const dirs = ["", ...[...plain.matchAll(CD)].map((match) => match[3])];
 	return plain.split(/[\s\x60()=:;<>|&]+/).some((word) => {
 		if (word.toLowerCase().includes("repos.json")) return true;

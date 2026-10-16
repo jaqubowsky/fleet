@@ -63,4 +63,11 @@ allow	Bash	jq '.["*"].host' ~/.fleet/config/repos.json
 deny	Bash	sed -i s/none/auto/ ~/.fleet/config/repos.json
 deny	Bash	cp /tmp/p.json ~/.fleet/config/repos.json
 deny	Bash	cd ~/.fleet/config && sed -i s/none/auto/ *
+allow	Bash	S=/tmp/x; cd $S; ls
+allow	Bash	B=https://example.com; for s in a b; do curl -sS "$B/page/$s"; done
+allow	Bash	D=libs/card; cat ${D}/card.tsx; ls $D/* -d | head -30
+deny	Bash	D=host; sed -i s/none/auto/ $D/*.json
+deny	Bash	D=/tmp; for D in host; do sed -i s/none/auto/ $D/*; done
+deny	Bash	D=/tmp; D=host; sed -i s/none/auto/ $D/*
+deny	Bash	D=/tmp; read D; sed -i s/none/auto/ $D/*
 allow	Write	~/.fleet/config/projects/acme/app.md
