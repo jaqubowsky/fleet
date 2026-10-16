@@ -59,8 +59,8 @@ const usage = `usage:
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
   ${CLI} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
-  ${CLI} land <sandbox> [--branch <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; --branch for one repo only
-  ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head the container pushed to its origin counts as landed; the task directory stays
+  ${CLI} land <sandbox> [--branch <name>] [--base <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; skips a repo on its recorded base or detached at a commit its origin holds; --branch lands another branch and --base records the branch the work now builds on, both for the one repo with work
+  ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head on its recorded base or on its clone's origin counts as landed; the task directory stays
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
@@ -283,7 +283,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		io.log(artifacts(repoOf(opts), io));
 	},
 	land(args) {
-		const { opts, rest } = flags(args, ["repo", "branch", "sign", "push"]);
+		const { opts, rest } = flags(args, ["repo", "branch", "base", "sign", "push"]);
 		const sandbox = sandboxOf(rest[0]).name;
 		const manifest = repositoryManifest(sandbox, io);
 		const requested =
@@ -298,6 +298,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 				repo: manifest?.repositories[0].repo ?? repoOf(opts),
 				root,
 				branch: opts.branch as string | undefined,
+				base: opts.base as string | undefined,
 				sign: opts.sign === true,
 				push: opts.push === true,
 			},

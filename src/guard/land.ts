@@ -12,7 +12,7 @@ type LandPermission = {
 };
 
 const BARE =
-	/^fleet land(?: (?:--sign|--push|--repo [A-Za-z0-9_./-]+|--branch [A-Za-z0-9_./-]+))* ([A-Za-z0-9][\w.-]*)(?: (?:--sign|--push|--repo [A-Za-z0-9_./-]+|--branch [A-Za-z0-9_./-]+))*$/;
+	/^fleet land(?: (?:--sign|--push|--repo [A-Za-z0-9_./-]+|--branch [A-Za-z0-9_./-]+|--base [A-Za-z0-9_./-]+))* ([A-Za-z0-9][\w.-]*)(?: (?:--sign|--push|--repo [A-Za-z0-9_./-]+|--branch [A-Za-z0-9_./-]+|--base [A-Za-z0-9_./-]+))*$/;
 
 export function landPermission(command: string): LandPermission | undefined {
 	const invokesLand = argvsOf(command).some(

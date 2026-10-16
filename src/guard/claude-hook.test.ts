@@ -254,6 +254,7 @@ test("the claude hook asks separately for landing, signing and pushing", () => {
 		"fleet land pi-harness-demo --sign",
 		"fleet land pi-harness-demo --push",
 		"fleet land --sign --push pi-harness-demo",
+		"fleet land pi-harness-demo --branch flo-1946 --base main --push",
 	])
 		assert.match(decide(command), /"permissionDecision":"ask"/, command);
 	for (const command of ["bash -c 'fleet land pi-harness-demo'"])

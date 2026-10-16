@@ -191,8 +191,9 @@ for (const harness of Object.values(KINDS)) {
 	});
 }
 
-const remoteRefs =
-	'sbx exec pi-a sh -c cd "$WORKSPACE_DIR" && git for-each-ref --contains abc';
+const onRemote = (workspace: string, head: string) =>
+	`sbx exec pi-a sh -c cd "$1" && git for-each-ref --contains "$2" --format='%(refname)' refs/remotes -- ${workspace} ${head}`;
+const remoteRefs = onRemote("/r", "abc");
 
 const twoRepositories = {
 	version: 1,
@@ -258,6 +259,34 @@ test("down takes both clones once each head is under its landed anchor", () => {
 				`git /api merge-base --is-ancestor ${"4".repeat(40)} refs/fleet/pi-a/api/landed`,
 		),
 	);
+	assert.ok(io.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
+});
+
+test("down passes a repository still on its recorded base", () => {
+	const io = fakeIo({
+		...twoRepositoryAnswers,
+		[apiProbe]: `task\t0\t${"2".repeat(40)}`,
+		[`git /api merge-base --is-ancestor ${"2".repeat(40)} refs/fleet/pi-a/api/landed`]:
+			new Error("exit 1"),
+	});
+
+	down("pi-a", {}, io);
+
+	assert.ok(io.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
+});
+
+test("down passes a repository whose detached head is on its own clone's remote", () => {
+	const head = "4".repeat(40);
+	const io = fakeIo({
+		...twoRepositoryAnswers,
+		[apiProbe]: `\t0\t${head}`,
+		[`git /api merge-base --is-ancestor ${head} refs/fleet/pi-a/api/landed`]:
+			new Error("exit 1"),
+		[onRemote("/tmp/fleet-repos/api", head)]: "refs/remotes/origin/AGE-898",
+	});
+
+	down("pi-a", {}, io);
+
 	assert.ok(io.calls.some((call) => call[0] === "sbx" && call[1] === "rm"));
 });
 

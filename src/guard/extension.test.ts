@@ -229,6 +229,7 @@ test("pi asks separately for landing, signing and pushing a sandbox", async () =
 		["fleet land pi-harness-demo --sign", "import and sign"],
 		["fleet land pi-harness-demo --push", "import and push, signing per profile"],
 		["fleet land --sign --push pi-harness-demo", "import, sign and push"],
+		["fleet land pi-harness-demo --branch flo-1946 --base main", "import, signing per profile"],
 	]) {
 		let prompted = false;
 		assert.equal(

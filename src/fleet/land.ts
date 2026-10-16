@@ -7,6 +7,7 @@ import {
 	repositoryCheckout,
 	repositoryManifest,
 	type RepositoryManifest,
+	saveRepositories,
 } from "./repositories.ts";
 import { sandboxes } from "./status.ts";
 
@@ -17,6 +18,7 @@ type LandInput = {
 	sign?: boolean;
 	push?: boolean;
 	branch?: string;
+	base?: string;
 };
 
 type Entry = RepositoryManifest["repositories"][number];
@@ -89,81 +91,137 @@ export function isAncestor(
 	}
 }
 
+export function onRemote(
+	sandbox: string,
+	workspace: string,
+	head: string,
+	io: Io,
+): boolean {
+	return (
+		io.sbx(
+			[
+				"exec",
+				sandbox,
+				"sh",
+				"-c",
+				`cd "$1" && git for-each-ref --contains "$2" --format='%(refname)' refs/remotes`,
+				"--",
+				workspace,
+				head,
+			],
+			{ quiet: true },
+		) !== ""
+	);
+}
+
 export function land(input: LandInput, io: Io): void {
-	const entries = recordedOrProbed(input, io);
+	const manifest = repositoryManifest(input.sandbox, io);
+	const entries = manifest?.repositories ?? [probed(input, io)];
 	if (input.repo !== entries[0].repo)
 		throw new Error(
 			`${input.sandbox} belongs to ${entries[0].repo}, not ${input.repo}`,
 		);
-	const several = entries.length > 1;
 	const landings: Landing[] = entries.map((entry) => {
 		const { host } = repoProfile(input.root, entry.name, io);
 		return {
 			entry,
-			branch: several ? entry.branch : (input.branch ?? entry.branch),
+			branch: entry.branch,
 			signs: input.sign === true || host.sign !== "none",
 			pushes: host.push !== "none",
 			refs: landedRef(input.sandbox, entry).slice(0, -"/landed".length),
 		};
 	});
 	try {
-		if (input.branch && several)
-			throw new Error(
-				"--branch names one repository's branch; a multi-repository land takes the branch recorded for each",
-			);
 		for (const { entry, pushes } of landings)
 			if (input.push && !pushes)
 				throw new Error(
 					`${entry.name}: this repository's profile gives the host no push (host.push is none in ~/.fleet/config/repos.json or host/repos.json); the branch reaches GitHub another way`,
 				);
-		for (const { entry, refs } of landings)
+		io.sbx(["exec", input.sandbox, "true"], { quiet: true });
+		const working =
+			landings.length > 1
+				? landings.filter((landing) => !idle(landing, input.sandbox, io))
+				: landings;
+		for (const { entry, head } of landings)
+			if (!working.some((landing) => landing.entry === entry))
+				io.log(
+					`${entry.name}: nothing to land, ${head} is the recorded base or a detached commit its origin holds`,
+				);
+		if (!working.length)
+			throw new Error(
+				"nothing to land: every repository sits on its recorded base or on a detached commit its origin holds",
+			);
+		if ((input.branch || input.base) && working.length > 1)
+			throw new Error(
+				`--branch and --base name one repository; ${working.map(({ entry }) => entry.name).join(", ")} hold work`,
+			);
+		if (input.branch) working[0].branch = input.branch;
+		if (input.base) working[0].entry.base = input.base;
+		for (const { entry, refs } of working)
 			if (input.branch && ref(entry.repo, `${refs}/landed`, io))
 				throw new Error(
 					`${entry.name}: ${refs}/landed already anchors the recorded branch ${entry.branch}; --branch would move that anchor, so land without it`,
 				);
-		io.sbx(["exec", input.sandbox, "true"], { quiet: true });
 		const url = io.git(
 			["remote", "get-url", `sandbox-${input.sandbox}`],
 			entries[0].repo,
 		);
-		for (const landing of landings) fetch(landing, url, input.push === true, io);
-		const moves = landings.map((landing) =>
-			preflight(landing, input, io),
-		);
-		for (const [index, landing] of landings.entries())
+		for (const landing of working)
+			fetch(landing, url, input.push === true || Boolean(input.base), io);
+		const moves = working.map((landing) => preflight(landing, input, io));
+		if (input.base && manifest) {
+			saveRepositories(input.sandbox, manifest.task, manifest, io);
+			io.log(
+				`${working[0].entry.name}: base recorded as origin/${input.base} at ${working[0].entry.baseSha}`,
+			);
+		}
+		for (const [index, landing] of working.entries())
 			move(landing, moves[index], input.sandbox, io);
-		for (const landing of landings)
+		for (const landing of working)
 			if (landing.signs) sign(landing, io);
 			else
 				io.log(
 					`${landing.entry.name}: unsigned commits stay unsigned; rerun with --sign to sign them (one Touch ID tap per commit)`,
 				);
-		if (input.push) for (const landing of landings) push(landing, io);
+		if (input.push) for (const landing of working) push(landing, io);
 	} finally {
 		for (const landing of landings) io.log(progress(landing, io));
 	}
 }
 
-function recordedOrProbed(input: LandInput, io: Io): Entry[] {
-	const manifest = repositoryManifest(input.sandbox, io);
-	if (manifest) return manifest.repositories;
+function idle(landing: Landing, sandbox: string, io: Io): boolean {
+	const { entry } = landing;
+	const checkout = repositoryCheckout(io, sandbox, entry.workspace);
+	landing.head = checkout.head;
+	return (
+		!checkout.dirty &&
+		(checkout.head === entry.baseSha ||
+			(!checkout.branch &&
+				onRemote(sandbox, entry.workspace, checkout.head, io)))
+	);
+}
+
+function probed(input: LandInput, io: Io): Entry {
 	const repo =
 		sandboxes(io).find((s) => s.name === input.sandbox)?.workspaces[0] ??
 		input.repo;
-	return [
-		{
-			repo,
-			name: repoName(io.git(["remote", "get-url", "origin"], repo)),
-			base: baseBranch(repo, io).replace(/^origin\//, ""),
-			baseSha: "",
-			branch: repositoryCheckout(io, input.sandbox, repo).branch,
-			workspace: repo,
-			served: "",
-		},
-	];
+	return {
+		repo,
+		name: repoName(io.git(["remote", "get-url", "origin"], repo)),
+		base: baseBranch(repo, io).replace(/^origin\//, ""),
+		baseSha: "",
+		branch: repositoryCheckout(io, input.sandbox, repo).branch,
+		workspace: repo,
+		served: "",
+	};
 }
 
-function fetch(landing: Landing, url: string, pushes: boolean, io: Io): void {
+function fetch(
+	landing: Landing,
+	url: string,
+	fetchesBase: boolean,
+	io: Io,
+): void {
 	const { entry, branch } = landing;
 	io.git(
 		[
@@ -178,8 +236,14 @@ function fetch(landing: Landing, url: string, pushes: boolean, io: Io): void {
 		],
 		entry.repo,
 	);
-	if (!landing.signs && !pushes) return;
-	io.git(["fetch", "--quiet", "origin", entry.base], entry.repo);
+	if (!landing.signs && !fetchesBase) return;
+	try {
+		io.git(["fetch", "--quiet", "origin", entry.base], entry.repo);
+	} catch (error) {
+		throw new Error(
+			`${entry.name}: ${(error as Error).message}\nwhen origin deleted ${entry.base} after its merge, land with --base <the branch the work now builds on>`,
+		);
+	}
 	try {
 		io.git(["fetch", "--quiet", "origin", branch], entry.repo);
 	} catch {}
@@ -217,9 +281,14 @@ function preflight(landing: Landing, input: LandInput, io: Io): Move {
 		throw new Error(
 			`${entry.name}: ${branch} moved in the container while it was fetched; nothing moved here`,
 		);
+	if (input.base)
+		entry.baseSha = io.git(
+			["merge-base", incoming, `origin/${entry.base}`],
+			entry.repo,
+		);
 	if (entry.baseSha && !isAncestor(entry.repo, entry.baseSha, incoming, io))
 		throw new Error(
-			`${entry.name}: ${incoming} does not descend from the recorded base ${entry.baseSha}`,
+			`${entry.name}: ${incoming} does not descend from the recorded base ${entry.baseSha}; when the branch was rebased onto another branch, land with --base <that branch>`,
 		);
 	const host = ref(entry.repo, `refs/heads/${branch}`, io);
 	const recorded = ref(entry.repo, `${landing.refs}/landed`, io);

@@ -214,7 +214,9 @@ exec ssh-keygen "$@"
 		assert.throws(() =>
 			git(repos[index].repo, "show-ref", "--verify", "refs/heads/task"),
 		);
-	const input = (flags: { sign?: boolean; push?: boolean; branch?: string } = {}) => ({
+	const input = (
+		flags: { sign?: boolean; push?: boolean; branch?: string; base?: string } = {},
+	) => ({
 		sandbox: "pi-a",
 		repo: repos[0].repo,
 		root: "/root",
@@ -376,6 +378,62 @@ test("land refuses a dirty container or one on another branch before any branch 
 	moved.absent(0);
 });
 
+function stackedBase(f: ReturnType<typeof fixture>): void {
+	const host = f.repos[0].repo;
+	f.git(host, "switch", "--quiet", "-c", "stack", "origin/main");
+	const stacked = f.commit(host, "stacked base");
+	f.git(host, "push", "--quiet", "origin", "stack");
+	f.git(host, "switch", "--quiet", "main");
+	f.commit(host, "stack merged into main");
+	f.git(host, "push", "--quiet", "origin", "main", ":stack");
+	const path = `${f.root}/.fleet/config/fleet/pi-a.json`;
+	const manifest = JSON.parse(f.io.files[path]);
+	manifest.repositories[0] = { ...manifest.repositories[0], base: "stack", baseSha: stacked };
+	f.io.files[path] = JSON.stringify(manifest);
+}
+
+const recorded = (f: ReturnType<typeof fixture>) =>
+	JSON.parse(f.io.files[`${f.root}/.fleet/config/fleet/pi-a.json`]).repositories[0];
+
+test("a branch rebased off a deleted stacked base lands once --base names the branch it now builds on", (t) => {
+	for (const owner of ["me", "acme"]) {
+		const f = fixture(t, ["one"], { owner });
+		stackedBase(f);
+		f.git(f.guests[0], "fetch", "--quiet", "origin");
+		f.git(f.guests[0], "rebase", "--quiet", "origin/main");
+
+		assert.throws(() => land(f.input(), f.io), /--base/, owner);
+		land(f.input({ base: "main" }), f.io);
+
+		assert.equal(f.landed(0), f.git(f.guests[0], "rev-parse", "HEAD"), owner);
+		assert.deepEqual(
+			[recorded(f).base, recorded(f).baseSha],
+			["main", f.git(f.repos[0].repo, "rev-parse", "origin/main")],
+			owner,
+		);
+	}
+});
+
+test("of several repositories, the one with work lands under --branch and --base and a clone detached at an origin commit is skipped", (t) => {
+	const f = fixture(t, ["one", "two"], { owner: "acme" });
+	stackedBase(f);
+	f.git(f.guests[0], "fetch", "--quiet", "origin");
+	f.git(f.guests[0], "switch", "--quiet", "-c", "renamed", "origin/main");
+	const head = f.commit(f.guests[0], "rebased work");
+	f.commit(f.repos[1].repo, "newer on two");
+	f.git(f.repos[1].repo, "push", "--quiet", "origin", "main");
+	f.git(f.guests[1], "fetch", "--quiet", "origin");
+	f.git(f.guests[1], "switch", "--quiet", "--detach", "origin/main");
+
+	land(f.input({ branch: "renamed", base: "main" }), f.io);
+
+	assert.equal(f.git(f.repos[0].repo, "rev-parse", "refs/heads/renamed"), head);
+	assert.equal(f.landed(0), head);
+	assert.equal(recorded(f).base, "main");
+	f.absent(1);
+	assert.ok(f.io.lines.some((line) => /^acme\/two: nothing to land/.test(line)));
+});
+
 test("a container resynced to the signed origin branch fast-forwards the host", (t) => {
 	const f = fixture(t, ["one"]);
 	land(f.input({ push: true }), f.io);
@@ -517,21 +575,26 @@ test("--branch is refused once the repository has a landed anchor", (t) => {
 	assert.throws(() => f.git(f.repos[0].repo, "show-ref", "--verify", "refs/heads/other"));
 });
 
-test("--branch names one repository's branch and is refused for several", () => {
-	const io = fakeIo({
-		"read /root/host/repos.json": SAMPLE_PROFILES,
-		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(multi),
-	});
+test("--branch and --base are refused while several repositories hold work", () => {
+	for (const flag of ["branch", "base"]) {
+		const io = fakeIo({
+			"read /root/host/repos.json": SAMPLE_PROFILES,
+			"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify(multi),
+			'sbx exec pi-a sh -c cd "$1" && printf': `task\t0\t${"3".repeat(40)}`,
+		});
 
-	assert.throws(
-		() => land({ sandbox: "pi-a", repo: "/r", root: "/root", branch: "other" }, io),
-		/--branch/,
-	);
-	assert.ok(!io.calls.some((call) => call[0] === "git" && call.includes("fetch")));
-	assert.deepEqual(
-		io.lines.filter((line) => /: container /.test(line)).map((line) => line.split(":")[0]),
-		["acme/fe", "acme/api"],
-	);
+		assert.throws(
+			() => land({ sandbox: "pi-a", repo: "/r", root: "/root", [flag]: "other" }, io),
+			/--branch and --base name one repository; acme\/fe, acme\/api hold work/,
+			flag,
+		);
+
+		assert.ok(!io.calls.some((call) => call[0] === "git" && call.includes("fetch")));
+		assert.deepEqual(
+			io.lines.filter((line) => /: container /.test(line)).map((line) => line.split(":")[0]),
+			["acme/fe", "acme/api"],
+		);
+	}
 });
 
 test("--push where a profile gives the host no push refuses before anything is fetched", () => {

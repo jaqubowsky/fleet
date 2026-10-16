@@ -12,7 +12,7 @@ import {
 	repositoryManifest,
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
-import { isAncestor, landedRef } from "./land.ts";
+import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET } from "./home.ts";
 import { agentName } from "./name.ts";
@@ -532,25 +532,8 @@ function landed(
 		io.git(["cat-file", "-e", `${head}^{commit}`], repo);
 		return true;
 	} catch {
-		return pushed(sandbox, head, io);
+		return onRemote(sandbox, repo, head, io);
 	}
-}
-
-function pushed(sandbox: string, head: string, io: Io): boolean {
-	return (
-		io
-			.sbx(
-				[
-					"exec",
-					sandbox,
-					"sh",
-					"-c",
-					`cd "$WORKSPACE_DIR" && git for-each-ref --contains ${head} --format='%(refname)' refs/remotes`,
-				],
-				{ quiet: true },
-			)
-			.trim() !== ""
-	);
 }
 
 
@@ -604,15 +587,16 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 	);
 	const manifest = repositoryManifest(sandbox, io);
 	if (manifest && !opts.force) {
-		for (const [index, repo] of manifest.repositories.entries()) {
+		for (const repo of manifest.repositories) {
 			const current = repositoryCheckout(io, sandbox, repo.workspace);
 			if (current.dirty)
 				throw new Error(
 					`${repo.name}: ${current.dirty} uncommitted file(s); commit them before closing ${sandbox}`,
 				);
 			if (
+				current.head !== repo.baseSha &&
 				!isAncestor(repo.repo, current.head, landedRef(sandbox, repo), io) &&
-				!(index === 0 && pushed(sandbox, current.head, io))
+				!onRemote(sandbox, repo.workspace, current.head, io)
 			)
 				throw new Error(
 					`${repo.name}: ${current.head} is not landed on ${repo.branch}; run ${CLI} land first`,
