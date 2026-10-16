@@ -59,7 +59,7 @@ Each check runs once, where it is cheapest:
 | Typecheck and lint of changed files | alongside the review, with no app running | 1 |
 | Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |
 | Review fixes | one batch, each with its own test | 1 |
-| Verification of what a user sees, the way `project.md` names | last, on the final tree | 1 |
+| Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |
 
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, a review of the delta, frames of the criteria the change touches
 - Gates run with no bash timeout
