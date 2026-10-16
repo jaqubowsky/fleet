@@ -22,6 +22,14 @@ test("checkout probe output parses branch, dirty count and head", () => {
 	assert.deepEqual(parseCheckout(""), { branch: "", dirty: 0, head: "" });
 });
 
+test("a detached checkout parses as no branch once its empty first field is trimmed away", () => {
+	const head = "d".repeat(40);
+
+	const checkout = parseCheckout(`0\t${head}`);
+
+	assert.deepEqual(checkout, { branch: "", dirty: 0, head });
+});
+
 test("agent lookup by name", () => {
 	assert.equal(
 		agentFor([{ pane_id: "w1:p1", name: "a", agent_status: "idle" }], "a")

@@ -61,7 +61,9 @@ export function parseCheckout(text: string): {
 	dirty: number;
 	head: string;
 } {
-	const [branch = "", dirty = "0", head = ""] = text.trim().split("\t");
+	const fields = text.trim().split("\t");
+	const detached = fields.length === 2 && /^[0-9a-f]{40,64}$/.test(fields[1]);
+	const [branch = "", dirty = "0", head = ""] = detached ? ["", ...fields] : fields;
 	return { branch, dirty: Number(dirty) || 0, head };
 }
 
