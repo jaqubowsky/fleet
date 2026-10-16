@@ -861,6 +861,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				"| Review fixes | one batch, each with its own test | 1 |",
 				"| Typecheck and lint of changed files | alongside the review, with no app running | 1 |",
 				"| Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |",
+				"| End-to-end suite, where the project has one | the changed path's specs after its slice; the full suite on the final tree | 1 per slice, plus 1 |",
 				"| Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |",
 			])
 				assert.ok(rules.includes(row), row);
