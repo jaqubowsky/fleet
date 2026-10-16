@@ -44,7 +44,7 @@ Collect the repo paths. The reviewer reads them, and [smells.md](smells.md) besi
 
 Supply these two axes in the review packet:
 
-- Axis 1: correctness and fulfillment. Against the original ask and the supplied plan, find missing or partial behavior, unrequested changes, wrong results, reached edge cases, regressions, integration gaps and missing regression evidence. Quote the requirement for each finding; a derived plan does not replace its source.
+- Axis 1: correctness and fulfillment. Against the original ask and the supplied plan, find missing or partial behavior, unrequested changes, wrong results, reached edge cases, regressions, integration gaps, missing regression evidence, and every stub in production code that the ticket's Out of scope does not name: a fixed or empty value where the requirement asks for a computed one. Quote the requirement for each finding; a derived plan does not replace its source.
 - Axis 2: engineering quality. Apply repository standards, then the four questions above, then the smell baseline. Check unnecessary complexity, architectural fit, scope, and security or performance reached by the diff. Decide each clone pair as shared knowledge or independent copies, with evidence rather than an extraction quota.
 
 ### 4. Run the reviewer
