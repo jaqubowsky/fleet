@@ -1,3 +1,4 @@
+import { FLEET } from "../fleet/home.ts";
 import type { Io } from "../fleet/io.ts";
 import { type AgentName, CLI, KINDS } from "../harness.ts";
 import { hostLinearServers, loadProfiles } from "../profile/profile.ts";
@@ -45,7 +46,7 @@ export function renderSettings(
 	values: Record<string, string> = {},
 ): string {
 	const rendered = template
-		.replace(/\{\{(root|home|compaction\.tokens|compaction\.reserve)\}\}/g, (all, key: string) => values[key] ?? all)
+		.replace(/\{\{(root|home|tasks|compaction\.tokens|compaction\.reserve)\}\}/g, (all, key: string) => values[key] ?? all)
 		.replace(
 			/\{\{(models|thinking|providers)\.([a-z-]+)\}\}/g,
 			(_, field: string, seat: string) => {
@@ -100,7 +101,7 @@ export function seatSettings(
 ): string {
 	const own = `${root}/${agent}/profiles`;
 	const models = parseJson<Models>(io.read(`${own}/models.json`) ?? "{}");
-	const values = { root, home: `${io.home}/${KINDS[agent].home}`, ...compactionTokens(io.read(`${root}/src/compaction.json`)) };
+	const values = { root, home: `${io.home}/${KINDS[agent].home}`, tasks: `${io.home}/${FLEET.tasks}`, ...compactionTokens(io.read(`${root}/src/compaction.json`)) };
 	const base = parseJson<Record<string, unknown>>(
 		renderSettings(io.read(`${own}/settings.json`) ?? "{}", models, values),
 	);

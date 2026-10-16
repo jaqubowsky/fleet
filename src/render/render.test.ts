@@ -325,6 +325,18 @@ function renderSeats(
 	}
 }
 
+test("the claude container reads every task directory and runbook without a dialog", () => {
+	renderSeats("claude", (out) => {
+		const settings = JSON.parse(
+			readFileSync(`${out}/container/context/settings.json`, "utf8"),
+		);
+
+		assert.deepEqual(settings.permissions?.additionalDirectories, [
+			`${out}/.fleet/tasks`,
+		]);
+	});
+});
+
 test("pi host and container load no pi-lens, and the pi kit sets none of its variables", () => {
 	renderSeats("pi", (out) => {
 		const host = JSON.parse(
