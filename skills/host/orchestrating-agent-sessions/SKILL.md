@@ -48,7 +48,6 @@ The host plans, delegates, accepts or rejects, and merges; containers implement 
 9. Merge as the host's merge line of `{{cli}} profile <repo>` says, with the method the overlay names, a merge commit when it names none:
    - `gh pr merge <n> --merge --match-head-commit <head sha>`, run bare in the checkout, the overlay's method flag in place of `--merge`
    - `<head sha>` is the full 40-character SHA read in the same turn as {{refs.ci}} says, never one from memory
-   - the guard grants this form, with `--subject` and `--body` in single quotes or in double quotes without `\`, `$` or a backtick, while `--repo`, `-R` and `--body-file` stay refused
 10. A decision that changes what the user sees reaches the user in your next reply. Write the ADR a decision of yours needs in `docs/adr/`
 11. The host checkout stays on the default branch: it is also the user's window. A fresh host session resumes from the tracker and `{{cli}} ls`
 
