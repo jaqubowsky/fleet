@@ -44,6 +44,7 @@ Person:
 
 - `command -v sbx herdr hunk` prints three paths, and `command -v claude pi` prints the path of each agent the person chose
 - with Herdr UI: `open -a Herdr` shows the herdr tabs; it reads the same `~/.config/herdr/config.toml` as the terminal client
+- `sbx version` prints v0.48.0 or newer; fleet reads the JSON lists sbx prints since 0.48, and `brew upgrade docker/tap/sbx` updates an older one
 - `sbx ls` answers without an authentication error; if not, the person signs in to sbx again
 - with pi: `test -f ~/.pi/agent/auth.json && echo ok` prints `ok`; if not, the login above is missing
 - with Claude Code: `test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`; if not, the plugin above is missing
