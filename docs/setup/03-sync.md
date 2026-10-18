@@ -34,7 +34,7 @@ npm test && npm run check
 
 `sync.sh` ends with `== set up by hand`: what it found missing and cannot install itself. Each line names its fix.
 
-From now on every host session runs `fleet profile --apply --brief` as it starts, which sets its checkout's git config the way the repository's profile says and registers the host's Linear server.
+Every host session runs `fleet profile --apply --brief` as it starts, which sets its checkout's git config the way the repository's profile says and registers the host's Linear server.
 
 A profile with `container.linear` set to `read` or `write` names its sandbox Linear server in `container.linearServer`. Register each such name once by hand, because `sync.sh` cannot read sbx's list: `sbx mcp add <linearServer> --url https://mcp.linear.app/mcp/readonly` for `read`, or `https://mcp.linear.app/mcp` for `write`. No profile with Linear, nothing to do.
 

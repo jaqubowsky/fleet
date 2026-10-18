@@ -10,7 +10,7 @@ Each repository's profile names its token in `container.token`. Sandboxes and th
 - `keychain:<name>`: a macOS keychain item the person stores. Lowercase letters, digits and hyphens; several repositories may share one name. Use this one
 - `env:<NAME>`: a variable the host session must be started with. It then sits in the session's environment, where any command can print it
 
-The repository's own `*` entry in `host/repos.json` uses `env:GH_TOKEN`. A person who skipped `repos.json` in step 2 starts every host session with it exported, for example from `~/.zshrc`, and `fleet up` refuses to start without it. To use the keychain for every repository instead, give their `repos.json` a `*` entry with a `keychain:<name>` token.
+The repository's own `*` entry in `host/repos.json` uses `env:GH_TOKEN`. A person who skipped `repos.json` in step 2 starts every host session with it exported, for example from `~/.zshrc`, and `fleet up` refuses to create a sandbox without it. To use the keychain for every repository instead, give their `repos.json` a `*` entry with a `keychain:<name>` token.
 
 ## Create and store
 
