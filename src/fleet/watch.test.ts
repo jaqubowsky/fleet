@@ -22,7 +22,7 @@ const REPORT = "Added the login rate limit; its tests pass at 9d290c9.";
 function leaving(io: ReturnType<typeof fakeIo>) {
 	const sbx = io.sbx;
 	io.sbx = (args, opts) =>
-		args.join(" ") === "ls --json" ? JSON.stringify({ sandboxes: [] }) : sbx(args, opts);
+		args.join(" ") === "ls --json" ? JSON.stringify([]) : sbx(args, opts);
 }
 
 function herdr(
@@ -57,13 +57,11 @@ function herdr(
 	});
 	const io = fakeIo(
 		{
-			"sbx ls --json": {
-				sandboxes: agents.map((a) => ({
-					name: a.name,
-					agent: a.name.startsWith("pi-") ? "pi" : "claude",
-					workspaces: ["/w/webapp"],
-				})),
-			},
+			"sbx ls --json": agents.map((a) => ({
+				name: a.name,
+				agent: a.name.startsWith("pi-") ? "pi" : "claude",
+				workspaces: ["/w/webapp"],
+			})),
 			"herdr agent list": { result: { agents } },
 		},
 		seat,
@@ -96,7 +94,7 @@ test("a stopped container stays in the status line without waking or probing it"
 	const { io, status, intervals } = herdr(t, [agents[0]]);
 	const sbx = io.sbx;
 	io.sbx = (args, opts) => args[0] === "ls"
-		? JSON.stringify({ sandboxes: [{ ...sandboxes[0], status: "stopped" }] })
+		? JSON.stringify([{ ...sandboxes[0], status: "stopped" }])
 		: sbx(args, opts);
 	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
 	const lines: string[] = [];
@@ -115,7 +113,7 @@ test("a stopped container stays in the status line without waking or probing it"
 
 test("a stopped tab stays watched after herdr loses the live process", (t) => {
 	const { io } = herdr(t, []);
-	io.sbx = () => JSON.stringify({ sandboxes: [{ ...sandboxes[0], status: "stopped" }] });
+	io.sbx = () => JSON.stringify([{ ...sandboxes[0], status: "stopped" }]);
 	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
 	const lines: string[] = [];
 	const handle = watch(() => undefined, io, () => {}, (line) => lines.push(line));
@@ -272,11 +270,9 @@ test("a watch wake names the full sandbox beside herdr's shortened agent", (t: T
 	const sbx = io.sbx;
 	io.sbx = (args, opts) =>
 		args[0] === "ls"
-			? JSON.stringify({
-					sandboxes: [
-						{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] },
-					],
-				})
+			? JSON.stringify([
+					{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] },
+				])
 			: sbx(args, opts);
 	const wakes: string[] = [];
 	watch(

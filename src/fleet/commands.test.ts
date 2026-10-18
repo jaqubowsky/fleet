@@ -17,11 +17,9 @@ import { checkoutProbe, commitsProbe, type Sandbox } from "./status.ts";
 import { KINDS, type Kind, SEATS } from "../harness.ts";
 
 const running = {
-	"sbx ls --json": {
-		sandboxes: [
-			{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
-		],
-	},
+	"sbx ls --json": [
+		{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+	],
 	"herdr agent list": { result: { agents: [] } },
 };
 const task = "/home/me/.fleet/tasks/r/pi-a";
@@ -551,11 +549,9 @@ test("down reports recorded tool failures without claiming task accuracy", () =>
 
 test("down leaves claude's transcripts where the container wrote them", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] },
+		],
 		"herdr agent list": { result: { agents: [] } },
 		[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 	});
@@ -673,7 +669,7 @@ test("down treats a failed secret cleanup after removal as a warning, and a fail
 	const ls = gone.sbx;
 	gone.sbx = (args, opts) =>
 		args[0] === "ls" && ++calls > 1
-			? JSON.stringify({ sandboxes: [] })
+			? JSON.stringify([])
 			: ls(args, opts);
 	down("pi-a", {}, gone);
 	assert.ok(
@@ -707,17 +703,15 @@ test("down names an unknown container", () => {
 
 test("ls joins sbx, herdr and git state", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{
-					name: "pi-webapp-web-1",
-					agent: "pi",
-					status: "running",
-					workspaces: ["/r"],
-				},
-				{ name: "pi-cv-x", agent: "pi", status: "stopped", workspaces: [] },
-			],
-		},
+		"sbx ls --json": [
+			{
+				name: "pi-webapp-web-1",
+				agent: "pi",
+				status: "running",
+				workspaces: ["/r"],
+			},
+			{ name: "pi-cv-x", agent: "pi", status: "stopped", workspaces: [] },
+		],
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
 		"herdr agent list": {
 			result: {
@@ -733,18 +727,24 @@ test("ls joins sbx, herdr and git state", () => {
 	);
 });
 
+test("ls on an sbx older than 0.48 names the version fleet needs", () => {
+	const io = fakeIo({
+		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
+	});
+
+	assert.throws(() => ls(io), /sbx 0\.48 or later/);
+});
+
 test("ls reads a one-entry manifest as the one-repository row it always printed", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{
-					name: "pi-webapp-web-1",
-					agent: "pi",
-					status: "running",
-					workspaces: ["/r"],
-				},
-			],
-		},
+		"sbx ls --json": [
+			{
+				name: "pi-webapp-web-1",
+				agent: "pi",
+				status: "running",
+				workspaces: ["/r"],
+			},
+		],
 		"read /home/me/.fleet/config/fleet/pi-webapp-web-1.json": JSON.stringify({
 			version: 1,
 			task: "/home/me/.fleet/tasks/r/pi-webapp-web-1",
@@ -868,11 +868,9 @@ test("ls names the API when its checkout cannot be probed", () => {
 
 test("ls shows a running container's commits and asks GitHub nothing, even beside an old status.md", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
+		],
 		"herdr agent list": {
 			result: {
 				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }],
@@ -899,17 +897,15 @@ test("ls shows a running container's commits and asks GitHub nothing, even besid
 
 test("ls prints a container whose sandbox fails as failed with its error, and lists the rest", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-broken", agent: "pi", status: "running", workspaces: ["/r"] },
-				{
-					name: "pi-webapp-web-1",
-					agent: "pi",
-					status: "running",
-					workspaces: ["/r"],
-				},
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-broken", agent: "pi", status: "running", workspaces: ["/r"] },
+			{
+				name: "pi-webapp-web-1",
+				agent: "pi",
+				status: "running",
+				workspaces: ["/r"],
+			},
+		],
 		[`sbx exec pi-broken sh -c ${checkoutProbe}`]: new Error(
 			`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`,
 		),
@@ -956,11 +952,9 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 
 test("down probes a stopped container too, so its refusals still apply", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+		],
 		"herdr agent list": { result: { agents: [] } },
 		"sbx exec pi-a sh -c": "web-1\t1\tabc",
 	});
@@ -981,16 +975,14 @@ test("down passes a container whose head is already in the repo", () => {
 
 test("resolveSandbox accepts the container name or its agent name", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{
-					name: "pi-webapp-frontend-ticket-123-fix-login-page",
-					agent: "pi",
-					status: "running",
-					workspaces: [],
-				},
-			],
-		},
+		"sbx ls --json": [
+			{
+				name: "pi-webapp-frontend-ticket-123-fix-login-page",
+				agent: "pi",
+				status: "running",
+				workspaces: [],
+			},
+		],
 	});
 
 	assert.equal(
@@ -1244,16 +1236,14 @@ test("ls prices a claude container from the transcripts it writes into its task 
 	const claudeTask = "/home/me/.fleet/tasks/r/claude-a";
 	const io = fakeIo(
 		{
-			"sbx ls --json": {
-				sandboxes: [
-					{
-						name: "claude-a",
-						agent: "claude",
-						status: "running",
-						workspaces: ["/r"],
-					},
-				],
-			},
+			"sbx ls --json": [
+				{
+					name: "claude-a",
+					agent: "claude",
+					status: "running",
+					workspaces: ["/r"],
+				},
+			],
 			"herdr agent list": {
 				result: {
 					agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }],
@@ -1284,11 +1274,9 @@ test("ls prices a claude container from the transcripts it writes into its task 
 
 test("ls still prices a stopped pi container from the sessions it wrote", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+		],
 		"herdr agent list": { result: { agents: [] } },
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`stat ${task}/logs/sessions/s1.jsonl`]: {
@@ -1305,11 +1293,9 @@ test("ls still prices a stopped pi container from the sessions it wrote", () => 
 
 test("ls keeps a stopped two-repo sandbox asleep", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
+		],
 		"herdr agent list": { result: { agents: [] } },
 		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,

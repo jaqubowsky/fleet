@@ -6,7 +6,7 @@ import { relay } from "./relay.ts";
 const TASK = "/home/me/.fleet/tasks/webapp/pi-webapp-a";
 const STATE = `${TASK}/logs/agent-state.json`;
 const PULL_REQUEST = `${TASK}/logs/pull-request.json`;
-const LISTED = { "sbx ls --json": { sandboxes: [{ name: "pi-webapp-a", agent: "pi", status: "running", workspaces: ["/w/webapp"] }] } };
+const LISTED = { "sbx ls --json": [{ name: "pi-webapp-a", agent: "pi", status: "running", workspaces: ["/w/webapp"] }] };
 
 function running(t: TestContext, files: Record<string, string> = {}) {
 	t.mock.timers.enable({ apis: ["setInterval"] });

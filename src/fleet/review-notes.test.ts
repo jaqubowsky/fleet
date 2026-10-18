@@ -19,7 +19,7 @@ function containerTab(answers: Record<string, unknown> = {}) {
 		"herdr pane current": { result: { pane: { pane_id: "w1:p1", tab_id: "w1:t1", workspace_id: "w1" } } },
 		"herdr tab list": { result: { tabs: [{ tab_id: "w1:t1", label: NAME }] } },
 		"herdr agent list": { result: { agents: [{ tab_id: "w1:t1", name: NAME }] } },
-		"sbx ls": { sandboxes: [{ name: NAME, status: "running", agent: "claude", workspaces: ["/w/app"] }] },
+		"sbx ls": [{ name: NAME, status: "running", agent: "claude", workspaces: ["/w/app"] }],
 		"hunk session list --json": { sessions: [{ sessionId: "s0", inputKind: "patch", sourceLabel: "/elsewhere.patch" }, { sessionId: "s1", inputKind: "patch", sourceLabel: PATCH }] },
 		"hunk session comment list s1 --type user --json": NOTES,
 		...answers,

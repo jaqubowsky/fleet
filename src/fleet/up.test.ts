@@ -24,7 +24,7 @@ const base = {
 		"bindings:\n  openai:\n    oauth:\n",
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
-	"sbx ls --json": { sandboxes: [] },
+	"sbx ls --json": [],
 	"herdr agent list": { result: { agents: [] } },
 	"herdr workspace list": {
 		result: { workspaces: [{ workspace_id: "w1", label: "webapp" }] },
@@ -762,16 +762,14 @@ test("up refuses a name another agent holds before it creates anything", async (
 test("up reuses an existing container and only opens the tab", async () => {
 	const io = fakeIo({
 		...base,
-		"sbx ls --json": {
-			sandboxes: [
-				{
-					name: "pi-webapp-web-1",
-					agent: "pi",
-					status: "stopped",
-					workspaces: [],
-				},
-			],
-		},
+		"sbx ls --json": [
+			{
+				name: "pi-webapp-web-1",
+				agent: "pi",
+				status: "stopped",
+				workspaces: [],
+			},
+		],
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));

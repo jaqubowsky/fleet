@@ -21,11 +21,9 @@ const manifest = {
 const path = "/home/me/.fleet/config/fleet/pi-a.json";
 const answers = {
 	[`read ${path}`]: JSON.stringify(manifest),
-	"sbx ls --json": {
-		sandboxes: [
-			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/a"] },
-		],
-	},
+	"sbx ls --json": [
+		{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/a"] },
+	],
 	"herdr agent list": { result: { agents: [] } },
 	"list /home/me/.fleet/config/fleet": ["pi-a.json"],
 	[`stat ${task}/logs`]: { size: 0, dir: true, mtime: new Date(0) },
@@ -51,11 +49,9 @@ test("a stopped group's listing uses its task directory without starting it", ()
 test("ls counts commits for every repository and asks GitHub nothing", () => {
 	const io = fakeIo({
 		...answers,
-		"sbx ls --json": {
-			sandboxes: [
-				{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/a"] },
-			],
-		},
+		"sbx ls --json": [
+			{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/a"] },
+		],
 	});
 	const sbx = io.sbx;
 	io.sbx = (args, opts) => {

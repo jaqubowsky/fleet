@@ -25,9 +25,7 @@ import { sessionScope, watch } from "./watch.ts";
 
 const log = `/home/me/${EVENTS_LOG}`;
 const listed = (name: string, agent: string) => ({
-	"sbx ls --json": {
-		sandboxes: [{ name, status: "running", workspaces: ["/r"], agent }],
-	},
+	"sbx ls --json": [{ name, status: "running", workspaces: ["/r"], agent }],
 	"herdr agent list": {
 		result: {
 			agents: [
@@ -80,29 +78,27 @@ for (const seat of Object.values(SEATS))
 
 test("the kind comes from the agent sbx reports, whatever the name prefix says", () => {
 	const io = fakeIo({
-		"sbx ls --json": {
-			sandboxes: [
-				{
-					name: "pi-runs-claude",
-					status: "running",
-					workspaces: ["/r"],
-					agent: "claude",
-				},
-				{
-					name: "claude-legacy",
-					status: "running",
-					workspaces: ["/r"],
-					agent: "claude",
-				},
-				{
-					name: "claude-runs-pi",
-					status: "running",
-					workspaces: ["/r"],
-					agent: "pi",
-				},
-				{ name: "pi-codex", status: "running", workspaces: ["/r"], agent: "codex" },
-			],
-		},
+		"sbx ls --json": [
+			{
+				name: "pi-runs-claude",
+				status: "running",
+				workspaces: ["/r"],
+				agent: "claude",
+			},
+			{
+				name: "claude-legacy",
+				status: "running",
+				workspaces: ["/r"],
+				agent: "claude",
+			},
+			{
+				name: "claude-runs-pi",
+				status: "running",
+				workspaces: ["/r"],
+				agent: "pi",
+			},
+			{ name: "pi-codex", status: "running", workspaces: ["/r"], agent: "codex" },
+		],
 	});
 
 	assert.equal(resolveSandbox("pi-runs-claude", io).kind, KINDS.claude);

@@ -30,13 +30,14 @@ export type Row = {
 
 export function sandboxes(io: Io): Sandbox[] {
 	const text = io.sbx(["ls", "--json"], { quiet: true, timeoutMs: 60_000 });
-	let listed: { sandboxes?: (Omit<Sandbox, "kind"> & { agent?: string })[] };
+	let listed: (Omit<Sandbox, "kind"> & { agent?: string })[];
 	try {
 		listed = JSON.parse(text);
 	} catch (cause) {
 		throw new Error("sbx ls returned invalid JSON", { cause });
 	}
-	return (listed.sandboxes ?? []).flatMap(({ agent, ...s }) =>
+	if (!Array.isArray(listed)) throw new Error("sbx ls --json gave no list of sandboxes; fleet needs sbx 0.48 or later");
+	return listed.flatMap(({ agent, ...s }) =>
 		agent && Object.hasOwn(KINDS, agent)
 			? [{ ...s, kind: KINDS[agent as AgentName] }]
 			: [],

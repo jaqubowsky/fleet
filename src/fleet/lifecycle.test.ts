@@ -84,7 +84,7 @@ for (const kind of Object.values(KINDS)) {
 	});
 
 	test(`${kind.name} listing a pending stop does not probe the guest`, () => {
-		const io = fakeIo({ ...fixture, "sbx ls --json": { sandboxes: [{ ...sandbox, agent: kind.name }] } });
+		const io = fakeIo({ ...fixture, "sbx ls --json": [{ ...sandbox, agent: kind.name }] });
 		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 
 		const text = ls(io);
@@ -94,7 +94,7 @@ for (const kind of Object.values(KINDS)) {
 	});
 
 	test(`${kind.name} inspecting a stopped pane leaves the container asleep`, () => {
-		const io = fakeIo({ ...fixture, "sbx ls --json": { sandboxes: [{ ...stopped, agent: kind.name }] } });
+		const io = fakeIo({ ...fixture, "sbx ls --json": [{ ...stopped, agent: kind.name }] });
 		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 
 		const text = peek(sandbox.name, io);

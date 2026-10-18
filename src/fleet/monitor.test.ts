@@ -36,13 +36,11 @@ function monitorRuntime(
 	});
 	const io = fakeIo(
 		{
-			"sbx ls --json": {
-				sandboxes: agents.map((a) => ({
-					name: a.name,
-					agent: "pi",
-					workspaces: ["/w/repo"],
-				})),
-			},
+			"sbx ls --json": agents.map((a) => ({
+				name: a.name,
+				agent: "pi",
+				workspaces: ["/w/repo"],
+			})),
 			"herdr agent list": herdr,
 		},
 		h,

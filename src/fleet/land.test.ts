@@ -181,11 +181,9 @@ exec ssh-keygen "$@"
 	io.sbx = (args) => {
 		io.calls.push(["sbx", ...args]);
 		if (args[0] === "ls")
-			return JSON.stringify({
-				sandboxes: [
-					{ name: "pi-a", agent: "pi", status: "running", workspaces: [repos[0].repo] },
-				],
-			});
+			return JSON.stringify([
+				{ name: "pi-a", agent: "pi", status: "running", workspaces: [repos[0].repo] },
+			]);
 		if (args[0] !== "exec" || args[2] === "true") return "";
 		const [command, ...rest] = args.slice(2).map(inGuest);
 		return execFileSync(command, rest, {

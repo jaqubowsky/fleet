@@ -12,7 +12,7 @@ function containerTab(files: Record<string, string> = {}) {
 		"herdr pane current": { result: { pane: { pane_id: "w1:p1", tab_id: "w1:t1", workspace_id: "w1" } } },
 		"herdr tab list": { result: { tabs: [{ tab_id: "w1:t1", label: NAME }] } },
 		"herdr agent list": { result: { agents: [{ tab_id: "w1:t1", name: NAME }] } },
-		"sbx ls": { sandboxes: [{ name: NAME, status: "running", agent: "claude", workspaces: ["/w/app"] }] },
+		"sbx ls": [{ name: NAME, status: "running", agent: "claude", workspaces: ["/w/app"] }],
 	});
 	Object.assign(io.files, files);
 	return io;

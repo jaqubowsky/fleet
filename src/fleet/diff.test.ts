@@ -8,7 +8,7 @@ import { DIFF_PROBE, containerPatch, toggleDiff } from "./diff.ts";
 import { diffView } from "./diff-view.ts";
 import { fakeIo } from "./fake-io.ts";
 
-const RUNNING = { "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "running", workspaces: ["/app"] }] } };
+const RUNNING = { "sbx ls": [{ name: "pi-app-task", agent: "pi", status: "running", workspaces: ["/app"] }] };
 const PATCH = "/home/me/.fleet/cache/diff/pi-app-task.patch";
 
 test("the diff shortcut stays inside Herdr prefix mode", () => {
@@ -30,7 +30,7 @@ for (const kind of ["pi", "claude"]) {
 			"herdr tab list": { result: { tabs: [{ tab_id: "w1:t1", label: name }] } },
 			"herdr agent list": { result: { agents: [{ tab_id: "w1:t1", name }] } },
 			"herdr pane split": { result: { pane: { pane_id: "w1:p2" } } },
-			"sbx ls": { sandboxes: [{ name, status: "running", agent: kind, workspaces: ["/app"] }] },
+			"sbx ls": [{ name, status: "running", agent: kind, workspaces: ["/app"] }],
 		});
 
 		toggleDiff(undefined, undefined, "/harness", io);
@@ -55,7 +55,7 @@ test("the second toggle closes only the recorded diff pane", () => {
 });
 
 test("a stopped container is never executed to read its changes", () => {
-	const io = fakeIo({ "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] } });
+	const io = fakeIo({ "sbx ls": [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] });
 
 	const patch = containerPatch("pi-app-task", io);
 
@@ -64,7 +64,7 @@ test("a stopped container is never executed to read its changes", () => {
 });
 
 test("a removed container has no changes to read", () => {
-	const io = fakeIo({ "sbx ls": { sandboxes: [] } });
+	const io = fakeIo({ "sbx ls": [] });
 
 	assert.equal(containerPatch("pi-app-task", io), undefined);
 });
@@ -80,7 +80,7 @@ test("the first read sends no empty sbx command arguments", () => {
 
 test("every repository of a task is read from its private checkout, its paths under its own name", () => {
 	const io = fakeIo({
-		"sbx ls": { sandboxes: [{ name: "claude-app-task", agent: "claude", status: "running", workspaces: ["/app"] }] },
+		"sbx ls": [{ name: "claude-app-task", agent: "claude", status: "running", workspaces: ["/app"] }],
 		"read /home/me/.fleet/config/fleet/claude-app-task.json": JSON.stringify({ version: 1, task: "/task", repositories: ["app", "api"].map(name => ({ repo: `/${name}`, workspace: `/private/${name}`, name, base: "main", baseSha: "abc", branch: "task", served: name })) }),
 		"sbx exec": JSON.stringify(""),
 	});
@@ -223,7 +223,7 @@ test("the view shows the container's changes in hunk and swaps in each new read 
 
 test("a stopped container keeps its last changes on screen", async t => {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
-	const io = fakeIo({ "sbx ls": { sandboxes: [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] } });
+	const io = fakeIo({ "sbx ls": [{ name: "pi-app-task", agent: "pi", status: "stopped", workspaces: ["/app"] }] });
 	io.files[PATCH] = "diff --git a/kept b/kept\n";
 	let quit: (code: number) => void = () => {};
 	io.launch = () => new Promise(resolve => { quit = resolve; });
