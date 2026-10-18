@@ -19,6 +19,14 @@ allow	Bash	ls ~/.claude/skills
 allow	Bash	head -5 ~/.pi/agent/settings.json
 allow	Grep	~/.claude/rules
 allow	Glob	~/.pi/skills
-deny	Bash	sed -n 1p ~/.claude/settings.json
-deny	Bash	find ~/.claude/skills -name SKILL.md
-deny	Bash	git -C ~/.pi log
+allow	Bash	readlink -f ~/.claude/hooks/guard.sh
+allow	Bash	realpath ~/.claude/rules
+deny	Bash	sed -i '' s/a/b/ ~/.claude/rules/core.md
+deny	Bash	perl -pi -e s/a/b/ ~/.claude/rules/core.md
+deny	Bash	rm ~/.claude/rules/core.md
+deny	Bash	mv ~/.claude/rules/core.md /tmp/core.md
+ask	Bash	sed -n 1p ~/.claude/settings.json
+ask	Bash	find ~/.claude/skills -name SKILL.md
+ask	Bash	git -C ~/.pi log
+ask	Bash	cd ~/.claude && for f in hooks/guard.sh agents/reviewer.md; do cat "$f"; done
+allow	Bash	for f in core host; do cat ~/.claude/rules/$f.md; done

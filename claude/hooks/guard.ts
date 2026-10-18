@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../../src/guard/down.ts";
 import { landPermission } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
-import { OWN_CONFIG, writesOwnConfig } from "../../src/guard/own-config.ts";
+import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../../src/guard/own-config.ts";
 import { decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
 
 type HookInput = {
@@ -43,12 +43,13 @@ export function answer(
 			});
 	}
 	const cwd = input.cwd ?? process.cwd();
-	if (writesOwnConfig(tool, input.tool_input ?? {}, cwd, home))
+	const homeWrite = ownConfig(tool, input.tool_input ?? {}, cwd, home);
+	if (homeWrite)
 		return JSON.stringify({
 			hookSpecificOutput: {
 				hookEventName: "PreToolUse",
-				permissionDecision: "deny",
-				permissionDecisionReason: OWN_CONFIG,
+				permissionDecision: homeWrite,
+				permissionDecisionReason: homeWrite === "deny" ? OWN_CONFIG : OWN_CONFIG_UNREAD,
 			},
 		});
 	const verdict = decide(

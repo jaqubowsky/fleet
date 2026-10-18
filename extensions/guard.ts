@@ -3,8 +3,8 @@ import { downPermission, sandboxDownTarget } from "../src/guard/down.ts";
 import { landPermission } from "../src/guard/land.ts";
 import type { Kind } from "../src/harness.ts";
 import { hostAt } from "../src/guard/host.ts";
-import { OWN_CONFIG, writesOwnConfig } from "../src/guard/own-config.ts";
-import { decide } from "../src/guard/policy.ts";
+import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../src/guard/own-config.ts";
+import { decide, unknownTool } from "../src/guard/policy.ts";
 import { TRUSTED, translate } from "../src/guard/translate.ts";
 
 type ToolCallEvent = { toolName: string; input?: Record<string, unknown> };
@@ -59,10 +59,18 @@ export default function guard(
 
 			const payload = translate(event.toolName, event.input ?? {});
 			if (!payload)
-				return { block: true, reason: `Unknown tool policy: ${event.toolName}` };
+				return { block: true, reason: unknownTool(event.toolName) };
 
-			if (writesOwnConfig(payload.tool_name, payload.tool_input, ctx.cwd, home))
-				return { block: true, reason: OWN_CONFIG };
+			const homeWrite = ownConfig(payload.tool_name, payload.tool_input, ctx.cwd, home);
+			if (homeWrite === "deny") return { block: true, reason: OWN_CONFIG };
+			if (homeWrite === "ask") {
+				if (!ctx.hasUI || !ctx.ui) return { block: true, reason: OWN_CONFIG_UNREAD };
+				return ctx.ui
+					.confirm("Command in a harness home", String(event.input?.command ?? ""))
+					.then((approved) =>
+						approved ? undefined : { block: true, reason: OWN_CONFIG_UNREAD },
+					);
+			}
 
 			const verdict = decide(
 				payload.tool_name,

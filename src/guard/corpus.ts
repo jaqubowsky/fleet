@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-type Case = { want: "allow" | "deny"; tool: string; subject: string };
+type Want = "allow" | "ask" | "deny";
+type Case = { want: Want; tool: string; subject: string };
 
 const CORPUS = join(import.meta.dirname, "../../host/tests");
 
@@ -12,7 +13,7 @@ export function cases(file: string): Case[] {
 		.map((line) => {
 			const [want, tool, ...rest] = line.split("\t");
 
-			return { want: want === "pass" ? "allow" : (want as "allow" | "deny"), tool, subject: rest.join("\t") };
+			return { want: want === "pass" ? "allow" : (want as Want), tool, subject: rest.join("\t") };
 		});
 }
 
