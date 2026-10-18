@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
-import { manifestPath } from "./repositories.ts";
+import { manifestPath, stopFile } from "./repositories.ts";
 import { SEATS, KINDS } from "../harness.ts";
 import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import {
@@ -775,6 +775,17 @@ test("up reuses an existing container and only opens the tab", async () => {
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
 	assert.ok(io.calls.some((c) => c[1] === "pane"));
 	assert.ok(!io.calls.some((c) => c[0] === "append" && c[2].includes(" created ")));
+});
+
+test("up that attaches a stopped container forgets the tab its stop saved", async () => {
+	const stopped = { name: "pi-webapp-web-1", agent: "pi", status: "stopped", workspaces: [repo] };
+	const io = fakeIo({ ...base, "sbx ls --json": [stopped] });
+	const record = stopFile(stopped, io);
+	io.files[record] = JSON.stringify({ pane: "w1:closed" });
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.equal(io.files[record], undefined);
 });
 
 test("up adopts an agent that already carries the name, whatever its tab is called", async () => {

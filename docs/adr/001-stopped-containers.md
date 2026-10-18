@@ -18,4 +18,4 @@ Leave `status.md` unchanged. Restart in the saved pane, resuming the last saved 
 
 ## Consequences
 
-Stop ends guest processes. Restart does not restore an interrupted tool call, a development server or process memory. The saved tab must still exist. Containers stopped outside fleet have no saved pane record and need `fleet up` to attach.
+Stop ends guest processes. Restart does not restore an interrupted tool call, a development server or process memory. The saved tab must still exist. Containers stopped outside fleet have no saved pane record and need `fleet up` to attach. A container whose saved tab is gone also needs `fleet up`, which removes the record once the agent runs in the new tab. A record left behind makes ls, exec, peek and the watch treat the running container as stopped, and makes the next stop send keys to the gone tab.

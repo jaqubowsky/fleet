@@ -15,6 +15,7 @@ import {
 	taskDir,
 	repositoryManifest,
 	saveRepositories,
+	stopFile,
 } from "./repositories.ts";
 import { agentFor, sandboxes, type Agent, type Sandbox } from "./status.ts";
 import { keychainRead } from "./tokens.ts";
@@ -504,6 +505,7 @@ export async function up(
 		runAgent(sandbox, task, pane, kind, args, input.root, io);
 	}
 	await waitForAgent(io, pane, sandbox, kind);
+	if (existing) io.remove(stopFile({ name: sandbox, workspaces: [input.repo] }, io));
 	logEvent(io, "up", agent);
 	io.herdr(["agent", "rename", pane, agent]);
 	io.log(
