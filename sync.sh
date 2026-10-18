@@ -154,7 +154,7 @@ by_hand() {
 
 template_loaded() {
 	sbx template ls --json 2>/dev/null | jq -e --arg r "${1%%:*}" --arg t "${1##*:}" \
-		'.images[] | select((.repository | endswith("/" + $r)) and .tag == $t)' >/dev/null
+		'.[] | select((.repository | endswith("/" + $r)) and .tag == $t)' >/dev/null
 }
 
 command -v node >/dev/null || { by_hand; exit 1; }
@@ -242,7 +242,7 @@ if set_up pi && [ -f "$HOME/.pi/agent/npm/package.json" ]; then
 		act npm uninstall --prefix "$HOME/.pi/agent/npm" $unused
 	fi
 fi
-if live="$(sbx ls --json 2>/dev/null | jq -r '.sandboxes[].name')"; then
+if live="$(sbx ls --json 2>/dev/null | jq -r '.[].name')"; then
 	for task in "$TASKS"/*/*/; do
 		task="${task%/}"
 		[ -f "$task/status.md" ] && grep -qx 'status: new' "$task/status.md" || continue

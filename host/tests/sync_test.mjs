@@ -10,7 +10,7 @@ const STUBS = {
 	claude: "echo 1.0.0",
 	pi: "echo 1.0.0",
 	docker: "exit 0",
-	sbx: `echo '{"sandboxes":[],"images":[{"repository":"docker.io/library/my-claude","tag":"v1"},{"repository":"docker.io/library/my-pi","tag":"v1"}]}'`,
+	sbx: `case "$1" in template) echo '[{"repository":"docker.io/library/my-claude","tag":"v1"},{"repository":"docker.io/library/my-pi","tag":"v1"}]' ;; *) echo '[]' ;; esac`,
 };
 
 function machine(t, agents) {
@@ -150,6 +150,18 @@ test("--apply with nothing to change writes no archive", (t) => {
 	assert.equal(status, 0, out);
 	assert.match(out, /In sync: nothing to change\./);
 	assert.deepEqual(archives(mac.home), []);
+});
+
+test("--apply removes the empty task directory of a sandbox that never started", (t) => {
+	const mac = claudeMac(t);
+	const task = join(mac.home, ".fleet/tasks/webapp/pi-webapp-a");
+	mkdirSync(task, { recursive: true });
+	writeFileSync(join(task, "status.md"), "status: new\n");
+
+	const { status, out } = mac.sync("--apply");
+
+	assert.equal(status, 0, out);
+	assert.deepEqual(readdirSync(join(mac.home, ".fleet/tasks/webapp")), []);
 });
 
 test("--apply relinks a dangling fleet link instead of removing it", (t) => {
