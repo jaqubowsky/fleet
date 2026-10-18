@@ -848,7 +848,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				.join("\n");
 			assert.match(
 				rules,
-				/A question for the host goes into the open questions of the closing message, and the turn ends there\. Never a `\w+` dialog here/,
+				/A question for the host goes into the open questions of the closing message\. Never a `\w+` dialog here/,
 			);
 			assert.ok(
 				rules.includes(

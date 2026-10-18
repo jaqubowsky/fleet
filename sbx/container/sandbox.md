@@ -29,17 +29,17 @@ You run in an isolated container. Someone outside watches this session and gives
    - goes once into the closing message's open questions, so the host can give the next container more
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
-8. A question for the host goes into the open questions of the closing message, and the turn ends there. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
+8. A question for the host goes into the open questions of the closing message. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
 
 ## The run
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. Implementation starts only once each is answered and the answer is in Decisions, with the user's deciding words and their date. An order to deliver end to end answers all but a product decision nothing settled
+1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. An order to deliver end to end answers all but a product decision nothing settled
 2. `implement` works the Plan's slices in order: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. At the end, one edit ticks each criterion in `ticket.md` with its evidence beside it
 3. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 
-Every task has the same files, built the same way, as {{refs}} lists them. A prompt with no ticket behind it runs none of this.
+A prompt with no ticket behind it runs none of this.
 
 An order to see a change before it is built runs `mockup` first; its frames are the hand-over.
 
