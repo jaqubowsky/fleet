@@ -48,7 +48,7 @@ export function downPermission(
 	} catch (error) {
 		return {
 			decision: "deny",
-			reason: `No host down permission could be read for ${match[2]}: ${(error as Error).message}.`,
+			reason: `No host down permission could be read for ${match[2]}: ${(error as Error).message}. Without it the guard cannot tell whether closing the container discards work the person still needs; check that fleet ls and fleet profile answer, then retry, or ask the person.`,
 		};
 	}
 	if (target?.level === "auto")

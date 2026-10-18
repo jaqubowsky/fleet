@@ -28,6 +28,8 @@ const PLAIN = /^\s*(git|sbx|herdr)\s[^\n;&|`$()<>]*$/;
 const plain = (subject: string, reason: string): Decision =>
 	PLAIN.test(subject) ? granted(reason) : allow(reason);
 const deny = (reason: string): Decision => ({ decision: "deny", reason });
+export const unknownTool = (tool: string): string =>
+	`Unknown tool policy: ${tool}. The guard has no rule for this tool, so it cannot see whether the call reaches a secret or a remote. Use a tool the guard judges, or add a policy for this one in the harness repo's src/guard/policy.ts.`;
 
 function strings(value: unknown): string[] {
 	if (typeof value === "string") return [value];
@@ -78,7 +80,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 			: allow("MCP call has no string arguments.");
 	}
 
-	return deny(`Unknown tool policy: ${tool}`);
+	return deny(unknownTool(tool));
 }
 
 const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.claude/\.credentials\.json|\.claude\.json)`;
@@ -92,7 +94,7 @@ export const SECRET_MATERIAL =
 	/(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,}|-----BEGIN\s[A-Z ]*PRIVATE KEY|op:\/\/)/;
 const DELEGATED = /(^|[;&|]|&&)\s*sbx\s+(exec|run|cp)(\s|$)/;
 const CREDENTIAL_STORE =
-	"Credential store is off limits: ~/.ssh, ~/.config/op and ~/Library/Keychains are read by the human only.";
+	"Credential store is off limits: ~/.ssh, ~/.config/op and ~/Library/Keychains hold the keys behind every login and signature, and a value read here lands in this transcript. Ask the person for what you need from them.";
 
 const START = String.raw`^(\|\s*)?`;
 const command = (rule: string): RegExp => new RegExp(START + rule, "m");
@@ -105,12 +107,12 @@ const PROTECTED = String.raw`(~|\$HOME|/Users/[^/\s]+/(Work|Personal|my-knowledg
 const ROOTS = String.raw`(/|/Users/[^/\s]+)(\s|$)`;
 
 const GH_WRITE =
-	"gh writing to the remote is a push by another name. The human opens the PR and runs the release.";
+	"gh writing to the remote is a push by another name, made under the person's GitHub identity. The repository's profile decides who opens and merges a pull request (fleet profile <repo>); every other gh write is the person's own command.";
 
 const BASH_RULES: [RegExp, string][] = [
 	[
 		command(String.raw`op\s+(read|item|document|vault|whoami|signin|account)\b`),
-		"1Password is the human's. Secrets reach a sandbox through sbx, never through the agent's shell.",
+		"The op CLI opens the person's vault, and a value it prints lands in this transcript. Secrets reach a sandbox through sbx; ask the person for anything else.",
 	],
 	[
 		command(
@@ -143,7 +145,7 @@ const BASH_RULES: [RegExp, string][] = [
 		command(
 			String.raw`(git\s+config[^|;&]*gpgsign\s+(false|no|0)|git[^|;&]*\s-c\s*commit\.gpg[sS]ign=(false|no|0)|git\s+commit[^|;&]*--no-gpg-sign)`,
 		),
-		"Every commit on this Mac is signed, and the Touch ID prompt is the evidence a person was here. Turning signing off removes that evidence.",
+		"Every commit on this Mac is signed, and the Touch ID prompt is the evidence a person was here. Turning signing off removes that evidence. Commit signed; when the prompt goes unanswered, tell the person and keep the commit for their tap.",
 	],
 	[
 		command(
@@ -283,7 +285,9 @@ export function decide(
 	const call = read(tool, input);
 	if ("decision" in call) return call;
 	if (!call.subject)
-		return deny("Guard policy error: tool input has no policy subject.");
+		return deny(
+			"Guard policy error: tool input has no policy subject, so the guard cannot see what the call touches. Pass the path, command, URL or query the tool takes.",
+		);
 
 	const subject = call.outbound
 		? call.subject.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, " ")
@@ -356,7 +360,9 @@ export function decide(
 				"Recursive delete of a protected path. Name a path inside the working tree instead.",
 			);
 		if (hit(RM_ROOTS))
-			return deny("Recursive delete of a home or filesystem root.");
+			return deny(
+				"Recursive delete of a home or filesystem root erases every file under it. Name the directory inside the working tree you mean.",
+			);
 	}
 
 	const sbxRuns = (verb: string) =>
@@ -378,7 +384,9 @@ export function decide(
 	if (ORCHESTRATION.test(subject))
 		return plain(subject, "sbx/herdr orchestration.");
 	if (hit(SSH) && !hit(SSH_LOCAL))
-		return deny("Remote shell access is outside this local-only fleet.");
+		return deny(
+			"Remote shell access runs commands on another machine, where this guard cannot see them. Run the command here, or ask the person to run it on that machine.",
+		);
 	if (READ_ONLY_GIT.test(subject)) return plain(subject, "Read-only git.");
 
 	return allow("Allowed by Bash policy.");
