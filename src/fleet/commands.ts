@@ -10,6 +10,7 @@ import {
 	repositoryCheckout,
 	groupManifest,
 	repositoryManifest,
+	stopFile,
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef, onRemote } from "./land.ts";
@@ -184,10 +185,6 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 		tail = `(no herdr agent named ${agentName(sandbox)}; the tab may still be coming up)`;
 	}
 	return `${git}\n=== last ${lines} lines\n${tail}`;
-}
-
-export function stopFile(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string {
-	return `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/logs/sandbox-stop.json`;
 }
 
 export function stoppedPane(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string | undefined {

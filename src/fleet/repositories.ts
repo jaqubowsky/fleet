@@ -1,7 +1,7 @@
 import { basename, dirname, isAbsolute } from "node:path";
 import type { Io } from "./io.ts";
 import { FLEET } from "./home.ts";
-import { parseCheckout } from "./status.ts";
+import { parseCheckout, type Sandbox } from "./status.ts";
 
 type Repository = {
 	repo: string;
@@ -41,6 +41,10 @@ export function taskDir(
 		);
 	if (manifest) return manifest.task;
 	return `${artifactsDir(repo, io)}/${sandbox}`;
+}
+
+export function stopFile(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string {
+	return `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/logs/sandbox-stop.json`;
 }
 
 export function manifestPath(sandbox: string, io: Io): string {

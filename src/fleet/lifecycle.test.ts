@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { KINDS, SEATS } from "../harness.ts";
-import { ls, peek, start, stop, stopFile, stoppedPane, steer } from "./commands.ts";
+import { ls, peek, start, stop, stoppedPane, steer } from "./commands.ts";
+import { stopFile } from "./repositories.ts";
 import { fakeIo } from "./fake-io.ts";
 import type { Sandbox } from "./status.ts";
 

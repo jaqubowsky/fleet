@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { KINDS } from "../harness.ts";
-import { stopFile } from "./commands.ts";
+import { stopFile } from "./repositories.ts";
 import { fakeIo } from "./fake-io.ts";
 import { keepName, stoppedScreen, stoppedView } from "./stopped.ts";
 

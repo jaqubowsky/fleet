@@ -1,5 +1,5 @@
 import { CLI } from "../harness.ts";
-import { stopFile } from "./commands.ts";
+import { stopFile } from "./repositories.ts";
 import type { Io } from "./io.ts";
 import type { Sandbox } from "./status.ts";
 
