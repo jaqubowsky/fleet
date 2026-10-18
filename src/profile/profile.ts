@@ -78,10 +78,6 @@ function text(entry: Entry, keys: string[], where: string): void {
 }
 
 function token(value: string, where: string): void {
-	if (value.startsWith("op://"))
-		throw new Error(
-			`${where}.token is an op:// reference, which ${CLI} no longer reads: store the token with \`${CLI} tokens set <name>\`, then write keychain:<name>`,
-		);
 	const name = keychainName(value);
 	if (name !== undefined && !KEYCHAIN_NAME.test(name))
 		throw new Error(

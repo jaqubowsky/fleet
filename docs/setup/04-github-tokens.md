@@ -23,7 +23,7 @@ The guard refuses `fleet tokens` to agents. An agent can still use a token withi
 
 ## Gotcha
 
-A shell function named `gh`, such as the one the 1Password shell plugin defines, hides the wrapper. Step 3's check, `zsh -ic 'type gh'`, catches it: remove the function from the person's shell startup.
+A shell function named `gh` hides the wrapper. Step 3's check, `zsh -ic 'type gh'`, catches it: remove the function from the person's shell startup.
 
 ## Signing
 

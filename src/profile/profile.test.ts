@@ -110,10 +110,7 @@ test("a profile file that breaks the contract is refused with the field it break
 	);
 });
 
-test("a container token is a keychain name or an environment variable, and an op:// reference says how to move to the keychain", () => {
-	refused((e) => {
-		e.container.token = "op://Dev/GitHub PAT private-app/credential";
-	}, /private-app\.container\.token is an op:\/\/ reference, which fleet no longer reads: store the token with `fleet tokens set <name>`, then write keychain:<name>/);
+test("a container token is a keychain name or an environment variable", () => {
 	refused((e) => {
 		e.container.token = "keychain:Private App";
 	}, /private-app\.container\.token names keychain:Private App; a keychain name matches \^\[a-z0-9\]\[a-z0-9-\]\*\$/);
