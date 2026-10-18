@@ -730,6 +730,7 @@ test("ls joins sbx, herdr and git state", () => {
 test("ls on an sbx older than 0.48 names the version fleet needs", () => {
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
+		"herdr agent list": { result: { agents: [] } },
 	});
 
 	assert.throws(() => ls(io), /sbx 0\.48 or later/);
