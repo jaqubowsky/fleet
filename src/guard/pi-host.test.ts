@@ -16,12 +16,12 @@ function hostRuntime(t: TestContext, sandbox = "pi-harness-remove-pi-lens") {
 	t.mock.method(childProcess, "spawnSync", (file: string, args: string[]) => {
 		assert.equal(file, "sbx");
 		assert.deepEqual(args, ["ls", "--json"]);
-		return { status: 0, stdout: '{"sandboxes":[]}', stderr: "" };
+		return { status: 0, stdout: '[]', stderr: "" };
 	});
 	t.mock.method(childProcess, "execFileSync", (file: string, args: string[]) => {
 		if (file === "sbx") {
 			assert.deepEqual(args, ["ls", "--json"]);
-			return JSON.stringify({ sandboxes: [{ name: sandbox, workspaces: [process.cwd()] }] });
+			return JSON.stringify([{ name: sandbox, workspaces: [process.cwd()] }]);
 		}
 		assert.equal(file, "git");
 		assert.deepEqual(args, ["-C", process.cwd(), "config", "--get-regexp", "^remote\\."]);

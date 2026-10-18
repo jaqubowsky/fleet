@@ -52,6 +52,17 @@ test("down that cannot list sandboxes names the failed listing", () => {
 	assert.match(verdict?.reason ?? "", /ETIMEDOUT/);
 });
 
+test("down on an sbx older than 0.48 names the version the guard needs", () => {
+	const listedBy047 = () => JSON.stringify({ sandboxes: [{ name: "pi-harness-demo", workspaces: ["/r"] }] });
+
+	const verdict = downPermission("fleet down pi-harness-demo", (sandbox) =>
+		sandboxDownTarget(sandbox, "/nonexistent", "/nonexistent", listedBy047),
+	);
+
+	assert.equal(verdict?.decision, "deny");
+	assert.match(verdict?.reason ?? "", /sbx 0\.48 or later/);
+});
+
 test("down reads the target workspace profile instead of the host checkout", (t) => {
 	const root = mkdtempSync(join(tmpdir(), "down-profile-"));
 	t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -79,7 +90,7 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 		]);
 		return { name: `pi-${level}`, workspaces: [workspace] };
 	});
-	const list = () => JSON.stringify({ sandboxes });
+	const list = () => JSON.stringify(sandboxes);
 
 	assert.deepEqual(sandboxDownTarget("pi-human", root, root, list), {
 		sandbox: "pi-human",
@@ -119,9 +130,7 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 	const shortened = agentName(longName);
 	assert.notEqual(shortened, longName);
 	const target = sandboxDownTarget(shortened, root, root, () =>
-		JSON.stringify({
-			sandboxes: [{ name: longName, workspaces: [sandboxes[1].workspaces[0]] }],
-		}),
+		JSON.stringify([{ name: longName, workspaces: [sandboxes[1].workspaces[0]] }]),
 	);
 	assert.deepEqual(target, { sandbox: longName, level: "auto" });
 	assert.match(

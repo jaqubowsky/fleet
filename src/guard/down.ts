@@ -80,13 +80,14 @@ export function sandboxDownTarget(
 	list = () =>
 		execFileSync("sbx", ["ls", "--json"], { encoding: "utf8", timeout: 5000 }),
 ): DownTarget | undefined {
-	let listed: { sandboxes?: { name?: string; workspaces?: string[] }[] };
+	let listed: { name?: string; workspaces?: string[] }[];
 	try {
 		listed = JSON.parse(list()) as typeof listed;
 	} catch (error) {
 		throw new Error(`sbx ls --json failed: ${(error as Error).message}`);
 	}
-	const entry = listed.sandboxes?.find(
+	if (!Array.isArray(listed)) throw new Error("sbx ls --json gave no list of sandboxes; the guard needs sbx 0.48 or later");
+	const entry = listed.find(
 		(item) =>
 			item.name === sandbox || (item.name && agentName(item.name) === sandbox),
 	);
