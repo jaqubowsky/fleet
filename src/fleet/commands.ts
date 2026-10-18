@@ -241,7 +241,13 @@ export async function start(sandbox: Sandbox, root: string, io: Io): Promise<voi
 	if (sandbox.status !== "stopped") throw new Error(`${sandbox.name}: already ${sandbox.status}; inspect its tab before starting again`);
 	const stale = staleSandbox(sandbox, root, io);
 	if (stale) io.log(stale);
-	io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
+	try {
+		io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
+	} catch (error) {
+		if (error instanceof Error && error.message.includes("pane_not_found"))
+			throw new Error(`${sandbox.name}: its saved tab ${pane} is gone; use ${CLI} up to attach it to a new tab`);
+		throw error;
+	}
 	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT]);
 	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
 	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), pane, root, io);

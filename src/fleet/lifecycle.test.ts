@@ -74,6 +74,17 @@ for (const kind of Object.values(KINDS)) {
 		assert.equal(io.calls.filter((c) => c.includes("prompt") || c.includes("create")).length, 0);
 	});
 
+	test(`${kind.name} start whose saved tab is gone points to fleet up`, async () => {
+		const gone = new Error('herdr pane send-keys w1:gone ctrl+c failed (1)\n{"error":{"code":"pane_not_found","message":"pane w1:gone not found"}}');
+		const io = fakeIo({ ...fixture, "herdr pane send-keys w1:gone": gone }, SEATS[kind.name]);
+		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:gone" });
+
+		await assert.rejects(start(stopped, "/harness", io), new RegExp(`${sandbox.name}: its saved tab w1:gone is gone; use fleet up to attach it to a new tab$`));
+
+		assert.equal(stoppedPane(sandbox, io), "w1:gone");
+		assert.equal(io.calls.filter((c) => c[0] === "sbx").length, 0);
+	});
+
 	test(`${kind.name} start names a sandbox built from an older harness`, async () => {
 		const io = fakeIo({ ...fixture, "git log -1 --format=%h": "f7e7f1a" }, SEATS[kind.name]);
 		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
