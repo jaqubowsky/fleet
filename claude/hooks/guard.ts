@@ -13,12 +13,22 @@ type HookInput = {
 };
 
 const POLICY = new RegExp(`^(${POLICY_TOOLS.join("|")})$`);
+
+function asPolicyCall(input: HookInput): HookInput {
+	if (input.tool_name !== "Monitor") return input;
+	const ws = input.tool_input?.ws as { url?: unknown } | undefined;
+	return ws
+		? { ...input, tool_name: "WebFetch", tool_input: { url: String(ws.url ?? "") } }
+		: { ...input, tool_name: "Bash", tool_input: { command: String(input.tool_input?.command ?? "") } };
+}
+
 export function answer(
-	input: HookInput,
+	given: HookInput,
 	root?: string,
 	home = homedir(),
 	level = (sandbox: string) => sandboxDownTarget(sandbox, root, home),
 ): string {
+	const input = asPolicyCall(given);
 	const tool = input.tool_name ?? "";
 	if (!POLICY.test(tool)) return "";
 	if (tool === "Bash") {

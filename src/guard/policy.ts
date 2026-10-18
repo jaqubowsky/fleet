@@ -44,6 +44,7 @@ type Call = { subject: string; outbound: boolean };
 
 export const POLICY_TOOLS = [
 	"Bash",
+	"Monitor",
 	"Read",
 	"Edit",
 	"Write",

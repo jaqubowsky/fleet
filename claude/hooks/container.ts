@@ -18,7 +18,7 @@ async function refusal(stdin: string): Promise<string | undefined> {
 			Number(process.env.FLEET_REPOSITORIES) > 1
 				? ("host-only" as const)
 				: undefined;
-		return input.tool_name === "Bash"
+		return input.tool_name === "Bash" || input.tool_name === "Monitor"
 			? refusal(
 					input.tool_input?.command ?? "",
 					input.cwd ?? process.cwd(),

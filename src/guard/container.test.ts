@@ -206,7 +206,7 @@ test("a clone without origin/HEAD refuses every push, since it cannot tell the d
 test("the claude container hook denies a push to the default branch and stays silent on the own branch", (t) => {
 	const dir = clone("web-1");
 	const task = mkdtempSync(join(tmpdir(), "container-task-"));
-	const hook = (command: string, multi = false) =>
+	const hook = (command: string, multi = false, tool = "Bash") =>
 		execFileSync(
 			process.execPath,
 			[
@@ -215,7 +215,7 @@ test("the claude container hook denies a push to the default branch and stays si
 			],
 			{
 				input: JSON.stringify({
-					tool_name: "Bash",
+					tool_name: tool,
 					tool_input: { command },
 					cwd: dir,
 				}),
@@ -236,6 +236,7 @@ test("the claude container hook denies a push to the default branch and stays si
 	assert.equal(hook("git push -u origin web-1"), "");
 	assert.match(hook("git commit --no-verify -m x"), /hooks/);
 	assert.match(hook("pkill -f vite"), /own shell/);
+	assert.match(hook("git push origin main", false, "Monitor"), /default branch main/);
 	mkdirSync(join(task, "claude-a"));
 	writeFileSync(join(task, "claude-a/repositories.json"), "{}");
 	t.after(() => rmSync(task, { recursive: true, force: true }));
