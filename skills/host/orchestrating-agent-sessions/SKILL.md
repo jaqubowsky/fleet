@@ -20,7 +20,7 @@ A steer is an order in your voice: what to do, the facts it rests on stated as f
 - What a container can deliver, in the words a steer uses: [references/outcomes.md](references/outcomes.md)
 
 ```text
-Deliver the ticket in <task dir>/ticket.md. Restoring a project brings back only the files deleted with it.
+Deliver the ticket in <task dir, absolute, never ~>/ticket.md. Restoring a project brings back only the files deleted with it.
 ```
 
 ## Driving a task
