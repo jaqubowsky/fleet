@@ -126,6 +126,19 @@ test("a pkill -f or pgrep -f whose pattern matches its own command is refused, a
 		assert.equal(refusal(command, dir), undefined, command);
 });
 
+test("a pkill -f pattern that misses its own command passes when the command redirects output", () => {
+	const dir = clone("web-1");
+
+	for (const command of [
+		"pkill -f '[t]sserver' 2>/dev/null",
+		"pkill -f '[t]sserver' 2> /dev/null",
+		"pkill -f '[t]sserver' >/dev/null 2>&1",
+		"pkill -f '[t]sserver' &>/dev/null",
+	])
+		assert.equal(refusal(command, dir), undefined, command);
+	assert.match(refusal("pkill -f tsserver 2>/dev/null", dir) ?? "", /own shell/);
+});
+
 test("a push the guard cannot place, because the same command moves HEAD, changes config or computes the target, is refused", () => {
 	const dir = clone("web-1");
 

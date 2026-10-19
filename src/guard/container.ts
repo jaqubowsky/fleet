@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { argvsOf } from "./argv.ts";
+import { argvsOf, redirections } from "./argv.ts";
 import { gitCall, hooksRefusal } from "./git.ts";
 
 const PUSH_VALUED = new Set([
@@ -129,7 +129,7 @@ function matchesItself(pattern: string, command: string): boolean {
 function selfMatchRefusal(command: string): string | undefined {
 	return argvsOf(command).some((argv) => {
 		if (!PROCESS_MATCH.test(argv[0] ?? "")) return false;
-		const args = argv.slice(1);
+		const args = redirections(argv).named.slice(1);
 		const pattern = args.filter((arg) => !arg.startsWith("-")).at(-1);
 		return (
 			args.some((arg) => FULL.test(arg)) &&

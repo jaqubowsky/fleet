@@ -9,6 +9,7 @@ const VALUED: Record<string, { short: string; long: string[] }> = {
 };
 const SPLIT = /^(-S|--split-string)(=?)(.*)$/s;
 const SHELL = /^(\S*\/)?(ba|z|da|k)?sh$/;
+const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
 
 export function scan(subject: string): string {
@@ -154,6 +155,18 @@ export function programs(subject: string, withDelegated: boolean): string[] {
 
 export function argvsOf(subject: string): string[][] {
 	return argvs(subject, false).map(({ argv }) => argv);
+}
+
+export function redirections(argv: string[]): { redirected: string[]; named: string[] } {
+	const redirected: string[] = [];
+	const named: string[] = [];
+	for (let i = 0; i < argv.length; i++) {
+		const op = argv[i].match(REDIRECT);
+		if (!op) named.push(argv[i]);
+		else if (argv[i].length > op[0].length) redirected.push(argv[i].slice(op[0].length));
+		else if (argv[i + 1] !== undefined) redirected.push(argv[++i]);
+	}
+	return { redirected, named };
 }
 
 function unwrapped(argv: string[]): string[] {

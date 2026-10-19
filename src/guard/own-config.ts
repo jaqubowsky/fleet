@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { type AgentName, KINDS } from "../harness.ts";
-import { argvsOf } from "./argv.ts";
+import { argvsOf, redirections } from "./argv.ts";
 import { within } from "./host.ts";
 
 const HOMES = Object.values(KINDS);
@@ -9,7 +9,6 @@ const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|readlink|realpath|echo|printf|test|\[|cd|pushd)$/;
 const WRITES = /^(\S*\/)?(cp|mv|rm|rmdir|tee|touch|mkdir|ln|chmod|chown|install|rsync|dd|truncate|unlink)$/;
 const IN_PLACE = /^(\S*\/)?(sed|perl)$/;
-const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 
 const READERS = "Read, Grep and Glob tools, or cat, head, tail, less, wc, jq, grep, rg, diff, ls, stat, file, readlink or realpath";
 export const OWN_CONFIG = `~/.pi and ~/.claude hold the settings, rules, refs, agents and skills the harness renders from its repo, so a write there skips git and the other harness, and the next render overwrites it. Change the source in the harness repo; the person renders it home. To read there, use the ${READERS}.`;
@@ -25,18 +24,6 @@ function own(path: string, home: string): boolean {
 	return HOMES.some((h) => within(path, `${home}/${h.home}`) && !RUNTIME[h.name].some((state) => within(path, `${home}/${h.home}/${state}`)));
 }
 
-function targets(argv: string[]): { redirected: string[]; named: string[] } {
-	const redirected: string[] = [];
-	const named: string[] = [];
-	for (let i = 0; i < argv.length; i++) {
-		const op = argv[i].match(REDIRECT);
-		if (!op) named.push(argv[i]);
-		else if (argv[i].length > op[0].length) redirected.push(argv[i].slice(op[0].length));
-		else if (argv[i + 1] !== undefined) redirected.push(argv[++i]);
-	}
-	return { redirected, named };
-}
-
 function writes(named: string[]): boolean {
 	const [program = "", ...rest] = named;
 	return WRITES.test(program) || (IN_PLACE.test(program) && rest.some((word) => /^-\w*i/.test(word)));
@@ -48,7 +35,7 @@ export function ownConfig(tool: string, input: Record<string, unknown>, cwd: str
 	let dir = cwd;
 	let verdict: OwnConfig;
 	for (const argv of argvsOf(String(input.command ?? ""))) {
-		const { redirected, named } = targets(argv);
+		const { redirected, named } = redirections(argv);
 		if (/^(cd|pushd)$/.test(named[0] ?? "")) dir = located(named.find((word, i) => i > 0 && word !== "--") ?? home, dir, home);
 		const inHome = (word: string) => own(located(word, dir, home), home);
 		if (redirected.some(inHome)) return "deny";
