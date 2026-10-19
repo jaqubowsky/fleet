@@ -81,11 +81,19 @@ test("a repository that declares a node version goes through fnm", async () => {
 	assert.match(calls, /use --install-if-missing/);
 });
 
-test("a repository that pins node only through engines installs on the image's node", async () => {
+test("a repository whose engines name only a range installs on the image's node", async () => {
 	const { log, calls } = await run({ "package.json": '{"engines":{"node":">=20"}}' });
 
 	assert.match(log, /deps-end: ready/);
-	assert.equal(calls, "", "fnm is not asked for a version only engines names");
+	assert.equal(calls, "", "fnm is not asked for a range only engines names");
+});
+
+test("a repository that pins node only through engines installs on that node and makes it every shell's default", async () => {
+	const { log, calls } = await run({ "package.json": '{"engines":{"node":"22.22"}}' });
+
+	assert.match(log, /deps-end: ready/);
+	assert.match(calls, /^use --install-if-missing 22\.22$/m);
+	assert.match(calls, /^default 22\.22$/m);
 });
 
 test("an install that fails names its root and exit instead of leaving the log mid-run", async () => {
