@@ -34,7 +34,6 @@ function sources(extra: Record<string, unknown> = {}): Record<string, unknown> {
 		"read /root/pi/sbx/Dockerfile":
 			'FROM pi-base\n\n{{toolchain}}\n\nCMD ["pi"]\n',
 		"read /root/claude/sbx/Dockerfile": "FROM claude-base\n\n{{toolchain}}\n",
-		"read /root/claude/sbx/stage.sh": "BUILD_ARGS+=(--build-arg X=1)\n",
 		"read /root/host/repos.json": SAMPLE_PROFILES,
 		...extra,
 	};

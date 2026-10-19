@@ -37,7 +37,7 @@ Only for the agents installed above. Ask the person which model plans they pay f
 Person:
 
 - create a Docker account if they have none, start `sbx` once and sign in with it
-- with Claude Code: start `claude`, log in, and install the TypeScript LSP plugin from `claude-plugins-official` with `/plugin`. The Claude sandbox image copies it from `~/.claude/plugins/`, so building that image fails without it
+- with Claude Code: start `claude` and log in
 - with pi: start `pi` and run `/login` for the provider its seats name. It writes `~/.pi/agent/auth.json`, which never goes into git
 
 ## Check
@@ -47,4 +47,3 @@ Person:
 - `sbx version` prints v0.48.0 or newer; fleet reads the JSON lists sbx prints since 0.48, and `brew upgrade docker/tap/sbx` updates an older one
 - `sbx ls` answers without an authentication error; if not, the person signs in to sbx again
 - with pi: `test -f ~/.pi/agent/auth.json && echo ok` prints `ok`; if not, the login above is missing
-- with Claude Code: `test -d ~/.claude/plugins/cache/claude-plugins-official/typescript-lsp && echo ok` prints `ok`; if not, the plugin above is missing

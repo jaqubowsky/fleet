@@ -23,8 +23,6 @@ COPY --from=claude-home --chown=agent:agent fleet/    /home/agent/fleet/
 RUN playwright-cli install --skills -g \
  && test -r /home/agent/.claude/skills/playwright-cli/SKILL.md
 
-COPY --from=claude-home --chown=agent:agent plugins/  /home/agent/.claude/plugins/
-
 COPY --chmod=0755 container/base-worktree.sh /usr/local/bin/base-worktree
 COPY --chmod=0755 container/ci-wait.sh /usr/local/bin/ci-wait
 

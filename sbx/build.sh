@@ -12,8 +12,6 @@ trap 'rm -rf "$RENDERED"' EXIT
 cp -RL "$HOME/.fleet/config/git" "$STAGE/git"
 find "$STAGE" -name .DS_Store -delete
 
-if [ -f "$RENDERED/stage.sh" ]; then . "$RENDERED/stage.sh"; fi
-
 TAR="${TMPDIR:-/tmp}/${IMAGE%%:*}.tar"
 docker buildx build --provenance=false --sbom=false \
 	${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"} \

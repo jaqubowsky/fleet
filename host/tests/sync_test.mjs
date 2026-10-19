@@ -40,12 +40,8 @@ function machine(t, agents) {
 
 function claudeMac(t) {
 	const mac = machine(t, ["claude", "docker", "sbx"]);
-	const plugins = join(mac.home, ".claude/plugins");
-	for (const path of [".fleet/config/git", ".config/herdr", ".claude/plugins/marketplaces/claude-plugins-official/.claude-plugin", ".claude/plugins/cache/claude-plugins-official/typescript-lsp"])
+	for (const path of [".fleet/config/git", ".config/herdr"])
 		mkdirSync(join(mac.home, path), { recursive: true });
-	writeFileSync(join(plugins, "marketplaces/claude-plugins-official/.claude-plugin/marketplace.json"), '{"plugins": [{"name": "typescript-lsp", "lspServers": {"typescript": {}}}]}');
-	writeFileSync(join(plugins, "known_marketplaces.json"), "{}");
-	writeFileSync(join(plugins, "installed_plugins.json"), '{"version": 2, "plugins": {"typescript-lsp@claude-plugins-official": [{}]}}');
 	return mac;
 }
 
