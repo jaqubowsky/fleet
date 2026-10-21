@@ -140,10 +140,17 @@ function sandboxOf(value: string | undefined) {
 	return resolveSandbox(need(value, "sandbox"), io);
 }
 
+function checkout(path: string): string {
+	const full = resolve(path);
+	if (!io.stat(full)?.dir)
+		throw new Error(`--repo takes the path of a checkout; ${full} is not a directory`);
+	return full;
+}
+
 function repoOf(opts: Record<string, string | true | string[]>): string {
 	if (Array.isArray(opts.repo))
 		throw new Error("--repo may only be repeated for fleet up");
-	return resolve(typeof opts.repo === "string" ? opts.repo : process.cwd());
+	return checkout(typeof opts.repo === "string" ? opts.repo : process.cwd());
 }
 
 const commands: Record<string, (args: string[]) => Promise<void> | void> = {
@@ -159,7 +166,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			"claude",
 		]);
 		const repos = Array.isArray(opts.repo)
-			? opts.repo.map((path) => resolve(path))
+			? opts.repo.map(checkout)
 			: [repoOf(opts)];
 		const bases = opts.base;
 		if (Array.isArray(bases) && bases.length !== repos.length)

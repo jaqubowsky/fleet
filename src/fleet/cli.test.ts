@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { flags } from "./cli.ts";
 
@@ -40,6 +41,15 @@ test("up retains two bases in repository order", () => {
 			rest: ["task"],
 		},
 	);
+});
+
+test("up names a --repo that is not a checkout directory", () => {
+	const cli = new URL("./cli.ts", import.meta.url).pathname;
+
+	const run = spawnSync(process.execPath, [cli, "up", "task", "--repo", "/fleet-test/owner/name"], { encoding: "utf8" });
+
+	assert.equal(run.status, 1);
+	assert.match(run.stderr, /--repo takes the path of a checkout; \/fleet-test\/owner\/name is not a directory/);
 });
 
 test("a value flag without a value is an error, never true", () => {
