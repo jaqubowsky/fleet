@@ -30,6 +30,7 @@ You run in an isolated container. Someone outside watches this session and gives
    - is named as not run, never started again, by every later gate with no more memory than that
 7. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 8. A question for the host goes into the open questions of the closing message. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
+9. An image path that does not exist here, such as a Mac temp path under `/var/folders`, names a file on the Mac. Say in your reply that you cannot see it, and ask for it in the task directory, before acting on what it shows
 
 ## The run
 
