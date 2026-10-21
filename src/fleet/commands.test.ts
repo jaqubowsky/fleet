@@ -105,6 +105,18 @@ test("steer logs the prompt before sending it", () => {
 	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
+test("steer sends a ~/.fleet path as the absolute path the container mounts, and leaves the container's own ~ alone", () => {
+	const io = fakeIo();
+
+	steer(row("pi-a"), "Deliver ~/.fleet/tasks/r/pi-a/ticket.md (\"~/.fleet/tasks/r/runbook\"), TICKET=~/.fleet/tasks/r/pi-a `~/.fleet/tasks/r/notes`; skills: ~/.claude/skills", io);
+
+	assert.equal(
+		io.calls[1][4],
+		'Deliver /home/me/.fleet/tasks/r/pi-a/ticket.md ("/home/me/.fleet/tasks/r/runbook"), TICKET=/home/me/.fleet/tasks/r/pi-a `/home/me/.fleet/tasks/r/notes`; skills: ~/.claude/skills',
+	);
+	assert.match(io.calls[0][2], /session= "Deliver \/home\/me\/\.fleet\/tasks\/r\/pi-a\/ticket\.md/);
+});
+
 const builtStamp = "/home/me/.fleet/tasks/r/pi-webapp-web-1/logs/image-stamp";
 
 test("steer names a sandbox built from an older harness, and still steers", () => {

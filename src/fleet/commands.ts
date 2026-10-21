@@ -15,7 +15,7 @@ import {
 import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
-import { agentCache, FLEET } from "./home.ts";
+import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
 import { agentName } from "./name.ts";
 import { harnessStamp, imageStampPath, resumeAgent, staleSandbox } from "./up.ts";
 import {
@@ -266,6 +266,8 @@ export function steer(
 	promptAgent(sandbox, text, io, { root });
 }
 
+const HOST_FLEET = new RegExp(String.raw`(?<![\w./~-])~/${FLEET_HOME.replace(".", "\\.")}/`, "g");
+
 export function promptAgent(
 	row: Sandbox,
 	text: string,
@@ -278,13 +280,14 @@ export function promptAgent(
 	const agent = agentName(sandbox);
 	const stale = root ? staleSandbox(row, root, io) : undefined;
 	if (stale) io.log(stale);
-	logEvent(io, "steer", agent, text);
+	const sent = text.replace(HOST_FLEET, `${io.home}/${FLEET_HOME}/`);
+	logEvent(io, "steer", agent, sent);
 	try {
 		io.herdr([
 			"agent",
 			"prompt",
 			agent,
-			text,
+			sent,
 			"--wait",
 			"--until",
 			"working",
