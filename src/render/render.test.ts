@@ -896,19 +896,18 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
-	test(`${name} keeps the prose catalogue behind a pointer on both seats`, () => {
+	test(`${name} loads the prose catalogue on the host and keeps it behind a pointer in the container`, () => {
 		renderSeats(name, (out) => {
-			for (const seat of ["host", "container"]) {
-				const always = seatFiles(out, seat)
+			const always = (seat: string) =>
+				seatFiles(out, seat)
 					.filter((file) => file.endsWith("AGENTS.md") || /(^|\/)rules\/[^/]+\.md$/.test(file))
 					.map((file) => readFileSync(join(out, seat, file), "utf8"))
 					.join("\n");
-				const ref = rendered(out, seat, "refs/prose.md");
 
-				assert.doesNotMatch(always, /Patterns to detect and fix/, `${seat} always loads the catalogue`);
-				assert.match(always, /refs\/prose\.md/, `${seat} has no pointer to the catalogue`);
-				assert.match(ref, /Patterns to detect and fix/);
-			}
+			assert.match(always("host"), /Patterns to detect and fix/, "host leaves the catalogue unloaded");
+			assert.doesNotMatch(always("container"), /Patterns to detect and fix/, "container always loads the catalogue");
+			assert.match(always("container"), /refs\/prose\.md/, "container has no pointer to the catalogue");
+			assert.match(rendered(out, "container", "refs/prose.md"), /Patterns to detect and fix/);
 		});
 	});
 

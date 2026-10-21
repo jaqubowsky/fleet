@@ -10,7 +10,7 @@
 6. Chat in the user's language. Everything committed or written to a file in English
 7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
 8. Image path in the task -> `read` it before describing or acting on it. A screenshot, mock or attachment on disk is evidence, and the read renders it inline for the user
-9. Explain how things work in everyday language before adding technical detail
+9. Explain how things work in everyday language before adding technical detail. An id, hash, test label or name from the code reaches a person beside a plain description of what it is, and the first sentence states the point in the product's terms
 10. A file path a person reads, in a reply or a report, is a `file://` URL of the absolute path with every variable expanded: a terminal pane in between drops the link from a bare path
 
 ## Coding

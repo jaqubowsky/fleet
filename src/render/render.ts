@@ -9,6 +9,7 @@ export type Models = { seats: Record<string, SeatModel> };
 type Source = { name: string; body: string };
 
 const HOST_ONLY_RULES = ["host.md"];
+const HOST_LOADED_REFS = ["prose.md"];
 const SKILL_SCOPES: Record<Seat, string[]> = {
 	host: ["shared", "host"],
 	container: ["shared", "container"],
@@ -224,6 +225,15 @@ class Renderer {
 			.map((name) => ({ name, body: this.text(`rules/${name}`) }));
 	}
 
+	hostRules(): Source[] {
+		return [
+			...this.rules(),
+			...this.refs()
+				.filter((name) => HOST_LOADED_REFS.includes(name))
+				.map((name) => ({ name, body: this.text(`rules/refs/${name}`) })),
+		];
+	}
+
 	refs(): string[] {
 		return this.io
 			.list(`${this.input.root}/rules/refs`)
@@ -338,7 +348,7 @@ function pi(r: Renderer): void {
 		);
 		r.put("agent/settings.json", r.settings("host.json"));
 		hostMcp(r, servers);
-		r.put("agent/AGENTS.md", buildAgents(rules, []));
+		r.put("agent/AGENTS.md", buildAgents(r.hostRules(), []));
 		for (const name of r.refs())
 			r.put(`agent/refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agent/agents");
@@ -380,7 +390,7 @@ function claude(r: Renderer): void {
 	const { seat } = r.input;
 	const rules = r.rules();
 	if (seat === "host") {
-		for (const rule of rules) r.put(`rules/${rule.name}`, rule.body);
+		for (const rule of r.hostRules()) r.put(`rules/${rule.name}`, rule.body);
 		for (const name of r.refs())
 			r.put(`refs/${name}`, r.text(`rules/refs/${name}`));
 		r.agents("agents");
