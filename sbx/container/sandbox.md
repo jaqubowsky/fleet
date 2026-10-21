@@ -24,7 +24,7 @@ You run in an isolated container. Someone outside watches this session and gives
    - otherwise in `base-worktree <base-commit>`, which builds `/tmp/base` with deps and env files linked in. Generated code and build output stay the base's own: generate and build there the way the runbook does before the run
 
    Whoever runs it, the analysis included, adds its line to that file for every later session and container on the same base
-6. A node heap flag is at most three quarters of what `free -m` shows available; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:
+6. A node heap flag is at most three quarters of what `free -m` shows available once everything else the task started, the app included, is stopped; a heap set to the whole container is what the kernel kills with exit 137. A check that still dies at that ceiling:
    - goes into `runbook/gotchas.md` as not runnable here, with the memory it had
    - goes once into the closing message's open questions, so the host can give the next container more
    - is named as not run, never started again, by every later gate with no more memory than that
