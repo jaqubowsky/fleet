@@ -31,7 +31,7 @@ export PLAYWRIGHT_CLI_SESSION=browser-<run-id>
 playwright-cli --config <run-dir>/cli.config.json open <url>
 ```
 
-An export lasts one shell: the session name and `NODE_NO_WARNINGS=1` go into `/etc/sandbox-persistent.sh`. Read `window.innerWidth` back before the first capture; a size the config did not take makes every later screenshot evidence at the wrong resolution.
+An export lasts one shell: the session name goes into `/etc/sandbox-persistent.sh`. Read `window.innerWidth` back before the first capture; a size the config did not take makes every later screenshot evidence at the wrong resolution.
 
 ## Driving
 

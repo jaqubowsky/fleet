@@ -85,6 +85,7 @@ RUN printf '%s\n' \
  && sudo chmod a+r /etc/fnm-bash-env.sh
 
 ENV BASH_ENV=/etc/fnm-bash-env.sh
+ENV NODE_NO_WARNINGS=1
 
 ARG JSCPD_VERSION=5.4.1
 
