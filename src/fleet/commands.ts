@@ -301,7 +301,7 @@ export function promptAgent(
 		)
 			throw error;
 		throw new Error(
-			`agent_prompt_stalled: Prompt submission uncertain. Inspect ${CLI} peek ${sandbox} and the agent editor; do not steer again until you know whether the prompt was submitted.`,
+			`agent_prompt_stalled: Prompt submission uncertain: herdr saw no work start within 6 s, which does not mean the prompt was lost. Search ${CLI} peek ${sandbox} --lines 200 for its first words. Found: it arrived or waits in the agent editor, so do not steer again. Not found while the agent is idle: steer again. Still starting or on a dialog: wait until it is idle, then search again.`,
 			{ cause: error },
 		);
 	}
