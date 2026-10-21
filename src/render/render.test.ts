@@ -851,7 +851,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.ok(
 				rules.includes(
-					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; and last, only when there are any, the open questions as a list.",
+					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; and last, only when there are any, the open questions as a list, each with the option you recommend first and one downside per option.",
 				),
 			);
 			for (const row of [
