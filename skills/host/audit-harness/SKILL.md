@@ -14,7 +14,7 @@ Use the session the user names, or the current session by default. Session store
 
 ## 2. Find friction
 
-Look for mistakes, repeated commands, tool errors, user corrections, slow navigation, missing information and oversized tool results. Include instructions that were followed but produced a bad outcome. Each candidate needs a quote and source line, or a measured tool-call count. If the session shows no actionable problem, say so and stop.
+Look for mistakes, repeated commands, tool errors, user corrections, slow navigation, missing information and oversized tool results. Include instructions that were followed but produced a bad outcome, and the person's own habits that cost turns, such as a preference repeated in every steer or a setting on the Mac that stops the work. Each candidate needs a quote and source line, or a measured tool-call count. If the session shows no actionable problem, say so and stop.
 
 ## 3. Find the smallest fix
 

@@ -44,3 +44,15 @@ jq -c 'select(.type=="user") | .message.content[]? | select(.type=="tool_result"
 ```
 
 Skill loads are `Skill` tool calls or `Read` calls on a `SKILL.md` path. Sub-agent briefs are `Agent` tool inputs; their transcripts sit in `subagents/` beside the parent. Written code is the `input` of `Edit` and `Write` calls.
+
+### Condensing many transcripts
+
+For more than a couple of Claude transcripts, condense each to text first and read or delegate the text. [`../scripts/condense.jq`](../scripts/condense.jq) prints one line per event, starting with its source line: `L<n> <time> U:` user text, `A:` assistant text, `T <tool>:` call, `R:` or `R!ERR:` result, `SYS`, `ATT`, each long field cut with the count it dropped. Two days of 18 transcripts and their sub-agents went from 430 MB to 6 MB. Write the transcript paths into a list file and loop over it; the guard refuses a glob or a variable that could expand to the fleet's config:
+
+```bash
+while read -r f; do
+  jq -r -f <this skill>/scripts/condense.jq "$f" > "<scratchpad>/condensed/$(basename "$f" .jsonl).txt"
+done < "<scratchpad>/files.txt"
+```
+
+Sub-agent transcripts sit in `<session id>/subagents/*.jsonl`; condense them the same way.
