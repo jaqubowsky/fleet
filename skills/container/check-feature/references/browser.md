@@ -49,6 +49,8 @@ One screenshot per criterion, at the state that decides its verdict, `<NN>-<crit
 
 Every capture is read by the agent that took it, before it is filed: the state the criterion names is in the frame, and everything else in the frame is accounted for, an element on top of another, a panel that did not close, a region that came up empty. A snapshot reports the tree the page declares, so a layout that renders wrong passes it; the image is where that surfaces. Full HD unless the criterion turns on a smaller screen, which sets its own size with `resize` and says so in the report.
 
+`playwright-cli request <id>` prints the request headers as sent, a session token among them, and the session transcript keeps whatever a command prints: read a request as `playwright-cli request <id> | grep -viE '^ *(authorization|cookie):'`.
+
 ## Runbook
 
 `features/<screen>.md` holds how a screen is reached and driven.
