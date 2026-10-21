@@ -4,7 +4,6 @@ FROM docker/sandbox-templates:claude-code-docker
 LABEL com.docker.sandboxes.start-docker="true"
 
 ENV GIT_TERMINAL_PROMPT=0
-ENV NODE_OPTIONS=--disable-warning=UNDICI-EHPA
 
 {{toolchain}}
 

@@ -16,7 +16,6 @@ sandbox:
     - pi
 environment:
   variables:
-    NODE_OPTIONS: "--disable-warning=UNDICI-EHPA"
     OPENROUTER_API_KEY: "sbx-openrouter-proxy"
 permissions:
   network:

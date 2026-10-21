@@ -2,13 +2,14 @@
 FROM docker/sandbox-templates:shell-docker
 
 ENV GIT_TERMINAL_PROMPT=0
-ENV NODE_OPTIONS=--disable-warning=UNDICI-EHPA
 
 {{toolchain}}
 
 ARG UPDATE_BUST=0
 RUN sudo npm install -g --prefix /usr/local/share/npm-global @earendil-works/pi-coding-agent@latest \
- && sudo ln -sf /usr/local/share/npm-global/bin/pi /usr/local/bin/pi \
+ && printf '#!/bin/sh\nexec /usr/bin/node --disable-warning=UNDICI-EHPA /usr/local/share/npm-global/bin/pi "$@"\n' | sudo tee /usr/local/bin/pi >/dev/null \
+ && sudo chmod 755 /usr/local/bin/pi \
+ && test "$(command -v pi)" = /usr/local/bin/pi \
  && pi --version
 
 COPY --from=pi-home --chown=agent:agent agent/    /home/agent/.pi/agent/
