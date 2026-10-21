@@ -85,6 +85,7 @@ RUN printf '%s\n' \
  && sudo chmod a+r /etc/fnm-bash-env.sh
 
 ENV BASH_ENV=/etc/fnm-bash-env.sh
+ENV LANG=C.UTF-8
 ENV NODE_NO_WARNINGS=1
 
 ARG JSCPD_VERSION=5.4.1
@@ -98,12 +99,15 @@ RUN printf 'ignore-scripts=true\nmin-release-age=7\nsave-exact=true\n' > /home/a
  && printf 'minimumReleaseAge: 10080\nblockExoticSubdeps: true\n' > /home/agent/.config/pnpm/config.yaml
 
 RUN sudo apt-get update \
- && sudo apt-get install -y --no-install-recommends fd-find iproute2 jq patch python3-pil \
+ && sudo apt-get install -y --no-install-recommends fd-find file iproute2 jq patch poppler-utils python3-pil time \
  && sudo rm -rf /var/lib/apt/lists/* \
  && sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd \
  && jq --version \
  && ss --version \
- && patch --version
+ && patch --version \
+ && file --version \
+ && command -v pdftoppm \
+ && test -x /usr/bin/time
 
 ARG GH_KEYRING_SHA256=6084d5d7bd8e288441e0e94fc6275570895da18e6751f70f057485dc2d1a811b
 
