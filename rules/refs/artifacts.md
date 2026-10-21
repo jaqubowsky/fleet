@@ -14,7 +14,7 @@ projects/      additional repos' project overlays, named by their workspace base
 ticket.md      the host's requirement, copied at start, then the Acceptance criteria the analysis writes; each criterion ticked with its evidence at the end
 analysis.md    Findings, Decisions, Plan
 review.md      the one review of the whole branch: Review and Required fixes lines, findings, checks read, shared seams
-browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video
+browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video; scripts/, the login, seed and walk scripts every run reuses
 mockup/        on an order for one: index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots
 logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; stale-told, the last older-harness notice {{cli}} steer printed; <skill>-<id>/ evidence
 ```
