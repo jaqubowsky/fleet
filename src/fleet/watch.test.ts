@@ -598,29 +598,114 @@ test("a steer lets the same message wake the host again", (t) => {
 	assert.equal(wakes.length, 2);
 });
 
-test("a third wake about the same state without a steer in between is not sent", (t) => {
-	const { said, wakes, turn } = settles(t, "first");
+test("every settle with a new message wakes the host, with or without a steer between them", (t) => {
+	const { said, wakes, turn } = settles(t, "Waiting on the typecheck.");
 
 	turn();
-	said["claude-worker"] = "second";
+	said["claude-worker"] = "Typecheck green; waiting on the e2e run.";
 	turn();
-	said["claude-worker"] = "third";
-	turn();
-
-	assert.equal(wakes.length, 2);
-});
-
-test("a steer after two wakes about the same state lets the next one through", (t) => {
-	const { io, said, wakes, turn } = settles(t, "first");
-
-	turn();
-	said["claude-worker"] = "second";
-	turn();
-	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		'2099-01-01T00:00:00.000Z w1:host steer claude-worker session= "go on"\n';
+	said["claude-worker"] = "Done: PR #12 needs a push.";
 	turn();
 
 	assert.equal(wakes.length, 3);
+	assert.match(wakes[2], /PR #12 needs a push/);
+});
+
+function works(t: TestContext) {
+	let clock = Date.UTC(2026, 9, 20, 9, 0);
+	t.mock.method(Date, "now", () => clock);
+	const fixture = herdr(t, [
+		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	]);
+	const wakes: string[] = [];
+	const handle = watch(() => undefined, fixture.io, (text) => wakes.push(text));
+	t.after(() => handle.stop());
+	const minutes = (count: number) => {
+		for (let i = 0; i < count; i++) {
+			clock += 60_000;
+			fixture.intervals.get(60_000)?.();
+		}
+	};
+	const sleep = (ms: number) => {
+		clock += ms;
+	};
+	return { ...fixture, wakes, minutes, sleep };
+}
+
+test("a container no wake has reached yet wakes the host after 20 minutes of work, with how long it has worked", (t) => {
+	const { wakes, minutes } = works(t);
+
+	minutes(20);
+
+	assert.deepEqual(wakes, [`[fleet] claude-worker: working 20m without settling\n\n${REPORT}`]);
+});
+
+test("a container that said nothing new since its last wake wakes the host after 20 minutes of work", (t) => {
+	const { status, wakes, minutes } = works(t);
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1000);
+	status("worker:pane", "working");
+	minutes(20);
+
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[1], /working 20m without settling/);
+});
+
+test("a container whose last message moves on keeps working without waking the host", (t) => {
+	const { said, wakes, minutes } = works(t);
+
+	minutes(20);
+	said["claude-worker"] = "Unit tests green; starting the e2e run.";
+	minutes(15);
+	const moving = wakes.length;
+	minutes(15);
+
+	assert.equal(moving, 1);
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[1], /working 50m without settling/);
+});
+
+test("a container that said something new since its last wake works on without waking the host", (t) => {
+	const { said, status, wakes, minutes } = works(t);
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1000);
+	status("worker:pane", "working");
+	said["claude-worker"] = "Steered: rebasing onto main.";
+	minutes(20);
+
+	assert.equal(wakes.length, 1);
+});
+
+test("a sleep of the Mac wakes the host once and does not count as working time", (t) => {
+	const { wakes, minutes, sleep } = works(t);
+
+	minutes(5);
+	sleep(3 * 60 * 60_000);
+	minutes(1);
+	const afterSleep = [...wakes];
+	minutes(13);
+	const beforeStall = wakes.length;
+	minutes(1);
+
+	assert.equal(afterSleep.length, 1);
+	assert.match(afterSleep[0], /^\[fleet\] watch: this Mac slept from \d\d:\d\d to \d\d:\d\d while claude-worker worked;/);
+	assert.equal(beforeStall, 1);
+	assert.match(wakes[1], /working 20m without settling/);
+});
+
+test("a container that starts working after the Mac wakes counts its work from then", (t) => {
+	const { status, wakes, minutes, sleep } = works(t);
+
+	status("worker:pane", "idle");
+	t.mock.timers.tick(1000);
+	sleep(3 * 60 * 60_000);
+	status("worker:pane", "working");
+	minutes(20);
+
+	assert.equal(wakes.length, 2);
+	assert.match(wakes[1], /working 20m without settling/);
 });
 
 test("a settle herdr reports again under the same state_change_seq wakes once", (t) => {

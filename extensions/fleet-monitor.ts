@@ -73,7 +73,7 @@ export default function fleetMonitor(seat: Seat, io: Io = realIo(os.homedir(), s
 			name: "fleet_watch",
 			label: "Fleet watch",
 			description:
-				`Watch containers beyond the ones this session put up, started or steered, which are watched by themselves. A container settling (done, idle, blocked) wakes this session with a [fleet] <agent>: <sandbox> <state> line (the sandbox named only where herdr shortened the agent), followed by the last message of its session transcript. Working 20 minutes without settling, gone and taken down wake it too. Between steers, an idle or done with the message its last wake carried stays silent, and the same state comes at most twice. That turn is where you act on it. Pass the sandbox name from ${CLI} ls; empty string = every container.`,
+				`Watch containers beyond the ones this session put up, started or steered, which are watched by themselves. A container settling (done, idle, blocked) wakes this session with a [fleet] <agent>: <sandbox> <state> line (the sandbox named only where herdr shortened the agent), followed by the last message of its session transcript. It also wakes for a container working 20 minutes without settling, unless its last message is new since the last wake, and for each 15 minutes its message stays the same after that; for a sleep of this Mac; and for gone and taken down. Between steers, an idle or done with the message its last wake carried stays silent. That turn is where you act on it. Pass the sandbox name from ${CLI} ls; empty string = every container.`,
 			promptSnippet: "watch containers; a settling one wakes this session with a [fleet] line",
 			parameters: {
 				type: "object",

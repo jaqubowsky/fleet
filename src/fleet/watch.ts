@@ -20,14 +20,14 @@ import { type Agent, type Sandbox, sandboxes } from "./status.ts";
 const REFRESH_MS = 30_000;
 const RECONNECT_MS = 3000;
 const STALL_TICK_MS = 60_000;
-const SAME_WAKES = 2;
+const SLEEP_MS = 5 * STALL_TICK_MS;
 
 type Frame = {
 	event?: string;
 	data?: { pane_id?: string; agent_status?: string; state_change_seq?: number };
 };
-type Tracked = { name: string; status: string; since: number; rang: number };
-type Woken = { key: string; message: string; count: number; at: string };
+type Tracked = { name: string; status: string; since: number; rang: number; said?: string };
+type Woken = { key: string; message: string; at: string };
 
 export function fleetAgents(
 	agents: Agent[],
@@ -150,17 +150,14 @@ export function watch(
 		const message = said && where ? lastSaid(where.sandbox) : "";
 		if (key) {
 			const last = woken.get(name);
-			const unsteered = last !== undefined && (steered.get(name) ?? "") <= last.at;
-			const repeat = unsteered && last.key === key;
 			const unchanged =
-				unsteered && TERMINAL.has(key) && TERMINAL.has(last.key) && last.message === message;
-			if ((repeat && last.count >= SAME_WAKES) || unchanged) return;
-			woken.set(name, {
-				key,
-				message,
-				count: repeat ? last.count + 1 : 1,
-				at: io.now().toISOString(),
-			});
+				last !== undefined &&
+				(steered.get(name) ?? "") <= last.at &&
+				TERMINAL.has(key) &&
+				TERMINAL.has(last.key) &&
+				last.message === message;
+			if (unchanged) return;
+			woken.set(name, { key, message, at: io.now().toISOString() });
 		}
 		onWake(wakeLines(name, where?.sandbox.name ?? name, change, message));
 	};
@@ -218,7 +215,7 @@ export function watch(
 		if (!change) return;
 		const wakeable = shouldWake(previous, next);
 		const now = Date.now();
-		tracked.set(pane, { ...entry, status: next, since: now, rang: now });
+		tracked.set(pane, { name: entry.name, status: next, since: now, rang: now });
 		report();
 		if (TERMINAL.has(next)) {
 			if (wakeable || settling.has(pane)) settle(pane, previous, seq);
@@ -329,8 +326,28 @@ export function watch(
 		if (tracked.size && (fresh.length || !sock || sock.destroyed)) connect();
 	};
 
+	let ticked = Date.now();
+
+	const clock = (ms: number) => new Date(ms).toTimeString().slice(0, 5);
+
+	const slept = (now: number) => {
+		const from = ticked;
+		const gap = now - from - STALL_TICK_MS;
+		ticked = now;
+		if (gap < SLEEP_MS) return;
+		const across = [...tracked].filter(([, t]) => t.since + gap <= now);
+		for (const [pane, t] of across)
+			tracked.set(pane, { ...t, since: t.since + gap, rang: t.rang + gap });
+		const working = across.filter(([, t]) => t.status === "working");
+		if (working.length)
+			onWake(
+				`[fleet] watch: this Mac slept from ${clock(from)} to ${clock(now)} while ${working.map(([, t]) => t.name).join(", ")} worked; the sleep does not count as working time, and a command running across it may have timed out`,
+			);
+	};
+
 	const ring = () => {
 		const now = Date.now();
+		slept(now);
 		const entries = [...tracked].map(([pane, t]) => ({
 			pane,
 			status: t.status,
@@ -340,7 +357,11 @@ export function watch(
 		for (const pane of stalled(entries, now, STALL_MS, RING_MS)) {
 			const t = tracked.get(pane);
 			if (!t) continue;
-			tracked.set(pane, { ...t, rang: now });
+			const where = dirs.get(t.name);
+			const said = where ? lastSaid(where.sandbox) : "";
+			const before = t.said ?? woken.get(t.name)?.message;
+			tracked.set(pane, { ...t, rang: now, said });
+			if (before !== undefined && said !== before) continue;
 			emit(
 				t.name,
 				`working ${Math.round((now - t.since) / 60_000)}m without settling`,
