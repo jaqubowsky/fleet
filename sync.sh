@@ -283,4 +283,5 @@ else
 		fi
 	done 3<<<"$HARNESS_ROWS"
 	[ "$left" = 0 ] && echo "$changes change(s) made; every home matches this repository."
+	echo "A host session already running keeps the rules and skills it loaded; a new session picks these up."
 fi
