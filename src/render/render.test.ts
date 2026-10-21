@@ -394,6 +394,17 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
+	test(`the ${name} reviewer names the smell baseline where each seat installs it`, () => {
+		renderSeats(name, (out) => {
+			for (const seat of ["host", "container"]) {
+				const [skill] = [...rendered(out, seat, "agents/reviewer.md").matchAll(/`~\/\.(?:pi|claude)\/(skills\/[^`]*)<name>\/SKILL\.md`/g)]
+					.map((match) => `${match[1]}two-axis-review/smells.md`)
+					.filter((path) => seatFiles(out, seat).some((f) => f.endsWith(path)));
+				assert.ok(skill, `${seat} reviewer names no installed smells.md`);
+			}
+		});
+	});
+
 	test(`the ${name} conflict procedure and pull request body reach only the container`, () => {
 		renderSeats(name, (out) => {
 			for (const suffix of ["resolving-merge-conflicts/SKILL.md", "/pr/SKILL.md"]) {

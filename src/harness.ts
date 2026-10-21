@@ -29,6 +29,7 @@ export type Kind = {
 	sbxGuidance?: string;
 	containerSessions?: string;
 	tokens: Record<string, string>;
+	hostTokens?: Record<string, string>;
 };
 
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
@@ -73,6 +74,9 @@ export const KINDS: Record<AgentName, Kind> = {
 			"reviewer.output": "written to review.md",
 			"review.call":
 				'One `reviewer` call with `async: true`, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. Leave the working tree untouched until `review.md` arrives: continue other read-only work or end the turn, and native completion wakes the session. Read the report before deciding what to fix.',
+		},
+		hostTokens: {
+			skills: "`~/.pi/skills/shared/<name>/SKILL.md` for a shared skill, `~/.pi/skills/host/<name>/SKILL.md` for a host one",
 		},
 	},
 	claude: {

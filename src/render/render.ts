@@ -167,6 +167,7 @@ class Renderer {
 		const body = this.source(path);
 		const tokens: Record<string, string> = {
 			...kind.tokens,
+			...(this.input.seat === "host" ? kind.hostTokens : {}),
 			cli: CLI,
 			...this.seats,
 			root,

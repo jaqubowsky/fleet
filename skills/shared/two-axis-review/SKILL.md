@@ -55,7 +55,7 @@ Supply these two axes in the review packet:
 2. the paths of the ticket and the analysis that set the task, those that exist; when none does, the prompt that set the task, quoted
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
-5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline) and the path of `smells.md`
+5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline)
 6. the two axes from step 3 and `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
 
 Every claim in the brief is a file in the evidence directory, quoted. The reviewer returns `review.md` in the shape its own definition holds.
