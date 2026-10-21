@@ -32,7 +32,7 @@ One short file per name above `logs/`. Top-level files are current state, never 
 
 - the Findings of `analysis.md` are anchored to the analyzed commit; its Decisions and Plan change in place
 - a changed requirement updates the criteria in `ticket.md`, and a changed decision Decisions in `analysis.md`, before the code changes
-- `review.md` covers only its named range, and that review's findings close in its addendum. A new review replaces it, and the one it replaces moves into its `logs/review-<head-sha7>/`
+- `review.md` covers only its named range, and that review's findings close in its addendum. Before a new review writes `review.md`, the one it replaces moves into its `logs/review-<head-sha7>/`
 - each `browser/<run-id>/report.md` records one browser run, cleanup included; a new run gets a new directory
 
 Historical and run-specific evidence stays under `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
