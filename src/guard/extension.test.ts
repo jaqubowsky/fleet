@@ -277,6 +277,44 @@ test("pi asks separately for landing, signing and pushing a sandbox", async () =
 	);
 });
 
+test("pi asks before a fetch or pull, blocks it without a dialog, and a deny beside one still wins", async () => {
+	const root = privateRoot();
+	let captured:
+		| ((
+				event: { toolName: string; input: { command: string } },
+				ctx: {
+					cwd: string;
+					hasUI?: boolean;
+					ui?: { confirm(title: string, message: string): Promise<boolean> };
+				},
+		  ) => unknown)
+		| undefined;
+	guard(
+		KINDS.pi,
+		root,
+		EMPTY_HOME,
+	)({
+		on: (_event, fn) => {
+			captured = fn as typeof captured;
+		},
+	});
+	assert.ok(captured);
+	const blocked = async (command: string, ui?: { confirm(title: string, message: string): Promise<boolean> }) =>
+		((await captured!({ toolName: "bash", input: { command } }, { cwd: root, hasUI: ui !== undefined, ui })) as { block?: boolean } | undefined)?.block === true;
+	let prompted = "";
+
+	const approved = await blocked("git pull --ff-only", { confirm: async (_title, message) => ((prompted = message), true) });
+	const declined = await blocked("git fetch origin", { confirm: async () => false });
+	const unattended = await blocked("git fetch origin");
+	const forced = await blocked("git fetch origin && git push --force origin main", { confirm: async () => true });
+
+	assert.equal(approved, false);
+	assert.match(prompted, /git pull --ff-only$/);
+	assert.equal(declined, true);
+	assert.equal(unattended, true);
+	assert.equal(forced, true);
+});
+
 test("pi checks the raw down command before bash prepends input.cwd", () => {
 	const root = privateRoot();
 	let captured:

@@ -17,6 +17,6 @@ Containers are the user's workbench. Commands: skill `orchestrating-agent-sessio
 
 ## Git on this Mac
 
-- Fetch and any other remote command the profile does not name only on the user's word
+- A remote command the profile does not name runs only on the user's word; before a `git fetch` or `git pull` the guard's dialog asks for it
 - Every signature costs the user one Touch ID tap: say what you are about to sign
 - SSH auth failure or `banner exchange` right after a Touch ID prompt went unanswered = the missed prompt: say so, retry once. Without that evidence, quote the error and diagnose it like any other. Never switch to https or change auth config, except through `{{cli}} profile --apply` on the user's word

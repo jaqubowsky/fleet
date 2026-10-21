@@ -271,6 +271,22 @@ test("the claude hook asks separately for landing, signing and pushing", () => {
 		assert.match(decide(command), /"permissionDecision":"deny"/, command);
 });
 
+test("the claude hook asks before a fetch or pull, and a deny beside one still wins", () => {
+	const root = privateRoot();
+	const decide = (command: string) =>
+		answer({ tool_name: "Bash", tool_input: { command }, cwd: root }, root);
+
+	for (const command of [
+		"git fetch origin",
+		"git -C /r fetch --prune origin",
+		"git pull --ff-only",
+		"git fetch origin && git log origin/main",
+	])
+		assert.match(decide(command), /"permissionDecision":"ask"/, command);
+	assert.match(decide("git fetch origin && git push --force origin main"), /"permissionDecision":"deny"/);
+	assert.match(decide("git log origin/main"), /"permissionDecision":"allow"/);
+});
+
 test("the claude hook lets a GitHub read run in any shell form and refuses a pull request write the policy cannot place", () => {
 	const root = privateRoot();
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);

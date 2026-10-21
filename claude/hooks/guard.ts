@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../../src/guard/down.ts";
+import { fetchQuestion } from "../../src/guard/fetch.ts";
 import { landPermission } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
 import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../../src/guard/own-config.ts";
@@ -67,6 +68,18 @@ export function answer(
 		input.tool_input ?? {},
 		hostAt(cwd, root, home),
 	);
+	const question =
+		verdict.decision === "allow" && tool === "Bash"
+			? fetchQuestion(String(input.tool_input?.command ?? ""))
+			: undefined;
+	if (question)
+		return JSON.stringify({
+			hookSpecificOutput: {
+				hookEventName: "PreToolUse",
+				permissionDecision: "ask",
+				permissionDecisionReason: question,
+			},
+		});
 	if (verdict.decision === "allow" && !verdict.explicit) return "";
 	return JSON.stringify({
 		hookSpecificOutput: {

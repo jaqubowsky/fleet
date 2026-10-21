@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../src/guard/down.ts";
+import { fetchQuestion } from "../src/guard/fetch.ts";
 import { landPermission } from "../src/guard/land.ts";
 import type { Kind } from "../src/harness.ts";
 import { hostAt } from "../src/guard/host.ts";
@@ -77,9 +78,15 @@ export default function guard(
 				payload.tool_input,
 				hostAt(ctx.cwd, root, home),
 			);
-			if (verdict.decision === "allow") return;
+			if (verdict.decision !== "allow") return { block: true, reason: verdict.reason };
 
-			return { block: true, reason: verdict.reason };
+			const command = "command" in payload.tool_input ? String(payload.tool_input.command) : "";
+			const question = payload.tool_name === "Bash" ? fetchQuestion(command) : undefined;
+			if (!question) return;
+			if (!ctx.hasUI || !ctx.ui) return { block: true, reason: question };
+			return ctx.ui
+				.confirm("Fetch from a remote?", command)
+				.then((approved) => (approved ? undefined : { block: true, reason: question }));
 		});
 	};
 }
