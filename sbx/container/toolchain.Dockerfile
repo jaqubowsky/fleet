@@ -80,6 +80,7 @@ RUN printf '%s\n' \
       'esac' \
       'fnm use --install-if-missing --silent-if-unchanged >/dev/null 2>&1 || true' \
       'fnm use --silent-if-unchanged >/dev/null 2>&1 || fnm use --silent-if-unchanged default >/dev/null 2>&1 || true' \
+      'unset FORCE_COLOR' \
       '[ -r /etc/sandbox-persistent.sh ] && . /etc/sandbox-persistent.sh 2>/dev/null || true' \
     | sudo tee /etc/fnm-bash-env.sh >/dev/null \
  && sudo chmod a+r /etc/fnm-bash-env.sh
