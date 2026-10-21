@@ -70,6 +70,18 @@ export function staleSandbox(
 	return `${sandbox.name} was built from ${built ? `harness ${built}` : "an unknown harness"}, and the harness is now ${current}: ${build}take it down and up again before its next ticket, since it keeps its image until then`;
 }
 
+export function staleOnce(
+	sandbox: Sandbox,
+	root: string,
+	io: Io,
+): string | undefined {
+	const stale = staleSandbox(sandbox, root, io);
+	const told = `${taskDir(sandbox.workspaces[0], sandbox.name, io)}/logs/stale-told`;
+	if (!stale || io.read(told) === stale) return undefined;
+	io.write(told, stale);
+	return stale;
+}
+
 function layoutTask(dir: string, io: Io): void {
 	io.mkdir(`${dir}/logs/sessions`);
 }

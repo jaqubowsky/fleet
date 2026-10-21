@@ -17,7 +17,7 @@ import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
 import { agentName } from "./name.ts";
-import { harnessStamp, imageStampPath, resumeAgent, staleSandbox } from "./up.ts";
+import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
 import {
 	agentFor,
 	checkoutProbe,
@@ -278,7 +278,7 @@ export function promptAgent(
 	const sandbox = row.name;
 	if (stoppedPane(row, io)) throw new Error(`${sandbox}: stopped; run ${CLI} start ${sandbox} first`);
 	const agent = agentName(sandbox);
-	const stale = root ? staleSandbox(row, root, io) : undefined;
+	const stale = root ? staleOnce(row, root, io) : undefined;
 	if (stale) io.log(stale);
 	const sent = text.replace(HOST_FLEET, `${io.home}/${FLEET_HOME}/`);
 	logEvent(io, "steer", agent, sent);

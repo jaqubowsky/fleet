@@ -16,7 +16,7 @@ analysis.md    Findings, Decisions, Plan
 review.md      the one review of the whole branch: Review and Required fixes lines, findings, checks read, shared seams
 browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video
 mockup/        on an order for one: index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots
-logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; <skill>-<id>/ evidence
+logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; stale-told, the last older-harness notice {{cli}} steer printed; <skill>-<id>/ evidence
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`. Every task on that repository reads it before it starts, so it holds rules, and the run that found a rule keeps the record of finding it:

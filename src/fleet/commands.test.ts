@@ -135,6 +135,26 @@ test("steer names a sandbox built from an older harness, and still steers", () =
 	assert.ok(io.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
 });
 
+test("steer names an older harness once, and again only when the advice changes", () => {
+	const io = fakeIo({
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
+		[`read ${builtStamp}`]: "31e3d51\n",
+	});
+
+	steer(row("pi-webapp-web-1"), "go", io, "/root");
+	steer(row("pi-webapp-web-1"), "go on", io, "/root");
+	const beforeBuild = io.lines.filter((line) => line.includes("was built from")).length;
+	io.files["/home/me/.fleet/cache/pi/image-stamp"] = "f7e7f1a\n";
+	steer(row("pi-webapp-web-1"), "and on", io, "/root");
+
+	assert.equal(beforeBuild, 1);
+	const warnings = io.lines.filter((line) => line.includes("was built from"));
+	assert.equal(warnings.length, 2);
+	assert.doesNotMatch(warnings[1], /fleet build/);
+	assert.equal(io.lines.filter((line) => line.endsWith(": steered")).length, 3);
+});
+
 test("steer asks for a build first when the image is older than the harness too", () => {
 	const io = fakeIo({
 		"git log -1 --format=%h": "f7e7f1a",
