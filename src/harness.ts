@@ -70,6 +70,7 @@ export const KINDS: Record<AgentName, Kind> = {
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
 			"ci.wait":
 				"pi runs it in the foreground, so give that bash call no timeout or one above 1260 seconds; a steer lands after it returns.",
+			"reviewer.output": "written to review.md",
 			"review.call":
 				'One `reviewer` call with `async: true`, `output` set to the absolute path of `review.md`, `outputMode: "file-only"`. Leave the working tree untouched until `review.md` arrives: continue other read-only work or end the turn, and native completion wakes the session. Read the report before deciding what to fix.',
 		},
@@ -105,6 +106,7 @@ export const KINDS: Record<AgentName, Kind> = {
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',
 			"ci.wait":
 				"Run it as one `Bash` call with `run_in_background: true`: the session stays steerable, and the loop's exit wakes you. Until then do what does not need CI, or end the turn.",
+			"reviewer.output": "returned to the caller, who writes it to review.md",
 			"review.call":
 				'One `Agent` call with `subagent_type: "reviewer"`. It runs in the background: leave the working tree untouched until its task notification arrives, and continue other read-only work or end the turn. The notification carries its final message, which is `review.md`; write it to the absolute path unchanged.',
 		},

@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Independent review of one candidate diff on two axes, correctness and engineering quality, written to review.md
+description: Independent review of one candidate diff on two axes, correctness and engineering quality, {{reviewer.output}}
 {{file:agent-reviewer}}
 ---
 
