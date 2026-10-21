@@ -95,7 +95,7 @@ export const SECRET_MATERIAL =
 	/(sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,}|-----BEGIN\s[A-Z ]*PRIVATE KEY|op:\/\/)/;
 const DELEGATED = /(^|[;&|]|&&)\s*sbx\s+(exec|run|cp)(\s|$)/;
 const CREDENTIAL_STORE =
-	"Credential store is off limits: ~/.ssh, ~/.config/op and ~/Library/Keychains hold the keys behind every login and signature, and a value read here lands in this transcript. Ask the person for what you need from them.";
+	"Credential store is off limits: ~/.ssh, ~/.config/op, ~/Library/Keychains, ~/.claude.json, ~/.claude/.credentials.json and auth.json, models-store.json and remote/credentials.json in ~/.pi/agent hold the keys behind every login and signature, and a value read here lands in this transcript. Ask the person for what you need from them.";
 
 const START = String.raw`^(\|\s*)?`;
 const command = (rule: string): RegExp => new RegExp(START + rule, "m");
