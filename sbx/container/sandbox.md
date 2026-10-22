@@ -67,7 +67,7 @@ Each check runs once, where it is cheapest:
 
 ## Closing message
 
-Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; and last, only when there are any, the open questions as a list, each with the option you recommend first and one downside per option.
+Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; in a turn that ran, followed or wrote an entry of the project notes, the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list, each with the option you recommend first and one downside per option. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
 
 ```text
 check                        result  commit   log

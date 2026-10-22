@@ -55,7 +55,7 @@ Every capture is read by the agent that took it, before it is filed: the state t
 
 `features/<screen>.md` holds how a screen is reached and driven.
 
-After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`. The report names every runbook file touched.
+After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged; an action that failed this run and its workaround goes into `gotchas.md`.
 
 ## Cleanup
 
