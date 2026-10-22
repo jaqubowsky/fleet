@@ -43,6 +43,14 @@ An action waits for itself and for nothing after it: `find`, `eval` and `screens
 
 `Target crashed` empties the page: reopen and walk the criterion again. Inside `run-code` it arrives as a script waiting out its timeout, so a replay that goes quiet is a crashed page. A crash that repeats in the same flow puts the run `blocked` on the environment.
 
+## Traps
+
+- A long `run-code` script can come back empty while the page keeps running: read the state back with a separate `eval`. A `filechooser` handled inside `run-code` leaves the CLI refusing every later command until `close` and a fresh login, so upload steps go last.
+- `run-code` has no `setTimeout`, `URL`, `require`, `fs` or `location`. Write files from the shell, read the address with `page.url()`, wait with `await page.waitForTimeout(ms)`, and match a route's URL with a regex: `new URL(route.request().url())` leaves the request pending. `page.evaluate` runs in the page, where `setTimeout` and `URL` exist.
+- `page.context().clearCookies()` in `run-code` hangs the CLI. Log out through the app's own control.
+- `setInputFiles` with a path holding non-ASCII letters or dashes puts no file in the page, with no request and no error. Build that file in the page: base64 its bytes into the script, then in `page.evaluate` add `new File([bytes], name, {type})` to a `DataTransfer`, assign it to `input[type=file].files` and dispatch `change`.
+- A React controlled input emptied without an `onChange` keeps its value, so the list stays filtered by a phrase the box no longer shows. Clear it with one Backspace per character; `ControlOrMeta+a` can select nothing.
+
 ## Evidence
 
 One screenshot per criterion, at the state that decides its verdict, `<NN>-<criterion-slug>.png` in the run directory, the path absolute (a bare filename lands in the working directory, which is the repository). Scroll the state into view, `highlight <ref>` the element that matters, capture the viewport; full page only when one criterion covers the whole page. A failed criterion adds the console or the response that shows the cause, as text. Tracing and video stay off here: a trace is hundreds of megabytes nobody opens, and a video is a replay of its own, after the walk.
