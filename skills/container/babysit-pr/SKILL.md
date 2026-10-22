@@ -52,8 +52,8 @@ Only unresolved threads (`isResolved == false`) are read: a bot resolves the thr
 3. **Record the round** in the closing message, one line per finding, each carrying its thread id and a verdict a person can paste as it stands:
 
 ```text
-PR #2077 round 3, head 03ed324
-  PRRT_kwDOabc fixed: the fallback assigned multi-rate totals to the first rate; the guard now rejects the import instead.
+PR #412 round 3, head 03ed324
+  PRRT_kwDOabc fixed: the fallback put the whole order discount on the first line; the guard now rejects the order instead.
   PRRT_kwDOdef rejected: the tolerance the bot compares belongs to the renderer, not the importer, and both read 0.01 after this change.
 ```
 

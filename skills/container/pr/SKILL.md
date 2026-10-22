@@ -10,7 +10,7 @@ The reader is a reviewer on GitHub who has the diff and this body, nothing else.
 ## Template
 
 ```markdown
-[FLO-1906](https://linear.app/<workspace>/issue/FLO-1906)
+[ABC-123](https://linear.app/<workspace>/issue/ABC-123)
 
 ## Summary
 

@@ -101,7 +101,7 @@ One row per finding that changed a decision. Cells are phrases, not sentences. A
 
 | Finding | Evidence | Consequence |
 | --- | --- | --- |
-| The SYNCHRONIZER gate is deliberate | review on PR #1910, commit `1114463` | open it in the change that ships delivery |
+| The sync flag is off on purpose | review on PR #398, commit `1114463` | turn it on in the change that ships delivery |
 
 #### Out of scope
 

@@ -48,8 +48,8 @@ One block in the closing message:
 ```text
 project notes                    words         edits
 runbook/gotchas.md               4210 -> 4105  merged "Restarting vite"; deleted "Login asks for a code"
-runbook/features/do-decyzji.md    980 ->  940  rewrote "Decree cards": the key is cache:gen:chart-accounts:<scope>:<id>
-unverified   runbook/run.md, "Leasing schedules"
+runbook/features/invoices.md      980 ->  940  rewrote "Totals cache": the key is cache:invoices:<org>:<id>
+unverified   runbook/run.md, "Report export"
 after merge  runbook/features/login.md, "Signing in": "<new text>"
 proposed     overlay, "## Gates": "<current text>" -> "<new text>"; evidence: git grep -n typecheck origin/main -- scripts/ci
 ```
