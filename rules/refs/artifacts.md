@@ -16,7 +16,7 @@ analysis.md    Findings, Decisions, Plan
 review.md      the one review of the whole branch: Review and Required fixes lines, findings, checks read, shared seams
 browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video; scripts/, the login, seed and walk scripts every run reuses
 mockup/        on an order for one: index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots
-logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; stale-told, the last older-harness notice {{cli}} steer printed; <skill>-<id>/ evidence
+logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent and {{cli}} down; image-stamp, the harness commit the container image was built from, from {{cli}} up; <skill>-<id>/ evidence
 ```
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`. Every task on that repository reads it before it starts, so it holds rules, and the run that found a rule keeps the record of finding it:
@@ -24,9 +24,8 @@ logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent
 - a fact goes where its scope is: starting the app in `run.sh` and `run.md`, one screen in `features/<screen>.md`, what defies a reasonable assumption about the environment, such as a gate that dies or flakes there or an action no script takes, in `gotchas.md`
 - each entry states today's design: the symptom, the cause, the fix or the command. Dates, ticket ids, commit SHAs, counts and log paths stay in the task's `logs/` and closing message
 - one entry per cause: search the runbook first, and edit the entry the fact belongs to
-- an entry the code or a script has made untrue, or whose failure did not reproduce, comes out in the edit that finds it
 
-`gate-base/` holds the one kind of record there, in the form the container rules give it: `<sha7>.md` for one commit's gate results, `container-<stamp>-<lockfile>.md` for the failures the container itself causes.
+`gate-base/` holds the one kind of record there, in the form {{refs.gates}} gives it: `<sha7>.md` for one commit's gate results, `container-<stamp>-<lockfile>.md` for the failures the container itself causes.
 
 One short file per name above `logs/`. Top-level files are current state, never an archive: update them in place when their truth changes, or delete them when they no longer have a role.
 
@@ -36,11 +35,3 @@ One short file per name above `logs/`. Top-level files are current state, never 
 - each `browser/<run-id>/report.md` records one browser run, cleanup included; a new run gets a new directory
 
 Historical and run-specific evidence stays under `browser/` or `logs/<skill>-<id>/`, and the current top-level file points to it.
-
-## analysis.md
-
-Always three sections, in this order:
-
-- **Findings**: the verdict, what it rests on, where the change lands, what is out of scope, what is open
-- **Decisions**: what will be built, each decision with the source or the answer that settled it
-- **Plan**: a numbered list of slices, each one commit naming the acceptance criteria it closes; a small change has one slice
