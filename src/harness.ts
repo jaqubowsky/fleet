@@ -34,6 +34,7 @@ export type Kind = {
 
 const REFS_BESIDE_AGENTS = "`refs/artifacts.md` beside `AGENTS.md`";
 const CI_BESIDE_AGENTS = "`refs/ci.md` beside `AGENTS.md`";
+const GATES_BESIDE_AGENTS = "`refs/gates.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
 const PROSE_BESIDE_AGENTS = "`refs/prose.md` beside `AGENTS.md`";
@@ -63,6 +64,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.ticket": TICKET_BESIDE_AGENTS,
 			"refs.design": DESIGN_BESIDE_AGENTS,
 			"refs.prose": PROSE_BESIDE_AGENTS,
+			"refs.gates": GATES_BESIDE_AGENTS,
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source": watchSource("fleet", "PI_SESSION_ID"),
@@ -101,6 +103,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.ticket": "`~/.claude/refs/ticket.md`",
 			"refs.design": "`~/.claude/refs/design.md`",
 			"refs.prose": "`~/.claude/refs/prose.md`",
+			"refs.gates": "`~/.claude/refs/gates.md`",
 			"steer.result":
 				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":
