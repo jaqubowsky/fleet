@@ -5,10 +5,6 @@ description: 'Turning a ticket, bug report or feature request into an evidence-b
 
 # Analyze task
 
-## Overview
-
-Produce an evidence-backed requirements analysis: the accepted specification, the evidenced defects that impair use of the same flow, and worthwhile improvements to the code being touched.
-
 This workflow ends at a proposal and the ticket's acceptance criteria; implementation and the work itself start on a separate request. Reproduction tests, harnesses and reversible probes are allowed within existing permissions. Keep diagnostic artifacts identifiable, remove temporary instrumentation before handover, report anything retained. Pass this boundary to every delegated agent.
 
 ## Read the sources before reading the code
@@ -74,8 +70,6 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-After the code analysis, report missing knowledge or access honestly.
-
 The reply is the report: the three sections below, in this order, one screen in all. A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed and keeps the same three sections, whatever the size of the task.
 
 Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
@@ -134,8 +128,6 @@ The reply ends with the open questions as a list, outside the three sections; th
    - as listed (recommended). Downside: <one>
    - <another cut>. Downside: <one>
 ```
-
-Define a term before using it, and keep one name per concept across the whole report. State the mechanism instead of naming it; no framing labels ("the key insight", "at its core"), no metaphor standing in for the mechanism.
 
 Rules for the report:
 
