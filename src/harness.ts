@@ -38,8 +38,8 @@ const GATES_BESIDE_AGENTS = "`refs/gates.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
 const PROSE_BESIDE_AGENTS = "`refs/prose.md` beside `AGENTS.md`";
-const watchSource = (cli: string, env: string) =>
-	`Only the session that ran \`${cli} up\`, \`${cli} start\` or \`${cli} steer\` auto-watches that container: the fleet monitor puts the session ID in \`${env}\` on every \`${cli}\` command the session runs, and the event carries it. Resuming that same session restores its watches, and the monitor keeps running while the session waits out an account limit. Ownerless events never auto-watch. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name \`${cli} ls\` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
+const watchSource = (cli: string) =>
+	`Only the session that ran \`${cli} up\`, \`${cli} start\` or \`${cli} steer\` auto-watches that container, and resuming that session restores its watches. The watch keeps running while the session waits out an account limit. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, watches any container by the name \`${cli} ls\` prints; no name watches every one. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
 export const KINDS: Record<AgentName, Kind> = {
 	pi: {
@@ -65,9 +65,7 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.design": DESIGN_BESIDE_AGENTS,
 			"refs.prose": PROSE_BESIDE_AGENTS,
 			"refs.gates": GATES_BESIDE_AGENTS,
-			"steer.result":
-				"steered; the container takes it after its current step, and it is under watch from now on",
-			"watch.source": watchSource("fleet", "PI_SESSION_ID"),
+			"watch.source": watchSource("fleet"),
 			"reload.models": RELOAD_MODELS,
 			"delegation.parallel":
 				'"Parallel" = several `explorer` or `researcher` runs started in the same turn, in the background, results collected before any synthesis',
@@ -104,10 +102,8 @@ export const KINDS: Record<AgentName, Kind> = {
 			"refs.design": "`~/.claude/refs/design.md`",
 			"refs.prose": "`~/.claude/refs/prose.md`",
 			"refs.gates": "`~/.claude/refs/gates.md`",
-			"steer.result":
-				"steered; the container takes it after its current step, and it is under watch from now on",
 			"watch.source":
-				"Only the session that ran `fleet up`, `fleet start` or `fleet steer` auto-watches that container, inside herdr or not: the harness puts the session ID in `CLAUDE_CODE_SESSION_ID` on every command, the event carries it, and the fleet mod holds `fleet watch` under that ID for the session's life, following the containers this session put up, started or steered and dropping one at its `fleet down`. It picks up new ones within 30 seconds and keeps running while the session waits out an account limit. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, explicitly watches containers regardless of ownership, by the sandbox name `fleet ls` prints; no name watches every container. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
+				"Only the session that ran `fleet up`, `fleet start` or `fleet steer` auto-watches that container, until its `fleet down`. The watch keeps running while the session waits out an account limit. `mcp__fleet__watch` with sandbox names, or `/fleet-watch [names]` typed by the user, watches any container by the name `fleet ls` prints; no name watches every one. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.",
 			"reload.models": "after `align-settings.py --apply`",
 			"delegation.parallel":
 				'"Parallel" = several `Agent` calls with `subagent_type` `explorer` or `researcher` in one message, each with `run_in_background: true`, results collected before any synthesis',

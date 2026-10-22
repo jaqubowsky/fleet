@@ -373,6 +373,12 @@ function rendered(out: string, seat: string, suffix: string): string {
 	return readFileSync(join(out, seat, file), "utf8");
 }
 
+function hostSkill(out: string): string {
+	return ["SKILL.md", "references/coordinating.md"]
+		.map((file) => rendered(out, "host", `orchestrating-agent-sessions/${file}`))
+		.join("\n");
+}
+
 function seatFiles(out: string, seat: string): string[] {
 	return readdirSync(`${out}/${seat}`, { recursive: true }) as string[];
 }
@@ -509,7 +515,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				rendered(out, "container", "refs/ci.md"),
 			];
 			const skills = [
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				rendered(out, "container", "babysit-pr/SKILL.md"),
 			];
 
@@ -545,7 +551,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					readFileSync(join(root, "rules/refs/ticket.md"), "utf8"),
 				);
 			for (const skill of [
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				rendered(out, "container", "to-tickets/SKILL.md"),
 			]) {
 				assert.ok(skill.includes(pointer), "skill points at the ticket template");
@@ -610,7 +616,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} tells the host which ticket of a wave goes up first, and no seat holds a natural-break table`, () => {
 		renderSeats(name, (out) => {
 			assert.match(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				/within a wave the ticket the most open tickets wait on goes up first/,
 			);
 			for (const seat of ["host", "container"]) {
@@ -619,6 +625,15 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					.filter((file) => readFileSync(join(out, seat, file), "utf8").includes("| Natural break |"));
 				assert.deepEqual(tables, [], `${seat} still has a natural-break table`);
 			}
+		});
+	});
+
+	test(`${name} host skill sends a project run to its coordinating reference before the first up`, () => {
+		renderSeats(name, (out) => {
+			assert.match(
+				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				/several tickets to run as a whole, read \[references\/coordinating\.md\]\(references\/coordinating\.md\) before the first `fleet up`/,
+			);
 		});
 	});
 }
@@ -641,11 +656,11 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				.filter((line) => !line.includes("the level your permissions give"));
 			assert.deepEqual(branches, []);
 			assert.match(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				/order the plan so the checks that judge a merge exist before the first change they judge, and the widest parallel wave starts as early as possible/i,
 			);
 			assert.doesNotMatch(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				/skeleton with CI/,
 			);
 		});
@@ -661,7 +676,7 @@ test("the claude host watches the containers its own session put up, started or 
 
 		assert.match(
 			rules,
-			/inside herdr or not: the harness puts the session ID in `CLAUDE_CODE_SESSION_ID` on every command, the event carries it, and the fleet mod holds `fleet watch` under that ID/,
+			/Only the session that ran `fleet up`, `fleet start` or `fleet steer` auto-watches that container, until its `fleet down`/,
 		);
 		assert.doesNotMatch(rules, /Monitor/);
 		assert.doesNotMatch(rules, /watches every `claude-` container/);
@@ -765,7 +780,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				.join("\n");
 			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the branch update \| 1 \|/);
 			assert.match(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				/Every container run ends on one independent review of its whole branch, in `review\.md`/,
 			);
 			assert.doesNotMatch(rendered(out, "container", "context/Dockerfile"), /ticket-check/);
@@ -959,7 +974,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				);
 			}
 			assert.match(
-				rendered(out, "host", "orchestrating-agent-sessions/SKILL.md"),
+				hostSkill(out),
 				/Write the ADR a decision of yours needs in `docs\/adr\/`/,
 			);
 			assert.match(
@@ -1001,7 +1016,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} host accepts on evidence it looked at, merges the overlay's way and keeps the plan in the tracker`, () => {
 		renderSeats(name, (out) => {
-			const skill = rendered(out, "host", "orchestrating-agent-sessions/SKILL.md");
+			const skill = hostSkill(out);
 			assert.doesNotMatch(
 				skill,
 				/--squash|spec\/|\b(Backlog|Todo|In Progress|In Review|Done|Canceled)\b/,
