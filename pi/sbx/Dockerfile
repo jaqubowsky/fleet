@@ -7,7 +7,9 @@ ENV GIT_TERMINAL_PROMPT=0
 
 ARG UPDATE_BUST=0
 RUN sudo npm install -g --prefix /usr/local/share/npm-global @earendil-works/pi-coding-agent@latest \
- && printf '#!/bin/sh\nexec /usr/bin/node /usr/local/share/npm-global/bin/pi "$@"\n' | sudo tee /usr/local/bin/pi >/dev/null \
+ && cli="$(readlink -f /usr/local/share/npm-global/bin/pi)" \
+ && sudo rm /usr/local/share/npm-global/bin/pi \
+ && printf '#!/bin/sh\nexec /usr/bin/node %s "$@"\n' "$cli" | sudo tee /usr/local/bin/pi >/dev/null \
  && sudo chmod 755 /usr/local/bin/pi \
  && test "$(command -v pi)" = /usr/local/bin/pi \
  && pi --version
