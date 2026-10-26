@@ -1,6 +1,6 @@
 ---
 name: pr
-description: 'Writing a pull request body. Use when a pull request is opened, and when a later round changes what its body says.'
+description: 'Writing a pull request title and body. Use when a pull request is opened, and when a later round changes what its body says.'
 ---
 
 # Pull request body
@@ -90,8 +90,18 @@ Below them, one line each, sits everything the reviewer weighs next to the merge
 - each CI check that fails on the base too
 - what was not verified
 
+## Title
+
+A squash merge turns the title into the commit subject, so it takes the form of the repository's merged pull requests: `gh pr list --repo <owner>/<repo> --state merged --limit 10 --json title`. Inside that form it names what the change does for the person who meets it, with the number when one was measured, rather than the mechanism:
+
+```text
+perf(server): cut websocket frame size by 70% with compression
+```
+
+where the mechanism alone would read `perf(server): negotiate permessage-deflate on the websocket`.
+
 ## Sending it
 
-Write the body to a file outside the working tree. Open the pull request with `gh pr create --body-file <file>`.
+Write the body to a file outside the working tree. Open the pull request with `gh pr create --title '<title>' --body-file <file>`.
 
 A later round that changes what the body says rewrites it whole in this shape against the new head, and the pull request round sends it with its `gh api -X PATCH` call. A bot may append its own block to the body between HTML comment markers, such as `<!-- This is an auto-generated comment: release notes by coderabbit.ai -->`; the rewrite keeps that block as it found it, after the template's sections.
