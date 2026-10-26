@@ -525,7 +525,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					"ref names the CI read",
 				);
 				assert.ok(
-					ref.includes("gh pr view <n> --json headRefOid"),
+					ref.includes("gh api repos/<owner>/<repo>/pulls/<n> --jq .head.sha"),
 					"ref names where the full SHA comes from",
 				);
 			}
@@ -533,7 +533,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				assert.ok(skill.includes(pointer), "skill points at the CI ref");
 				assert.doesNotMatch(
 					skill,
-					/statusCheckRollup|check runs|gh pr checks|Checks permission|--json headRefOid/,
+					/statusCheckRollup|check runs|gh pr checks|Checks permission|--jq \.head\.sha/,
 				);
 			}
 		});
@@ -789,7 +789,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				/container\/ci-wait\.sh\s+\/usr\/local\/bin\/ci-wait/,
 			);
 			assert.ok(
-				rendered(out, "container", "context/container/ci-wait.sh").includes("headRefOid"),
+				rendered(out, "container", "context/container/ci-wait.sh").includes("--jq .head.sha"),
 			);
 		});
 	});

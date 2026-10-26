@@ -25,13 +25,15 @@ The wait ends by recording the settled state: the runs and the commit status it 
 3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Read CI as {{refs.ci}} says, naming the repository in every call. Every bot that posts a commit status, CodeRabbit included, shows in the status of the head beside the Actions runs.
 
 ```bash
-gh pr view <number> --repo <owner>/<repo> --json number,state,headRefOid,isDraft,mergeable
+gh api repos/<owner>/<repo>/pulls/<number> --jq '{number, state, head: .head.sha, draft, mergeable}'
 gh run list --repo <owner>/<repo> --commit <head-sha> --json name,status,conclusion,url
 gh api repos/<owner>/<repo>/commits/<head-sha>/status --jq '{state, contexts: [.statuses[] | {context, state, target_url}]}'
 gh api graphql --paginate -f query='query($owner:String!,$repo:String!,$pr:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id isResolved path line comments(first:10){totalCount nodes{body createdAt author{login}}}}}}}}' -F pr=<number> -f owner=<owner> -f repo=<repo> --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
-gh pr view <number> --repo <owner>/<repo> --json comments --jq '.comments[] | {author: .author.login, createdAt, body}'
+gh api --paginate repos/<owner>/<repo>/issues/<number>/comments --jq '.[] | {author: .user.login, createdAt: .created_at, body}'
 git fetch origin && git merge-base --is-ancestor origin/<base> HEAD
 ```
+
+The threads query is the one GraphQL read here, because REST has no `isResolved`. When it fails on `API rate limit exceeded`, `gh api rate_limit --jq .resources.graphql.reset` prints when the limit returns, in Unix seconds: answer what the other reads show, and name the threads as unread until that time in the closing message.
 
 A thread whose `totalCount` is above 10 has more comments than the page shows: read the rest before you answer it. A bot's first pass often arrives as one long comment rather than as threads, so an empty `reviewThreads` still carries a review.
 

@@ -18,7 +18,7 @@ function ciWait(
 		join(bin, "gh"),
 		`#!/usr/bin/env bash
 case "$*" in
-  *headRefOid*) echo '${gh.head ?? sha}' ;;
+  *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
   *"run list"*"select"*) echo '${gh.pending}' ;;
   *"run list"*"--jq length"*) echo '${gh.total}' ;;
   *"run list"*) echo '[]' ;;

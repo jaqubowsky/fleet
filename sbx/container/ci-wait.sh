@@ -11,7 +11,7 @@ main() {
   [[ "$#" == 2 ]] || { echo "$usage"; exit 2; }
   local repo="$1" pr="$2" reads=20 interval="${CI_WAIT_INTERVAL:-60}"
   local sha pending total state i
-  sha="$(gh pr view "$pr" --repo "$repo" --json headRefOid --jq .headRefOid)"
+  sha="$(gh api "repos/$repo/pulls/$pr" --jq .head.sha)"
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "head read failed: $sha"; exit 2; }
   echo "head $sha"
   for i in $(seq 1 "$reads"); do
