@@ -1,6 +1,6 @@
 ---
 name: modernize
-description: 'Bringing an old pull request up to date with its base, or recommending it be closed. Use when the order says to modernize, rebase or refresh a pull request that fell behind.'
+description: 'Bringing an old pull request up to date with its base, or recommending it be closed. Use when the order says to modernize or refresh a pull request that fell behind its base.'
 ---
 
 # Modernize a pull request
