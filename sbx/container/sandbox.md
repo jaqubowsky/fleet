@@ -34,6 +34,8 @@ A prompt with no ticket behind it runs none of this.
 
 An order to see a change before it is built runs `mockup` first; its frames are the hand-over.
 
+An order to modernize or rebase an existing pull request runs `modernize` in place of this order.
+
 An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs/adr/`.
 
 ## Checks
