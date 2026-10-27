@@ -14,7 +14,7 @@ Every repository has its own runbook, shared by every container that works on it
 
 ## Keep the runbook true
 
-A fact about starting the app that the runbook lacks or contradicts goes into `run.sh` or `run.md` the moment it is confirmed, in whichever step of the run you are: a service `run.sh start` leaves down, an env variable, a port, a stub. A step run by hand, such as killing a process that never exits or restarting one service with another env, becomes a `run.sh` subcommand or a script in the runbook's `bin/`, with one line in `run.md` naming it. A start that fails from the runbook is such a fact once the fix answers. A workaround the start no longer needs comes out. Written in English.
+A fact about starting the app that the runbook lacks or contradicts goes into `run.sh` or `run.md` the moment it is confirmed, in whichever step of the run you are: a service `run.sh start` leaves down, an env variable, a port, a stub. A start that fails from the runbook is such a fact once the fix answers. A workaround the start no longer needs comes out. Written in English.
 
 ## Stop
 
