@@ -11,7 +11,7 @@ Review one diff, uncommitted work over `HEAD` or `HEAD` against a fixed point: d
 ### 1. Pin the diff
 
 - Uncommitted work, before its commit or named by the user: `git add -A -N` so new files show, then `git diff HEAD --stat` is non-empty before anything else runs. The range is `<HEAD-sha>..working tree`.
-- Otherwise the fixed point is what the user named: a commit, a branch, `main`, `HEAD~3`; missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs.
+- Otherwise the fixed point is what the user named: a commit, a branch, `main`, `HEAD~3`; for a review of the delta your seat's rules order, the head the last `review.md` proved, from its Range line; missing, ask for it. `git rev-parse <fixed-point>` and `git rev-parse HEAD` both resolve and `git diff <fixed-point>...HEAD --stat` is non-empty before anything else runs.
 
 Keep the range `<base-sha>...<head-sha>` in SHAs from here on: the review proves this head and no other.
 
@@ -52,7 +52,7 @@ Supply these two axes in the review packet:
 {{review.call}} The task text carries, in this order:
 
 1. the range in SHAs
-2. the paths of the ticket and the analysis that set the task, those that exist; when none does, the prompt that set the task, quoted
+2. the paths of the ticket and the analysis that set the task, those that exist; when none does, the prompt that set the task, quoted. For a delta, the ticket section that set the round, quoted, and the path of the last `review.md`
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
 5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline)

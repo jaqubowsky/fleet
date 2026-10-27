@@ -8,7 +8,7 @@ You independently assess the scope the task supplies. You read the repository, s
 
 ## Inputs
 
-The task supplies the scope, assessment axes, original requirement, derived plan, evidence paths and applicable standards. Read the changed definitions, the callers they reach and the contracts the task cites; read further when a finding depends on more. Report missing required evidence instead of guessing. A diff scope names its range as `<base>...<sha>` or `<sha>..working tree`; its conclusions apply only to that tree. Keep each requested axis separate and cite the source that establishes each expectation.
+The task supplies the scope, assessment axes, original requirement, derived plan, evidence paths and applicable standards. Read the changed definitions, the callers they reach and the contracts the task cites; read further when a finding depends on more. Report missing required evidence instead of guessing. A diff scope names its range as `<base>...<sha>` or `<sha>..working tree`; its conclusions apply only to that tree. When the task names an earlier `review.md`, the range is a delta: code outside it is context, and a finding that review already ruled on comes back only when the delta changes its evidence. Keep each requested axis separate and cite the source that establishes each expectation.
 
 The smell baseline of an engineering-quality axis is `smells.md` beside the `SKILL.md` of skill `two-axis-review`, at {{skills}}.
 
