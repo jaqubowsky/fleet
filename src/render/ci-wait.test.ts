@@ -13,7 +13,7 @@ const cases = [
 	{ name: "pending", pending: 1, state: "pending", exit: 1, reads: 20 },
 	{ name: "settled success", pending: 0, state: "success", exit: 0, reads: 1 },
 	{ name: "settled failure", pending: 0, state: "failure", exit: 0, reads: 1 },
-	{ name: "unavailable read", pending: 0, state: "unavailable", exit: 2, reads: 1 },
+	{ name: "unavailable read", pending: 0, state: "unavailable", exit: 2, reads: 3 },
 ];
 
 for (const agent of ["pi", "claude"] as const) {
@@ -56,7 +56,7 @@ esac
 			assert.equal(run.status, fixture.exit, `${invocation}\n${output}`);
 			assert.doesNotMatch(output, /usage: ci-wait/);
 			assert.equal((output.match(/^read \d+\/20:/gm) ?? []).length, fixture.reads);
-			assert.deepEqual(readFileSync(join(out, "waits"), "utf8").trim().split("\n"), Array(fixture.reads).fill("60"));
+			assert.deepEqual(readFileSync(join(out, "waits"), "utf8").split("\n").filter(Boolean), Array(fixture.reads - 1).fill("60"));
 			if (fixture.state === "pending") assert.match(output, /still pending after 20 reads/);
 			else if (fixture.state === "unavailable") assert.match(output, /read failed, stop waiting/);
 			else {

@@ -10,7 +10,15 @@ const script = new URL("../../sbx/container/ci-wait.sh", import.meta.url)
 const sha = "a".repeat(40);
 
 function ciWait(
-	gh: { head?: string; pending: string; total: string; state: string; contexts?: string },
+	gh: {
+		head?: string;
+		pending: string;
+		total: string;
+		state: string;
+		contexts?: string;
+		failedReads?: number;
+		interval?: string;
+	},
 	...args: string[]
 ) {
 	const bin = mkdtempSync(join(tmpdir(), "ci-wait-"));
@@ -19,7 +27,10 @@ function ciWait(
 		`#!/usr/bin/env bash
 case "$*" in
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
-  *"run list"*"select"*) echo '${gh.pending}' ;;
+  *"run list"*"select"*)
+    n=$(( $(cat "${bin}/reads" 2>/dev/null || echo 0) + 1 )); echo "$n" > "${bin}/reads"
+    if (( n <= ${gh.failedReads ?? 0} )); then echo 'failed to get runs: EOF' >&2; exit 1; fi
+    echo '${gh.pending}' ;;
   *"run list"*"--jq length"*) echo '${gh.total}' ;;
   *"run list"*) echo '[]' ;;
   *"--jq .state"*) echo '${gh.state}' ;;
@@ -31,7 +42,12 @@ esac
 	chmodSync(join(bin, "gh"), 0o755);
 	const run = spawnSync("bash", [script, "o/r", "7", ...args], {
 		encoding: "utf8",
-		env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, CI_WAIT_INTERVAL: "0" },
+		env: {
+			...process.env,
+			PATH: `${bin}:${process.env.PATH}`,
+			CI_WAIT_INTERVAL: gh.interval ?? "0",
+		},
+		timeout: 10_000,
 	});
 	return { status: run.status, out: run.stdout + run.stderr };
 }
@@ -76,6 +92,28 @@ test("no runs registered yet keeps waiting", () => {
 	const run = ciWait({ pending: "0", total: "0", state: "success" });
 
 	assert.equal(run.status, 1);
+});
+
+test("ci settled before the wait starts ends it without sleeping", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "success", interval: "60" });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, /read 1\/20: 0 of 2 runs pending, status success/);
+});
+
+test("a read lost to the network is read again", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "success", failedReads: 2 });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, /read 3\/20: 0 of 2 runs pending, status success/);
+});
+
+test("three failed reads in a row stop the wait", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "success", failedReads: 3 });
+
+	assert.equal(run.status, 2);
+	assert.match(run.out, /read failed, stop waiting/);
+	assert.doesNotMatch(run.out, /read 4\//);
 });
 
 test("an error body instead of a count stops the wait", () => {
