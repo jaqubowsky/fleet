@@ -10,7 +10,7 @@ const script = new URL("../../sbx/container/ci-wait.sh", import.meta.url)
 const sha = "a".repeat(40);
 
 function ciWait(
-	gh: { head?: string; pending: string; total: string; state: string },
+	gh: { head?: string; pending: string; total: string; state: string; contexts?: string },
 	...args: string[]
 ) {
 	const bin = mkdtempSync(join(tmpdir(), "ci-wait-"));
@@ -23,6 +23,7 @@ case "$*" in
   *"run list"*"--jq length"*) echo '${gh.total}' ;;
   *"run list"*) echo '[]' ;;
   *"--jq .state"*) echo '${gh.state}' ;;
+  *"--jq .total_count"*) echo '${gh.contexts ?? "1"}' ;;
   *) echo '{}' ;;
 esac
 `,
@@ -56,6 +57,19 @@ test("a caller cannot shorten the round with an extra argument", () => {
 	assert.equal(run.status, 2);
 	assert.match(run.out, /usage: ci-wait/);
 	assert.doesNotMatch(run.out, /head |read 1/);
+});
+
+test("settled runs with no commit status end the wait green", () => {
+	const run = ciWait({ pending: "0", total: "1", state: "pending", contexts: "0" });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, /read 1\/20: 0 of 1 runs pending, status pending, 0 statuses/);
+});
+
+test("a commit status still pending keeps waiting", () => {
+	const run = ciWait({ pending: "0", total: "1", state: "pending", contexts: "1" });
+
+	assert.equal(run.status, 1);
 });
 
 test("no runs registered yet keeps waiting", () => {

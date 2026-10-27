@@ -10,7 +10,7 @@ count() {
 main() {
   [[ "$#" == 2 ]] || { echo "$usage"; exit 2; }
   local repo="$1" pr="$2" reads=20 interval="${CI_WAIT_INTERVAL:-60}"
-  local sha pending total state i
+  local sha pending total state statuses i
   sha="$(gh api "repos/$repo/pulls/$pr" --jq .head.sha)"
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "head read failed: $sha"; exit 2; }
   echo "head $sha"
@@ -19,10 +19,11 @@ main() {
     pending="$(gh run list --repo "$repo" --commit "$sha" --json status --jq '[.[] | select(.status != "completed")] | length')" || pending=""
     total="$(gh run list --repo "$repo" --commit "$sha" --json status --jq 'length')" || total=""
     state="$(gh api "repos/$repo/commits/$sha/status" --jq .state)" || state=""
-    echo "read $i/$reads: $pending of $total runs pending, status $state"
-    count "$pending" && count "$total" || { echo "read failed, stop waiting"; exit 2; }
+    statuses="$(gh api "repos/$repo/commits/$sha/status" --jq .total_count)" || statuses=""
+    echo "read $i/$reads: $pending of $total runs pending, status $state, $statuses statuses"
+    count "$pending" && count "$total" && count "$statuses" || { echo "read failed, stop waiting"; exit 2; }
     case "$state" in success|pending|failure|error) ;; *) echo "read failed, stop waiting"; exit 2 ;; esac
-    if [[ "$pending" == 0 && "$total" != 0 && "$state" != pending ]]; then
+    if [[ "$pending" == 0 && "$total" != 0 && ( "$state" != pending || "$statuses" == 0 ) ]]; then
       gh run list --repo "$repo" --commit "$sha" --json name,status,conclusion,url
       gh api "repos/$repo/commits/$sha/status" --jq '{state, contexts: [.statuses[] | {context, state}]}'
       exit 0

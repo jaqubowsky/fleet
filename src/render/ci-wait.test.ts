@@ -41,6 +41,7 @@ case "$*" in
   *"--jq .state"*)
     if [ '${fixture.state}' = unavailable ]; then echo 'read unavailable' >&2; exit 1; fi
     echo '${fixture.state}' ;;
+  *"--jq .total_count"*) echo 1 ;;
   *"api repos/"*) echo '{"state":"${fixture.state}","contexts":[{"context":"review","state":"${fixture.state}"}]}' ;;
   *) exit 99 ;;
 esac
