@@ -48,7 +48,7 @@ A `[fleet]` line or a question about a task starts at the closing message the wa
 
 ## Landing
 
-The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
+The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word. `{{cli}} land` and `{{cli}} down` run bare: one line, one sandbox name, no pipe, `cd` or `2>&1`, their flags read from `{{cli}} --help`. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
 
 Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. The container's closing message for that round holds them, and a line pasted into a thread opens with `[container / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing.
 
