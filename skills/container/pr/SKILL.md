@@ -73,7 +73,7 @@ Each item is a check the reviewer can read in the diff or repeat. Show before an
 2. A number measured before and after on the same workload, with what was measured and where in the same line, so a local measurement never reads as a production one.
 3. A screenshot, only where the environment can attach one to GitHub. A change a user sees that was checked in the running app with no image to attach gets one line saying what was checked.
 
-Every path in the body is relative to the repository root, and every link opens for a GitHub reader: a file in the diff, a commit, a check run. The `file://` form used in replies points at a machine the reviewer cannot reach.
+Every path in the body is relative to the repository root, and every link opens for a GitHub reader: a file in the diff, a commit, a check run. The absolute path used in replies points at a machine the reviewer cannot reach.
 
 Gate output, suite counts, compiler diagnostic counts, baseline attribution and the run's own mechanics stay in `review.md` and the closing message. One of them reaches the body only when the reviewer will meet it on GitHub: a CI check that also fails on the base gets one line under merge danger, naming it as failing on the base.
 
