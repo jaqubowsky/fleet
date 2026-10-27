@@ -777,6 +777,31 @@ test("up reuses an existing container and only opens the tab", async () => {
 	assert.ok(!io.calls.some((c) => c[0] === "append" && c[2].includes(" created ")));
 });
 
+test("up refuses a sandbox name given as the label and names the label", async () => {
+	const io = fakeIo(base);
+
+	await assert.rejects(
+		up({ repo, label: "pi-webapp-web-1", root: "/root" }, io),
+		/its label is web-1/,
+	);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
+});
+
+test("up still attaches a container whose name repeats the prefix", async () => {
+	const io = fakeIo({
+		...base,
+		"sbx ls --json": [
+			{ name: "pi-webapp-pi-webapp-web-1", agent: "pi", status: "stopped", workspaces: [] },
+		],
+		"sbx exec pi-webapp-pi-webapp-web-1 sh -c stty": "-icanon -icrnl",
+	});
+
+	await up({ repo, label: "pi-webapp-web-1", root: "/root" }, io);
+
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
+	assert.ok(io.calls.some((c) => c[1] === "pane"));
+});
+
 test("up that attaches a stopped container forgets the tab its stop saved", async () => {
 	const stopped = { name: "pi-webapp-web-1", agent: "pi", status: "stopped", workspaces: [repo] };
 	const io = fakeIo({ ...base, "sbx ls --json": [stopped] });

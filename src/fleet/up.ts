@@ -7,7 +7,7 @@ import { describe, keychainName, repoName, type Profile } from "../profile/profi
 import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
-import { agentName, sandboxName, slug } from "./name.ts";
+import { agentName, labelInSandboxName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import { claudeProject, sessionsDir } from "./sessions.ts";
 import {
@@ -277,6 +277,9 @@ export async function up(
 	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
 	const profile = repoProfile(input.root, name, io);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
+	const inner = labelInSandboxName(input.repo, input.label, kind.prefix);
+	if (!existing && inner)
+		throw new Error(`${input.label} is a sandbox name; its label is ${inner}`);
 	const found = findPane(io, basename(input.repo), agent, kind);
 	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
 	if (existing) layoutTask(task, io);
