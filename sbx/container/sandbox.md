@@ -55,7 +55,9 @@ Each check runs once, where it is cheapest:
 | Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |
 
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, and the frames the change alters, picked by diffing the output first
-- A review of the delta from the last reviewed head runs once, right before the branch leaves the container: its push, or the closing message that hands it over to be landed. Rounds the person is still steering and batches of review fixes wait for that review
+- A round whose commits change what the code decides, such as a condition, a query, state, an API call or a migration, gets a review of those commits once its checks pass
+- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, one review covers every commit no review has seen yet; with none left, no review runs
+- Fixes of review findings close in that review's addendum, as `two-axis-review` says, and never start a review of their own
 - Gates run with no bash timeout
 
 ## Closing message
