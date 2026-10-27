@@ -448,6 +448,19 @@ test("the rules the corpus never spells out hold too", () => {
 	assert.equal(decide("mcp__linear", { count: 3 }, here).decision, "allow");
 });
 
+test("a directory whose name only starts like a credential store passes", () => {
+	assert.equal(
+		decide("Bash", { command: "ls ~/.config/opencode" }, here).decision,
+		"allow",
+	);
+	assert.equal(
+		decide("Bash", { command: "ls /Users/me/.config/opencode/skills" }, here).decision,
+		"allow",
+	);
+	assert.equal(decide("Bash", { command: "ls ~/.config/op/" }, here).decision, "deny");
+	assert.equal(decide("Bash", { command: "ls ~/.ssh_old" }, here).decision, "deny");
+});
+
 test("a secret reference does not pass by standing at the front of the argument", () => {
 	assert.equal(
 		decide("mcp__linear", { title: "op://Dev/GitHub PAT/credential" }, here)

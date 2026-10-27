@@ -84,7 +84,7 @@ function read(tool: string, input: Record<string, unknown>): Call | Decision {
 	return deny(unknownTool(tool));
 }
 
-const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.claude/\.credentials\.json|\.claude\.json)`;
+const SECRET_PATHS = String.raw`(\.ssh|\.config/op|Library/Keychains|\.pi/agent/(auth\.json|models-store\.json|remote/credentials\.json)|\.claude/\.credentials\.json|\.claude\.json)(?![A-Za-z0-9])`;
 const HOST_SECRETS = new RegExp(
 	String.raw`(^|[^A-Za-z0-9_./-])/Users/[^/\s]+/${SECRET_PATHS}`,
 );
