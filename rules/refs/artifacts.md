@@ -11,7 +11,7 @@ permissions.md what each seat may do in each repository: one line per action and
 repositories.json  every clone's path, base, base SHA and branch for a multi-repository task; the host keeps the authoritative copy
 project.md     how the primary project does what the rules require, when ~/.fleet/config/projects/<owner>/<repo>.md exists; {{cli}} up writes it
 projects/      additional repos' project overlays, named by their workspace basenames, when present
-ticket.md      the host's requirement, copied at start below the first line fleet up writes, then the Acceptance criteria the analysis writes; each criterion ticked with its evidence at the end
+ticket.md      the host's requirement, copied at start below the first line {{cli}} up writes, then the Acceptance criteria the analysis writes; each criterion ticked with its evidence at the end
 analysis.md    Findings, Decisions, Plan
 review.md      the one review of the whole branch: Review and Required fixes lines, findings, checks read, shared seams
 browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video; scripts/, the login, seed and walk scripts every run reuses
