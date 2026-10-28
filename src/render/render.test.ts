@@ -411,7 +411,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
-	test(`the ${name} conflict procedure and pull request body reach only the container`, () => {
+	test(`the ${name} delivery skill and pull request body reach only the container`, () => {
 		renderSeats(name, (out) => {
 			for (const suffix of ["deliver-ticket/SKILL.md", "/pr/SKILL.md"]) {
 				assert.equal(seatFiles(out, "host").some((f) => f.endsWith(suffix)), false, `host has ${suffix}`);
