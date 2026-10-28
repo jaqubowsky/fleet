@@ -1,6 +1,6 @@
 ---
 name: orchestrating-agent-sessions
-description: 'Fleet containers: put one up, steer it, read its task directory, land its branch, close it. Use when the user asks to run work in an sbx sandbox with an agent in a herdr tab, steer or inspect a running one, asks what a task is up to, wants its branch home, or when a `[fleet]` line or a refusal from `{{cli}}` needs reading.'
+description: 'Fleet containers: put one up, steer it, read its task directory, land its branch, close it. Use when the user asks to run work in an sbx sandbox with an agent in a herdr tab, asks what a running task is up to, or when a `[fleet]` line or a refusal from `{{cli}}` needs reading.'
 ---
 
 # Fleet containers

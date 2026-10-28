@@ -1,6 +1,6 @@
 ---
 name: check-regressions
-description: 'Check the behaviours beside a change, the callers and readers of each seam the diff modified, on this checkout, and on the base only for one that fails. Use when the task''s diff changes a shared seam, or the user asks what a change broke beside it.'
+description: 'Use when the task''s diff changes a shared seam, or the user asks what a change broke beside it. Checks the callers and readers of each modified seam on this checkout, and on the base only for one that fails.'
 compatibility: Requires a container that can start the project's app, plus playwright-cli and base-worktree
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: diagnosing-bugs
-description: 'Use when something is broken, throwing, failing or slow, when the user says "diagnose" or "debug this", or when the user describes a visual, layout or responsiveness defect in their own words and in any language ("it''s crooked", "it jumps", "it flashes", "it lags", "still wrong", "worse now"). Also use unprompted the moment a second attempted fix for the same symptom fails.'
+description: 'Use when something is broken, throwing, failing or slow, when the user says "diagnose" or "debug this", or when the user describes a visual defect in their own words, in any language ("it''s crooked", "it jumps", "still wrong"). Also use unprompted the moment a second attempted fix for the same symptom fails.'
 ---
 
 # Diagnosing Bugs

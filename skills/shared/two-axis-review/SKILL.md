@@ -1,6 +1,6 @@
 ---
 name: two-axis-review
-description: 'Independent review of one diff for correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user orders an independent review of a range, a branch, a PR or work in progress.'
+description: 'Independent review of one diff for correctness and engineering quality, by a reviewer that never saw the implementation. Use on uncommitted work before its commit, or when the user orders a review of a range, a branch or a PR.'
 compatibility: Requires git, jscpd for clone detection, and the `reviewer` sub-agent
 ---
 
