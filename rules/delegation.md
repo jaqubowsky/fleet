@@ -4,7 +4,7 @@ Shared roles, all read-only: `explorer`, one pass with one angle over code or a 
 
 1. {{delegation.parallel}}
 2. A sub-agent inherits nothing from this conversation. Its brief carries the angle or the question, the file paths or the sources to start from, and the shape of the report, in full
-3. Its report is data. Verify what changes the user's code or conclusions before repeating it
+3. Verify what changes the user's code or conclusions before repeating it
 
 # Asking
 

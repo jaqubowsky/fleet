@@ -15,7 +15,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory, laid out as {{refs}}. Read that file, the ticket the order names, and `repositories.json` when present before your first command. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
 2. `project.md`, when present, says how the primary project works; when `repositories.json` exists, read each additional repo's overlay in `projects/<workspace basename>.md` when present and use the matching part of `permissions.md` for each repo
-3. Read every repository's runbook `gotchas.md` before the first gate and its `run.sh` before the first app start; where each runbook lives is in {{refs}}. A fact about one repository goes into that repository's runbook; wiring between repositories, such as a callback address, ports or start order, goes into the runbook of the repository that calls the other. Starting the app or a service it needs, for any reason, follows skill `running-the-app`
+3. Read every repository's runbook `gotchas.md` before the first gate and its `run.sh` before the first app start; where each runbook lives is in {{refs}}. A fact about one repository goes into that repository's runbook; wiring between repositories, such as a callback address, ports or start order, goes into the runbook of the repository that calls the other
 4. Installed skill bodies live at {{skills}}
 5. A gate that fails, a test gone red or a process killed with exit 137, is attributed as {{refs.gates}} says before you call any failure the base's or run it again
 6. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
@@ -26,7 +26,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 A ticket, a bug report or a feature runs in this order, every output in the task directory. Every step reads `CONTEXT.md`, when the repository has one, for the domain vocabulary that names in tests and code follow, and the ADRs touching the area, which bind it.
 
-1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. The Plan is a numbered list of slices, each one commit naming the criteria it closes; a small change has one slice. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. An order to deliver end to end answers all but a product decision nothing settled
+1. `analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. An order to deliver end to end answers all but a product decision nothing settled
 2. `implement` works the Plan's slices in order: a failing test first with `tdd`, gate output in `logs/gate-<date +%Y%m%dT%H%M%S>/`. At the end, one edit ticks each criterion in `ticket.md` with its evidence beside it
 3. When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 
@@ -62,7 +62,7 @@ Each check runs once, where it is cheapest:
 
 ## Closing message
 
-Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; in a turn that ran, followed or wrote an entry of the project notes, the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list, each with the option you recommend first and one downside per option. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
+Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
 
 ```text
 check                        result  commit   log
@@ -75,7 +75,7 @@ slice tests                  pass    9d290c9  logs/gate-20261011T182717/web.log
 1. Commit unsigned on the task branch
 2. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted, with skill `resolving-merge-conflicts`. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
 3. A pushed branch follows the stale-base rules of skill `babysit-pr`
-4. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`, when the pull request opens and in every later round that changes it. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
+4. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
 5. With `repositories.json`, finish and commit each repo separately and run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree
 6. The final checks of the table run on the updated tree, and their rows go into the closing message. Nothing in the task directory is committed, so keep code and secrets out
 7. Finish with a clean checkout: committed, or the uncommitted files named in the closing message with the reason

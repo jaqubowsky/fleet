@@ -462,7 +462,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 			assert.match(rules, /`analyze-task` writes the `Acceptance criteria` section of `ticket\.md`/);
 			assert.match(rules, /`analysis\.md` with its three sections: Findings, Decisions, Plan/);
-			assert.match(rules, /The Plan is a numbered list of slices, each one commit naming the criteria it closes/);
 			assert.match(rules, /`implement` works the Plan's slices in order/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);
@@ -877,7 +876,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.ok(
 				rules.includes(
-					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; in a turn that ran, followed or wrote an entry of the project notes, the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list, each with the option you recommend first and one downside per option.",
+					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list.",
 				),
 			);
 			for (const row of [
