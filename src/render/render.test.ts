@@ -904,6 +904,22 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	});
 }
 
+test("pi agents opt into the session's agent catalog on both seats, claude agents need no opt-in", () => {
+	for (const name of ["pi", "claude"] as const)
+		renderSeats(name, (out) => {
+			for (const seat of ["host", "container"]) {
+				const agents = seatFiles(out, seat).filter((file) => /(?:^|\/)agents\/[^/]+\.md$/.test(file));
+				assert.ok(agents.length > 0, `${name} ${seat} installs no agent`);
+
+				for (const file of agents) {
+					const frontmatter = readFileSync(join(out, seat, file), "utf8").split("---\n")[1];
+					if (name === "pi") assert.match(frontmatter, /^advertise: true$/m, `${seat} ${file}`);
+					else assert.doesNotMatch(frontmatter, /^advertise:/m, `${seat} ${file}`);
+				}
+			}
+		});
+});
+
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} allows exactly the read-only roles installed on each seat`, () => {
 		renderSeats(name, (out) => {
@@ -916,6 +932,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				const installed = seatFiles(out, seat).flatMap((file) => file.match(/(?:^|\/)agents\/([^/]+)\.md$/)?.[1] ?? []).sort();
 
 				assert.deepEqual(allowed, installed, `${name} ${seat}`);
+				assert.match(allowance, /^Shared roles, all read-only: `explorer`, `researcher`, `reviewer`\. /, `${name} ${seat} defines a role beside its description`);
 			}
 		});
 	});
