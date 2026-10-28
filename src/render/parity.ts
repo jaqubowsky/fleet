@@ -11,6 +11,11 @@ const DIVERGENCES: Divergence[] = [
 			"claude's typescript-lsp plugin gives it a deferred `LSP` tool; pi has no language server tool",
 	},
 	{
+		where: /^sbx\/container\/sandbox\.md: 8\. Installed skill bodies live at/,
+		reason:
+			"a claude container finds its skill bodies without the line (micro-test t1-12); pi keeps them apart from its agent/ directory, untested, so pi keeps the line",
+	},
+	{
 		where: /^rules\/delegation\.md: 1\. "Parallel" =/,
 		reason:
 			"pi starts runs in the background, claude sends several background `Agent` calls in one message",
