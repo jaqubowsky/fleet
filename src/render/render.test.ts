@@ -443,10 +443,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					seat,
 					name === "claude" ? "rules/core.md" : "AGENTS.md",
 				);
-				assert.equal(
-					core.split("Wrong expectation -> stop, quote spec or ask user.").length -
-						1,
-					1,
+				assert.equal(core.split("-> skill `tdd` first").length - 1, 1);
+				assert.match(
+					rendered(out, seat, "tdd/red.md"),
+					/A wrong expectation is a stop, not an edit/,
 				);
 			}
 		});

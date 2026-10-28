@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: 'Writing or changing a test, or fixing a bug that needs one. Use before the first test of a feature, ticket or fix, when a red test has to be diagnosed, and when green arrives on the first run.'
+description: 'Writing, changing or reading a test, or reproducing a bug. Use before the first test of a feature, ticket or fix, on a bug report, when a red test has to be diagnosed, and when green arrives on the first run.'
 ---
 
 # Test-Driven Development
@@ -8,6 +8,11 @@ description: 'Writing or changing a test, or fixing a bug that needs one. Use be
 TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop.
 
 ## What a good test is
+
+- Unit = behavior, not class or method
+- Black box. Arrange/Act/Assert as blank-line sections, no comment labels
+- Short test names, like user story. No Gherkin
+- Test the behavior at the lowest seam that can still fail on it. None -> test higher, up to e2e, and name the doubles it forced: that list is the coupling to remove before the next test goes lower
 
 A test verifies behavior through a public interface, so it survives a refactor that keeps the behavior. Its name reads like a specification: "user can checkout with valid cart" says what capability exists. [mocking.md](mocking.md) decides what gets a double.
 
@@ -25,8 +30,9 @@ A **seam** is the public boundary you test at: the interface where you observe b
 
 ## Rules of the loop
 
+- **Bug report -> regression test first.** Show the red, then the fix.
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
 - **Every red leaves a log.** Save the right red's output to `logs/tdd-<ticket>/<test-name>.log` where your seat's rules keep outputs. It is the review's only evidence that the test can fail.
-- **A red test accuses the code, not itself.** [red.md](red.md) is the procedure for every failure in the loop.
+- **A red test accuses the code, not itself.** While red never weaken the test: no value copied from actual, no loosened matcher, no skip/only, no raised timeout, no renamed scenario. [red.md](red.md) is the procedure for every failure in the loop.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs after green, before the gate, not inside the red → green implementation cycle.
