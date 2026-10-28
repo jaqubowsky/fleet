@@ -62,7 +62,7 @@ Every claim in the brief is a file in the evidence directory, quoted. The review
 
 ### 5. Hand back
 
-Read `review.md`. Report whether it covered its whole range, whether it found a break that must be fixed, and the finding count per axis with its path. The task stays open while the review missed part of its range, or while a proven break of an acceptance line or a correction required before release is unfixed; its acceptance and final gates still decide readiness. Fixes are the main agent's, and this review is the only one. Close each finding:
+Read `review.md`. Report whether it covered its whole range, whether it found a break that must be fixed, and the finding count per axis with its path. The task stays open while the review missed part of its range, or while a proven break of an acceptance line or a correction required before release is unfixed; its acceptance and final gates still decide readiness. Fixes are the main agent's. Close each finding:
 
 - Fix what a test or a trace shows broken, with the smallest fix, and close it with that evidence: a test that fails without the fix, or a log path and line
 - A finding no test or trace reproduces stays unbuilt, closed as not reproduced
