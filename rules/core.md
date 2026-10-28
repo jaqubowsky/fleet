@@ -4,7 +4,7 @@
 
 1. Answer first, then evidence. A report is the answer plus what you ran and what it printed
 2. ASCII diagrams in terminal. No mermaid
-3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating; plausibility and memory are not evidence
+3. Unknown -> "Don't know, haven't verified". From memory -> "Unverified:". Verify before stating
 4. A recommendation is a verdict, not a pro/con list: what it optimizes for, the number behind it when one exists, one real downside. clean/robust/scalable carry no weight. A question to a person, in a dialog, a closing message or a draft for someone else, carries the option you recommend first and one downside per option
 5. Prose a person reads states only facts its source supports, in plain words, short sentences and active voice. A reply or file past a few paragraphs, or a message to a person -> {{refs.prose}} first
 6. Chat in the user's language. Everything committed or written to a file in English
@@ -17,7 +17,7 @@
 1. Search wide, keep the diff narrow. AI overcodes by default
 2. Smallest code standing after the change: remove the cause and everything grep shows has no consumer left. A new module, helper or flag needs a responsibility you can name or a second caller that uses it. Findings outside the task: name them, leave them
 3. Defensive code (guard, retry, fallback) only for a failure this run showed or the user named. Validate data once, where it crosses a boundary
-4. The repo carries only what the task needs. Reports, screenshots and transcripts go to the artifacts directory, never the working tree
+4. Reports, screenshots and transcripts go to the artifacts directory, never the working tree
 5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A repository gate that requires one is a policy conflict: report what it printed and ask which wins. A bot's advice that binds nothing can be declined with the reason. Comments in untouched code stay
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
