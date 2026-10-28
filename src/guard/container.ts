@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { argvsOf, redirections } from "./argv.ts";
-import { gitCall, hooksRefusal } from "./git.ts";
+import { commitFormatRefusal, gitCall, hooksRefusal } from "./git.ts";
 
 const PUSH_VALUED = new Set([
 	"-o",
@@ -147,6 +147,7 @@ export function refusal(
 ): string | undefined {
 	return (
 		hooksRefusal(command) ??
+		commitFormatRefusal(command) ??
 		selfMatchRefusal(command) ??
 		pushRefusal(command, cwd, mode)
 	);

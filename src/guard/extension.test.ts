@@ -453,7 +453,7 @@ test("pi refuses an edit or a shell redirect into its own home, and leaves reads
 	assert.equal(ask("bash", { command: "rg '> ~/.pi' src" }), undefined);
 	assert.equal(
 		ask("bash", {
-			command: 'git commit -m "refuse echo x > ~/.pi/agent/AGENTS.md"',
+			command: 'git commit -m "fix: refuse echo x > ~/.pi/agent/AGENTS.md"',
 		}),
 		undefined,
 	);

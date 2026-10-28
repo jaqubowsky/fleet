@@ -8,6 +8,8 @@ import { cases, input } from "./corpus.ts";
 import { hostAt } from "./host.ts";
 import { at, EMPTY_HOME, here, privateRoot } from "./checkouts.ts";
 import { decide, type HostLevels } from "./policy.ts";
+import { refusal } from "./container.ts";
+import { commitFormatRefusal } from "./git.ts";
 
 test("the host policy leaves sandbox removal to the fleet down approval path", () => {
 	for (const command of [
@@ -15,6 +17,30 @@ test("the host policy leaves sandbox removal to the fleet down approval path", (
 		`sh -c 'exec "$@"' -- sbx rm -f pi-demo`,
 	]) {
 		assert.equal(decide("Bash", { command }, here).decision, "deny", command);
+	}
+});
+
+test("a commit message that is not one conventional line is refused with the format, on the host and in a container", () => {
+	for (const command of [
+		'git commit -m "Return an empty document for empty input"',
+		'git commit -m "fix(parser): return an empty document" -m "Fixes #412."',
+		'git commit -m "fix(parser): Return an empty document"',
+		'git commit -m "fix(parser): return an empty document."',
+		`git commit -m "$(cat <<'EOF'\nfix(parser): return an empty document\nEOF\n)"`,
+		"git commit -F msg.txt",
+	]) {
+		const verdict = decide("Bash", { command }, here);
+		assert.equal(verdict.decision, "deny", command);
+		assert.match(verdict.reason, /`type\(scope\): subject`/);
+		assert.match(refusal(command, import.meta.dirname) ?? "", /`type\(scope\): subject`/, command);
+	}
+	for (const command of [
+		'git commit -m "fix(parser): return an empty document for empty input"',
+		"git add src && git commit -qm 'feat: add a dry run'",
+		"git commit --amend --no-edit",
+	]) {
+		assert.equal(commitFormatRefusal(command), undefined, command);
+		assert.equal(refusal(command, import.meta.dirname), undefined, command);
 	}
 });
 

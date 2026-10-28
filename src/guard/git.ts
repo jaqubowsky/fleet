@@ -47,3 +47,36 @@ export function hooksRefusal(command: string): string | undefined {
 		? "--no-verify skips the repository's own hooks, which are its gate. Run the command with them; a hook this environment cannot run gets the substitute the repository names, and a hook that blocks you is reported with what it printed."
 		: undefined;
 }
+
+const ONE_LINE = /^[a-z]+(\([^()\s]+\))?!?: [^A-Z\s](.*[^.\s])?$/;
+
+function commitMessages(args: string[]): string[] | undefined {
+	const messages: string[] = [];
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg === "-F" || arg.startsWith("--file") || /^-[A-Za-z]*F/.test(arg)) return undefined;
+		if (arg.startsWith("--message=")) messages.push(arg.slice("--message=".length));
+		else if (arg === "--message") messages.push(args[++i] ?? "");
+		else {
+			const cluster = /^-([A-Za-z]*?)m([\s\S]*)$/.exec(arg);
+			if (cluster && ![...cluster[1]].some((letter) => COMMIT_VALUED.includes(letter)))
+				messages.push(cluster[2] === "" ? (args[++i] ?? "") : cluster[2]);
+		}
+	}
+	return messages;
+}
+
+export function commitFormatRefusal(command: string): string | undefined {
+	const bad = argvsOf(command)
+		.map(gitCall)
+		.filter((call) => call?.subcommand === "commit")
+		.some((call) => {
+			const messages = commitMessages(call!.args);
+			if (messages === undefined) return true;
+			if (messages.length === 0) return false;
+			return messages.length > 1 || !ONE_LINE.test(messages[0]);
+		});
+	return bad
+		? "A commit message is one line, `type(scope): subject`: a conventional type, an optional scope, a lowercase imperative subject with no trailing period, and no body or trailer. Pass it as one literal `-m`."
+		: undefined;
+}

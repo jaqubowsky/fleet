@@ -68,7 +68,7 @@ test("in a container on its own branch, a push of that branch and every other co
 		"git push -u origin web-1",
 		"git push origin HEAD",
 		"git push -o ci.skip origin web-1",
-		'git commit -m "git push origin main"',
+		'git commit -m "docs: git push origin main"',
 		"git log main",
 		"ls",
 	])

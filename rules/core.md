@@ -44,9 +44,7 @@
 
 ## Git
 
-1. Conventional commit, single line: `type(scope): subject`. No body, no footer
-2. Subject imperative, lowercase, no trailing period
-3. Commit once the work is done, split into logical commits, one change each. Never rebuild history by undoing finished work
+1. Commit once the work is done, split into logical commits, one change each. Never rebuild history by undoing finished work
 
 ## Decisions
 

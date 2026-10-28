@@ -209,7 +209,7 @@ test("the claude hook judges a chained privileged command by the policy alone, s
 	for (const command of [
 		"npm test && git push",
 		"cd .. ; fleet up demo",
-		'git add -A && git commit -m "fix"',
+		'git add -A && git commit -m "fix: x"',
 		"git fetch origin && git log origin/main",
 		"gh run view 7 --log-failed | tail",
 	])
