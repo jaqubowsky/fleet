@@ -28,6 +28,11 @@ test("a commit message that is not one conventional line is refused with the for
 		'git commit -m "fix(parser): return an empty document."',
 		`git commit -m "$(cat <<'EOF'\nfix(parser): return an empty document\nEOF\n)"`,
 		"git commit -F msg.txt",
+		'git commit -s -m "fix: return an empty document"',
+		'git commit -sm "fix: return an empty document"',
+		'git commit --trailer "Co-authored-by: X" -m "fix: return an empty document"',
+		'git commit --mes="Fix stuff"',
+		"git commit --fil=msg.txt",
 	]) {
 		const verdict = decide("Bash", { command }, here);
 		assert.equal(verdict.decision, "deny", command);
@@ -38,6 +43,7 @@ test("a commit message that is not one conventional line is refused with the for
 		'git commit -m "fix(parser): return an empty document for empty input"',
 		"git add src && git commit -qm 'feat: add a dry run'",
 		"git commit --amend --no-edit",
+		'git commit --mes="fix: return an empty document"',
 	]) {
 		assert.equal(commitFormatRefusal(command), undefined, command);
 		assert.equal(refusal(command, import.meta.dirname), undefined, command);

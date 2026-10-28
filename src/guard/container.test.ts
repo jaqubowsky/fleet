@@ -93,6 +93,7 @@ test("skipping the repository's own hooks is refused in a container", () => {
 		.map((c) => `${c.want} expected: ${c.subject}`);
 
 	assert.deepEqual(wrong, []);
+	assert.equal(hooksRefusal("git commit -mn"), undefined);
 });
 
 test("a pkill -f or pgrep -f whose pattern matches its own command is refused, and one that misses it passes", () => {

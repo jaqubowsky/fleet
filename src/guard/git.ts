@@ -50,18 +50,28 @@ export function hooksRefusal(command: string): string | undefined {
 
 const ONE_LINE = /^[a-z]+(\([^()\s]+\))?!?: [^A-Z\s](.*[^.\s])?$/;
 
+function longOption(arg: string, name: string): boolean {
+	const key = arg.split("=")[0];
+	return key.length > 2 && `--${name}`.startsWith(key);
+}
+
 function commitMessages(args: string[]): string[] | undefined {
 	const messages: string[] = [];
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
-		if (arg === "-F" || arg.startsWith("--file") || /^-[A-Za-z]*F/.test(arg)) return undefined;
-		if (arg.startsWith("--message=")) messages.push(arg.slice("--message=".length));
-		else if (arg === "--message") messages.push(args[++i] ?? "");
-		else {
-			const cluster = /^-([A-Za-z]*?)m([\s\S]*)$/.exec(arg);
-			if (cluster && ![...cluster[1]].some((letter) => COMMIT_VALUED.includes(letter)))
-				messages.push(cluster[2] === "" ? (args[++i] ?? "") : cluster[2]);
-		}
+		if (["file", "signoff", "trailer"].some((name) => longOption(arg, name))) return undefined;
+		if (longOption(arg, "message"))
+			messages.push(arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : (args[++i] ?? ""));
+		else if (/^-[^-]/.test(arg))
+			for (const [at, letter] of [...arg.slice(1)].entries()) {
+				if (letter === "F" || letter === "s") return undefined;
+				if (letter === "m") {
+					const attached = arg.slice(at + 2);
+					messages.push(attached === "" ? (args[++i] ?? "") : attached);
+					break;
+				}
+				if (COMMIT_VALUED.includes(letter)) break;
+			}
 	}
 	return messages;
 }
