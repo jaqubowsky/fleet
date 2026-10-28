@@ -18,7 +18,7 @@ One container per task, with one private clone per `--repo`, in an sbx sandbox. 
 
 ## Putting a task up
 
-After `{{cli}} up`, write everything the issue holds into the task directory: its description, comments, attachments, linked documents and related issues into `ticket.md`, and each file or image it carries beside it, or its link when you cannot download it. A sub-agent report a decision of the task rests on goes there too, now or later, named in `ticket.md`. The steer is one line, the outcome and that path. The container ticks its criteria there, each with its evidence.
+After `{{cli}} up`, write everything the issue holds into the task directory: its description, comments, attachments, linked documents and related issues into `ticket.md`, below the first line `{{cli}} up` wrote there, which starts the container's delivery, and each file or image it carries beside it, or its link when you cannot download it. A sub-agent report a decision of the task rests on goes there too, now or later, named in `ticket.md`. The steer is one line, the outcome and that path. The container ticks its criteria there, each with its evidence.
 
 ## Wording a steer
 

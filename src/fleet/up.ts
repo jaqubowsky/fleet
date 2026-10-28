@@ -94,6 +94,9 @@ export function agentArgs(
 	return `${[...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])].join(" ")}`;
 }
 
+export const TICKET_STUB =
+	"Deliver this ticket with skill `deliver-ticket`; the host writes the ticket below this line.\n";
+
 export const SWITCH_TO_BRANCH = `cd "$WORKSPACE_DIR" || exit 1
 git fetch --quiet origin "$2" || { echo "cannot refresh origin/$2; refusing stale base" >&2; exit 1; }
 base_sha="$(git rev-parse 'FETCH_HEAD^{commit}')" || exit 1
@@ -428,6 +431,8 @@ export async function up(
 		const overlay = projectOverlay(name, io);
 		if (overlay === undefined) io.remove(`${task}/project.md`);
 		else io.write(`${task}/project.md`, overlay);
+		if (io.read(`${task}/ticket.md`) === undefined)
+			io.write(`${task}/ticket.md`, TICKET_STUB);
 		const setup = setupCommand(overlay);
 		if (locks || setup) {
 			io.sbx(

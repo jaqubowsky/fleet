@@ -7,7 +7,8 @@ import { render } from "./render.ts";
 
 type Misplaced = { at: string; names: string; owner: string };
 
-const CONTAINER_OWNER = "sbx/container/sandbox.md";
+const CONTAINER_OWNER = "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md";
+const DELIVERY = "skills/container/deliver-ticket/";
 const HOST_OWNER = "skills/host/orchestrating-agent-sessions/SKILL.md";
 const SEAT_OWNERS = `${CONTAINER_OWNER} or ${HOST_OWNER}`;
 
@@ -62,7 +63,7 @@ export function misplaced(sources: Record<string, string>): Misplaced[] {
 		MECHANICS.flatMap((m) => line.match(m)?.[0] ?? []);
 	const layerOf = (file: string): Layer | undefined => {
 		const skill = file.match(/^skills\/(container|host|shared)\/([^/]+)\//);
-		if (skill && file !== HOST_OWNER && !file.startsWith(HOST_OWNER.replace("SKILL.md", "references/"))) {
+		if (skill && file !== HOST_OWNER && !file.startsWith(HOST_OWNER.replace("SKILL.md", "references/")) && !file.startsWith(DELIVERY)) {
 			const [, seat, name] = skill;
 			return {
 				names: (line) => [

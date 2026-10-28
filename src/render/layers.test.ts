@@ -18,8 +18,8 @@ test("every line in skills, principles and refs sits in its own layer", () => {
 });
 
 test("a container skill naming another skill or a mechanic belongs to the container owner", () => {
-	assert.deepEqual(atSeededLine("skills/container/babysit-pr/SKILL.md", "Then run skill `analyze-task` and write `analysis.md`."), [{ names: "analyze-task, analysis.md", owner: "sbx/container/sandbox.md" }]);
-	assert.deepEqual(atSeededLine("skills/container/babysit-pr/SKILL.md", "Then read `project.md`."), [{ names: "project.md", owner: "sbx/container/sandbox.md" }]);
+	assert.deepEqual(atSeededLine("skills/container/babysit-pr/SKILL.md", "Then run skill `analyze-task` and write `analysis.md`."), [{ names: "analyze-task, analysis.md", owner: "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("skills/container/babysit-pr/SKILL.md", "Then read `project.md`."), [{ names: "project.md", owner: "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md" }]);
 });
 
 test("a host skill naming a mechanic belongs to the host owner", () => {
@@ -27,16 +27,16 @@ test("a host skill naming a mechanic belongs to the host owner", () => {
 });
 
 test("a principle naming a mechanic belongs to a seat owner", () => {
-	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `analysis.md`"), [{ names: "analysis.md", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("rules/core.md", "9. Blocked -> write it in `analysis.md`"), [{ names: "analysis.md", owner: "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
 });
 
 test("a principle naming a skill one seat lacks belongs to a seat owner", () => {
-	assert.deepEqual(atSeededLine("rules/core.md", "9. A red check on the pull request -> skill `babysit-pr`"), [{ names: "babysit-pr", owner: "sbx/container/sandbox.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
+	assert.deepEqual(atSeededLine("rules/core.md", "9. A red check on the pull request -> skill `babysit-pr`"), [{ names: "babysit-pr", owner: "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md or skills/host/orchestrating-agent-sessions/SKILL.md" }]);
 	assert.deepEqual(atSeededLine("rules/delegation.md", "4. Reviewing a diff -> skill `two-axis-review`"), []);
 });
 
 test("a contract naming a skill belongs to the container owner", () => {
-	assert.deepEqual(atSeededLine("rules/refs/ticket.md", "A ticket is written by skill `to-tickets`."), [{ names: "to-tickets", owner: "sbx/container/sandbox.md" }]);
+	assert.deepEqual(atSeededLine("rules/refs/ticket.md", "A ticket is written by skill `to-tickets`."), [{ names: "to-tickets", owner: "sbx/container/sandbox.md or skills/container/deliver-ticket/SKILL.md" }]);
 });
 
 test("no text a container reads names a check the host runs after it", () => {

@@ -7,7 +7,7 @@ import { type TestContext, test } from "node:test";
 import { fakeIo } from "./fake-io.ts";
 import { manifestPath, stopFile } from "./repositories.ts";
 import { SEATS, KINDS } from "../harness.ts";
-import { SWITCH_TO_BRANCH, cacheDir, cacheStore, envFiles, up } from "./up.ts";
+import { SWITCH_TO_BRANCH, TICKET_STUB, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import {
 	PRIVATE_PROFILE,
 	PRIVATE_REPO,
@@ -1341,7 +1341,7 @@ test("up lays out the task directory once and points pi's sessions into it", asy
 		again.calls
 			.filter((c) => c[0] === "write" && c[1].startsWith(`${task}/`))
 			.map((c) => c[1]),
-		[`${task}/permissions.md`],
+		[`${task}/permissions.md`, `${task}/ticket.md`],
 	);
 });
 
@@ -2034,6 +2034,18 @@ test("up writes the repository's overlay into the task directory as project.md, 
 	assert.ok(
 		none.calls.some((c) => c[0] === "remove" && c[1] === `${task}/project.md`),
 	);
+});
+
+test("up starts the ticket on the line that loads the delivery skill, and keeps a ticket that is already there", async () => {
+	const task = "/home/me/.fleet/tasks/webapp/pi-webapp-web-1";
+	const fresh = fakeIo(base);
+	await up({ repo, label: "web-1", root: "/root" }, fresh);
+	assert.equal(fresh.files[`${task}/ticket.md`].split("\n")[0], TICKET_STUB.split("\n")[0]);
+	assert.match(TICKET_STUB, /skill `deliver-ticket`/);
+
+	const kept = fakeIo({ ...base, [`read ${task}/ticket.md`]: "# The host's ticket\n" });
+	await up({ repo, label: "web-1", root: "/root" }, kept);
+	assert.ok(!kept.calls.some((c) => c[0] === "write" && c[1] === `${task}/ticket.md`));
 });
 
 test("up runs the overlay's Setup sh block after the install, and the plain install when the overlay has none", async () => {

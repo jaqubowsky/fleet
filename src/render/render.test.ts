@@ -413,7 +413,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 	test(`the ${name} conflict procedure and pull request body reach only the container`, () => {
 		renderSeats(name, (out) => {
-			for (const suffix of ["resolving-merge-conflicts/SKILL.md", "/pr/SKILL.md"]) {
+			for (const suffix of ["deliver-ticket/SKILL.md", "/pr/SKILL.md"]) {
 				assert.equal(seatFiles(out, "host").some((f) => f.endsWith(suffix)), false, `host has ${suffix}`);
 				assert.ok(seatFiles(out, "container").some((f) => f.endsWith(suffix)), `container lacks ${suffix}`);
 			}
@@ -458,11 +458,13 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		renderSeats(name, (out) => {
 			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
 			const analyze = rendered(out, "container", "analyze-task/SKILL.md");
+			const deliver = rendered(out, "container", "deliver-ticket/SKILL.md");
 			const artifacts = rendered(out, "container", "refs/artifacts.md");
 
-			assert.match(rules, /`analyze-task` writes the `Acceptance criteria` section of `ticket\.md`/);
-			assert.match(rules, /`analysis\.md` with its three sections: Findings, Decisions, Plan/);
-			assert.match(rules, /`implement` works the Plan's slices in order/);
+			assert.match(deliver, /`analyze-task` writes the `Acceptance criteria` section of `ticket\.md`/);
+			assert.match(deliver, /`analysis\.md` with its three sections: Findings, Decisions, Plan/);
+			assert.match(deliver, /The Plan's slices in order: a failing test first with `tdd`/);
+			assert.match(rules, /runs skill `deliver-ticket`/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);
 			assert.match(analyze, /each one commit: what it delivers, the acceptance criteria it closes, and its test seam/);
@@ -483,8 +485,8 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 	test(`${name} updates the branch once, by the merge method the project names, as a git command decides`, () => {
 		renderSeats(name, (out) => {
-			const rules = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
-			const finish = rules.split("## Finish\n")[1]!;
+			const rules = rendered(out, "container", "deliver-ticket/SKILL.md");
+			const finish = rules.split("## 4. Branch update and final checks\n")[1]!;
 
 			assert.match(finish, /`git merge-base --is-ancestor origin\/<base> HEAD` exiting 0 means no update/);
 			assert.match(finish, /by the method `## Merge method` in `project\.md` names/);
@@ -771,13 +773,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				);
 			assert.deepEqual(promises, []);
 			assert.match(
-				rendered(out, "container", "implement/SKILL.md"),
-				/The independent review runs once, over the whole branch, as your seat's Checks table orders it/,
+				rendered(out, "container", "deliver-ticket/SKILL.md"),
+				/The independent review runs once, over the whole branch, as the Checks table orders it/,
 			);
-			const rules = containerRules(out)
-				.map((file) => readFileSync(join(out, "container", file), "utf8"))
-				.join("\n");
-			assert.match(rules, /\| Independent review of the whole branch, `two-axis-review` \| after the branch update \| 1 \|/);
+			assert.match(rendered(out, "container", "deliver-ticket/SKILL.md"), /\| Independent review of the whole branch, `two-axis-review` \| after the branch update \| 1 \|/);
 			assert.match(
 				hostSkill(out),
 				/Every container run ends on one independent review of its whole branch, in `review\.md`/,
@@ -824,7 +823,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				/Seen:|## Parent/,
 			);
 			assert.doesNotMatch(
-				rendered(out, "container", "implement/SKILL.md"),
+				rendered(out, "container", "deliver-ticket/SKILL.md"),
 				/Seen:/,
 			);
 			assert.doesNotMatch(
@@ -850,7 +849,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 	test(`${name} container checkpoints, ends every turn on the closing message and cuts small slices`, () => {
 		renderSeats(name, (out) => {
-			const implement = rendered(out, "container", "implement/SKILL.md");
+			const implement = rendered(out, "container", "deliver-ticket/SKILL.md");
 			assert.match(
 				implement,
 				/Commit the first coherent vertical piece before widening/,
@@ -888,7 +887,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				"| End-to-end suite, where the project has one | the changed path's specs after its slice; the full suite on the final tree | 1 per slice, plus 1 |",
 				"| Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |",
 			])
-				assert.ok(rules.includes(row), row);
+				assert.ok(implement.includes(row), row);
 			assert.match(rules, /each check covers only the base or the last `@sha` it passed on, up to HEAD/);
 			assert.match(rules, /Gates run with no bash timeout/);
 			assert.match(
@@ -977,11 +976,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				/Write the ADR a decision of yours needs in `docs\/adr\/`/,
 			);
 			assert.match(
-				rendered(
-					out,
-					"container",
-					name === "claude" ? "rules/sandbox.md" : "AGENTS.md",
-				),
+				rendered(out, "container", "deliver-ticket/SKILL.md"),
 				/An ADR the run's decisions need is proposed in its pull request, as a commit adding it under `docs\/adr\/`/,
 			);
 		});
