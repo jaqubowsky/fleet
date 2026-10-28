@@ -10,7 +10,7 @@ A container's always-loaded rules carried the whole first delivery: the analysis
 
 ## Decision
 
-Skill `deliver-ticket` holds the first delivery, from the analysis to the final checks, with the conflict rules of a branch update. `fleet up` writes `ticket.md` with a first line that loads it, and the host writes the ticket below that line. `sbx/container/sandbox.md` keeps every rule a later round needs, under `## Every round`, and names `deliver-ticket` under `## Delivery`. `src/render/layers.ts` lets `deliver-ticket` name skills and mechanics as `sandbox.md` does.
+Skill `deliver-ticket` holds the first delivery, from the analysis to the final checks. `fleet up` writes `ticket.md` with a first line that loads it, and the host writes the ticket below that line. `sbx/container/sandbox.md` keeps every rule a later round needs, the two conflict rules among them, under `## Every round`, and names `deliver-ticket` under `## Delivery`. `src/render/layers.ts` lets `deliver-ticket` name skills and mechanics as `sandbox.md` does.
 
 ## Consequences
 
