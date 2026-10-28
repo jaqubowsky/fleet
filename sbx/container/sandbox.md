@@ -34,7 +34,7 @@ A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from
 - Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, one review covers every commit no review has seen yet; with none left, no review runs
 - Fixes of review findings close in that review's addendum, as `two-axis-review` says, and never start a review of their own
 - Gates run with no bash timeout
-- Where the two sides of a merge or rebase conflict cannot both stand, keep the side the merge's stated goal names (its pull request, its ticket, the branch it lands on), and write down in the commit or the report which side you dropped and why
+- Where the two sides of a merge or rebase conflict cannot both stand, keep the side the merge's stated goal names (its pull request, its ticket, the branch it lands on), and write down in the commit or the report which side you dropped and why. A conflict between two product decisions is not resolved in code: it becomes an open question for the host, and under `modernize` it is REWORK as its step 4 says
 - A rebase is done when `git status` shows no rebase in progress: after each resolved commit, `git rebase --continue`, until every commit is replayed
 
 ## Closing message
