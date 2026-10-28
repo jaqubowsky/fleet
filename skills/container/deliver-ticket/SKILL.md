@@ -58,12 +58,6 @@ Each check runs once, where it is cheapest:
 
 ## 4. Branch update and final checks
 
-1. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted, as Conflicts below says. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
+1. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
 2. With `repositories.json`, finish and commit each repo separately and run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree
 3. The final checks of the table run on the updated tree, and their rows go into the closing message
-
-## Conflicts
-
-1. Where the two sides' intents cannot both stand, keep the side the merge's stated goal names (its pull request, its ticket, the branch it lands on), and write down in the commit or the report which side you dropped and why.
-
-2. A rebase is done when `git status` shows no rebase in progress: after each resolved commit, `git rebase --continue`, until every commit is replayed.
