@@ -1,6 +1,6 @@
 # Gate failures
 
-Reached from the container rules when a gate fails: a test goes red, or a process dies.
+Reached from the container rules when a gate fails: a test goes red, or a process dies; and when a task needs services.
 
 ## Whose failure it is
 
@@ -22,3 +22,9 @@ The kernel killed it for memory. A node heap flag is at most three quarters of w
 - goes into `runbook/gotchas.md` as not runnable here, with the memory it had
 - goes once into the closing message's open questions, so the next container can get more
 - is named as not run, never started again, by every later gate with no more memory than that
+
+## Services
+
+A missing Docker daemon: name the failed `docker info` check, and the image rebuild and fresh container it needs, as an open question of the closing message.
+
+With Docker, start only the test services, through `$FLEET_ARTIFACTS/runbook/run.md` or the repository's compose file, and wait for their healthchecks; a service still refusing a connection (`ECONNREFUSED`, timeout) blocks the run on its name. A runbook that starts native services instead is valid where the project supplies one. The services and the app stay up between turns.
