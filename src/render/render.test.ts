@@ -934,6 +934,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				const installed = seatFiles(out, seat).flatMap((file) => file.match(/(?:^|\/)agents\/([^/]+)\.md$/)?.[1] ?? []).sort();
 
 				assert.deepEqual(allowed, installed, `${name} ${seat}`);
+				assert.match(allowance, /^Shared roles, all read-only: `explorer`, `researcher`, `reviewer`\. /, `${name} ${seat} defines a role beside its description`);
 			}
 		});
 	});
