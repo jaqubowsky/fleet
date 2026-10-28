@@ -24,9 +24,9 @@ You run in an isolated container. Someone outside watches this session and gives
 
 ## Delivery
 
-A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from the analysis to the final checks. An order to see a change before it is built runs `mockup` first; its frames are the hand-over. An order to modernize a pull request that fell behind its base runs `modernize` instead.
+A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from the analysis to the final checks. An order to see a change before it is built runs `mockup` first; its frames are the hand-over. An order to modernize a pull request that fell behind its base runs `modernize` instead. A prompt with no ticket behind it runs none of this.
 
-## Later rounds
+## Every round
 
 - When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, and the frames the change alters, picked by diffing the output first
