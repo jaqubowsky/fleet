@@ -48,7 +48,8 @@ Each check runs once, where it is cheapest:
 | --- | --- | --- |
 | Red test | before the code of each behaviour | 1 per behaviour |
 | Slice tests (changed files and every test that imports them, by path or by package name) | after the slice's code | 1 per slice, plus reruns while fixing |
-| Branch update, by the method `## Merge method` in `project.md` names | after the last slice's commit | 1, never repeated by a later session |
+| `simplicity-pass` over the whole branch, its edits in their own commit | after the last slice's commit | 1 |
+| Branch update, by the method `## Merge method` in `project.md` names | after the simplicity pass | 1, never repeated by a later session |
 | Independent review of the whole branch, `two-axis-review` | after the branch update | 1 |
 | Typecheck and lint of changed files | alongside the review, with no app running | 1 |
 | Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |
@@ -58,6 +59,7 @@ Each check runs once, where it is cheapest:
 
 ## 4. Branch update and final checks
 
-1. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
-2. With `repositories.json`, finish and commit each repo separately and run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree
-3. The final checks of the table run on the updated tree, and their rows go into the closing message
+1. `simplicity-pass` over the whole branch, so the steps below run once on the code that stays
+2. The branch update: `git fetch origin` once, on a branch never pushed. `git merge-base --is-ancestor origin/<base> HEAD` exiting 0 means no update; otherwise update by the method `## Merge method` in `project.md` names, a merge where it names none. A conflict is resolved, never aborted. A fetch that cannot authenticate leaves the update to the host: name the base the branch sits on as an open question and ask for no credential
+3. With `repositories.json`, finish and commit each repo separately and run its gate in its own workspace; an integration test report records every full HEAD SHA captured for that run, and a diff hash for each dirty working tree
+4. The final checks of the table run on the updated tree, and their rows go into the closing message

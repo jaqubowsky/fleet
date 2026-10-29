@@ -24,6 +24,7 @@ RUN playwright-cli install --skills -g \
 
 COPY --chmod=0755 container/base-worktree.sh /usr/local/bin/base-worktree
 COPY --chmod=0755 container/ci-wait.sh /usr/local/bin/ci-wait
+COPY --chmod=0755 container/added-comments.sh /usr/local/bin/added-comments
 
 COPY settings.json    /etc/claude-code/managed-settings.json
 

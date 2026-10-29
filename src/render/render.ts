@@ -309,6 +309,7 @@ class Renderer {
 			["sbx/container/.dockerignore", "context/.dockerignore"],
 			["sbx/container/base-worktree.sh", "context/container/base-worktree.sh"],
 			["sbx/container/ci-wait.sh", "context/container/ci-wait.sh"],
+			["sbx/container/added-comments.sh", "context/container/added-comments.sh"],
 		]);
 	}
 

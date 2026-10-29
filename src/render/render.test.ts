@@ -490,7 +490,21 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 
 			assert.match(finish, /`git merge-base --is-ancestor origin\/<base> HEAD` exiting 0 means no update/);
 			assert.match(finish, /by the method `## Merge method` in `project\.md` names/);
-			assert.match(rules, /\| Branch update, by the method `## Merge method` in `project\.md` names \| after the last slice's commit \| 1, never repeated by a later session \|/);
+			assert.match(rules, /\| Branch update, by the method `## Merge method` in `project\.md` names \| after the simplicity pass \| 1, never repeated by a later session \|/);
+		});
+	});
+
+	test(`${name} runs the simplicity pass in every round that wrote code, before its checks`, () => {
+		renderSeats(name, (out) => {
+			const delivery = rendered(out, "container", "deliver-ticket/SKILL.md");
+			const finish = delivery.split("## 4. Branch update and final checks\n")[1]!;
+			const sandbox = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+
+			assert.match(finish, /^\n1\. `simplicity-pass` over the whole branch/);
+			assert.match(delivery, /\| `simplicity-pass` over the whole branch, its edits in their own commit \| after the last slice's commit \| 1 \|/);
+			assert.match(sandbox.split("## Every round\n")[1]!, /^\n- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it/);
+			assert.match(sandbox, /^- At that same point `added-comments origin\/<base>` prints nothing/m);
+			assert.match(rendered(out, "container", "simplicity-pass/SKILL.md"), /`added-comments origin\/<base>`/);
 		});
 	});
 
@@ -789,6 +803,13 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.ok(
 				rendered(out, "container", "context/container/ci-wait.sh").includes("--jq .head.sha"),
 			);
+			assert.match(
+				rendered(out, "container", "context/Dockerfile"),
+				/container\/added-comments\.sh\s+\/usr\/local\/bin\/added-comments/,
+			);
+			assert.ok(
+				rendered(out, "container", "context/container/added-comments.sh").includes("merge-base"),
+			);
 		});
 	});
 }
@@ -875,7 +896,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.ok(
 				rules.includes(
-					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list.",
+					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list.",
 				),
 			);
 			for (const row of [

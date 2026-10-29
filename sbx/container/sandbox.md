@@ -28,10 +28,12 @@ A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from
 
 ## Every round
 
+- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it, so they run once on the code that stays
 - When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, and the frames the change alters, picked by diffing the output first
 - A round whose commits change what the code decides, such as a condition, a query, state, an API call or a migration, gets a review of those commits once its checks pass
 - Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, one review covers every commit no review has seen yet; with none left, no review runs
+- At that same point `added-comments origin/<base>` prints nothing, so a comment a review fix wrote comes out too
 - Fixes of review findings close in that review's addendum, as `two-axis-review` says, and never start a review of their own
 - Gates run with no bash timeout
 - Where the two sides of a merge or rebase conflict cannot both stand, keep the side the merge's stated goal names (its pull request, its ticket, the branch it lands on), and write down in the commit or the report which side you dropped and why. A conflict between two product decisions is not resolved in code: it becomes an open question for the host, and under `modernize` it is REWORK as its step 4 says
@@ -39,7 +41,7 @@ A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from
 
 ## Closing message
 
-Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
+Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
 
 ```text
 check                        result  commit   log

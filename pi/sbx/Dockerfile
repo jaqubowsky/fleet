@@ -24,6 +24,7 @@ RUN cp -r /usr/local/share/npm-global/lib/node_modules/@playwright/cli/skills/pl
 COPY --chown=agent:agent agent-settings.json      /home/agent/.pi/agent/settings.json
 COPY --chmod=0755 container/base-worktree.sh       /usr/local/bin/base-worktree
 COPY --chmod=0755 container/ci-wait.sh            /usr/local/bin/ci-wait
+COPY --chmod=0755 container/added-comments.sh     /usr/local/bin/added-comments
 
 RUN pkgs="$(node -p "require('/home/agent/.pi/agent/settings.json').packages.map(p => p.replace(/^npm:/, '')).join(' ')")" \
  && mkdir -p /home/agent/.pi/agent/npm \
