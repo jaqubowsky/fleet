@@ -40,7 +40,7 @@ function machine(t, agents) {
 
 function claudeMac(t) {
 	const mac = machine(t, ["claude", "docker", "sbx"]);
-	for (const path of [".fleet/config/git", ".config/herdr"])
+	for (const path of [".fleet/config/git", ".config/herdr-app/layouts"])
 		mkdirSync(join(mac.home, path), { recursive: true });
 	return mac;
 }
@@ -71,7 +71,7 @@ test("a claude-only Mac sets up claude and names pi as skipped", (t) => {
 	assert.doesNotMatch(section(out, "set up by hand"), /skipped claude/);
 });
 
-test("a pi-only Mac sets up pi and herdr without claude's pieces", (t) => {
+test("a pi-only Mac sets up pi and the Herdr app layout and mods without claude's pieces", (t) => {
 	const mac = machine(t, ["pi"]);
 
 	const { status, out } = mac.sync();
@@ -80,7 +80,10 @@ test("a pi-only Mac sets up pi and herdr without claude's pieces", (t) => {
 	assert.match(out, /== pi: host seat/);
 	assert.doesNotMatch(out, /== claude/);
 	assert.doesNotMatch(out, /statusline\.mjs/);
-	assert.match(out, /\.config\/herdr\/config\.toml/);
+	assert.match(out, /\.config\/herdr-app\/layouts\/fleet\.json/);
+	assert.match(out, /\.config\/herdr-app\/mods\/fleet-agents/);
+	assert.match(out, /cp \S+\/host\/herdr-app\/icons\/added\.svg \S+\/\.config\/herdr-app\/fleet-icons\/added\.svg/);
+	assert.match(out, /\.config\/herdr-core\/config\.toml/);
 	assert.match(section(out, "set up by hand"), /skipped claude: no claude on PATH/);
 });
 
@@ -107,10 +110,10 @@ test("a dry run names the archive --apply would write", (t) => {
 test("--apply first packs the files it replaces into one archive", (t) => {
 	const mac = claudeMac(t);
 	const settings = join(mac.home, ".claude/settings.json");
-	const herdr = join(mac.home, ".config/herdr/config.toml");
+	const layout = join(mac.home, ".config/herdr-app/layouts/fleet.json");
 	mkdirSync(join(mac.home, ".claude"), { recursive: true });
 	writeFileSync(settings, '{"language": "Polish"}\n');
-	writeFileSync(herdr, "theme = 'mine'\n");
+	writeFileSync(layout, '{"id": "mine"}\n');
 
 	const { status, out } = mac.sync("--apply");
 
@@ -122,9 +125,9 @@ test("--apply first packs the files it replaces into one archive", (t) => {
 	mkdirSync(restored);
 	assert.equal(spawnSync("tar", ["-xzf", made[0], "-C", restored]).status, 0);
 	assert.equal(readFileSync(join(restored, ".claude/settings.json"), "utf8"), '{"language": "Polish"}\n');
-	assert.equal(readFileSync(join(restored, ".config/herdr/config.toml"), "utf8"), "theme = 'mine'\n");
+	assert.equal(readFileSync(join(restored, ".config/herdr-app/layouts/fleet.json"), "utf8"), '{"id": "mine"}\n');
 	assert.notEqual(readFileSync(settings, "utf8"), '{"language": "Polish"}\n');
-	assert.deepEqual(readdirSync(join(mac.home, ".config/herdr")).filter((name) => name.endsWith(".bak")), []);
+	assert.deepEqual(readdirSync(join(mac.home, ".config/herdr-app/layouts")).filter((name) => name.endsWith(".bak")), []);
 });
 
 test("--apply records the built image under ~/.fleet", (t) => {

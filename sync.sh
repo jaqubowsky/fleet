@@ -8,7 +8,7 @@ usage: sync.sh [--apply]
 
 Brings the home of each agent whose CLI is on PATH, ~/.claude for claude and
 ~/.pi for pi, in line with this repository: installs its dependencies, links
-the CLIs and the herdr config, renders each such harness's host seat (a file
+the CLIs and the Herdr app layout and mods, renders each such harness's host seat (a file
 gone from here disappears there), prints where the two renders differ and
 whether a listed reason covers it, aligns Claude's settings and hooks, rebuilds
 a container image whose rendered seat changed, and removes
@@ -129,6 +129,13 @@ link() {
 	act ln -sfn "$1" "$2"
 }
 
+copy() {
+	cmp -s "$1" "$2" && return
+	keep "$2"
+	queue mkdir -p "$(dirname "$2")"
+	act cp "$1" "$2"
+}
+
 set_up() {
 	grep -q "^$1 " <<<"$HARNESS_ROWS"
 }
@@ -138,7 +145,8 @@ by_hand() {
 	for name in $skipped; do echo "  skipped $name: no $name on PATH, so its home and image stay as they are; install it to set it up: docs/setup/01-tools.md"; done
 	[ -d "$HOME/.fleet/config" ] || echo "  missing ~/.fleet/config/, your git config for the images, profiles and overlays: docs/setup/02-your-config.md"
 	command -v sbx >/dev/null || echo "  missing sbx on PATH: docs/setup/01-tools.md"
-	command -v herdr >/dev/null || echo "  missing herdr on PATH: docs/setup/01-tools.md"
+	command -v herdr-app >/dev/null || echo "  missing herdr-app on PATH: docs/setup/01-tools.md"
+	command -v hc >/dev/null || echo "  missing hc on PATH: docs/setup/01-tools.md"
 	[ "$(zsh -ic 'type gh' 2>/dev/null | tail -1)" = "gh is $HOME/.local/bin/gh" ] || echo "  gh in a new shell is not ~/.local/bin/gh: put ~/.local/bin first on PATH and drop any gh function: docs/setup/04-github-tokens.md"
 	command -v node >/dev/null || { echo "  missing node on PATH: docs/setup/01-tools.md"; return; }
 	node --input-type=module -e '
@@ -177,8 +185,10 @@ fi
 echo "== commands"
 link "$ROOT/bin/fleet" "$HOME/.local/bin/fleet"
 link "$ROOT/bin/gh" "$HOME/.local/bin/gh"
-link "$ROOT/host/herdr.toml" "$HOME/.config/herdr/config.toml"
-for rules in "$ROOT"/host/agent-detection/*.toml; do link "$rules" "$HOME/.config/herdr/agent-detection/$(basename "$rules")"; done
+link "$ROOT/host/herdr-app/layouts/fleet.json" "$HOME/.config/herdr-app/layouts/fleet.json"
+for mod in "$ROOT"/host/herdr-app/mods/*/; do link "${mod%/}" "$HOME/.config/herdr-app/mods/$(basename "$mod")"; done
+for icon in "$ROOT"/host/herdr-app/icons/*.svg; do copy "$icon" "$HOME/.config/herdr-app/fleet-icons/$(basename "$icon")"; done
+link "$ROOT/host/herdr-core/config.toml" "$HOME/.config/herdr-core/config.toml"
 if set_up claude; then link "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"; fi
 
 while read -r name home image owned <&3; do

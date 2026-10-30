@@ -7,3 +7,5 @@ __pycache__/
 .playwright-cli/
 claude/mods/*/.claude-plugin/types/
 claude/mods/*/tsconfig.json
+host/herdr-app/mods/*/jsconfig.json
+host/herdr-app/mods/*/gpui-kit.d.ts

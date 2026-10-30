@@ -1,0 +1,38 @@
+mods/fleet-changes/main.js is adapted from threads/mods/t4-diff/main.js in
+https://github.com/herdrdev/herdr-layout-examples, licensed under the
+Apache License 2.0 (LICENSE-herdr-layout-examples beside this file).
+Changed: it reads a fleet container's changes through the fleet CLI,
+takes its colors from the theme, refreshes only while shown, parses one
+patch, and shows every file as a card with a file tree beside it.
+
+mods/fleet-agents/main.js is a clone of the agents mod, version 0.1.9,
+that Herdr app ships (made with `herdr-app do mod.clone`), licensed under the Apache
+License 2.0, the same text as LICENSE-herdr-layout-examples. Changed: a
+container's row shows a PR #n pill read from its task directory, stopped
+containers are listed under Stopped, and the sort menu opens this mod.
+
+mods/fleet-tabs/main.js is a clone of the tabs mod, version 0.1.9, that
+Herdr app ships (made with `herdr-app do mod.clone`), licensed under the
+Apache License 2.0, the same text as LICENSE-herdr-layout-examples.
+Changed: it has no Files button, and its Changes button switches the
+work area to the Changes view for the active tab only.
+
+icons/added.svg, icons/modified.svg and icons/deleted.svg
+draw a mark on the outline of Lucide's file icon (https://lucide.dev),
+under the ISC License:
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as
+part of Feather (MIT). All other copyright (c) for Lucide are held by
+Lucide Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
