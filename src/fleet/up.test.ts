@@ -4,8 +4,8 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
-import { fakeIo } from "./fake-io.ts";
-import { manifestPath, stopFile } from "./repositories.ts";
+import { fakeIo, liveTerminals } from "./fake-io.ts";
+import { manifestPath } from "./repositories.ts";
 import { SEATS, KINDS } from "../harness.ts";
 import { SWITCH_TO_BRANCH, TICKET_STUB, cacheDir, cacheStore, envFiles, up } from "./up.ts";
 import {
@@ -18,6 +18,11 @@ import {
 const repo = "/Users/me/Work/webapp";
 const containerLocks =
 	'sbx exec pi-webapp-web-1 sh -c cd "$WORKSPACE_DIR" && git ls-files';
+const started = (io: ReturnType<typeof fakeIo>): string[] => {
+	const opened: string[] = io.calls.find((c) => c[0] === "herdr-app" && c[1] === "do") ?? [];
+	return JSON.parse(opened[opened.indexOf("--argv") + 1]);
+};
+
 const base = {
 	"read /root/host/repos.json": SAMPLE_PROFILES,
 	"read /home/me/.config/sbx/credentials.yaml":
@@ -25,15 +30,9 @@ const base = {
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 	"sbx ls --json": [],
-	"herdr agent list": { result: { agents: [] } },
-	"herdr workspace list": {
-		result: { workspaces: [{ workspace_id: "w1", label: "webapp" }] },
-	},
-	"herdr tab list": { result: { tabs: [] } },
-	"herdr tab create": { result: { root_pane: { pane_id: "w1:p9" } } },
-	"herdr agent get w1:p9": {
-		result: { agent: { pane_id: "w1:p9", agent_status: "idle" } },
-	},
+	"herdr-app ls": { spaces: [{ id: "sp1", name: "webapp", machine: null }] },
+	"herdr-app do tab.new": { tab: "tb1", terminal: "t9" },
+	"hc get t9": { state: "live", status: { state: "idle" } },
 	"sbx exec pi-webapp-web-1 sh -c stty": "-icanon -icrnl",
 	"sbx exec pi-cv-x sh -c stty": "-icanon -icrnl",
 	[`sbx exec pi-webapp-web-1 git -C ${repo} rev-parse refs/fleet/base`]:
@@ -53,8 +52,7 @@ test("up creates the container, switches the branch, starts the install in the b
 	);
 	assert.deepEqual(out, {
 		sandbox: "pi-webapp-web-1",
-		agent: "pi-webapp-web-1",
-		pane: "w1:p9",
+		terminal: "t9",
 	});
 	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
 	assert.ok(
@@ -94,16 +92,10 @@ test("up creates the container, switches the branch, starts the install in the b
 		io.lines.some((l) => /1 lockfile\(s\) install in the background/.test(l)),
 	);
 	assert.deepEqual(
-		io.calls.find((c) => c[1] === "pane"),
-		[
-			"herdr",
-			"pane",
-			"run",
-			"w1:p9",
-			"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve",
-		],
+		io.calls.find((c) => c[0] === "herdr-app" && c[1] === "do"),
+		["herdr-app", "do", "tab.new", "--space", "sp1", "--name", "pi-webapp-web-1", "--folder", repo, "--argv", JSON.stringify(["exec", "sbx", "run", "--name", "pi-webapp-web-1", "--", "--approve"])],
 	);
-	assert.ok(!io.calls.some((c) => c[1] === "agent" && c[2] === "prompt"));
+	assert.ok(!io.calls.some((c) => c[0] === "hc" && c[1] === "send"));
 	assert.deepEqual(
 		JSON.parse(io.files["/home/me/.fleet/config/fleet/pi-webapp-web-1.json"]),
 		{
@@ -130,12 +122,13 @@ test("up creates the container, switches the branch, starts the install in the b
 		io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/status.md"],
 		undefined,
 	);
-	assert.deepEqual(io.calls.at(-1), [
-		"herdr",
-		"agent",
-		"rename",
-		"w1:p9",
-		"pi-webapp-web-1",
+	assert.deepEqual(io.calls.find((c) => c[0] === "hc" && c[1] === "label"), [
+		"hc",
+		"label",
+		"t9",
+		"fleet=1",
+		"fleet.sandbox=pi-webapp-web-1",
+		"fleet.task=/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
 	]);
 });
 
@@ -532,17 +525,18 @@ test("up waits for the container tty to leave canonical input mode", async () =>
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
 	assert.equal(probes, 2);
-	assert.deepEqual(io.calls.at(-1), [
-		"herdr",
-		"agent",
-		"rename",
-		"w1:p9",
-		"pi-webapp-web-1",
+	assert.deepEqual(io.calls.find((c) => c[0] === "hc" && c[1] === "label"), [
+		"hc",
+		"label",
+		"t9",
+		"fleet=1",
+		"fleet.sandbox=pi-webapp-web-1",
+		"fleet.task=/home/me/.fleet/tasks/webapp/pi-webapp-web-1",
 	]);
 });
 
 for (const harness of [SEATS.claude]) {
-	test(`up waits for the ${harness.name} process even when herdr already reports a status`, async () => {
+	test(`up waits for the ${harness.name} process even when hc already reports a status`, async () => {
 		const io = fakeIo(base, harness);
 		const sbx = io.sbx;
 		let probes = 0;
@@ -559,13 +553,7 @@ for (const harness of [SEATS.claude]) {
 		await up({ repo, label: "web-1", root: "/root" }, io);
 
 		assert.equal(probes, 2);
-		assert.deepEqual(io.calls.at(-1), [
-			"herdr",
-			"agent",
-			"rename",
-			"w1:p9",
-			`${harness.name}-webapp-web-1`,
-		]);
+		assert.match(io.lines.at(-1) ?? "", /claude-webapp-web-1: the container's agent waiting in its tab \(terminal t9\)/);
 	});
 
 	test(`up fails with the probe's error when the ${harness.name} process never starts`, async () => {
@@ -622,10 +610,6 @@ test("up copies every submodule and its git metadata into the clone, then drops 
 		.filter((c) => c[0] === "sbx" && c[1] === "cp")
 		.map((c) => c.slice(2));
 	assert.deepEqual(cps, [
-		[
-			"/home/me/.pi/agent/extensions/herdr-agent-state.ts",
-			"pi-webapp-web-1:/home/agent/.pi/agent/extensions/herdr-agent-state.ts",
-		],
 		[`${repo}/packages/pdf-generator`, `pi-webapp-web-1:${repo}/packages/`],
 		[
 			`${repo}/.git/modules/packages/pdf-generator`,
@@ -690,75 +674,6 @@ test("up without --branch switches to a branch named from the label, and resolve
 	);
 });
 
-test("up refuses to adopt a same-named agent that is not pi", async () => {
-	const io = fakeIo({
-		...base,
-		"herdr agent list": {
-			result: {
-				agents: [
-					{
-						pane_id: "w1:p3",
-						name: "pi-webapp-web-1",
-						agent: "claude",
-						agent_status: "idle",
-					},
-				],
-			},
-		},
-	});
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, io),
-		/is claude in pane w1:p3, not pi/,
-	);
-});
-
-test("up refuses a name another agent holds before it creates anything", async () => {
-	const held = fakeIo({
-		...base,
-		"herdr agent list": {
-			result: {
-				agents: [
-					{
-						pane_id: "w1:p3",
-						name: "pi-webapp-web-1",
-						agent: "claude",
-						agent_status: "idle",
-					},
-				],
-			},
-		},
-	});
-	const tab = fakeIo({
-		...base,
-		"herdr tab list": {
-			result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] },
-		},
-		"herdr pane list": {
-			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "claude" }] },
-		},
-	});
-	const created = (io: typeof held) =>
-		io.calls.filter(
-			(c) =>
-				c[0] === "mkdir" ||
-				c[0] === "write" ||
-				(c[0] === "sbx" && c[1] !== "ls") ||
-				(c[0] === "herdr" && ["create", "rename", "run"].includes(c[2])),
-		);
-
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, held),
-		/is claude in pane w1:p3, not pi/,
-	);
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, tab),
-		/already runs claude/,
-	);
-
-	assert.deepEqual(created(held), []);
-	assert.deepEqual(created(tab), []);
-});
-
 test("up reuses an existing container and only opens the tab", async () => {
 	const io = fakeIo({
 		...base,
@@ -773,7 +688,7 @@ test("up reuses an existing container and only opens the tab", async () => {
 	});
 	await up({ repo, label: "web-1", root: "/root" }, io);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
-	assert.ok(io.calls.some((c) => c[1] === "pane"));
+	assert.ok(io.calls.some((c) => c[0] === "herdr-app" && c[2] === "tab.new"));
 	assert.ok(!io.calls.some((c) => c[0] === "append" && c[2].includes(" created ")));
 });
 
@@ -799,141 +714,50 @@ test("up still attaches a container whose name repeats the prefix", async () => 
 	await up({ repo, label: "pi-webapp-web-1", root: "/root" }, io);
 
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
-	assert.ok(io.calls.some((c) => c[1] === "pane"));
+	assert.ok(io.calls.some((c) => c[0] === "herdr-app" && c[2] === "tab.new"));
 });
 
-test("up that attaches a stopped container forgets the tab its stop saved", async () => {
-	const stopped = { name: "pi-webapp-web-1", agent: "pi", status: "stopped", workspaces: [repo] };
-	const io = fakeIo({ ...base, "sbx ls --json": [stopped] });
-	const record = stopFile(stopped, io);
-	io.files[record] = JSON.stringify({ pane: "w1:closed" });
-
-	await up({ repo, label: "web-1", root: "/root" }, io);
-
-	assert.equal(io.files[record], undefined);
-});
-
-test("up adopts an agent that already carries the name, whatever its tab is called", async () => {
+test("up adopts the agent already running in the container's terminal", async () => {
 	const io = fakeIo({
 		...base,
-		"herdr agent list": {
-			result: {
-				agents: [
-					{
-						pane_id: "w1:p3",
-						name: "pi-webapp-web-1",
-						agent: "pi",
-						agent_status: "working",
-					},
-				],
-			},
-		},
-		"herdr agent get w1:p3": { result: { agent: { agent_status: "working" } } },
+		...liveTerminals(["pi-webapp-web-1", "working"]),
 	});
+
 	const out = await up({ repo, label: "web-1", root: "/root" }, io);
-	assert.equal(out.pane, "w1:p3");
-	assert.ok(
-		!io.calls.some(
-			(c) => c[1] === "pane" || (c[1] === "tab" && c[2] === "create"),
-		),
-	);
+
+	assert.equal(out.terminal, "t2");
+	assert.ok(!io.calls.some((c) => c[0] === "herdr-app" && c[1] === "do"));
 });
 
-test("up reuses an empty tab with the same label, adopts an unnamed pi there, refuses another agent", async () => {
-	const tabs = {
-		result: { tabs: [{ tab_id: "w1:t7", label: "pi-webapp-web-1" }] },
-	};
-	const free = fakeIo({
-		...base,
-		"herdr tab list": tabs,
-		"herdr pane list": {
-			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: null }] },
-		},
-		"herdr agent get w1:p7": { result: { agent: { agent_status: "idle" } } },
-	});
-	assert.equal(
-		(await up({ repo, label: "web-1", root: "/root" }, free)).pane,
-		"w1:p7",
-	);
-	assert.ok(!free.calls.some((c) => c[1] === "tab" && c[2] === "create"));
-	const adopt = fakeIo({
-		...base,
-		"herdr tab list": tabs,
-		"herdr pane list": {
-			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "pi" }] },
-		},
-		"herdr agent get w1:p7": { result: { agent: { agent_status: "idle" } } },
-	});
-	await up({ repo, label: "web-1", root: "/root" }, adopt);
-	assert.ok(!adopt.calls.some((c) => c[1] === "pane" && c[2] === "run"));
-	assert.deepEqual(adopt.calls.at(-1), [
-		"herdr",
-		"agent",
-		"rename",
-		"w1:p7",
-		"pi-webapp-web-1",
-	]);
-	const busy = fakeIo({
-		...base,
-		"herdr tab list": tabs,
-		"herdr pane list": {
-			result: { panes: [{ pane_id: "w1:p7", tab_id: "w1:t7", agent: "claude" }] },
-		},
-	});
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, busy),
-		/already runs claude/,
-	);
-});
-
-test("up creates the workspace when the repo has none and names its root tab", async () => {
+test("up makes the repository's space when the window has none", async () => {
 	const io = fakeIo({
 		...base,
-		"herdr workspace list": { result: { workspaces: [] } },
-		"herdr workspace create": {
-			result: {
-				workspace: { workspace_id: "w2" },
-				root_pane: { pane_id: "w2:p1" },
-			},
-		},
-		"herdr agent get w2:p1": { result: { agent: { agent_status: "done" } } },
+		"herdr-app ls": { spaces: [] },
+		"herdr-app do space.new": { space: "sp2", tab: "tb1", terminal: "t9" },
 		"sbx exec pi-cv-x git -C /r/cv rev-parse refs/fleet/base": "3".repeat(40),
 	});
+
 	const out = await up({ repo: "/r/cv", label: "x", root: "/root" }, io);
-	assert.equal(out.pane, "w2:p1");
-	assert.equal(out.sandbox, "pi-cv-x");
-	assert.ok(
-		io.calls.some(
-			(c) =>
-				c[1] === "tab" &&
-				c[2] === "rename" &&
-				c[3] === "w2:t1" &&
-				c[4] === "pi-cv-x",
-		),
-	);
+
+	assert.equal(out.terminal, "t9");
+	const made: string[] = io.calls.find((c) => c[0] === "herdr-app" && c[2] === "space.new") ?? [];
+	assert.deepEqual(made.slice(3, 9), ["--name", "cv", "--folder", "/r/cv", "--tab", "pi-cv-x"]);
+	assert.equal(JSON.parse(made[made.indexOf("--argv") + 1])[0], "exec");
 });
 
 test("up accepts a pi that comes up blocked or working, and fails when nothing comes up", async () => {
 	const blocked = fakeIo({
 		...base,
-		"herdr agent get w1:p9": { result: { agent: { agent_status: "blocked" } } },
+		"hc get t9": { state: "live", status: { state: "blocked" } },
 	});
 	await up({ repo, label: "web-1", root: "/root" }, blocked);
-	const io = fakeIo({
+	const silent = fakeIo({
 		...base,
-		"herdr agent get w1:p9": new Error("agent_not_found"),
+		"hc get t9": { state: "live", status: null },
 	});
 	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, io),
-		/did not become ready/,
-	);
-	const unknown = fakeIo({
-		...base,
-		"herdr agent get w1:p9": { result: { agent: { agent_status: "unknown" } } },
-	});
-	await assert.rejects(
-		up({ repo, label: "web-1", root: "/root" }, unknown),
-		/did not become ready/,
+		up({ repo, label: "web-1", root: "/root" }, silent),
+		/did not become ready in terminal t9/,
 	);
 });
 
@@ -1020,7 +844,7 @@ test("up copies the env files the repo ignores, and skips the probe when there a
 	await up({ repo, label: "web-1", root: "/root" }, none);
 	assert.deepEqual(
 		none.calls.filter((c) => c[0] === "sbx" && c[1] === "cp").map((c) => c[2]),
-		["/home/me/.pi/agent/extensions/herdr-agent-state.ts"],
+		[],
 	);
 });
 
@@ -1357,20 +1181,14 @@ test("up hands --model to pi and resumes the last session when one is on disk", 
 		},
 		fresh,
 	);
-	assert.equal(
-		fresh.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve --model openai-codex/gpt-5.6-luna:high",
-	);
+	assert.deepEqual(started(fresh), ["exec", "sbx", "run", "--name", "pi-webapp-web-1", "--", "--approve", "--model", "openai-codex/gpt-5.6-luna:high"]);
 
 	const resumed = fakeIo({
 		...base,
 		[`list ${task}/logs/sessions`]: ["--Users-me-Work-webapp--"],
 	});
 	await up({ repo, label: "web-1", root: "/root" }, resumed);
-	assert.equal(
-		resumed.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve -c",
-	);
+	assert.deepEqual(started(resumed), ["exec", "sbx", "run", "--name", "pi-webapp-web-1", "--", "--approve", "-c"]);
 });
 
 test("up branches off the freshest remote base, detected or given with --base", async () => {
@@ -1645,39 +1463,32 @@ test("a claude container is given colour, a pi container is left as it is", asyn
 	assert.ok(!args(piIo).includes("FORCE_COLOR=3"));
 });
 
-for (const [h, integration, command] of [
-	[
-		SEATS.pi,
-		".pi/agent/extensions/herdr-agent-state.ts",
-		"HERDR_AGENT=pi /root/bin/fleet relay pi-webapp-web-1 /home/me/.fleet/tasks/webapp/pi-webapp-web-1 -- --approve",
-	],
-] as const) {
-	test(`up copies herdr's ${h.name} integration into a new container and starts ${h.name} through the relay`, async () => {
-		const io = fakeIo(base, h);
+test("up starts each kind's agent straight through sbx run and copies nothing into the container", async () => {
+	const pi = fakeIo(base, SEATS.pi);
+	const claude = fakeIo(base, SEATS.claude);
 
-		await up({ repo, label: "web-1", root: "/root" }, io);
+	await up({ repo, label: "web-1", root: "/root" }, pi);
+	await up({ repo, label: "web-1", root: "/root" }, claude);
 
-		assert.ok(
-			io.calls.some(
-				(c) =>
-					c.join(" ") ===
-					`sbx cp /home/me/${integration} ${KINDS[h.name].prefix}webapp-web-1:/home/agent/${integration}`,
-			),
-		);
-		assert.equal(io.calls.find((c) => c[1] === "pane")![4], command);
-	});
-}
+	assert.deepEqual(started(pi), ["exec", "sbx", "run", "--name", "pi-webapp-web-1", "--", "--approve"]);
+	assert.deepEqual(started(claude), ["exec", "sbx", "run", "--name", "claude-webapp-web-1"]);
+	assert.ok(![...pi.calls, ...claude.calls].some((c) => c[0] === "sbx" && c[1] === "cp"));
+});
 
-test("up of a claude container starts claude through the relay and copies no herdr integration", async () => {
-	const io = fakeIo(base, SEATS.claude);
+test("the agent's tab closes when its agent exits instead of falling back to a shell", async () => {
+	const io = fakeIo(base, SEATS.pi);
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
-	assert.equal(
-		io.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1",
-	);
-	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
+	assert.equal(started(io)[0], "exec");
+});
+
+test("the agent's tab is not brought back as a shell after the Mac restarts", async () => {
+	const io = fakeIo(base, SEATS.pi);
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	assert.ok(io.calls.some((c) => c.join(" ") === "hc keep t9 --off"));
 });
 
 test("up of a claude container links claude's transcript store into the task directory before claude starts", async () => {
@@ -1696,12 +1507,8 @@ test("up of a claude container links claude's transcript store into the task dir
 				`${task}/logs/sessions/projects/-Users-me-Work-webapp /home/agent/.claude/projects/-Users-me-Work-webapp`,
 			),
 	);
-	const started = order.findIndex((c) => c.startsWith("herdr pane run"));
-	assert.ok(made >= 0 && made < linked && linked < started, order.join("\n"));
-	assert.equal(
-		io.calls[started][4],
-		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1",
-	);
+	const opened = order.findIndex((c) => c.startsWith("herdr-app do tab.new"));
+	assert.ok(made >= 0 && made < linked && linked < opened, order.join("\n"));
 });
 
 test("up of a claude container continues the conversation its task directory holds", async () => {
@@ -1713,10 +1520,7 @@ test("up of a claude container continues the conversation its task directory hol
 
 	await up({ repo, label: "web-1", root: "/root" }, io);
 
-	assert.equal(
-		io.calls.find((c) => c[1] === "pane")![4],
-		"HERDR_AGENT=claude /root/bin/fleet relay claude-webapp-web-1 /home/me/.fleet/tasks/webapp/claude-webapp-web-1 -- --continue",
-	);
+	assert.deepEqual(started(io), ["exec", "sbx", "run", "--name", "claude-webapp-web-1", "--", "--continue"]);
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "cp"));
 });
 
@@ -1765,14 +1569,14 @@ test("up of a claude container stops when claude in the new container is not log
 	const io = fakeIo(
 		{
 			...base,
-			"herdr agent read w1:p9 --source visible": "Not logged in · Run /login",
+			"hc read t9": "Not logged in · Run /login",
 		},
 		SEATS.claude,
 	);
 
 	await assert.rejects(
 		up({ repo, label: "web-1", root: "/root" }, io),
-		/the container's agent is not logged in.*\/login in tab claude-webapp-web-1/,
+		/the container's agent is not logged in.*\/login in its tab/,
 	);
 });
 
@@ -1882,9 +1686,7 @@ const pushing = {
 	...base,
 	"read /root/host/repos.json": WITH_PRIVATE,
 	"git remote get-url origin": "git@github.com:alice/private-app.git",
-	"herdr workspace list": {
-		result: { workspaces: [{ workspace_id: "w1", label: "private-app" }] },
-	},
+	"herdr-app ls": { spaces: [{ id: "sp1", name: "private-app", machine: null }] },
 	"sbx exec claude-private-app-x git -C /r/private-app rev-parse refs/fleet/base":
 		"3".repeat(40),
 };
@@ -2118,10 +1920,7 @@ for (const seat of Object.values(SEATS))
 					.find((c) => c[0] === "sbx" && c[1] === "run")!
 					.includes(kind.agentSpec("/root")),
 			);
-			assert.match(
-				io.calls.find((c) => c[1] === "pane")!.at(-1)!,
-				new RegExp(`^HERDR_AGENT=${kind.name} `),
-			);
+			assert.deepEqual(started(io).slice(0, 5), ["exec", "sbx", "run", "--name", out.sandbox]);
 			assert.ok(
 				io.calls.some(
 					(c) =>

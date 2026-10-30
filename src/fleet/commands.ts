@@ -10,36 +10,27 @@ import {
 	repositoryCheckout,
 	groupManifest,
 	repositoryManifest,
-	stopFile,
 } from "./repositories.ts";
 import { INSTALL_LOG } from "./deps.ts";
 import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
-import { agentName } from "./name.ts";
+import { fleetTerminals, statusOf, terminalOf } from "./terminals.ts";
 import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
 import {
-	agentFor,
 	checkoutProbe,
 	commitsOf,
 	formatRows,
 	parseCheckout,
 	sandboxes,
-	type Agent,
 	type Row,
 	type Sandbox,
 } from "./status.ts";
 import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
-type Agents = { result: { agents: Agent[] } };
-
-function agents(io: Io): Agent[] {
-	return io.herdr<Agents>(["agent", "list"]).result.agents;
-}
-
 export function resolveSandbox(name: string, io: Io): Sandbox {
 	const all = sandboxes(io);
-	const hit = all.find((s) => s.name === name || agentName(s.name) === name);
+	const hit = all.find((s) => s.name === name);
 	if (hit) return hit;
 
 	throw new Error(
@@ -56,10 +47,10 @@ export function activityNow(task: string, io: Io): string {
 }
 
 export function ls(io: Io): string {
-	const live = agents(io);
+	const live = fleetTerminals(io);
 	const rows: Row[] = sandboxes(io).map((s) => {
-		const stopped = s.status === "stopped" || Boolean(stoppedPane(s, io));
-		const agent = stopped ? "stopped" : agentFor(live, agentName(s.name))?.agent_status ?? "gone";
+		const stopped = s.status === "stopped";
+		const agent = stopped ? "stopped" : statusOf(terminalOf(s.name, live));
 		const manifest = groupManifest(s.name, io);
 		const canProbe = !stopped && s.status === "running";
 		let checkout = { branch: "?", dirty: 0, head: "" };
@@ -130,11 +121,7 @@ function lastLine(error: unknown): string {
 
 export function peek(sandbox: string, io: Io, lines = 40): string {
 	const entry = sandboxes(io).find((s) => s.name === sandbox);
-	if (entry && (entry.status === "stopped" || stoppedPane(entry, io))) {
-		const pane = stoppedPane(entry, io);
-		const tail = pane ? io.herdrText(["pane", "read", pane, "--source", "recent-unwrapped", "--lines", String(lines)]) : "no saved herdr pane";
-		return `${sandbox}: stopped; checkout not probed\n=== last ${lines} lines\n${tail}`;
-	}
+	if (entry?.status === "stopped") return `${sandbox}: stopped; checkout not probed`;
 	const manifest = groupManifest(sandbox, io);
 	const git = manifest
 		? manifest.repositories
@@ -170,90 +157,30 @@ export function peek(sandbox: string, io: Io, lines = 40): string {
 				],
 				{ quiet: true },
 			);
-	let tail = "";
-	try {
-		tail = io.herdrText([
-			"agent",
-			"read",
-			agentName(sandbox),
-			"--source",
-			"recent-unwrapped",
-			"--lines",
-			String(lines),
-		]);
-	} catch {
-		tail = `(no herdr agent named ${agentName(sandbox)}; the tab may still be coming up)`;
-	}
+	const terminal = terminalOf(sandbox, fleetTerminals(io));
+	const tail = terminal
+		? io.hcText(["read", terminal.address, "--lines", String(lines)])
+		: `(no terminal for ${sandbox}; the tab may still be coming up, or ${CLI} start ${sandbox} reopens it)`;
 	return `${git}\n=== last ${lines} lines\n${tail}`;
 }
 
-export function stoppedPane(sandbox: Pick<Sandbox, "name" | "workspaces">, io: Io): string | undefined {
-	const file = stopFile(sandbox, io);
-	const text = io.read(file);
-	if (text === undefined) return undefined;
-	const record = JSON.parse(text);
-	if (typeof record?.pane !== "string" || !record.pane) throw new Error(`${file}: missing pane`);
-	return record.pane;
-}
-
-const STOPPED_AGENT = "fleet";
-const RELEASE_POLL_MS = 500;
-const RELEASE_POLLS = 20;
-
-async function agentReleased(pane: string, io: Io): Promise<void> {
-	for (let poll = 0; poll < RELEASE_POLLS; poll++) {
-		if (!io.herdr<{ result?: { pane?: { agent?: string } } }>(["pane", "get", pane]).result?.pane?.agent) return;
-		await io.sleep(RELEASE_POLL_MS);
-	}
-}
-
-export async function stop(sandbox: Sandbox, io: Io): Promise<void> {
-	const file = stopFile(sandbox, io);
-	let pane = stoppedPane(sandbox, io);
-	if (!pane) {
-		pane = agentFor(agents(io), agentName(sandbox.name))?.pane_id;
-		if (!pane) throw new Error(`${sandbox.name}: no herdr agent to preserve; inspect ${CLI} peek ${sandbox.name}`);
-	}
-	const before = io.read(file);
-	io.mkdir(dirname(file));
-	io.write(file, `${JSON.stringify({ pane })}\n`);
-	try {
-		if (sandbox.status !== "stopped") {
-			io.sbx(["stop", sandbox.name], { quiet: true });
-			logEvent(io, "stop", agentName(sandbox.name));
-		}
-	} catch (error) {
-		if (before === undefined) io.remove(file);
-		else io.write(file, before);
-		throw error;
-	}
-	io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
-	await agentReleased(pane, io);
-	io.herdr(["pane", "run", pane, `HERDR_AGENT=${sandbox.kind.name} ${CLI} stopped ${sandbox.name}`]);
-	io.herdr(["pane", "report-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT, "--state", "unknown"]);
-	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--applies-to-source", "fleet:stopped", "--state-label", "unknown=stopped"]);
-	io.log(`${sandbox.name}: stopped; tab and files kept. Resume with ${CLI} start ${sandbox.name}`);
+export function stop(sandbox: Sandbox, io: Io): void {
+	if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: already stopped`);
+	const terminal = terminalOf(sandbox.name, fleetTerminals(io));
+	io.sbx(["stop", sandbox.name], { quiet: true });
+	logEvent(io, "stop", sandbox.name);
+	if (terminal) io.hc(["kill", terminal.address]);
+	io.log(`${sandbox.name}: stopped; files kept. Resume with ${CLI} start ${sandbox.name}`);
 }
 
 export async function start(sandbox: Sandbox, root: string, io: Io): Promise<void> {
-	const pane = stoppedPane(sandbox, io);
-	if (!pane) throw new Error(`${sandbox.name}: no saved stopped tab; use ${CLI} up to attach it`);
-	if (sandbox.status !== "stopped") throw new Error(`${sandbox.name}: already ${sandbox.status}; inspect its tab before starting again`);
+	const terminal = terminalOf(sandbox.name, fleetTerminals(io));
+	if (terminal) throw new Error(`${sandbox.name}: already runs in terminal ${terminal.address}; inspect its tab before starting again`);
 	const stale = staleSandbox(sandbox, root, io);
 	if (stale) io.log(stale);
-	try {
-		io.herdr(["pane", "send-keys", pane, "ctrl+c"]);
-	} catch (error) {
-		if (error instanceof Error && error.message.includes("pane_not_found"))
-			throw new Error(`${sandbox.name}: its saved tab ${pane} is gone; use ${CLI} up to attach it to a new tab`);
-		throw error;
-	}
-	io.herdr(["pane", "release-agent", pane, "--source", "fleet:stopped", "--agent", STOPPED_AGENT]);
-	io.herdr(["pane", "report-metadata", pane, "--source", "fleet:stopped", "--clear-state-labels"]);
-	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), pane, root, io);
-	io.remove(stopFile(sandbox, io));
-	logEvent(io, "start", agentName(sandbox.name));
-	io.log(`${sandbox.name}: started in the same tab; no prompt sent`);
+	await resumeAgent(sandbox, taskDir(sandbox.workspaces[0], sandbox.name, io), io);
+	logEvent(io, "start", sandbox.name);
+	io.log(`${sandbox.name}: started in a new tab, resuming its last session; no prompt sent`);
 }
 
 export function steer(
@@ -276,36 +203,14 @@ export function promptAgent(
 ): void {
 	if (row.status === "stopped") throw new Error(`${row.name}: stopped; run ${CLI} start ${row.name} first`);
 	const sandbox = row.name;
-	if (stoppedPane(row, io)) throw new Error(`${sandbox}: stopped; run ${CLI} start ${sandbox} first`);
-	const agent = agentName(sandbox);
+	const terminal = terminalOf(sandbox, fleetTerminals(io));
+	if (!terminal) throw new Error(`${sandbox}: no terminal runs its agent; run ${CLI} start ${sandbox} first`);
 	const stale = root ? staleOnce(row, root, io) : undefined;
 	if (stale) io.log(stale);
 	const sent = text.replace(HOST_FLEET, `${io.home}/${FLEET_HOME}/`);
-	logEvent(io, "steer", agent, sent);
-	try {
-		io.herdr([
-			"agent",
-			"prompt",
-			agent,
-			sent,
-			"--wait",
-			"--until",
-			"working",
-			"--timeout",
-			"6000",
-		]);
-	} catch (error) {
-		if (
-			!(error instanceof Error) ||
-			!error.message.includes("agent_prompt_stalled")
-		)
-			throw error;
-		throw new Error(
-			`agent_prompt_stalled: Prompt submission uncertain: herdr saw no work start within 6 s, which does not mean the prompt was lost. Search ${CLI} peek ${sandbox} --lines 200 for its first words. Found: it arrived or waits in the agent editor, so do not steer again. Not found while the agent is idle: steer again. Still starting or on a dialog: wait until it is idle, then search again.`,
-			{ cause: error },
-		);
-	}
-	io.log(`${agent}: steered`);
+	logEvent(io, "steer", sandbox, sent);
+	io.hc(["send", terminal.address, sent]);
+	io.log(`${sandbox}: steered`);
 }
 
 const SHELL_SYNTAX = /[\s;&|<>$`(){}[\]*?~]/;
@@ -623,8 +528,8 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 			`${sandbox} has commits on ${checkout.branch} that never reached ${entry.workspaces[0]}; run ${CLI} land first or pass --force to discard`,
 		);
 	}
-	const runtime = runtimeOf(io.read(`${io.home}/${EVENTS_LOG}`), agentName(sandbox), io.now());
-	logEvent(io, "down", agentName(sandbox));
+	const runtime = runtimeOf(io.read(`${io.home}/${EVENTS_LOG}`), sandbox, io.now());
+	logEvent(io, "down", sandbox);
 	const repo = entry.workspaces[0];
 	const task = taskDir(repo ?? "", sandbox, io);
 	const from = runtime.coverage === "complete" ? runtime.started_at : undefined;
@@ -652,8 +557,8 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		io.log(
 			`${sandbox}: artifacts stay in ${task}, read them with ${CLI} artifacts --repo ${repo}`,
 		);
-	const agent = agentFor(agents(io), agentName(sandbox));
-	if (agent?.tab_id) io.herdr(["tab", "close", agent.tab_id]);
+	const terminal = terminalOf(sandbox, fleetTerminals(io));
+	if (terminal) io.hc(["kill", terminal.address]);
 	try {
 		io.sbx(["rm", "-f", sandbox], { quiet: true });
 	} catch (error) {
@@ -663,7 +568,5 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		);
 		return;
 	}
-	const stopped = stopFile(entry, io);
-	if (io.read(stopped) !== undefined) io.remove(stopped);
 	io.log(`${sandbox}: removed`);
 }

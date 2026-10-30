@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-const SEATS = /\b(host|container|containers|sandbox|sandboxes|sbx|fleet|herdr)\b/i;
+const SEATS = /\b(host|container|containers|sandbox|sandboxes|sbx|fleet|hc|herdr-app)\b/i;
 const root = new URL("../../", import.meta.url).pathname;
 
 for (const file of ["rules/core.md", "rules/delegation.md"]) {

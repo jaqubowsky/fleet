@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
-import { EventEmitter } from "node:events";
-import net from "node:net";
 import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { SEATS } from "../harness.ts";
 import { EVENTS_LOG, logEvent } from "./events.ts";
@@ -12,27 +10,15 @@ function monitorRuntime(
 	t: TestContext,
 	h = SEATS.pi,
 	agents = [
-		{ name: "pi-worker", pane_id: "worker:pane", agent_status: "working" },
+		{ name: "pi-worker", address: "t20", state: "working" },
 	],
-	herdr: unknown = { result: { agents } },
+	hc: unknown = { terminals: agents.map((a) => ({ address: a.address, state: "live", status: a.state, turn: 0 })) },
 ) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	const previousOwner = process.env[h.sessionIdEnv];
 	t.after(() => {
 		if (previousOwner === undefined) delete process.env[h.sessionIdEnv];
 		else process.env[h.sessionIdEnv] = previousOwner;
-	});
-	const sockets: (EventEmitter & { destroyed: boolean })[] = [];
-	t.mock.method(net, "createConnection", () => {
-		const socket = Object.assign(new EventEmitter(), {
-			destroyed: false,
-			write() {},
-			destroy() {
-				this.destroyed = true;
-			},
-		});
-		sockets.push(socket);
-		return socket as unknown as net.Socket;
 	});
 	const io = fakeIo(
 		{
@@ -41,7 +27,8 @@ function monitorRuntime(
 				agent: "pi",
 				workspaces: ["/w/repo"],
 			})),
-			"herdr agent list": herdr,
+			"hc ls --label fleet=1": hc,
+			...Object.fromEntries(agents.map((a) => [`hc get ${a.address}`, { address: a.address, labels: { fleet: "1", "fleet.sandbox": a.name }, status: { state: a.state }, turn: 0 }])),
 		},
 		h,
 	);
@@ -82,23 +69,14 @@ function monitorRuntime(
 		);
 		return { handlers, tools, messages, notices, statuses };
 	};
-	const exit = (pane = "worker:pane") => {
-		for (const socket of sockets.filter((s) => !s.destroyed))
-			socket.emit(
-				"data",
-				Buffer.from(
-					`${JSON.stringify({ event: "pane.exited", data: { pane_id: pane } })}\n`,
-				),
-			);
+	const send = (params: Record<string, unknown>) => {
+		for (const follower of io.followers.filter((f) => !f.stopped)) follower.onLine(JSON.stringify({ params }));
 	};
-	const settle = (pane = "worker:pane") => {
-		for (const socket of sockets.filter((s) => !s.destroyed))
-			socket.emit(
-				"data",
-				Buffer.from(
-					`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: "idle" } })}\n`,
-				),
-			);
+	let turn = 0;
+	const exit = (terminal = "t20") => send({ type: "finished", terminal, data: { exit_code: 0 } });
+	const settle = (terminal = "t20") => {
+		send({ type: "status", terminal, data: { status: { state: "idle" } } });
+		send({ type: "turn", terminal, data: { turn: ++turn } });
 		t.mock.timers.tick(1100);
 	};
 	return { events, exit, start, settle };
@@ -166,12 +144,12 @@ for (const h of [SEATS.pi]) {
 	});
 }
 
-test("a watcher that cannot reach herdr says so in the session once per trouble", async (t) => {
+test("a watcher that cannot reach hc says so in the session once per trouble", async (t) => {
 	const runtime = monitorRuntime(
 		t,
 		SEATS.pi,
 		[],
-		new Error("herdr: connection refused"),
+		new Error("hc: connection refused"),
 	);
 	const watcher = runtime.start("session-a");
 
@@ -202,19 +180,19 @@ test("explicit fleet watch delivers a follow-up turn without waiting for user in
 test("a container working past the stall window rings once, then again after the ring window", () => {
 	const minute = 60_000;
 	const entries = [
-		{ pane: "w:p1", status: "working", since: 0, rang: 0 },
-		{ pane: "w:p2", status: "working", since: 15 * minute, rang: 15 * minute },
-		{ pane: "w:p3", status: "idle", since: 0, rang: 0 },
-		{ pane: "w:p4", status: "working", since: 0, rang: 25 * minute },
+		{ name: "pi-a", status: "working", since: 0, rang: 0 },
+		{ name: "pi-b", status: "working", since: 15 * minute, rang: 15 * minute },
+		{ name: "pi-c", status: "idle", since: 0, rang: 0 },
+		{ name: "pi-d", status: "working", since: 0, rang: 25 * minute },
 	];
 
 	assert.deepEqual(stalled(entries, 30 * minute, 20 * minute, 15 * minute), [
-		"w:p1",
+		"pi-a",
 	]);
 	assert.deepEqual(stalled(entries, 40 * minute, 20 * minute, 15 * minute), [
-		"w:p1",
-		"w:p2",
-		"w:p4",
+		"pi-a",
+		"pi-b",
+		"pi-d",
 	]);
 });
 
@@ -261,7 +239,7 @@ test("a container the host takes down mid-turn wakes nobody after the turn, its 
 	watcher.handlers.agent_start();
 	runtime.settle();
 	runtime.events(
-		"2026-09-16T10:05:00.000Z w1:host down pi-worker session=session-a",
+		"2026-09-16T10:05:00.000Z t30 down pi-worker session=session-a",
 	);
 	runtime.exit();
 	watcher.handlers.agent_end();
@@ -277,7 +255,7 @@ test("a container another session takes down mid-turn arrives after the turn as 
 	watcher.handlers.agent_start();
 	runtime.settle();
 	runtime.events(
-		"2026-09-16T10:05:00.000Z w2:other down pi-worker session=session-b",
+		"2026-09-16T10:05:00.000Z t31 down pi-worker session=session-b",
 	);
 	runtime.exit();
 	watcher.handlers.agent_end();

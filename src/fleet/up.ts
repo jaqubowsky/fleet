@@ -7,7 +7,7 @@ import { describe, keychainName, repoName, type Profile } from "../profile/profi
 import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
-import { agentName, labelInSandboxName, sandboxName, slug } from "./name.ts";
+import { labelInSandboxName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import { claudeProject, sessionsDir } from "./sessions.ts";
 import {
@@ -15,9 +15,9 @@ import {
 	taskDir,
 	repositoryManifest,
 	saveRepositories,
-	stopFile,
 } from "./repositories.ts";
-import { agentFor, sandboxes, type Agent, type Sandbox } from "./status.ts";
+import { sandboxes, type Sandbox } from "./status.ts";
+import { fleetTerminals, openTab, terminalOf } from "./terminals.ts";
 import { keychainRead } from "./tokens.ts";
 import { gitdirOf, parentDir, submodulePaths } from "./submodules.ts";
 
@@ -90,8 +90,8 @@ export function agentArgs(
 	h: Kind,
 	model: string | undefined,
 	resume: boolean,
-): string {
-	return `${[...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])].join(" ")}`;
+): string[] {
+	return [...h.agentArgs, ...(model ? ["--model", model] : []), ...(resume ? [h.resume] : [])];
 }
 
 export const TICKET_STUB =
@@ -247,23 +247,13 @@ function fetchedBase(plan: RepoPlan, sandbox: string, io: Io): string {
 	return sha;
 }
 
-type Workspace = { workspace_id: string; label: string };
-type Tab = { tab_id: string; label: string };
-type Pane = { pane_id: string; tab_id: string; agent?: string | null };
-type Created = {
-	result: {
-		workspace?: { workspace_id: string };
-		root_pane: { pane_id: string };
-	};
-};
-
 const DETECT_TIMEOUT_MS = 90_000;
 const KNOWN_STATUS = new Set(["idle", "done", "working", "blocked"]);
 
 export async function up(
 	input: UpInput,
 	io: Io,
-): Promise<{ sandbox: string; agent: string; pane: string }> {
+): Promise<{ sandbox: string; terminal: string }> {
 	const seat = seatOf(io);
 	const kind = KINDS[input.kind ?? seat.name];
 	const stale = staleImage(input.root, kind, io);
@@ -276,14 +266,13 @@ export async function up(
 		),
 	};
 	const sandbox = sandboxName(input.repo, input.label, kind.prefix);
-	const agent = agentName(sandbox);
 	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
 	const profile = repoProfile(input.root, name, io);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const inner = labelInSandboxName(input.repo, input.label, kind.prefix);
 	if (!existing && inner)
 		throw new Error(`${input.label} is a sandbox name; its label is ${inner}`);
-	const found = findPane(io, basename(input.repo), agent, kind);
+	const live = terminalOf(sandbox, fleetTerminals(io));
 	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
 	if (existing) layoutTask(task, io);
 	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
@@ -332,7 +321,7 @@ export async function up(
 		const built = io.read(imageStampPath(kind, io));
 		if (built) io.write(builtStampPath(task), built);
 		else io.remove(builtStampPath(task));
-		logEvent(io, "created", agent);
+		logEvent(io, "created", sandbox);
 		let locks: number;
 		try {
 			if (!group && profile.container.push === "auto")
@@ -353,16 +342,6 @@ export async function up(
 						'f="$(dirname "$WORKSPACE_DIR")/$1"; [ ! -f "$f" ] || sudo truncate -s 0 "$f"',
 						"--",
 						kind.sbxGuidance,
-					],
-					{ quiet: true },
-				);
-			const integration = kind.herdrIntegration;
-			if (integration)
-				io.sbx(
-					[
-						"cp",
-						`${io.home}/${kind.home}/${integration}`,
-						`${sandbox}:/home/agent/${kind.home}/${integration}`,
 					],
 					{ quiet: true },
 				);
@@ -515,34 +494,21 @@ export async function up(
 		}
 	}
 
-	const { pane, running } = openPane(io, basename(input.repo), agent, found);
-	if (!running) {
-		const args = agentArgs(
-			kind,
-			input.model,
-			io.list(sessionsDir(task, kind, input.repo)).length > 0,
-		);
-		runAgent(sandbox, task, pane, kind, args, input.root, io);
-	}
-	await waitForAgent(io, pane, sandbox, kind);
-	if (existing) io.remove(stopFile({ name: sandbox, workspaces: [input.repo] }, io));
-	logEvent(io, "up", agent);
-	io.herdr(["agent", "rename", pane, agent]);
+	if (live) io.log(`${sandbox}: adopting the container's agent already running in terminal ${live.address}`);
+	const terminal =
+		live?.address ??
+		openTab(sandbox, task, input.repo, agentArgs(kind, input.model, io.list(sessionsDir(task, kind, input.repo)).length > 0), io);
+	await waitForAgent(io, terminal, sandbox, kind);
+	logEvent(io, "up", sandbox);
 	io.log(
-		`${sandbox}: the container's agent waiting in tab ${agent} (pane ${pane}); no prompt sent`,
+		`${sandbox}: the container's agent waiting in its tab (terminal ${terminal}); no prompt sent`,
 	);
-	return { sandbox, agent, pane };
+	return { sandbox, terminal };
 }
 
-function runAgent(sandbox: string, task: string, pane: string, kind: Kind, args: string, root: string, io: Io): void {
-	io.herdr(["pane", "run", pane, `HERDR_AGENT=${kind.name} ${root}/bin/${CLI} relay ${sandbox} ${task}${args ? ` -- ${args}` : ""}`]);
-}
-
-export async function resumeAgent(sandbox: Sandbox, task: string, pane: string, root: string, io: Io): Promise<void> {
+export async function resumeAgent(sandbox: Sandbox, task: string, io: Io): Promise<void> {
 	const args = agentArgs(sandbox.kind, undefined, io.list(sessionsDir(task, sandbox.kind, sandbox.workspaces[0])).length > 0);
-	runAgent(sandbox.name, task, pane, sandbox.kind, args, root, io);
-	await waitForAgent(io, pane, sandbox.name, sandbox.kind);
-	io.herdr(["agent", "rename", pane, agentName(sandbox.name)]);
+	await waitForAgent(io, openTab(sandbox.name, task, sandbox.workspaces[0], args, io), sandbox.name, sandbox.kind);
 }
 
 function sessionToken(profile: Profile): string | undefined {
@@ -956,134 +922,37 @@ git submodule update --no-fetch --checkout -- "$2" || { echo "submodule $2 canno
 	}
 }
 
-type Found = { pane: string; running: boolean } | { workspace?: string };
-
-function findPane(io: Io, label: string, tab: string, kind: Kind): Found {
-	const named = agentFor(
-		io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents,
-		tab,
-	);
-	if (named?.pane_id) {
-		if (named.agent !== kind.name)
-			throw new Error(
-				`agent ${tab} is ${named.agent ?? "unknown"} in pane ${named.pane_id}, not ${kind.name}; rename it or pick another label`,
-			);
-		io.log(
-			`${tab}: adopting the container's agent already running in pane ${named.pane_id}`,
-		);
-		return { pane: named.pane_id, running: true };
-	}
-	const list = io.herdr<{ result: { workspaces: Workspace[] } }>([
-		"workspace",
-		"list",
-	]);
-	const workspace = list.result.workspaces.find(
-		(w) => w.label.toLowerCase() === label.toLowerCase(),
-	)?.workspace_id;
-	if (!workspace) return {};
-	const existing = io
-		.herdr<{ result: { tabs: Tab[] } }>(["tab", "list", "--workspace", workspace])
-		.result.tabs.find((t) => t.label === tab);
-	if (!existing) return { workspace };
-	const pane = io
-		.herdr<{ result: { panes: Pane[] } }>([
-			"pane",
-			"list",
-			"--workspace",
-			workspace,
-		])
-		.result.panes.find((p) => p.tab_id === existing.tab_id);
-	if (!pane) throw new Error(`tab ${tab} exists without a pane; close it`);
-	if (pane.agent && pane.agent !== kind.name)
-		throw new Error(
-			`tab ${tab} already runs ${pane.agent} in pane ${pane.pane_id}`,
-		);
-	if (pane.agent)
-		io.log(
-			`${tab}: adopting the container's agent already running in pane ${pane.pane_id}`,
-		);
-	return { pane: pane.pane_id, running: Boolean(pane.agent) };
-}
-
-function openPane(
-	io: Io,
-	label: string,
-	tab: string,
-	found: Found,
-): { pane: string; running: boolean } {
-	if ("pane" in found) return found;
-	if (!found.workspace) {
-		const created = io.herdr<Created>([
-			"workspace",
-			"create",
-			"--label",
-			label,
-			"--no-focus",
-		]);
-		if (created.result.workspace)
-			io.herdr([
-				"tab",
-				"rename",
-				created.result.root_pane.pane_id.replace(/:p/, ":t"),
-				tab,
-			]);
-		return { pane: created.result.root_pane.pane_id, running: false };
-	}
-	return {
-		pane: io.herdr<Created>([
-			"tab",
-			"create",
-			"--workspace",
-			found.workspace,
-			"--label",
-			tab,
-			"--no-focus",
-		]).result.root_pane.pane_id,
-		running: false,
-	};
-}
-
 async function waitForAgent(
 	io: Io,
-	pane: string,
+	terminal: string,
 	sandbox: string,
 	kind: Kind,
 ): Promise<void> {
 	const started = io.now().getTime();
 	let probeError: unknown;
 	while (io.now().getTime() - started < DETECT_TIMEOUT_MS) {
-		try {
-			const status =
-				io.herdr<{ result: { agent: Agent } }>(["agent", "get", pane]).result.agent
-					.agent_status ?? "";
-			if (KNOWN_STATUS.has(status)) {
-				let runs = false;
-				try {
-					runs = agentRuns(io, sandbox, kind);
-				} catch (error) {
-					probeError = error;
-				}
-				if (runs) {
-					if (
-						kind.name !== "pi" &&
-						io
-							.herdrText(["agent", "read", pane, "--source", "visible"])
-							.includes("Not logged in")
-					)
-						throw new Error(
-							`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; run /login in tab ${agentName(sandbox)}, then steer`,
-						);
-					return;
-				}
+		const { state, status } = io.hc<{ state?: string; status?: { state?: string } | null }>(["get", terminal]);
+		if (state === "finished")
+			throw new Error(`${sandbox}: the container's agent exited in terminal ${terminal}:\n${io.hcText(["read", terminal, "--lines", "20"])}`);
+		if (KNOWN_STATUS.has(status?.state ?? "")) {
+			let runs = false;
+			try {
+				runs = agentRuns(io, sandbox, kind);
+			} catch (error) {
+				probeError = error;
 			}
-		} catch (error) {
-			if (!(error instanceof Error) || !error.message.includes("agent_not_found"))
-				throw error;
+			if (runs) {
+				if (kind.name !== "pi" && io.hcText(["read", terminal, "--lines", "40"]).includes("Not logged in"))
+					throw new Error(
+						`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; run /login in its tab, then steer`,
+					);
+				return;
+			}
 		}
 		await io.sleep(2000);
 	}
 	throw new Error(
-		`the container's agent did not become ready in pane ${pane} within ${DETECT_TIMEOUT_MS / 1000}s; read the pane${probeError ? `; process probe: ${String(probeError)}` : ""}`,
+		`the container's agent did not become ready in terminal ${terminal} within ${DETECT_TIMEOUT_MS / 1000}s; read it with hc read ${terminal}${probeError ? `; process probe: ${String(probeError)}` : ""}`,
 	);
 }
 

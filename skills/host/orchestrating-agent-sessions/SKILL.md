@@ -1,17 +1,17 @@
 ---
 name: orchestrating-agent-sessions
-description: 'Fleet containers: put one up, steer it, read its task directory, land its branch, close it. Use when the user asks to run work in an sbx sandbox with an agent in a herdr tab, asks what a running task is up to, or when a `[fleet]` line or a refusal from `{{cli}}` needs reading.'
+description: 'Fleet containers: put one up, steer it, read its task directory, land its branch, close it. Use when the user asks to run work in an sbx sandbox with an agent in a Herdr app tab, asks what a running task is up to, or when a `[fleet]` line or a refusal from `{{cli}}` needs reading.'
 ---
 
 # Fleet containers
 
-One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a herdr tab; its task directory, `~/.fleet/tasks/<primary repo>/<sandbox>/`, holds the task's state and the skills' work, laid out as {{refs}}. Every repository keeps its runbook at `~/.fleet/tasks/<repo>/runbook`. When this session may steer is in the Fleet section of your rules.
+One container per task, with one private clone per `--repo`, in an sbx sandbox. The agent waits in a Herdr app tab; its task directory, `~/.fleet/tasks/<primary repo>/<sandbox>/`, holds the task's state and the skills' work, laid out as {{refs}}. Every repository keeps its runbook at `~/.fleet/tasks/<repo>/runbook`. When this session may steer is in the Fleet section of your rules.
 
 `{{cli}} --help` lists every command and its flags, and each command's output and refusals name the next step. What they leave out:
 
 - A stopped container needs `{{cli}} start` before a steer or exec. `start` restores the saved conversation, not an interrupted tool call or app server. Inspect through `{{cli}} ls` or `{{cli}} peek`: raw `sbx exec` starts a stopped container
 - `{{cli}} down --force` discards work, and only the user runs it
-- `{{cli}} start` answering `no saved stopped tab` for a container `{{cli}} ls` shows running and `gone`: ask the user before ending the agent process still inside, then `{{cli}} up <label>` with the task's label and repositories attaches it to a new tab and resumes its session
+- A container `{{cli}} ls` shows `running` and `gone` has lost its tab, and an agent process may still run inside: ask the user before `{{cli}} start`, which opens a new tab and resumes its saved session
 - Once a container's branch is landed, a second branch of it comes home with `git -C <repo> fetch sandbox-<sandbox> <branch>:<branch>` and `git push`
 - A rule or skill change reaches a container through `{{cli}} build` and a new container; a running one keeps the rules it started with
 - Models for new containers: edit `<kind>/profiles/models.json` in the harness repo and run `{{cli}} render`, or pass `--model` to one `{{cli}} up`. Containers take it after `{{cli}} build`, the host {{reload.models}}

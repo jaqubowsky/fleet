@@ -1,22 +1,11 @@
 import { type AgentName, type Kind, KINDS } from "../harness.ts";
 import type { Io } from "./io.ts";
-import { agentName } from "./name.ts";
 
 export type Sandbox = {
 	name: string;
 	status: string;
 	workspaces: string[];
 	kind: Kind;
-};
-export type Agent = {
-	pane_id: string;
-	tab_id?: string;
-	workspace_id?: string;
-	agent_status?: string;
-	state_change_seq?: number;
-	name?: string;
-	agent?: string | null;
-	cwd?: string;
 };
 export type Row = {
 	sandbox: string;
@@ -42,19 +31,6 @@ export function sandboxes(io: Io): Sandbox[] {
 			? [{ ...s, kind: KINDS[agent as AgentName] }]
 			: [],
 	);
-}
-
-export function agentFor(agents: Agent[], name: string): Agent | undefined {
-	return agents.find((a) => a.name === name);
-}
-
-export function tabContainer(name: string | undefined, current: { tab_id: string; workspace_id: string }, io: Io): Sandbox | undefined {
-	const all = sandboxes(io);
-	const agents = io.herdr<{ result: { agents: Agent[] } }>(["agent", "list"]).result.agents;
-	const tabs = io.herdr<{ result: { tabs: { tab_id: string; label: string }[] } }>(["tab", "list", "--workspace", current.workspace_id]).result.tabs;
-	const tab = tabs.find((t) => t.tab_id === current.tab_id);
-	const matches = all.filter((s) => (name ? s.name === name || agentName(s.name) === name : agents.some((a) => a.tab_id === current.tab_id && a.name === agentName(s.name)) || tab?.label === agentName(s.name)));
-	return matches.length === 1 ? matches[0] : undefined;
 }
 
 export function parseCheckout(text: string): {

@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { KINDS, SEATS } from "../harness.ts";
-import { ls, peek, start, stop, stoppedPane, steer } from "./commands.ts";
-import { stopFile } from "./repositories.ts";
-import { fakeIo } from "./fake-io.ts";
+import { ls, peek, start, stop } from "./commands.ts";
+import { fakeIo, liveTerminals } from "./fake-io.ts";
 import type { Sandbox } from "./status.ts";
 
 for (const kind of Object.values(KINDS)) {
@@ -11,83 +10,95 @@ for (const kind of Object.values(KINDS)) {
 	const task = `/home/me/.fleet/tasks/webapp/${sandbox.name}`;
 	const stopped = { ...sandbox, status: "stopped" };
 	const fixture = {
-		"herdr agent list": { result: { agents: [{ name: sandbox.name, pane_id: "w1:p7", agent: kind.name }] } },
-		"herdr agent get w1:p7": { result: { agent: { agent_status: "idle" } } },
+		"herdr-app ls": { spaces: [{ id: "sp1", name: "WebApp", machine: null }, { id: "sp2", name: "webapp", machine: "vps" }] },
+		"herdr-app do tab.new": { tab: "tb1", terminal: "t9" },
+		"herdr-app do space.new": { space: "sp3", tab: "tb1", terminal: "t9" },
+		"hc get t9": { state: "live", status: { state: "idle" } },
 		"sbx exec": "-icanon -icrnl",
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`list ${task}/logs/sessions/projects/-w-webapp`]: ["s1.jsonl"],
 	};
 
-	test(`${kind.name} stop keeps the tab, session and dirty files`, async () => {
-		const io = fakeIo(fixture, SEATS[kind.name]);
+	test(`${kind.name} stop closes the tab and keeps the session and dirty files`, () => {
+		const io = fakeIo({ ...fixture, ...liveTerminals(sandbox.name) }, SEATS[kind.name]);
 		io.files[`${task}/ticket.md`] = "# Restore projects\n";
 		io.files[`${task}/logs/sessions/s1.jsonl`] = "saved conversation";
 
-		await stop(sandbox, io);
+		stop(sandbox, io);
 
-		assert.equal(stoppedPane(sandbox, io), "w1:p7");
 		assert.equal(io.files[`${task}/ticket.md`], "# Restore projects\n");
 		assert.equal(io.files[`${task}/logs/sessions/s1.jsonl`], "saved conversation");
 		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` stop ${sandbox.name} `)));
-		assert.deepEqual(io.calls.filter((c) => c[0] === "sbx"), [["sbx", "stop", sandbox.name]]);
-		assert.equal(io.calls.filter((c) => c.includes("close") || c.includes("rm")).length, 0);
+		const steps = io.calls.filter((c) => c[0] === "sbx" || (c[0] === "hc" && c[1] === "kill")).map((c) => c.join(" "));
+		assert.deepEqual(steps, [`sbx stop ${sandbox.name}`, "hc kill t2"]);
 	});
 
-	test(`${kind.name} a stopped tab is reported under fleet's own label once herdr has let the exited agent go`, async () => {
-		const io = fakeIo(fixture, SEATS[kind.name]);
-		const herdr = io.herdr;
-		let reads = 0;
-		io.herdr = <T>(args: string[]) => {
-			if (args[0] !== "pane" || args[1] !== "get") return herdr<T>(args);
-			io.calls.push(["herdr", ...args]);
-			reads += 1;
-			return { result: { pane: reads < 3 ? { pane_id: "w1:p7", agent: kind.name } : { pane_id: "w1:p7" } } } as T;
-		};
+	test(`${kind.name} a failed stop leaves the agent's tab open`, () => {
+		const io = fakeIo({ ...fixture, ...liveTerminals(sandbox.name), "sbx stop": new Error("stop refused") });
 
-		await stop(sandbox, io);
+		assert.throws(() => stop(sandbox, io), /stop refused/);
 
-		const herdrCalls = io.calls.filter((c) => c[0] === "herdr").map((c) => c.slice(1));
-		const steps = herdrCalls.map((c) => c.slice(0, 2).join(" "));
-		assert.deepEqual(steps.slice(steps.indexOf("pane send-keys")), ["pane send-keys", "pane get", "pane get", "pane get", "pane run", "pane report-agent", "pane report-metadata"]);
-		assert.deepEqual(herdrCalls.find((c) => c[1] === "run"), ["pane", "run", "w1:p7", `HERDR_AGENT=${kind.name} fleet stopped ${sandbox.name}`]);
-		const report: string[] = herdrCalls.find((c) => c[1] === "report-agent") ?? [];
-		assert.equal(report[report.indexOf("--agent") + 1], "fleet");
-		assert.ok(herdrCalls.some((c) => c[1] === "report-metadata" && c.includes("unknown=stopped")));
+		assert.ok(!io.calls.some((c) => c[1] === "kill"));
+		assert.equal(io.calls.filter((c) => c[0] === "append").length, 0);
 	});
 
-	test(`${kind.name} start resumes the saved session in the same pane without a prompt`, async () => {
+	test(`${kind.name} stopping a stopped container changes nothing`, () => {
+		const io = fakeIo(fixture);
+
+		assert.throws(() => stop(stopped, io), /already stopped/);
+
+		assert.equal(io.calls.length, 0);
+	});
+
+	test(`${kind.name} start resumes the saved session in a new tab of the repository's space without a prompt`, async () => {
 		const io = fakeIo(fixture, SEATS[kind.name]);
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 
 		await start(stopped, "/harness", io);
 
-		const launched = io.calls.find((c) => c[2] === "run");
-		const released: string[] = io.calls.find((c) => c[2] === "release-agent") ?? [];
-		assert.equal(released[released.indexOf("--agent") + 1], "fleet");
-		const closed = io.calls.findIndex((c) => c[2] === "send-keys" && c[3] === "w1:p7" && c[4] === "ctrl+c");
-		assert.ok(closed >= 0 && closed < io.calls.indexOf(launched!), "the stopped view closes before the agent starts");
-		assert.equal(launched?.[3], "w1:p7");
-		assert.match(launched?.[4] ?? "", new RegExp(kind.resume));
-		assert.ok(launched?.[4].includes(`/harness/bin/fleet relay ${sandbox.name} ${task}`));
-		assert.equal(stoppedPane(sandbox, io), undefined);
+		const opened: string[] = io.calls.find((c) => c[0] === "herdr-app" && c[2] === "tab.new") ?? [];
+		assert.equal(opened[opened.indexOf("--space") + 1], "sp1");
+		assert.equal(opened[opened.indexOf("--name") + 1], sandbox.name);
+		assert.deepEqual(JSON.parse(opened[opened.indexOf("--argv") + 1]), ["exec", "sbx", "run", "--name", sandbox.name, "--", ...kind.agentArgs, kind.resume]);
+		assert.deepEqual(io.calls.find((c) => c[0] === "hc" && c[1] === "label"), ["hc", "label", "t9", "fleet=1", `fleet.sandbox=${sandbox.name}`, `fleet.task=${task}`]);
 		assert.ok(io.calls.some((c) => c[0] === "append" && c[2].includes(` start ${sandbox.name} `)));
-		assert.equal(io.calls.filter((c) => c.includes("prompt") || c.includes("create")).length, 0);
+		assert.ok(!io.calls.some((c) => c[1] === "send"));
 	});
 
-	test(`${kind.name} start whose saved tab is gone points to fleet up`, async () => {
-		const gone = new Error('herdr pane send-keys w1:gone ctrl+c failed (1)\n{"error":{"code":"pane_not_found","message":"pane w1:gone not found"}}');
-		const io = fakeIo({ ...fixture, "herdr pane send-keys w1:gone": gone }, SEATS[kind.name]);
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:gone" });
+	test(`${kind.name} start makes the repository's space when the window has none`, async () => {
+		const io = fakeIo({ ...fixture, "herdr-app ls": { spaces: [] } }, SEATS[kind.name]);
 
-		await assert.rejects(start(stopped, "/harness", io), new RegExp(`${sandbox.name}: its saved tab w1:gone is gone; use fleet up to attach it to a new tab$`));
+		await start(stopped, "/harness", io);
 
-		assert.equal(stoppedPane(sandbox, io), "w1:gone");
-		assert.equal(io.calls.filter((c) => c[0] === "sbx").length, 0);
+		const made: string[] = io.calls.find((c) => c[0] === "herdr-app" && c[2] === "space.new") ?? [];
+		assert.equal(made[made.indexOf("--name") + 1], "webapp");
+		assert.equal(made[made.indexOf("--folder") + 1], "/w/webapp");
+		assert.equal(made[made.indexOf("--tab") + 1], sandbox.name);
+	});
+
+	test(`${kind.name} start reopens a running container whose tab was closed`, async () => {
+		const io = fakeIo(fixture, SEATS[kind.name]);
+
+		await start(sandbox, "/harness", io);
+
+		assert.ok(io.calls.some((c) => c[0] === "herdr-app" && c[2] === "tab.new"));
+	});
+
+	test(`${kind.name} start refuses a container that still has its tab`, async () => {
+		const io = fakeIo({ ...fixture, ...liveTerminals(sandbox.name) }, SEATS[kind.name]);
+
+		await assert.rejects(start(sandbox, "/harness", io), new RegExp(`${sandbox.name}: already runs in terminal t2`));
+
+		assert.ok(!io.calls.some((c) => c[0] === "herdr-app"));
+	});
+
+	test(`${kind.name} start says so when the agent exits before it is ready`, async () => {
+		const io = fakeIo({ ...fixture, "hc get t9": { state: "finished", status: null }, "hc read t9": "sandbox not found" }, SEATS[kind.name]);
+
+		await assert.rejects(start(stopped, "/harness", io), /exited in terminal t9:\nsandbox not found/);
 	});
 
 	test(`${kind.name} start names a sandbox built from an older harness`, async () => {
 		const io = fakeIo({ ...fixture, "git log -1 --format=%h": "f7e7f1a" }, SEATS[kind.name]);
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 		io.files[`${task}/logs/image-stamp`] = "31e3d51\n";
 
 		await start(stopped, "/harness", io);
@@ -95,9 +106,8 @@ for (const kind of Object.values(KINDS)) {
 		assert.match(io.lines[0], new RegExp(`^${sandbox.name} was built from harness 31e3d51, and the harness is now f7e7f1a`));
 	});
 
-	test(`${kind.name} listing a pending stop does not probe the guest`, () => {
-		const io = fakeIo({ ...fixture, "sbx ls --json": [{ ...sandbox, agent: kind.name }] });
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
+	test(`${kind.name} listing a stopped container does not probe the guest`, () => {
+		const io = fakeIo({ ...fixture, "sbx ls --json": [{ ...stopped, agent: kind.name }] });
 
 		const text = ls(io);
 
@@ -105,43 +115,12 @@ for (const kind of Object.values(KINDS)) {
 		assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
 	});
 
-	test(`${kind.name} inspecting a stopped pane leaves the container asleep`, () => {
+	test(`${kind.name} inspecting a stopped container leaves it asleep`, () => {
 		const io = fakeIo({ ...fixture, "sbx ls --json": [{ ...stopped, agent: kind.name }] });
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
 
 		const text = peek(sandbox.name, io);
 
 		assert.match(text, /stopped; checkout not probed/);
 		assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
-	});
-
-	test(`${kind.name} a failed stop leaves the running agent available`, async () => {
-		const io = fakeIo({ ...fixture, "sbx stop": new Error("stop refused") });
-
-		await assert.rejects(stop(sandbox, io), /stop refused/);
-
-		assert.equal(stoppedPane(sandbox, io), undefined);
-		assert.equal(io.calls.filter((c) => c[2] === "report-agent").length, 0);
-		assert.equal(io.calls.filter((c) => c[0] === "append").length, 0);
-	});
-
-	test(`${kind.name} stopping twice keeps the saved pane`, async () => {
-		const io = fakeIo(fixture);
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
-
-		await stop(stopped, io);
-
-		assert.equal(stoppedPane(sandbox, io), "w1:p7");
-		assert.equal(io.calls.filter((c) => c[0] === "sbx").length, 0);
-		assert.equal(io.calls.filter((c) => c[0] === "append").length, 0);
-	});
-
-	test(`${kind.name} a pending stop rejects a steer even before sandboxd updates its status`, () => {
-		const io = fakeIo(fixture);
-		io.files[stopFile(sandbox, io)] = JSON.stringify({ pane: "w1:p7" });
-
-		assert.throws(() => steer(sandbox, "go", io), /stopped; run fleet start/);
-
-		assert.deepEqual(io.calls, []);
 	});
 }

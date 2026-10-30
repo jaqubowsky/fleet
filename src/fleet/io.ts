@@ -5,11 +5,12 @@ import type { Seat } from "../harness.ts";
 
 export type Io = {
 	sbx(args: string[], opts?: { quiet?: boolean; stream?: boolean; timeoutMs?: number; input?: string }): string;
-	herdr<T = unknown>(args: string[]): T;
-	herdrText(args: string[]): string;
+	hc<T = unknown>(args: string[]): T;
+	hcText(args: string[]): string;
+	app<T = unknown>(args: string[]): T;
+	follow(command: string, args: string[], onLine: (line: string) => void, onClose: () => void): () => void;
 	git(args: string[], cwd: string, opts?: { env?: Record<string, string>; input?: string }): string;
 	gh(args: string[], cwd: string): string;
-	hunk(args: string[]): string;
 	read(path: string): string | undefined;
 	write(path: string, text: string): void;
 	rename(from: string, to: string): void;
@@ -21,13 +22,12 @@ export type Io = {
 	mkdir(path: string): void;
 	log(line: string): void;
 	run(command: string, args: string[], cwd?: string): void;
-	launch(command: string, args: string[]): Promise<number>;
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
 	seat?: Seat;
 	tmp: string;
-	pane: string;
+	terminal: string;
 	sessionId?: string;
 	env(name: string): string | undefined;
 };
@@ -40,6 +40,7 @@ function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: bo
 		encoding: "utf8",
 		stdio: ["pipe", opts.stream ? "inherit" : "pipe", opts.quiet ? "pipe" : "inherit"],
 		timeout: opts.timeoutMs,
+		maxBuffer: 64 * 1024 * 1024,
 	});
 	const shown = args.map((a) => (a.length > 80 ? `${a.slice(0, 77)}...` : a)).join(" ");
 	if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT") throw new Error(`${cmd} ${shown} gave no answer within ${(opts.timeoutMs ?? 0) / 1000}s`);
@@ -51,21 +52,37 @@ function shell(cmd: string, args: string[], opts: { quiet?: boolean; stream?: bo
 	return (result.stdout ?? "").trim();
 }
 
+function json<T>(cmd: string, args: string[]): T {
+	const out = shell(cmd, args, { quiet: true });
+	try {
+		return (out ? JSON.parse(out) : {}) as T;
+	} catch (cause) {
+		throw new Error(`${cmd} returned invalid JSON`, { cause });
+	}
+}
+
 export function realIo(home: string, seat?: Seat): Io {
 	return {
 		sbx: (args, opts) => shell("sbx", args, opts),
-		herdr: <T>(args: string[]) => {
-			const out = shell("herdr", args, { quiet: true });
-			try {
-				return (out ? JSON.parse(out) : {}) as T;
-			} catch (cause) {
-				throw new Error("herdr returned invalid JSON", { cause });
-			}
+		hc: <T>(args: string[]) => json<T>("hc", [...args, "--json"]),
+		hcText: (args) => shell("hc", args, { quiet: true }),
+		app: <T>(args: string[]) => json<T>("herdr-app", args),
+		follow: (command, args, onLine, onClose) => {
+			const child = spawn(command, args, { stdio: ["ignore", "pipe", "ignore"] });
+			let buf = "";
+			child.stdout.on("data", (chunk: Buffer) => {
+				buf += chunk.toString();
+				for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
+					onLine(buf.slice(0, nl));
+					buf = buf.slice(nl + 1);
+				}
+			});
+			child.on("error", () => {});
+			child.on("close", onClose);
+			return () => child.kill();
 		},
-		herdrText: (args) => shell("herdr", args, { quiet: true }),
 		git: (args, cwd, opts) => shell("git", args, { cwd, quiet: true, ...opts }),
 		gh: (args, cwd) => shell("gh", args, { cwd, quiet: true, timeoutMs: 30_000 }),
-		hunk: (args) => shell("hunk", args, { quiet: true, timeoutMs: 20_000 }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
 		write: (path, text) => writeFileSync(path, text),
 		rename: (from, to) => renameSync(from, to),
@@ -100,18 +117,12 @@ export function realIo(home: string, seat?: Seat): Io {
 			if (result.error) throw result.error;
 			if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 		},
-		launch: (command, args) =>
-			new Promise((resolve, reject) => {
-				const child = spawn(command, args, { stdio: "inherit" });
-				child.on("error", reject);
-				child.on("exit", (code) => resolve(code ?? 1));
-			}),
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,
 		seat,
 		tmp: process.env.TMPDIR ?? "/tmp",
-		pane: process.env.HERDR_PANE_ID ?? "-",
+		terminal: process.env.HC_TERMINAL_ID ?? "-",
 		sessionId: seat ? process.env[seat.sessionIdEnv] : undefined,
 		env: (name) => process.env[name] || undefined,
 	};

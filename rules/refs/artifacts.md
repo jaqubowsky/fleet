@@ -1,6 +1,6 @@
 # Task directory
 
-One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. A task uses `~/.fleet/tasks/<primary repo>/<sandbox>/`, for one repository or several. `{{cli}} up` creates it, `{{cli}} down` keeps it. It carries the work between skills, between sessions and to the host: what the next reader needs is in a file here or in git. The state of the work is herdr's and git's: the agent writes no status file, and each turn ends with the closing message its container rule shows.
+One directory per task at `$FLEET_ARTIFACTS/$SANDBOX_NAME/`. A task uses `~/.fleet/tasks/<primary repo>/<sandbox>/`, for one repository or several. `{{cli}} up` creates it, `{{cli}} down` keeps it. It carries the work between skills, between sessions and to the host: what the next reader needs is in a file here or in git. The state of the work is the agent's Herdr app status and git: the agent writes no status file, and each turn ends with the closing message its container rule shows.
 
 ## Files
 

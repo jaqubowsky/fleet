@@ -24,7 +24,7 @@ const EFFORT = [35];
 const MUTED = [90];
 const ACCENT = [33];
 const ZONES = [[32], [33], [31], [91, 1]];
-const AGENT_STATUS: Record<string, number[]> = { working: [33], idle: [32], done: [32], blocked: [31], exited: [31], gone: [31] };
+const AGENT_STATUS: Record<string, number[]> = { working: [33], idle: [32], done: [32], blocked: [31], error: [31], exited: [31], gone: [31] };
 
 type Run = { text: string; codes: number[] };
 type Group = { rank: number; runs: Run[] };

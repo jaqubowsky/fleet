@@ -4,9 +4,9 @@ import type { EngineInterface, Register } from "claude-code";
 type Line = { wake?: string; log?: string; watching?: string };
 
 const WATCH_DESCRIPTION =
-	"Watch containers beyond the ones this session put up, started or steered, which are watched by themselves. A watched container settling wakes this session with a [fleet] <agent>: <state> turn carrying the last message of its session transcript. It also wakes for a container working 20 minutes without settling, unless its last message is new since the last wake, and for each 15 minutes its message stays the same after that; for a sleep of this Mac; and for gone and taken down. Pass the sandbox names fleet ls prints; an empty string watches every container.";
+	"Watch containers beyond the ones this session put up, started or steered, which are watched by themselves. A watched container settling wakes this session with a [fleet] <sandbox>: <state> turn carrying the last message of its session transcript. It also wakes for a container working 20 minutes without settling, unless its last message is new since the last wake, and for each 15 minutes its message stays the same after that; for a sleep of this Mac; and for gone and taken down. Pass the sandbox names fleet ls prints; an empty string watches every container.";
 
-const AGENT_STATUS: Record<string, string> = { working: "yellow", idle: "green", done: "green", blocked: "red", exited: "red", gone: "red" };
+const AGENT_STATUS: Record<string, string> = { working: "yellow", idle: "green", done: "green", blocked: "red", error: "red", exited: "red", gone: "red" };
 
 const watching = atom({ plugin: "fleet", key: "watching" } as const, "");
 

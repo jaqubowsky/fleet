@@ -2,7 +2,7 @@ export const SETTLE_MS = 1000;
 export const STALL_MS = 20 * 60_000;
 export const RING_MS = 15 * 60_000;
 export const TERMINAL = new Set(["done", "idle"]);
-const WAKE = new Set(["done", "idle", "blocked"]);
+const WAKE = new Set(["done", "idle", "blocked", "error"]);
 
 export function shouldWake(prev: string | undefined, next: string): boolean {
 	if (next === "unknown") return prev === "working";
@@ -12,7 +12,7 @@ export function shouldWake(prev: string | undefined, next: string): boolean {
 }
 
 export function stalled(
-	entries: { pane: string; status: string; since: number; rang: number }[],
+	entries: { name: string; status: string; since: number; rang: number }[],
 	now: number,
 	stallMs: number,
 	ringMs: number,
@@ -24,7 +24,7 @@ export function stalled(
 				now - e.since >= stallMs &&
 				now - e.rang >= ringMs,
 		)
-		.map((e) => e.pane);
+		.map((e) => e.name);
 }
 
 export function transition(

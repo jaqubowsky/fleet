@@ -93,27 +93,6 @@ test("pi carries its own theme and draws its status line itself", () => {
 	);
 });
 
-test("a pi container carries the state relay for herdr's integration, and its host does not", () => {
-	const relay = {
-		"read /root/extensions/state-relay.ts": "relay\n",
-		"stat /root/extensions/state-relay.ts": {
-			size: 6,
-			mtime: new Date(0),
-			dir: false,
-		},
-	};
-	const pi = fakeIo(sources(relay));
-
-	render({ root: "/root", agent: "pi", seat: "host", out: "/home" }, pi);
-	render({ root: "/root", agent: "pi", seat: "container", out: "/stage" }, pi);
-
-	assert.equal(
-		pi.files["/stage/home/agent/extensions/state-relay.ts"],
-		"relay\n",
-	);
-	assert.equal(pi.files["/home/agent/extensions/state-relay.ts"], undefined);
-});
-
 test("every container carries the activity recorder beside each module that imports it, and no host does", () => {
 	const activity = {
 		"read /root/extensions/activity.ts": "activity\n",

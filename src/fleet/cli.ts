@@ -15,22 +15,15 @@ import {
 	start,
 	steer,
 	stop,
-	stoppedPane,
 } from "./commands.ts";
 import { init } from "./init.ts";
-import { toggleDiff } from "./diff.ts";
-import { diffView } from "./diff-view.ts";
+import { containerPatch } from "./diff.ts";
 import { realIo, seatOf } from "./io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { repositoryManifest } from "./repositories.ts";
-import { openPullRequest } from "./pull-request.ts";
-import { relay } from "./relay.ts";
-import { sendReviewNotes } from "./review-notes.ts";
 import { loadProfiles } from "../profile/profile.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
-import { agentName } from "./name.ts";
-import { keepName, stoppedScreen, stoppedView } from "./stopped.ts";
 import { up } from "./up.ts";
 import { jsonLines, sessionScope, watch } from "./watch.ts";
 
@@ -43,18 +36,15 @@ const io = realIo(
 );
 
 const usage = `usage:
-  ${CLI} up <label> [--repo <path> ...] [--pi|--claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]   clone one repo, or repeat --repo for N private repos (first primary, additional clones imported via Git bundles); each takes its own fetched origin base and branch, one --base applies to all and one --base per repo selects bases in --repo order, --branch names a branch in each, never the default; bind each profile, lay out the task directory with permissions.md and, when ~/.fleet/config/projects holds an overlay, project.md, start the container's agent in a herdr tab, the seat's own without --pi|--claude, send nothing
+  ${CLI} up <label> [--repo <path> ...] [--pi|--claude] [--branch <name>] [--base <name> ...] [--model <model>] [--memory 8g] [--cpus 4]   clone one repo, or repeat --repo for N private repos (first primary, additional clones imported via Git bundles); each takes its own fetched origin base and branch, one --base applies to all and one --base per repo selects bases in --repo order, --branch names a branch in each, never the default; bind each profile, lay out the task directory with permissions.md and, when ~/.fleet/config/projects holds an overlay, project.md, start the container's agent in a Herdr app tab, the seat's own without --pi|--claude, send nothing
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
   ${CLI} profile [<repo>] [--apply [--brief]]         what ~/.fleet/config/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.fleet/config/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell; --brief prints only what --apply changed, and nothing outside a GitHub checkout, for a session start
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
-  ${CLI} ls                                           containers with herdr status; branch, dirty count and SHA for each repo
-  ${CLI} diff [<sandbox>] [--pane <id>]              toggle the live Changes pane in the current Herdr tab; Ctrl+B then D
-  ${CLI} pr [<sandbox>] [--pane <id>]                open the pull request the container in the current Herdr tab opened; Ctrl+B then U
-  ${CLI} notes [<sandbox>] [--pane <id>]             send the notes written in the container's Changes pane to its agent; Ctrl+B then M
-  ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the pane tail
-  ${CLI} stop <sandbox>                              stop without removing files or the herdr tab; show stopped and release container resources
-  ${CLI} start <sandbox>                             restart in the saved tab and resume the last saved agent session; send no prompt
-  ${CLI} stopped <sandbox>                           what stop leaves in the saved tab: a full-screen view of the stopped container until ctrl+c
+  ${CLI} ls                                           containers with the agent status hc reports; branch, dirty count and SHA for each repo
+  ${CLI} patch <sandbox>                             print the container's changes as one patch, the diff the Changes panel shows
+  ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the terminal tail
+  ${CLI} stop <sandbox>                              close the container's tab and stop it without removing files; release container resources
+  ${CLI} start <sandbox>                             open a new Herdr app tab for a stopped container, or a running one whose tab closed, and resume the last saved agent session; send no prompt
   ${CLI} steer <sandbox> <text...>                    send the container's agent this text
   ${CLI} exec <sandbox> -- <command...>               run it in the container workspace; one quoted argument runs as a shell line
   ${CLI} artifacts [--repo <path>]                    each task's files with size and age, its folders folded to one line
@@ -64,12 +54,9 @@ const usage = `usage:
   ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
-  ${CLI} relay <sandbox> <task dir> -- <args...>      what up types into the container's tab: run the container's agent here and hand herdr the state it reports and the pull request it opened
 
-  <sandbox> is the container name or its herdr agent name, which is the container name cut to 32 characters with a hash when longer
+  <sandbox> is the container name, which is also its tab name
   --repo <path> picks the repository for up, land and artifacts, and defaults to the current directory; up accepts it repeatedly, primary first; multi-repo land uses the recorded primary`;
-
-const NAME_CHECK_MS = 5000;
 
 const BARE = new Set([
 	"apply",
@@ -81,7 +68,6 @@ const BARE = new Set([
 	"claude",
 	"json",
 	"every",
-	"view",
 ]);
 
 export function flags(
@@ -134,6 +120,11 @@ function kindOf(
 	if (opts.pi && opts.claude)
 		throw new Error("--pi and --claude exclude each other");
 	return opts.pi ? "pi" : opts.claude ? "claude" : undefined;
+}
+
+function running(name: string, read: string | undefined): string {
+	if (read === undefined) throw new Error(`${name} is not running, so its checkout is not read; fleet start ${name} runs it`);
+	return read;
 }
 
 function sandboxOf(value: string | undefined) {
@@ -218,57 +209,22 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		flags(args, []);
 		io.log(ls(io));
 	},
-	async diff(args) {
-		const { opts, rest } = flags(args, ["pane", "view"]);
-		if (opts.view) await diffView(need(rest[0], "sandbox"), io);
-		else toggleDiff(rest[0], opts.pane as string | undefined, root, io);
-	},
-	pr(args) {
-		const { opts, rest } = flags(args, ["pane"]);
-		openPullRequest(rest[0], opts.pane as string | undefined, io);
-	},
-	notes(args) {
-		const { opts, rest } = flags(args, ["pane"]);
-		sendReviewNotes(rest[0], opts.pane as string | undefined, io);
+	patch(args) {
+		const { rest } = flags(args, []);
+		const name = sandboxOf(rest[0]).name;
+		io.log(running(name, containerPatch(name, io)));
 	},
 	peek(args) {
 		const { opts, rest } = flags(args, ["lines"]);
 		io.log(peek(sandboxOf(rest[0]).name, io, Number(opts.lines ?? 40)));
 	},
-	async stop(args) {
+	stop(args) {
 		const { rest } = flags(args, []);
-		await stop(sandboxOf(rest[0]), io);
+		stop(sandboxOf(rest[0]), io);
 	},
 	async start(args) {
 		const { rest } = flags(args, []);
 		await start(sandboxOf(rest[0]), root, io);
-	},
-	async stopped(args) {
-		const { rest } = flags(args, []);
-		const sandbox = sandboxOf(rest[0]);
-		const view = stoppedView(sandbox, io);
-		const pane = process.env.HERDR_PANE_ID;
-		if (pane) {
-			const name = () => keepName(pane, agentName(sandbox.name), io);
-			name();
-			setInterval(name, NAME_CHECK_MS);
-		}
-		const out = process.stdout;
-		const draw = () => out.write(`\x1b[2J\x1b[H${stoppedScreen(view, { columns: out.columns ?? 80, rows: out.rows ?? 24 }).join("\n")}`);
-		const leave = () => {
-			out.write("\x1b[?25h\x1b[?1049l");
-			process.exit(0);
-		};
-		out.write("\x1b[?1049h\x1b[?25l");
-		draw();
-		out.on("resize", draw);
-		process.stdin.setRawMode?.(true);
-		process.stdin.on("data", (key: Buffer) => {
-			if (key.includes(3)) leave();
-		});
-		process.on("SIGTERM", leave);
-		process.on("SIGHUP", leave);
-		await new Promise(() => {});
 	},
 	steer(args) {
 		const { rest } = flags(args, []);
@@ -278,7 +234,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	exec(args) {
 		const { rest } = flags(args, []);
 		const sandbox = sandboxOf(rest[0]);
-		if (sandbox.status === "stopped" || stoppedPane(sandbox, io)) throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
+		if (sandbox.status === "stopped") throw new Error(`${sandbox.name}: stopped; run ${CLI} start ${sandbox.name} first`);
 		exec(sandbox.name, rest.slice(1), io);
 	},
 	copy(args) {
@@ -329,16 +285,6 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			render({ root, agent: seatOf(io).name, seat, out: resolve(opts.out) }, io);
 		else if (seat === "host") renderHost(root, io);
 		else throw new Error("the container seat needs --out <dir>");
-	},
-	async relay(args) {
-		const { rest } = flags(args, []);
-		const [sandbox, task, ...agentArgs] = rest;
-		process.exitCode = await relay(
-			need(sandbox, "sandbox"),
-			need(task, "task directory"),
-			agentArgs,
-			io,
-		);
 	},
 	async watch(args) {
 		const { opts, rest } = flags(args, ["json", "every"]);

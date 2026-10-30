@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
-import net from "node:net";
 import { test, type TestContext } from "node:test";
 import fleetMonitor from "../../extensions/fleet-monitor.ts";
 import { KINDS, SEATS } from "../harness.ts";
@@ -17,7 +15,7 @@ import {
 	steer,
 } from "./commands.ts";
 import { EVENTS_LOG } from "./events.ts";
-import { fakeIo } from "./fake-io.ts";
+import { fakeIo, liveTerminals } from "./fake-io.ts";
 import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { up } from "./up.ts";
@@ -26,13 +24,7 @@ import { sessionScope, watch } from "./watch.ts";
 const log = `/home/me/${EVENTS_LOG}`;
 const listed = (name: string, agent: string) => ({
 	"sbx ls --json": [{ name, status: "running", workspaces: ["/r"], agent }],
-	"herdr agent list": {
-		result: {
-			agents: [
-				{ name, pane_id: "w1:p2", tab_id: "w1:t2", agent_status: "working" },
-			],
-		},
-	},
+	...liveTerminals([name, "working"]),
 });
 for (const seat of Object.values(SEATS))
 	for (const kind of Object.values(KINDS)) {
@@ -44,7 +36,7 @@ for (const seat of Object.values(SEATS))
 
 			assert.ok(
 				io.calls.some((c) =>
-					c.join(" ").startsWith(`herdr agent prompt ${name} go`),
+					c.join(" ") === "hc send t2 go",
 				),
 			);
 			assert.deepEqual(io.lines, [`${name}: steered`]);
@@ -170,52 +162,39 @@ test("ls, peek, exec, copy, artifacts, land and down run without FLEET_SEAT", ()
 	assert.ok(io.calls.some((c) => c.join(" ") === "sbx rm -f pi-a"));
 });
 
-function herdrSocket(t: TestContext) {
+function settling(t: TestContext) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
 	t.mock.method(
 		globalThis,
 		"setInterval",
 		(() => 1) as unknown as typeof setInterval,
 	);
-	const sockets: EventEmitter[] = [];
-	t.mock.method(net, "createConnection", () => {
-		const socket = Object.assign(new EventEmitter(), {
-			destroyed: false,
-			write() {},
-			destroy() {},
-		});
-		sockets.push(socket);
-		return socket as unknown as net.Socket;
-	});
-	return () => {
-		for (const socket of sockets)
-			socket.emit(
-				"data",
-				Buffer.from(
-					`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: "w1:p2", agent_status: "idle" } })}\n`,
-				),
-			);
+	return (io: ReturnType<typeof fakeIo>) => {
+		for (const follower of io.followers) {
+			follower.onLine(JSON.stringify({ params: { type: "status", terminal: "t2", data: { status: { state: "idle" } } } }));
+			follower.onLine(JSON.stringify({ params: { type: "turn", terminal: "t2", data: { turn: 1 } } }));
+		}
 		t.mock.timers.tick(1100);
 	};
 }
 
 test("a claude seat's session-owned watch wakes on a pi container it put up", (t) => {
-	const settle = herdrSocket(t);
+	const settle = settling(t);
 	const io = Object.assign(fakeIo(listed("pi-a", "pi"), SEATS.claude), { sessionId: "s1" });
 	io.files[log] = "2026-09-16T10:00:00.000Z - up pi-a session=s1";
 	const wakes: string[] = [];
 
 	watch(sessionScope(io, []), io, (text) => wakes.push(text));
-	settle();
+	settle(io);
 
 	assert.match(wakes[0] ?? "", /^\[fleet\] pi-a:/);
 });
 
 test("a pi seat's session-owned watch wakes on a claude container it put up", (t) => {
-	const settle = herdrSocket(t);
+	const settle = settling(t);
 	const io = fakeIo(listed("claude-a", "claude"), SEATS.pi);
 	io.files[log] =
-		"2026-09-16T10:00:00.000Z w9:other up claude-a session=session-a";
+		"2026-09-16T10:00:00.000Z t39 up claude-a session=session-a";
 	const handlers: Record<string, (...args: any[]) => any> = {};
 	const messages: string[] = [];
 	fleetMonitor(
@@ -235,7 +214,7 @@ test("a pi seat's session-owned watch wakes on a claude container it put up", (t
 		{},
 		{ sessionManager: { getSessionId: () => "session-a" } },
 	);
-	settle();
+	settle(io);
 
 	assert.match(messages[0] ?? "", /^\[fleet\] claude-a:/);
 });

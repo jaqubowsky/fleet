@@ -376,7 +376,6 @@ function pi(r: Renderer): void {
 			`home/agent/${to}`,
 		]),
 		["extensions/activity.ts", "home/agent/extensions/activity.ts"],
-		["extensions/state-relay.ts", "home/agent/extensions/state-relay.ts"],
 		["extensions/container-guard.ts", "home/agent/extensions/container-guard.ts"],
 		["src/guard/container.ts", "home/agent/src/guard/container.ts"],
 		["src/guard/argv.ts", "home/agent/src/guard/argv.ts"],

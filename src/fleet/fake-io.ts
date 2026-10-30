@@ -20,6 +20,7 @@ export function fakeIo(
 	lines: string[];
 	files: Record<string, string>;
 	sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[];
+	followers: { args: string[]; onLine: (line: string) => void; onClose: () => void; stopped: boolean }[];
 } {
 	const calls: Call[] = [];
 	const sbxOpts: (
@@ -27,6 +28,7 @@ export function fakeIo(
 		| undefined
 	)[] = [];
 	const lines: string[] = [];
+	const followers: { args: string[]; onLine: (line: string) => void; onClose: () => void; stopped: boolean }[] = [];
 	const files: Record<string, string> = {};
 	const answer = (key: string): FixtureAnswer => {
 		const hit = Object.keys(answers)
@@ -47,7 +49,8 @@ export function fakeIo(
 		home: "/home/me",
 		seat,
 		tmp: "/tmp",
-		pane: "w1:host",
+		terminal: "t1",
+		followers,
 		env: (name) => answer(`env ${name}`) as string | undefined,
 		sbxOpts,
 		sbx: (args, opts) => {
@@ -55,15 +58,29 @@ export function fakeIo(
 			sbxOpts.push(opts);
 			return text(`sbx ${args.join(" ")}`);
 		},
-		herdr: <T>(args: string[]) => {
-			calls.push(["herdr", ...args]);
-			const a = answer(`herdr ${args.join(" ")}`);
+		hc: <T>(args: string[]) => {
+			calls.push(["hc", ...args]);
+			const a = answer(`hc ${args.join(" ")}`);
 			if (a instanceof Error) throw a;
-			return (a ?? { result: {} }) as T;
+			return (a ?? {}) as T;
 		},
-		herdrText: (args) => {
-			calls.push(["herdr", ...args]);
-			return text(`herdr ${args.join(" ")}`);
+		hcText: (args) => {
+			calls.push(["hc", ...args]);
+			return text(`hc ${args.join(" ")}`);
+		},
+		app: <T>(args: string[]) => {
+			calls.push(["herdr-app", ...args]);
+			const a = answer(`herdr-app ${args.join(" ")}`);
+			if (a instanceof Error) throw a;
+			return (a ?? {}) as T;
+		},
+		follow: (command, args, onLine, onClose) => {
+			calls.push(["follow", command, ...args]);
+			const follower = { args: [command, ...args], onLine, onClose, stopped: false };
+			followers.push(follower);
+			return () => {
+				follower.stopped = true;
+			};
 		},
 		git: (args, cwd) => {
 			calls.push(["git", cwd, ...args]);
@@ -75,10 +92,6 @@ export function fakeIo(
 		gh: (args, cwd) => {
 			calls.push(["gh", cwd, ...args]);
 			return text(`gh ${args.join(" ")}`);
-		},
-		hunk: (args) => {
-			calls.push(["hunk", ...args]);
-			return text(`hunk ${args.join(" ")}`);
 		},
 		read: (path) => files[path] ?? (answer(`read ${path}`) as string | undefined),
 		write: (path, body) => {
@@ -117,13 +130,20 @@ export function fakeIo(
 		run: (command, args, cwd) => {
 			calls.push(["run", ...(cwd === undefined ? [] : [cwd]), command, ...args]);
 		},
-		launch: async (command, args) => {
-			calls.push(["launch", command, ...args]);
-			return 0;
-		},
 		sleep: async () => {
 			tick += 1;
 		},
 		now: () => new Date(Date.UTC(2026, 8, 16, 10, 0, tick * 2)),
+	};
+}
+
+export function liveTerminals(...sandboxes: (string | [string, string | null])[]): Record<string, unknown> {
+	const terminals = sandboxes.map((entry, index) => {
+		const [name, state] = Array.isArray(entry) ? entry : [entry, "idle"];
+		return { address: `t${index + 2}`, labels: { fleet: "1", "fleet.sandbox": name }, status: state ? { state } : null, turn: 0 };
+	});
+	return {
+		"hc ls --label fleet=1": { terminals: terminals.map(({ address, status, turn }) => ({ address, state: "live", status: status?.state ?? null, turn })) },
+		...Object.fromEntries(terminals.map((terminal) => [`hc get ${terminal.address}`, { ...terminal, state: "live" }])),
 	};
 }

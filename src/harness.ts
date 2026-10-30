@@ -23,7 +23,6 @@ export type Kind = {
 	agentArgs: string[];
 	resume: string;
 	sessionEnv?: string;
-	herdrIntegration?: string;
 	codex?: { auth: string; kit: string };
 	projectConfig?: string;
 	sbxGuidance?: string;
@@ -53,7 +52,6 @@ export const KINDS: Record<AgentName, Kind> = {
 		agentArgs: ["--approve"],
 		resume: "-c",
 		sessionEnv: "PI_CODING_AGENT_SESSION_DIR",
-		herdrIntegration: "agent/extensions/herdr-agent-state.ts",
 		codex: { auth: "agent/auth.json", kit: "pi" },
 		tokens: {
 			"tool.ask": "ask_user_question",

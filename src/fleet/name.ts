@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { basename } from "node:path";
 
 export function slug(value: string): string {
@@ -16,9 +15,4 @@ export function labelInSandboxName(repo: string, label: string, prefix: string):
 	const head = sandboxName(repo, "x", prefix).slice(0, -1);
 	const suffix = slug(label);
 	return suffix.startsWith(head) && suffix.length > head.length ? suffix.slice(head.length) : undefined;
-}
-
-export function agentName(sandbox: string): string {
-	if (sandbox.length <= 32) return sandbox;
-	return `${sandbox.slice(0, 24).replace(/-+$/, "")}-${createHash("sha256").update(sandbox).digest("hex").slice(0, 7)}`;
 }

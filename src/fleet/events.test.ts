@@ -12,19 +12,19 @@ test("new up and steer events carry the invoking Pi session", () => {
 	logEvent(io, "up", "webapp-web-2");
 
 	assert.deepEqual(io.calls, [
-		["append", "/home/me/.fleet/tasks/fleet-events.log", '2026-09-16T10:00:00.000Z w1:host steer webapp-web-1 session=session-a "zrób \\"x\\""'],
-		["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host up webapp-web-2 session=session-a"],
+		["append", "/home/me/.fleet/tasks/fleet-events.log", '2026-09-16T10:00:00.000Z t1 steer webapp-web-1 session=session-a "zrób \\"x\\""'],
+		["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z t1 up webapp-web-2 session=session-a"],
 	]);
 });
 
 test("runtime sums several stops without counting a repeated stop twice", () => {
 	const log = [
-		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
-		"2026-09-16T10:10:00Z w1:p stop worker session=a",
-		"2026-09-16T10:20:00Z w1:p stop worker session=a",
-		"2026-09-16T10:40:00Z w1:p start worker session=a",
-		"2026-09-16T10:45:00Z w1:p stop worker session=a",
-		"2026-09-16T10:50:00Z w1:p start worker session=a",
+		"2026-09-16T10:00:00Z t30 created worker session=a runtime=1",
+		"2026-09-16T10:10:00Z t30 stop worker session=a",
+		"2026-09-16T10:20:00Z t30 stop worker session=a",
+		"2026-09-16T10:40:00Z t30 start worker session=a",
+		"2026-09-16T10:45:00Z t30 stop worker session=a",
+		"2026-09-16T10:50:00Z t30 start worker session=a",
 	].join("\n");
 
 	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
@@ -39,11 +39,11 @@ test("runtime sums several stops without counting a repeated stop twice", () => 
 
 test("runtime follows the latest creation rather than a previous container", () => {
 	const log = [
-		"2026-09-16T09:00:00Z w1:p created worker session=a runtime=1",
-		"2026-09-16T09:30:00Z w1:p down worker session=a",
-		"2026-09-16T10:00:00Z w1:p created worker session=b runtime=1",
-		"2026-09-16T10:10:00Z w1:p stop another-worker session=b",
-		"2026-09-16T12:00:00Z w1:p stop worker session=b",
+		"2026-09-16T09:00:00Z t30 created worker session=a runtime=1",
+		"2026-09-16T09:30:00Z t30 down worker session=a",
+		"2026-09-16T10:00:00Z t30 created worker session=b runtime=1",
+		"2026-09-16T10:10:00Z t30 stop another-worker session=b",
+		"2026-09-16T12:00:00Z t30 stop worker session=b",
 	].join("\n");
 
 	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
@@ -56,8 +56,8 @@ test("runtime follows the latest creation rather than a previous container", () 
 
 test("an unmatched start leaves runtime coverage partial", () => {
 	const log = [
-		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
-		"2026-09-16T10:30:00Z w1:p start worker session=a",
+		"2026-09-16T10:00:00Z t30 created worker session=a runtime=1",
+		"2026-09-16T10:30:00Z t30 start worker session=a",
 	].join("\n");
 
 	const runtime = runtimeOf(log, "worker", new Date("2026-09-16T11:00:00Z"));
@@ -77,9 +77,9 @@ test("a missing creation leaves runtime unavailable", () => {
 
 test("the session that starts a stopped container owns it, and a stop changes no ownership", () => {
 	const log = [
-		"2026-09-16T10:00:00Z w1:p created worker session=a runtime=1",
-		"2026-09-16T10:00:01Z w1:p up worker session=a",
-		"2026-09-16T10:30:00Z w2:p stop worker session=b",
+		"2026-09-16T10:00:00Z t30 created worker session=a runtime=1",
+		"2026-09-16T10:00:01Z t30 up worker session=a",
+		"2026-09-16T10:30:00Z t31 stop worker session=b",
 		"2026-09-16T11:00:00Z - start worker session=c",
 	].join("\n");
 
@@ -104,13 +104,13 @@ test("two Pi sessions sharing a pane only adopt their own events", () => {
 
 test("legacy and ownerless events never cause automatic watching", () => {
 	const log = [
-		"2026-09-16T10:00:00.000Z w1:host up worker-a",
-		'2026-09-16T10:01:00.000Z w1:host steer worker-b "continue"',
-		"2026-09-16T10:02:00.000Z w1:host up worker-c session=",
+		"2026-09-16T10:00:00.000Z t30 up worker-a",
+		'2026-09-16T10:01:00.000Z t30 steer worker-b "continue"',
+		"2026-09-16T10:02:00.000Z t30 up worker-c session=",
 		"not a line",
 	].join("\n");
 
-	assert.deepEqual(eventAgents(log, "w1:host"), []);
+	assert.deepEqual(eventAgents(log, "t30"), []);
 	assert.deepEqual(eventAgents(log, ""), []);
 });
 
@@ -126,12 +126,12 @@ test("the shell Pi session id reaches event logging", (t) => {
 	assert.match(append.mock.calls[0].arguments[1], / session=shell-session$/);
 });
 
-test("a claude host outside herdr logs its Claude Code session id", (t) => {
-	const previous = { session: process.env.CLAUDE_CODE_SESSION_ID, pane: process.env.HERDR_PANE_ID };
+test("a claude host outside Herdr app logs its Claude Code session id", (t) => {
+	const previous = { session: process.env.CLAUDE_CODE_SESSION_ID, pane: process.env.HC_TERMINAL_ID };
 	process.env.CLAUDE_CODE_SESSION_ID = "claude-session";
-	delete process.env.HERDR_PANE_ID;
+	delete process.env.HC_TERMINAL_ID;
 	t.after(() => {
-		for (const [name, value] of [["CLAUDE_CODE_SESSION_ID", previous.session], ["HERDR_PANE_ID", previous.pane]] as const)
+		for (const [name, value] of [["CLAUDE_CODE_SESSION_ID", previous.session], ["HC_TERMINAL_ID", previous.pane]] as const)
 			if (value === undefined) delete process.env[name];
 			else process.env[name] = value;
 	});
@@ -148,16 +148,16 @@ test("a harness that watches through its CLI logs events in its writable fleet c
 
 	logEvent(io, "down", "worker-a");
 
-	assert.deepEqual(io.calls, [["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z w1:host down worker-a session="]]);
+	assert.deepEqual(io.calls, [["append", "/home/me/.fleet/tasks/fleet-events.log", "2026-09-16T10:00:00.000Z t1 down worker-a session="]]);
 });
 
 test("a container taken down is closed until it comes up again", () => {
 	const log = [
-		"2026-09-16T10:00:00.000Z w1:host up worker-a session=s",
-		'2026-09-16T10:01:00.000Z w1:host steer worker-a session=s "go"',
-		"2026-09-16T10:02:00.000Z w1:host down worker-a session=s",
-		"2026-09-16T10:03:00.000Z w1:host down worker-b session=s",
-		"2026-09-16T10:04:00.000Z w1:host up worker-b session=s",
+		"2026-09-16T10:00:00.000Z t30 up worker-a session=s",
+		'2026-09-16T10:01:00.000Z t30 steer worker-a session=s "go"',
+		"2026-09-16T10:02:00.000Z t30 down worker-a session=s",
+		"2026-09-16T10:03:00.000Z t30 down worker-b session=s",
+		"2026-09-16T10:04:00.000Z t30 up worker-b session=s",
 	].join("\n");
 
 	const { closed, steered } = lifecycle(log);
@@ -169,10 +169,10 @@ test("a container taken down is closed until it comes up again", () => {
 
 test("a Pi session keeps a container it put up after another session steers it, until it is taken down", () => {
 	const log = [
-		"2026-09-16T10:00:00.000Z w1:host up worker-a session=session-a",
-		'2026-09-16T10:01:00.000Z w2:other steer worker-a session=session-b "go"',
-		"2026-09-16T10:02:00.000Z w1:host up worker-b session=session-a",
-		"2026-09-16T10:03:00.000Z w2:other down worker-b session=session-b",
+		"2026-09-16T10:00:00.000Z t30 up worker-a session=session-a",
+		'2026-09-16T10:01:00.000Z t31 steer worker-a session=session-b "go"',
+		"2026-09-16T10:02:00.000Z t30 up worker-b session=session-a",
+		"2026-09-16T10:03:00.000Z t31 down worker-b session=session-b",
 	].join("\n");
 
 	assert.deepEqual(eventAgents(log, "session-a"), ["worker-a"]);

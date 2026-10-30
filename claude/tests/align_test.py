@@ -50,16 +50,16 @@ check("no $HARNESS is left unexpanded", "$HARNESS" not in json.dumps(data))
 check("the compaction point comes from its one source", data["env"]["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] == str(align.load(align.COMPACTION)["tokens"]))
 check("a change of the repo source is reported", align.fix_user({**data, "autoCompactEnabled": False}) != [])
 
-herdr = {"matcher": "^(startup|resume|clear|compact|fork)$", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/herdr-agent-state.sh session"}]}
+theirs = {"matcher": "^(startup|resume|clear|compact|fork)$", "hooks": [{"type": "command", "command": "bash ~/.claude/hooks/session-note.sh"}]}
 stale = {"matcher": "Bash", "hooks": [{"type": "command", "command": str(align.HOME / ".claude" / "hooks" / "guard.sh"), "timeout": 10}]}
-mine = {"hooks": {"SessionStart": [herdr], "PreToolUse": [stale]}}
+mine = {"hooks": {"SessionStart": [theirs], "PreToolUse": [stale]}}
 align.fix_user(mine)
 twice = json.loads(json.dumps(mine))
 align.fix_user(twice)
 starts = mine["hooks"]["SessionStart"]
 guards = [entry for entry in mine["hooks"]["PreToolUse"] if entry["hooks"][0]["command"].endswith("guard.sh")]
 
-check("a hook the person added, such as herdr's, survives the sync", herdr in starts)
+check("a hook the person added survives the sync", theirs in starts)
 check("the repo's own hook is added beside it", any(entry["hooks"][0]["command"].endswith("plugin-drift.sh") for entry in starts))
 check("the repo's hook replaces its own stale entry instead of doubling it", len(guards) == 1 and guards[0]["matcher"] != "Bash")
 check("a second sync changes nothing", twice == mine)
@@ -72,11 +72,11 @@ check("gh opens and merges pull requests without the auto-mode classifier", all(
 check("the host runs without Claude Code's OS sandbox, as pi's does", "sandbox" not in desired)
 
 with tempfile.TemporaryDirectory() as tmp:
-    source = Path(tmp) / "herdr.toml"
-    source.write_text("theme = 'repo'\n")
-    target = Path(tmp) / "config" / "config.toml"
+    source = Path(tmp) / "layout.json"
+    source.write_text('{"id": "repo"}\n')
+    target = Path(tmp) / "config" / "layout.json"
     target.parent.mkdir()
-    target.write_text("theme = 'mine'\n")
+    target.write_text('{"id": "mine"}\n')
     settings = Path(tmp) / "config" / "settings.json"
     settings.write_text("{}\n")
     with contextlib.redirect_stdout(io.StringIO()):

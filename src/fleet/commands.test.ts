@@ -12,7 +12,7 @@ import {
 	resolveSandbox,
 	steer,
 } from "./commands.ts";
-import { fakeIo } from "./fake-io.ts";
+import { fakeIo, liveTerminals } from "./fake-io.ts";
 import { checkoutProbe, commitsProbe, type Sandbox } from "./status.ts";
 import { KINDS, type Kind, SEATS } from "../harness.ts";
 
@@ -20,7 +20,6 @@ const running = {
 	"sbx ls --json": [
 		{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
 	],
-	"herdr agent list": { result: { agents: [] } },
 };
 const task = "/home/me/.fleet/tasks/r/pi-a";
 const row = (
@@ -83,44 +82,35 @@ test("a stopped container rejects a steer without waking it", () => {
 });
 
 test("steer logs the prompt before sending it", () => {
-	const io = fakeIo();
+	const io = fakeIo(liveTerminals("pi-webapp-web-1"));
 	steer(row("pi-webapp-web-1"), 'zrób analizę "x"', io);
-	assert.equal(io.calls[0][1], "/home/me/.fleet/tasks/fleet-events.log");
+	const logged = io.calls.find((c) => c[0] === "append");
+	assert.equal(logged?.[1], "/home/me/.fleet/tasks/fleet-events.log");
 	assert.match(
-		io.calls[0][2],
-		/w1:host steer pi-webapp-web-1 session= "zrób analizę \\"x\\""/,
+		logged?.[2] ?? "",
+		/t1 steer pi-webapp-web-1 session= "zrób analizę \\"x\\""/,
 	);
-	assert.deepEqual(io.calls[1], [
-		"herdr",
-		"agent",
-		"prompt",
-		"pi-webapp-web-1",
-		'zrób analizę "x"',
-		"--wait",
-		"--until",
-		"working",
-		"--timeout",
-		"6000",
-	]);
+	assert.deepEqual(io.calls.at(-1), ["hc", "send", "t2", 'zrób analizę "x"']);
 	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
 test("steer sends a ~/.fleet path as the absolute path the container mounts, and leaves the container's own ~ alone", () => {
-	const io = fakeIo();
+	const io = fakeIo(liveTerminals("pi-a"));
 
 	steer(row("pi-a"), "Deliver ~/.fleet/tasks/r/pi-a/ticket.md (\"~/.fleet/tasks/r/runbook\"), TICKET=~/.fleet/tasks/r/pi-a `~/.fleet/tasks/r/notes`; skills: ~/.claude/skills", io);
 
 	assert.equal(
-		io.calls[1][4],
+		io.calls.at(-1)?.[3],
 		'Deliver /home/me/.fleet/tasks/r/pi-a/ticket.md ("/home/me/.fleet/tasks/r/runbook"), TICKET=/home/me/.fleet/tasks/r/pi-a `/home/me/.fleet/tasks/r/notes`; skills: ~/.claude/skills',
 	);
-	assert.match(io.calls[0][2], /session= "Deliver \/home\/me\/\.fleet\/tasks\/r\/pi-a\/ticket\.md/);
+	assert.match(io.calls.find((c) => c[0] === "append")?.[2] ?? "", /session= "Deliver \/home\/me\/\.fleet\/tasks\/r\/pi-a\/ticket\.md/);
 });
 
 const builtStamp = "/home/me/.fleet/tasks/r/pi-webapp-web-1/logs/image-stamp";
 
 test("steer names a sandbox built from an older harness, and still steers", () => {
 	const io = fakeIo({
+		...liveTerminals("pi-webapp-web-1"),
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
 		[`read ${builtStamp}`]: "31e3d51\n",
@@ -132,11 +122,12 @@ test("steer names a sandbox built from an older harness, and still steers", () =
 		io.lines[0],
 		/^pi-webapp-web-1 was built from harness 31e3d51, and the harness is now f7e7f1a: .*down and up again/,
 	);
-	assert.ok(io.calls.some((c) => c[0] === "herdr" && c[2] === "prompt"));
+	assert.ok(io.calls.some((c) => c[0] === "hc" && c[1] === "send"));
 });
 
 test("steer names an older harness once, and again only when the advice changes", () => {
 	const io = fakeIo({
+		...liveTerminals("pi-webapp-web-1"),
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
 		[`read ${builtStamp}`]: "31e3d51\n",
@@ -157,6 +148,7 @@ test("steer names an older harness once, and again only when the advice changes"
 
 test("steer asks for a build first when the image is older than the harness too", () => {
 	const io = fakeIo({
+		...liveTerminals("pi-webapp-web-1"),
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
 		[`read ${builtStamp}`]: "31e3d51\n",
@@ -169,6 +161,7 @@ test("steer asks for a build first when the image is older than the harness too"
 
 test("steer says a sandbox with no recorded stamp came from an unknown harness", () => {
 	const io = fakeIo({
+		...liveTerminals("pi-webapp-web-1"),
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "f7e7f1a\n",
 	});
@@ -180,6 +173,7 @@ test("steer says a sandbox with no recorded stamp came from an unknown harness",
 
 test("steer stays quiet for a sandbox built from the current harness, even when the image is older", () => {
 	const io = fakeIo({
+		...liveTerminals("pi-webapp-web-1"),
 		"git log -1 --format=%h": "f7e7f1a",
 		"read /home/me/.fleet/cache/pi/image-stamp": "31e3d51\n",
 		[`read ${builtStamp}`]: "f7e7f1a\n",
@@ -190,36 +184,13 @@ test("steer stays quiet for a sandbox built from the current harness, even when 
 	assert.deepEqual(io.lines, ["pi-webapp-web-1: steered"]);
 });
 
-for (const harness of Object.values(KINDS)) {
-	test(`${harness.name} steer does not resend a stalled prompt`, () => {
-		const agent = `${harness.prefix}webapp-web-1727`;
-		const io = fakeIo(
-			{
-				[`herdr agent prompt ${agent}`]: new Error("agent_prompt_stalled"),
-				[`herdr agent get ${agent}`]: {
-					result: { agent: { agent_status: "idle" } },
-				},
-				[`herdr agent read ${agent}`]: "different text",
-			},
-			SEATS[harness.name],
-		);
+test("steer to a container whose tab closed asks for fleet start and sends nothing", () => {
+	const io = fakeIo(liveTerminals("pi-b"));
 
-		assert.throws(
-			() => steer(row(agent, harness), "go", io),
-			(error: Error) =>
-				error.message.includes(
-					"agent_prompt_stalled: Prompt submission uncertain",
-				) &&
-				error.message.includes(`fleet peek ${agent}`) &&
-				error.message.includes("do not steer again"),
-		);
-		assert.deepEqual(
-			io.calls.filter((c) => c[0] === "herdr").map((c) => c[2]),
-			["prompt"],
-		);
-		assert.deepEqual(io.lines, []);
-	});
-}
+	assert.throws(() => steer(row("pi-a"), "go", io), /no terminal runs its agent; run fleet start pi-a first/);
+
+	assert.ok(!io.calls.some((c) => c[1] === "send"));
+});
 
 const onRemote = (workspace: string, head: string) =>
 	`sbx exec pi-a sh -c cd "$1" && git for-each-ref --contains "$2" --format='%(refname)' refs/remotes -- ${workspace} ${head}`;
@@ -363,9 +334,7 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 		...running,
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"herdr agent list": {
-			result: { agents: [{ pane_id: "w1:p2", tab_id: "w1:t2", name: "pi-a" }] },
-		},
+		...liveTerminals("pi-a"),
 	});
 	down("pi-a", {}, io);
 	const order = io.calls.map((c) => c.slice(0, 3).join(" "));
@@ -375,8 +344,8 @@ test("down sums the task's sessions into usage.json, closes the tab, then remove
 		return i;
 	};
 	assert.ok(at("git /r cat-file") < at(`write ${task}/logs/usage.json`));
-	assert.ok(at(`write ${task}/logs/usage.json`) < at("herdr tab close"));
-	assert.ok(at("herdr tab close") < at("sbx rm -f"));
+	assert.ok(at(`write ${task}/logs/usage.json`) < at("hc kill t2"));
+	assert.ok(at("hc kill t2") < at("sbx rm -f"));
 	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
 	assert.equal(usage.totals.requests, 2);
 	assert.deepEqual(usage.runs[0].commits, ["abc1234"]);
@@ -420,9 +389,9 @@ test("down excludes a stopped night from running time", () => {
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"read /home/me/.fleet/tasks/fleet-events.log": [
-			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
-			"2026-09-21T13:00:00Z w1:host stop pi-a session=s",
-			"2026-09-22T01:00:00Z w1:host start pi-a session=s",
+			"2026-09-21T12:00:00Z t30 created pi-a session=s runtime=1",
+			"2026-09-21T13:00:00Z t30 stop pi-a session=s",
+			"2026-09-22T01:00:00Z t30 start pi-a session=s",
 		].join("\n"),
 	});
 	io.now = () => new Date("2026-09-22T02:00:00Z");
@@ -447,9 +416,9 @@ test("down keeps usage from an older container out of the new runtime", () => {
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"read /home/me/.fleet/tasks/fleet-events.log": [
-			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
-			"2026-09-21T12:30:00Z w1:host down pi-a session=s",
-			"2026-09-21T13:00:00Z w1:host created pi-a session=s runtime=1",
+			"2026-09-21T12:00:00Z t30 created pi-a session=s runtime=1",
+			"2026-09-21T12:30:00Z t30 down pi-a session=s",
+			"2026-09-21T13:00:00Z t30 created pi-a session=s runtime=1",
 		].join("\n"),
 		[`read ${task}/logs/sessions/--r--/2026-09-21T12-01-18-932Z_s1.jsonl`]: [
 			request("2026-09-21T12:02:02Z", 0),
@@ -479,7 +448,7 @@ test("down flags long tool-activity gaps without calling them stopped time", () 
 		...running,
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
+		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z t30 created pi-a session=s runtime=1",
 		[`read ${task}/logs/activity.jsonl`]: [
 			JSON.stringify({ at: "2026-09-21T12:10:00Z", tool: "read", ok: true, agent: "main" }),
 			JSON.stringify({ at: "2026-09-21T12:20:00Z", tool: "bash", ok: true, agent: "main" }),
@@ -502,9 +471,9 @@ test("a stopped night is not flagged as tool inactivity", () => {
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"read /home/me/.fleet/tasks/fleet-events.log": [
-			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
-			"2026-09-21T12:02:00Z w1:host stop pi-a session=s",
-			"2026-09-22T00:02:00Z w1:host start pi-a session=s",
+			"2026-09-21T12:00:00Z t30 created pi-a session=s runtime=1",
+			"2026-09-21T12:02:00Z t30 stop pi-a session=s",
+			"2026-09-22T00:02:00Z t30 start pi-a session=s",
 		].join("\n"),
 		[`read ${task}/logs/activity.jsonl`]: [
 			JSON.stringify({ at: "2026-09-21T12:01:00Z", tool: "read", ok: true, agent: "main" }),
@@ -526,8 +495,8 @@ test("down includes an unfinished stop without treating it as running", () => {
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 		"read /home/me/.fleet/tasks/fleet-events.log": [
-			"2026-09-21T12:00:00Z w1:host created pi-a session=s runtime=1",
-			"2026-09-21T13:00:00Z w1:host stop pi-a session=s",
+			"2026-09-21T12:00:00Z t30 created pi-a session=s runtime=1",
+			"2026-09-21T13:00:00Z t30 stop pi-a session=s",
 		].join("\n"),
 	});
 	io.now = () => new Date("2026-09-22T02:00:00Z");
@@ -545,7 +514,7 @@ test("legacy runtime coverage is unknown rather than zero stopped time", () => {
 		...running,
 		...sessions,
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z w1:host up pi-a session=s",
+		"read /home/me/.fleet/tasks/fleet-events.log": "2026-09-21T12:00:00Z t30 up pi-a session=s",
 	});
 	io.now = () => new Date("2026-09-22T02:00:00Z");
 
@@ -584,7 +553,7 @@ test("down leaves claude's transcripts where the container wrote them", () => {
 		"sbx ls --json": [
 			{ name: "claude-a", agent: "claude", status: "running", workspaces: ["/r"] },
 		],
-		"herdr agent list": { result: { agents: [] } },
+
 		[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 	});
 
@@ -733,7 +702,7 @@ test("down names an unknown container", () => {
 	);
 });
 
-test("ls joins sbx, herdr and git state", () => {
+test("ls joins sbx, hc and git state", () => {
 	const io = fakeIo({
 		"sbx ls --json": [
 			{
@@ -745,13 +714,7 @@ test("ls joins sbx, herdr and git state", () => {
 			{ name: "pi-cv-x", agent: "pi", status: "stopped", workspaces: [] },
 		],
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
-		"herdr agent list": {
-			result: {
-				agents: [
-					{ pane_id: "w1:p2", name: "pi-webapp-web-1", agent_status: "working" },
-				],
-			},
-		},
+		...liveTerminals(["pi-webapp-web-1", "working"]),
 	});
 	assert.equal(
 		ls(io),
@@ -762,7 +725,7 @@ test("ls joins sbx, herdr and git state", () => {
 test("ls on an sbx older than 0.48 names the version fleet needs", () => {
 	const io = fakeIo({
 		"sbx ls --json": { sandboxes: [{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] }] },
-		"herdr agent list": { result: { agents: [] } },
+
 	});
 
 	assert.throws(() => ls(io), /sbx 0\.48 or later/);
@@ -794,13 +757,7 @@ test("ls reads a one-entry manifest as the one-repository row it always printed"
 			],
 		}),
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t1\tabc",
-		"herdr agent list": {
-			result: {
-				agents: [
-					{ pane_id: "w1:p2", name: "pi-webapp-web-1", agent_status: "working" },
-				],
-			},
-		},
+		...liveTerminals(["pi-webapp-web-1", "working"]),
 	});
 
 	assert.equal(
@@ -904,11 +861,7 @@ test("ls shows a running container's commits and asks GitHub nothing, even besid
 		"sbx ls --json": [
 			{ name: "pi-a", agent: "pi", status: "running", workspaces: ["/r"] },
 		],
-		"herdr agent list": {
-			result: {
-				agents: [{ name: "pi-a", pane_id: "w1:p1", agent_status: "idle" }],
-			},
-		},
+		...liveTerminals(["pi-a", "idle"]),
 		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "task\t0\tabc",
 		[`sbx exec pi-a sh -c ${commitsProbe}`]:
 			"task\torigin/main\t2\t0\t 1 file changed, 4 insertions(+), 1 deletion(-)\tabc1234 add two",
@@ -943,11 +896,7 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 			`sbx exec pi-broken sh -c cd "$WORKSPACE_DIR" && printf... failed (1)\ndocker daemon failed to start inside the sandbox`,
 		),
 		[`sbx exec pi-webapp-web-1 sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
-		"herdr agent list": {
-			result: {
-				agents: [{ pane_id: "w1:p2", name: "pi-broken", agent_status: "idle" }],
-			},
-		},
+		...liveTerminals(["pi-broken", "idle"]),
 	});
 
 	assert.equal(
@@ -963,11 +912,12 @@ test("ls prints a container whose sandbox fails as failed with its error, and li
 	);
 });
 
-test("peek shows git state and the pane tail, or says the agent is gone", () => {
+test("peek shows git state and the terminal tail, or says the tab is gone", () => {
 	const io = fakeIo({
 		...running,
+		...liveTerminals("pi-a"),
 		"sbx exec pi-a sh -c": " M a.ts\n---\nabc feat: x\n---\n 1 file changed",
-		"herdr agent read pi-a": "❯ waiting",
+		"hc read t2 --lines 5": "❯ waiting",
 	});
 	const out = peek("pi-a", io, 5);
 	assert.match(out, /M a\.ts/);
@@ -975,11 +925,10 @@ test("peek shows git state and the pane tail, or says the agent is gone", () => 
 	const gone = fakeIo({
 		...running,
 		"sbx exec pi-a sh -c": "clean",
-		"herdr agent read pi-a": new Error("agent_not_found"),
 	});
 	assert.match(
 		peek("pi-a", gone, 5),
-		/no herdr agent named pi-a; the tab may still be coming up/,
+		/no terminal for pi-a; the tab may still be coming up, or fleet start pi-a reopens it/,
 	);
 });
 
@@ -988,7 +937,7 @@ test("down probes a stopped container too, so its refusals still apply", () => {
 		"sbx ls --json": [
 			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
 		],
-		"herdr agent list": { result: { agents: [] } },
+
 		"sbx exec pi-a sh -c": "web-1\t1\tabc",
 	});
 	assert.throws(() => down("pi-a", {}, io), /1 uncommitted/);
@@ -1006,7 +955,7 @@ test("down passes a container whose head is already in the repo", () => {
 	);
 });
 
-test("resolveSandbox accepts the container name or its agent name", () => {
+test("resolveSandbox finds the container by its name", () => {
 	const io = fakeIo({
 		"sbx ls --json": [
 			{
@@ -1020,10 +969,6 @@ test("resolveSandbox accepts the container name or its agent name", () => {
 
 	assert.equal(
 		resolveSandbox("pi-webapp-frontend-ticket-123-fix-login-page", io).name,
-		"pi-webapp-frontend-ticket-123-fix-login-page",
-	);
-	assert.equal(
-		resolveSandbox("pi-webapp-frontend-ticke-6ec8f90", io).name,
 		"pi-webapp-frontend-ticket-123-fix-login-page",
 	);
 });
@@ -1277,11 +1222,7 @@ test("ls prices a claude container from the transcripts it writes into its task 
 					workspaces: ["/r"],
 				},
 			],
-			"herdr agent list": {
-				result: {
-					agents: [{ name: "claude-a", pane_id: "w1:p1", agent_status: "working" }],
-				},
-			},
+			...liveTerminals(["claude-a", "working"]),
 			[`sbx exec claude-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
 			[`list ${claudeTask}/logs/sessions`]: ["projects"],
 			[`stat ${claudeTask}/logs/sessions/projects`]: { size: 0, mtime: new Date(0), dir: true },
@@ -1310,7 +1251,7 @@ test("ls still prices a stopped pi container from the sessions it wrote", () => 
 		"sbx ls --json": [
 			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
 		],
-		"herdr agent list": { result: { agents: [] } },
+
 		[`list ${task}/logs/sessions`]: ["s1.jsonl"],
 		[`stat ${task}/logs/sessions/s1.jsonl`]: {
 			size: 10,
@@ -1329,7 +1270,7 @@ test("ls keeps a stopped two-repo sandbox asleep", () => {
 		"sbx ls --json": [
 			{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/r"] },
 		],
-		"herdr agent list": { result: { agents: [] } },
+
 		"read /home/me/.fleet/config/fleet/pi-a.json": JSON.stringify({
 			version: 1,
 			task: "/home/me/.fleet/tasks/r/pi-a",

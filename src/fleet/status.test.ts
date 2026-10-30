@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import {
-	agentFor,
 	commitFacts,
 	commitsProbe,
 	elapsed,
@@ -28,15 +27,6 @@ test("a detached checkout parses as no branch once its empty first field is trim
 	const checkout = parseCheckout(`0\t${head}`);
 
 	assert.deepEqual(checkout, { branch: "", dirty: 0, head });
-});
-
-test("agent lookup by name", () => {
-	assert.equal(
-		agentFor([{ pane_id: "w1:p1", name: "a", agent_status: "idle" }], "a")
-			?.agent_status,
-		"idle",
-	);
-	assert.equal(agentFor([], "a"), undefined);
 });
 
 test("rows render aligned with dirty count only when dirty", () => {

@@ -4,7 +4,7 @@ import type { Io } from "./io.ts";
 export const EVENTS_LOG = `${FLEET.tasks}/fleet-events.log`;
 
 export function logEvent(io: Io, kind: "up" | "steer" | "down" | "stop" | "start" | "created", agent: string, text?: string): void {
-	const fields = [io.now().toISOString(), io.pane, kind, agent, `session=${encodeURIComponent(io.sessionId ?? "")}`];
+	const fields = [io.now().toISOString(), io.terminal, kind, agent, `session=${encodeURIComponent(io.sessionId ?? "")}`];
 	if (kind === "created") fields.push("runtime=1");
 	if (text !== undefined) fields.push(JSON.stringify(text));
 	io.append(`${io.home}/${EVENTS_LOG}`, fields.join(" "));

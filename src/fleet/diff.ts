@@ -1,9 +1,5 @@
-import { basename, dirname, resolve } from "node:path";
+import { checkouts, withoutTerminalControls } from "./checkout.ts";
 import type { Io } from "./io.ts";
-import { repositoryManifest } from "./repositories.ts";
-import { sandboxes, tabContainer } from "./status.ts";
-
-type Pane = { pane_id: string; tab_id: string; workspace_id: string; title?: string };
 
 export const DIFF_PROBE = String.raw`
 const { execFileSync } = require('node:child_process');
@@ -35,36 +31,11 @@ process.stdout.write(JSON.stringify(patch));
 `;
 
 export function containerPatch(name: string, io: Io): string | undefined {
-	if (sandboxes(io).find(s => s.name === name)?.status !== "running") return undefined;
-	const repositories = repositoryManifest(name, io)?.repositories ?? [];
-	const reads = repositories.length
-		? repositories.map(r => ({ workspace: r.workspace, base: `refs/remotes/origin/${r.base}`, prefix: repositories.length > 1 ? `${basename(r.repo)}/` : "" }))
-		: [{ workspace: "", base: "", prefix: "" }];
-	return reads
-		.map(read => JSON.parse(io.sbx(["exec", name, "node", "-e", DIFF_PROBE, JSON.stringify(read)], { quiet: true, timeoutMs: 15_000 })) as string)
-		.join("")
-		.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
-}
-
-export function toggleDiff(name: string | undefined, paneId: string | undefined, root: string, io: Io): void {
-	const current = io.herdr<{ result: { pane: Pane } }>(["pane", "current", ...(paneId ? ["--pane", paneId] : ["--current"])]).result.pane;
-	const statePath = `${io.home}/.fleet/cache/diff/panels/${current.tab_id}.json`;
-	const saved = io.read(statePath);
-	const panes = io.herdr<{ result: { panes: Pane[] } }>(["pane", "list", "--workspace", current.workspace_id]).result.panes;
-	if (saved) {
-		const state = JSON.parse(saved) as { pane: string; tab: string };
-		if (panes.some(p => p.pane_id === state.pane && p.tab_id === state.tab)) {
-			io.herdr(["pane", "close", state.pane]);
-			io.remove(statePath);
-			return;
-		}
-	}
-	const sandbox = tabContainer(name, current, io);
-	if (!sandbox) throw new Error("Select a Fleet container tab, or run fleet diff <sandbox> from the target pane");
-	const panel = io.herdr<{ result: { pane: Pane } }>(["pane", "split", current.pane_id, "--direction", "right", "--ratio", "0.6", "--no-focus"]).result.pane;
-	io.mkdir(dirname(statePath));
-	io.write(statePath, JSON.stringify({ pane: panel.pane_id, tab: current.tab_id }));
-	io.herdr(["pane", "rename", panel.pane_id, `Changes: ${sandbox.name}`]);
-	const quote = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
-	io.herdr(["pane", "run", panel.pane_id, `${quote(resolve(root, "bin/fleet"))} diff ${quote(sandbox.name)} --view`]);
+	const reads = checkouts(name, io);
+	if (!reads) return undefined;
+	return withoutTerminalControls(
+		reads
+			.map(read => JSON.parse(io.sbx(["exec", name, "node", "-e", DIFF_PROBE, JSON.stringify(read)], { quiet: true, timeoutMs: 15_000 })) as string)
+			.join(""),
+	);
 }

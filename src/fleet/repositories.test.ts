@@ -24,7 +24,6 @@ const answers = {
 	"sbx ls --json": [
 		{ name: "pi-a", agent: "pi", status: "stopped", workspaces: ["/a"] },
 	],
-	"herdr agent list": { result: { agents: [] } },
 	"list /home/me/.fleet/config/fleet": ["pi-a.json"],
 	[`stat ${task}/logs`]: { size: 0, dir: true, mtime: new Date(0) },
 	[`stat ${task}/status.md`]: { size: 10, dir: false, mtime: new Date(0) },

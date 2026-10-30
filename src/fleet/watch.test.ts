@@ -1,20 +1,17 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
-import net from "node:net";
 import { test, type TestContext } from "node:test";
 import { SEATS, KINDS } from "../harness.ts";
 import { fakeIo } from "./fake-io.ts";
-import { agentName } from "./name.ts";
 import { fleetAgents, jsonLines, sessionScope, wakeLines, wakeName, watch } from "./watch.ts";
 
 const agents = [
-	{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
-	{ name: "claude-webapp-b", pane_id: "w1:p2", agent_status: "idle" },
-	{ name: "notes", pane_id: "w1:p3", agent_status: "idle" },
+	{ name: "claude-webapp-a", address: "t1", state: "working" },
+	{ name: "claude-webapp-b", address: "t2", state: "idle" },
+	{ name: "notes", address: "t3", state: "idle" },
 ];
 const sandboxes = [
-	{ name: "claude-webapp-a", agent: "claude", workspaces: ["/w/webapp"] },
-	{ name: "claude-webapp-b", agent: "claude", workspaces: ["/w/webapp"] },
+	{ name: "claude-webapp-a", agent: "claude", status: "running", workspaces: ["/w/webapp"] },
+	{ name: "claude-webapp-b", agent: "claude", status: "running", workspaces: ["/w/webapp"] },
 ];
 
 const REPORT = "Added the login rate limit; its tests pass at 9d290c9.";
@@ -25,9 +22,11 @@ function leaving(io: ReturnType<typeof fakeIo>) {
 		args.join(" ") === "ls --json" ? JSON.stringify([]) : sbx(args, opts);
 }
 
-function herdr(
+type Live = { name: string; address: string; state: string; turn?: number; sandbox?: string };
+
+function fleet(
 	t: TestContext,
-	agents: { name: string; pane_id: string; agent_status: string }[],
+	agents: Live[],
 	seat = SEATS.claude,
 ) {
 	t.mock.timers.enable({ apis: ["setTimeout"] });
@@ -39,22 +38,6 @@ function herdr(
 		intervals.set(delay, callback);
 		return 1;
 	}) as typeof setInterval);
-	const sockets: (EventEmitter & { destroyed: boolean; written: string[] })[] =
-		[];
-	t.mock.method(net, "createConnection", () => {
-		const socket = Object.assign(new EventEmitter(), {
-			destroyed: false,
-			written: [] as string[],
-			write(line: string) {
-				this.written.push(line);
-			},
-			destroy() {
-				this.destroyed = true;
-			},
-		});
-		sockets.push(socket);
-		return socket as unknown as net.Socket;
-	});
 	const io = fakeIo(
 		{
 			"sbx ls --json": agents.map((a) => ({
@@ -62,10 +45,13 @@ function herdr(
 				agent: a.name.startsWith("pi-") ? "pi" : "claude",
 				workspaces: ["/w/webapp"],
 			})),
-			"herdr agent list": { result: { agents } },
 		},
 		seat,
 	);
+	io.hc = <T>(args: string[]) => {
+		io.calls.push(["hc", ...args]);
+		return hcAnswer(agents, args) as T;
+	};
 	const said: Record<string, string> = {};
 	const sessions = (sandbox: string) =>
 		`/home/me/.fleet/tasks/webapp/${sandbox}/logs/sessions${sandbox.startsWith("pi-") ? "" : "/projects/-w-webapp"}`;
@@ -78,31 +64,45 @@ function herdr(
 		const content = [{ type: "text", text: said[agent.name] ?? REPORT }];
 		return JSON.stringify({ type: "assistant", message: { role: "assistant", content } });
 	};
-	const status = (pane: string, next: string, seq?: number) => {
-		for (const socket of sockets)
-			socket.emit(
-				"data",
-				Buffer.from(
-					`${JSON.stringify({ event: "pane.agent_status_changed", data: { pane_id: pane, agent_status: next, state_change_seq: seq } })}\n`,
-				),
-			);
+	const send = (params: Record<string, unknown>) => {
+		for (const follower of io.followers) if (!follower.stopped) follower.onLine(JSON.stringify({ jsonrpc: "2.0", method: "event", params }));
 	};
-	return { io, intervals, sockets, status, said };
+	const states = new Map(agents.map((a) => [a.address, a.state]));
+	const turns = new Map(agents.map((a) => [a.address, a.turn ?? 0]));
+	const status = (terminal: string, next: string, turn?: number) => {
+		send({ type: "status", terminal, data: { status: { state: next } } });
+		const left = states.get(terminal) === "working" && next !== "working";
+		states.set(terminal, next);
+		if (turn === undefined && !left) return;
+		turns.set(terminal, turn ?? (turns.get(terminal) ?? 0) + 1);
+		send({ type: "turn", terminal, data: { state: next, turn: turns.get(terminal) } });
+	};
+	const exited = (terminal: string) => send({ type: "finished", terminal, data: { exit_code: 0 } });
+	return { io, intervals, streams: io.followers, status, exited, said };
+}
+
+function hcAnswer(agents: Live[], args: string[]) {
+	const terminals = terminalsOf(agents);
+	if (args[0] === "get") return terminals.find((terminal) => terminal.address === args[1]);
+	return { terminals: terminals.map(({ address, status, turn }) => ({ address, state: "live", status: status.state, turn })) };
+}
+
+function terminalsOf(agents: Live[]) {
+	return agents.map((a) => ({ address: a.address, labels: { fleet: "1", "fleet.sandbox": a.sandbox ?? a.name }, status: { state: a.state }, turn: a.turn ?? 0 }));
 }
 
 test("a stopped container stays in the status line without waking or probing it", (t) => {
-	const { io, status, intervals } = herdr(t, [agents[0]]);
+	const { io, status, intervals } = fleet(t, [agents[0]]);
 	const sbx = io.sbx;
 	io.sbx = (args, opts) => args[0] === "ls"
 		? JSON.stringify([{ ...sandboxes[0], status: "stopped" }])
 		: sbx(args, opts);
-	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
 	const lines: string[] = [];
 	const wakes: string[] = [];
 	const handle = watch(() => undefined, io, (text) => wakes.push(text), (line) => lines.push(line));
 	t.after(() => handle.stop());
 
-	status("w1:p1", "idle");
+	status("t1", "idle");
 	t.mock.timers.tick(1000);
 	intervals.get(60_000)?.();
 
@@ -111,10 +111,9 @@ test("a stopped container stays in the status line without waking or probing it"
 	assert.equal(io.calls.filter((c) => c[0] === "sbx" && c[1] === "exec").length, 0);
 });
 
-test("a stopped tab stays watched after herdr loses the live process", (t) => {
-	const { io } = herdr(t, []);
+test("a stopped container stays watched with no terminal at all", (t) => {
+	const { io } = fleet(t, []);
 	io.sbx = () => JSON.stringify([{ ...sandboxes[0], status: "stopped" }]);
-	io.files["/home/me/.fleet/tasks/webapp/claude-webapp-a/logs/sandbox-stop.json"] = JSON.stringify({ pane: "w1:p1" });
 	const lines: string[] = [];
 	const handle = watch(() => undefined, io, () => {}, (line) => lines.push(line));
 	t.after(() => handle.stop());
@@ -124,70 +123,57 @@ test("a stopped tab stays watched after herdr loses the live process", (t) => {
 	assert.equal(lines.at(-1), "claude-webapp-a stopped");
 });
 
-test("watch follows the harness's containers and nothing else in herdr", () => {
+test("watch follows the harness's containers and nothing else hc runs", () => {
+	const terminals = terminalsOf(agents);
 	assert.deepEqual(
-		fleetAgents(agents, sandboxes, undefined).map((a) => a.name),
+		fleetAgents(terminals, sandboxes, undefined).map((a) => a.name),
 		["claude-webapp-a", "claude-webapp-b"],
 	);
 	assert.deepEqual(
-		fleetAgents(agents, sandboxes, ["claude-webapp-b"]).map((a) => a.name),
+		fleetAgents(terminals, sandboxes, ["claude-webapp-b"]).map((a) => a.name),
 		["claude-webapp-b"],
 	);
-	assert.deepEqual(fleetAgents(agents, sandboxes, []), []);
+	assert.deepEqual(fleetAgents(terminals, sandboxes, []), []);
 });
 
-test("a long sandbox name picks the agent herdr named after it", () => {
+test("a long sandbox is followed under its shortened tab name", () => {
 	const sandbox = "pi-webapp-bug-ledger-repost-status-bar";
-	const agents = [
-		{ pane_id: "w:p1", name: "pi-webapp-bug-ledger-rep-87c8fb9" },
-		{ pane_id: "w:p2", name: "pi-webapp-web-1705-no-da-1dc5052" },
+	const other = "pi-webapp-web-1705-no-date-picker-for-import";
+	const terminals = [
+		{ address: "t1", labels: { fleet: "1", "fleet.sandbox": sandbox }, status: { state: "idle" } },
+		{ address: "t2", labels: { fleet: "1", "fleet.sandbox": other }, status: { state: "idle" } },
 	];
-	const sandboxes = [
-		sandbox,
-		"pi-webapp-web-1705-no-date-picker-for-import",
-	].map((name) => ({ name, workspaces: ["/w/webapp"] }));
+	const rows = [sandbox, other].map((name) => ({ name, status: "running" }));
 
-	assert.deepEqual(
-		fleetAgents(agents, sandboxes, [sandbox]).map((a) => a.pane_id),
-		["w:p1"],
-	);
+	assert.deepEqual(fleetAgents(terminals, rows, [sandbox]), [{ name: sandbox, status: "idle", terminal: "t1", turn: undefined }]);
 });
 
-test("a wake names the agent, then the full sandbox and its state, before the agent's last message", () => {
-	const text = wakeLines(
-		"claude-household-budget-35d0485",
-		"claude-household-budget-t01-skeleton",
-		"idle",
-		REPORT,
-	);
-	assert.equal(
-		text,
-		`[fleet] claude-household-budget-35d0485: claude-household-budget-t01-skeleton idle\n\n${REPORT}`,
-	);
-	assert.equal(wakeName(text), "claude-household-budget-35d0485");
+test("a wake names the sandbox and its state before the agent's last message", () => {
+	const text = wakeLines("claude-household-budget-t01-skeleton", "idle", REPORT);
+	assert.equal(text, `[fleet] claude-household-budget-t01-skeleton: idle\n\n${REPORT}`);
+	assert.equal(wakeName(text), "claude-household-budget-t01-skeleton");
 });
 
 test("CLI watch reconciles status and reconnects after a closed stream", (t: TestContext) => {
 	const agents = [
-		{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
+		{ name: "claude-webapp-a", address: "t1", state: "working" },
 	];
-	const { io, intervals, sockets } = herdr(t, agents);
+	const { io, intervals, streams } = fleet(t, agents);
 	let snapshots = 0;
-	io.herdr = <T>() => {
-		snapshots++;
-		if (snapshots === 2) throw new Error("herdr unavailable");
-		return { result: { agents } } as T;
+	io.hc = <T>(args: string[]) => {
+		if (args[0] === "ls") snapshots++;
+		if (snapshots === 2) throw new Error("hc unavailable");
+		return hcAnswer(agents, args) as T;
 	};
 	watch(() => undefined, io);
 
-	agents[0].agent_status = "idle";
-	sockets[0].destroyed = true;
-	sockets[0].emit("close");
+	agents[0].state = "idle";
+	streams[0].onClose();
 	t.mock.timers.tick(3000);
 	t.mock.timers.tick(3000);
 	t.mock.timers.tick(1000);
 
-	assert.equal(sockets.length, 2);
+	assert.equal(streams.length, 2);
 	assert.equal(
 		io.lines.filter((line) => line.startsWith("[fleet] claude-webapp-a:"))
 			.length,
@@ -198,7 +184,7 @@ test("CLI watch reconciles status and reconnects after a closed stream", (t: Tes
 		/^\[fleet\] claude-webapp-a: idle\n\nAdded the login rate limit/,
 	);
 
-	agents[0].agent_status = "done";
+	agents[0].state = "done";
 	intervals.get(30_000)?.();
 	t.mock.timers.tick(1000);
 
@@ -210,13 +196,13 @@ test("CLI watch reconciles status and reconnects after a closed stream", (t: Tes
 });
 
 test("a JSON watch prints each wake and each notice as one line a reader can split on newlines", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-webapp-a", address: "t1", state: "working" },
 	]);
 	const json = jsonLines(io);
 	watch(() => undefined, json.io, json.onWake, json.onTracked);
 
-	status("w1:p1", "idle");
+	status("t1", "idle");
 	t.mock.timers.tick(1100);
 
 	const parsed = io.lines.map((line) => JSON.parse(line));
@@ -227,15 +213,15 @@ test("a JSON watch prints each wake and each notice as one line a reader can spl
 });
 
 test("watch reports the containers it follows with each one's status as it changes", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-webapp-a", pane_id: "w1:p1", agent_status: "working" },
-		{ name: "pi-webapp-b", pane_id: "w1:p2", agent_status: "idle" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-webapp-a", address: "t1", state: "working" },
+		{ name: "pi-webapp-b", address: "t2", state: "idle" },
 	]);
 	const reports: string[] = [];
 
 	watch(() => undefined, io, () => {}, (line) => reports.push(line));
-	status("w1:p1", "blocked");
-	status("w1:p1", "blocked");
+	status("t1", "blocked");
+	status("t1", "blocked");
 
 	assert.deepEqual(reports, [
 		"claude-webapp-a working · pi-webapp-b idle",
@@ -244,8 +230,8 @@ test("watch reports the containers it follows with each one's status as it chang
 });
 
 test("a transient idle between active turns does not wake the host", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -254,44 +240,17 @@ test("a transient idle between active turns does not wake the host", (t: TestCon
 		(text) => wakes.push(text),
 	);
 
-	status("worker:pane", "idle");
-	status("worker:pane", "working");
+	status("t20", "idle");
+	status("t20", "working");
 	t.mock.timers.tick(1100);
 
 	assert.deepEqual(wakes, []);
 });
 
-test("a watch wake names the full sandbox beside herdr's shortened agent", (t: TestContext) => {
-	const sandbox = "claude-household-budget-t01-skeleton";
-	const agent = agentName(sandbox);
-	const { io, status } = herdr(t, [
-		{ name: agent, pane_id: "t01:pane", agent_status: "working" },
-	]);
-	const sbx = io.sbx;
-	io.sbx = (args, opts) =>
-		args[0] === "ls"
-			? JSON.stringify([
-					{ name: sandbox, agent: "claude", workspaces: ["/w/household-budget"] },
-				])
-			: sbx(args, opts);
-	const wakes: string[] = [];
-	watch(
-		() => undefined,
-		io,
-		(text) => wakes.push(text),
-	);
-
-	status("t01:pane", "idle");
-	t.mock.timers.tick(1100);
-
-	assert.equal(wakes.length, 1);
-	assert.equal(wakes[0].split("\n")[0], `[fleet] ${agent}: ${sandbox} idle`);
-});
-
 test("different containers wake independently while an identical transition stays deduplicated", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-first", pane_id: "first:pane", agent_status: "working" },
-		{ name: "claude-second", pane_id: "second:pane", agent_status: "working" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-first", address: "t21", state: "working" },
+		{ name: "claude-second", address: "t22", state: "working" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -300,8 +259,8 @@ test("different containers wake independently while an identical transition stay
 		(text) => wakes.push(text),
 	);
 
-	for (const pane of ["first:pane", "first:pane", "second:pane"]) {
-		status(pane, "idle");
+	for (const terminal of ["t21", "t21", "t22"]) {
+		status(terminal, "idle");
 		t.mock.timers.tick(1100);
 	}
 
@@ -311,9 +270,9 @@ test("different containers wake independently while an identical transition stay
 	assert.doesNotMatch(wakes[0], /claude-second/);
 });
 
-test("an empty scope asks herdr and sbx nothing", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+test("an empty scope asks hc and sbx nothing", (t: TestContext) => {
+	const { io, intervals } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 
 	watch(() => [], io);
@@ -323,7 +282,7 @@ test("an empty scope asks herdr and sbx nothing", (t: TestContext) => {
 });
 
 test("a watch with nothing to follow says how to follow a container this session did not put up, start or steer", (t: TestContext) => {
-	const { io } = herdr(t, []);
+	const { io } = fleet(t, []);
 
 	watch(() => [], io);
 
@@ -333,51 +292,44 @@ test("a watch with nothing to follow says how to follow a container this session
 });
 
 test("a stopped watch neither refreshes nor reconnects", (t: TestContext) => {
-	const { io, intervals, sockets } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, intervals, streams } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const stop = watch(() => undefined, io).stop;
 	const asked = io.calls.length;
 
 	stop();
-	sockets[0].emit("close");
+	streams[0].onClose();
 	t.mock.timers.tick(3000);
 	intervals.get(30_000)?.();
 
-	assert.equal(sockets.length, 1);
+	assert.equal(streams.length, 1);
+	assert.ok(streams[0].stopped);
 	assert.equal(io.calls.length, asked);
 });
 
 for (const h of Object.values(SEATS)) {
-	test(`the ${h.name} watch subscribes to herdr's status and exit events`, (t: TestContext) => {
-		const { io, sockets } = herdr(
+	test(`the ${h.name} watch follows hc's events for every fleet terminal`, (t: TestContext) => {
+		const { io, streams } = fleet(
 			t,
 			[
 				{
 					name: `${KINDS[h.name].prefix}webapp-a`,
-					pane_id: "w1:p1",
-					agent_status: "working",
+					address: "t1",
+					state: "working",
 				},
 			],
 			h,
 		);
 		watch(() => undefined, io);
 
-		sockets[0].emit("connect");
-
-		const { params } = JSON.parse(sockets[0].written[0]) as {
-			params: { subscriptions: { type: string }[] };
-		};
-		assert.deepEqual(
-			params.subscriptions.map((s) => s.type),
-			["pane.agent_status_changed", "pane.exited"],
-		);
+		assert.deepEqual(streams.map((f) => f.args), [["hc", "events", "--label", "fleet=1", "--json"]]);
 	});
 }
 
 test("a steer since the last wake lets the next settle wake the host again", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -386,20 +338,20 @@ test("a steer since the last wake lets the next settle wake the host again", (t:
 		(text) => wakes.push(text),
 	);
 
-	status("worker:pane", "idle");
+	status("t20", "idle");
 	t.mock.timers.tick(1100);
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		'2026-09-16T10:05:00.000Z w1:host steer claude-worker session= "go on"\n';
-	status("worker:pane", "working");
-	status("worker:pane", "idle");
+		'2026-09-16T10:05:00.000Z t30 steer claude-worker session= "go on"\n';
+	status("t20", "working");
+	status("t20", "idle");
 	t.mock.timers.tick(1100);
 
 	assert.equal(wakes.length, 2);
 });
 
 test("a container a down closes wakes once as taken down, never with its last settle or its exit", (t: TestContext) => {
-	const { io, status, sockets } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, status, exited } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -409,24 +361,18 @@ test("a container a down closes wakes once as taken down, never with its last se
 	);
 
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		"2026-09-16T10:05:00.000Z w2:other down claude-worker session=\n";
-	status("worker:pane", "idle");
+		"2026-09-16T10:05:00.000Z t31 down claude-worker session=\n";
+	status("t20", "idle");
 	t.mock.timers.tick(1100);
-	for (const socket of sockets)
-		socket.emit(
-			"data",
-			Buffer.from(
-				`${JSON.stringify({ event: "pane.exited", data: { pane_id: "worker:pane" } })}\n`,
-			),
-		);
+	exited("t20");
 
 	assert.equal(wakes.length, 1);
 	assert.match(wakes[0], /^\[fleet\] claude-worker: idle -> taken down$/);
 });
 
 test("a container this session takes down wakes nobody", (t: TestContext) => {
-	const { io, status, sockets } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, status, exited } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	io.sessionId = "host-a";
 	const wakes: string[] = [];
@@ -437,23 +383,17 @@ test("a container this session takes down wakes nobody", (t: TestContext) => {
 	);
 
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		"2026-09-16T10:05:00.000Z w1:host down claude-worker session=host-a\n";
-	status("worker:pane", "idle");
+		"2026-09-16T10:05:00.000Z t30 down claude-worker session=host-a\n";
+	status("t20", "idle");
 	t.mock.timers.tick(1100);
-	for (const socket of sockets)
-		socket.emit(
-			"data",
-			Buffer.from(
-				`${JSON.stringify({ event: "pane.exited", data: { pane_id: "worker:pane" } })}\n`,
-			),
-		);
+	exited("t20");
 
 	assert.deepEqual(wakes, []);
 });
 
-test("a watched container whose sandbox leaves the list wakes once as taken down while its pane stays", (t: TestContext) => {
-	const { io, intervals } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "idle" },
+test("a watched container whose sandbox leaves the list wakes once as taken down while its terminal stays", (t: TestContext) => {
+	const { io, intervals } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "idle" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -471,12 +411,12 @@ test("a watched container whose sandbox leaves the list wakes once as taken down
 });
 
 test("a refresh that keeps failing the same way logs it once", (t: TestContext) => {
-	const { io } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
-	io.herdr = (() => {
+	io.hc = (() => {
 		throw new Error("sbx ls --json failed (1) docker hub refresh lock held");
-	}) as typeof io.herdr;
+	}) as typeof io.hc;
 	watch(() => undefined, io);
 
 	t.mock.timers.tick(3000);
@@ -489,8 +429,8 @@ test("a refresh that keeps failing the same way logs it once", (t: TestContext) 
 });
 
 test("a sandbox listing that fails the same way on every wake logs it once", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const { io, status } = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const wakes: string[] = [];
 	watch(
@@ -507,9 +447,9 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 		return listed(args, opts);
 	}) as typeof io.sbx;
 
-	status("worker:pane", "blocked");
-	status("worker:pane", "working");
-	status("worker:pane", "blocked");
+	status("t20", "blocked");
+	status("t20", "working");
+	status("t20", "blocked");
 
 	assert.equal(wakes.length, 2);
 	assert.equal(
@@ -519,16 +459,16 @@ test("a sandbox listing that fails the same way on every wake logs it once", (t:
 });
 
 function settles(t: TestContext, message: string) {
-	const fixture = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const fixture = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	fixture.said["claude-worker"] = message;
 	const wakes: string[] = [];
 	const handle = watch(() => undefined, fixture.io, (text) => wakes.push(text));
 	t.after(() => handle.stop());
 	const turn = (seq?: number) => {
-		fixture.status("worker:pane", "working");
-		fixture.status("worker:pane", "idle", seq);
+		fixture.status("t20", "working");
+		fixture.status("t20", "idle", seq);
 		t.mock.timers.tick(1000);
 	};
 	return { ...fixture, wakes, turn };
@@ -541,20 +481,33 @@ test("a settle wakes the host with its state and the agent's last message", (t) 
 	turn();
 
 	assert.deepEqual(wakes, [`[fleet] claude-worker: idle\n\n${message}`]);
-	assert.equal(io.calls.filter((c) => c[0] === "herdr" && c[1] === "agent" && c[2] === "read").length, 0);
+	assert.equal(io.calls.filter((c) => c[0] === "hc" && c[1] === "read").length, 0);
 });
 
 test("a pi container wakes the host with the last message of its own session", (t) => {
-	const { io, said, status } = herdr(t, [{ name: "pi-worker", pane_id: "worker:pane", agent_status: "working" }], SEATS.pi);
+	const { io, said, status } = fleet(t, [{ name: "pi-worker", address: "t20", state: "working" }], SEATS.pi);
 	said["pi-worker"] = "Checked the trace; nothing to change.";
 	const wakes: string[] = [];
 	const handle = watch(() => undefined, io, (text) => wakes.push(text));
 	t.after(() => handle.stop());
 
-	status("worker:pane", "idle");
+	status("t20", "idle");
 	t.mock.timers.tick(1000);
 
 	assert.deepEqual(wakes, ["[fleet] pi-worker: idle\n\nChecked the trace; nothing to change."]);
+});
+
+test("a turn that ends in an error wakes the host with the error the agent last wrote", (t) => {
+	const { io, said, status } = fleet(t, [{ name: "pi-worker", address: "t20", state: "working" }], SEATS.pi);
+	said["pi-worker"] = "429 rate limit reached; not retried.";
+	const wakes: string[] = [];
+	const handle = watch(() => undefined, io, (text) => wakes.push(text));
+	t.after(() => handle.stop());
+
+	status("t20", "error");
+	t.mock.timers.tick(1000);
+
+	assert.deepEqual(wakes, ["[fleet] pi-worker: error\n\n429 rate limit reached; not retried."]);
 });
 
 test("a settle that says nothing new since the last wake, as after compacting while idle, wakes nobody", (t) => {
@@ -570,8 +523,8 @@ test("a done after an idle with the same message wakes nobody", (t) => {
 	const { wakes, turn, status } = settles(t, REPORT);
 
 	turn();
-	status("worker:pane", "working");
-	status("worker:pane", "done");
+	status("t20", "working");
+	status("t20", "done");
 	t.mock.timers.tick(1000);
 
 	assert.equal(wakes.length, 1);
@@ -580,9 +533,9 @@ test("a done after an idle with the same message wakes nobody", (t) => {
 test("a second dialog wakes the host even when the agent said nothing new", (t) => {
 	const { wakes, status } = settles(t, REPORT);
 
-	status("worker:pane", "blocked");
-	status("worker:pane", "working");
-	status("worker:pane", "blocked");
+	status("t20", "blocked");
+	status("t20", "working");
+	status("t20", "blocked");
 
 	assert.equal(wakes.length, 2);
 });
@@ -592,7 +545,7 @@ test("a steer lets the same message wake the host again", (t) => {
 
 	turn();
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		'2099-01-01T00:00:00.000Z w1:host steer claude-worker session= "go on"\n';
+		'2099-01-01T00:00:00.000Z t30 steer claude-worker session= "go on"\n';
 	turn();
 
 	assert.equal(wakes.length, 2);
@@ -614,8 +567,8 @@ test("every settle with a new message wakes the host, with or without a steer be
 function works(t: TestContext) {
 	let clock = Date.UTC(2026, 9, 20, 9, 0);
 	t.mock.method(Date, "now", () => clock);
-	const fixture = herdr(t, [
-		{ name: "claude-worker", pane_id: "worker:pane", agent_status: "working" },
+	const fixture = fleet(t, [
+		{ name: "claude-worker", address: "t20", state: "working" },
 	]);
 	const wakes: string[] = [];
 	const handle = watch(() => undefined, fixture.io, (text) => wakes.push(text));
@@ -643,9 +596,9 @@ test("a container no wake has reached yet wakes the host after 20 minutes of wor
 test("a container that said nothing new since its last wake wakes the host after 20 minutes of work", (t) => {
 	const { status, wakes, minutes } = works(t);
 
-	status("worker:pane", "idle");
+	status("t20", "idle");
 	t.mock.timers.tick(1000);
-	status("worker:pane", "working");
+	status("t20", "working");
 	minutes(20);
 
 	assert.equal(wakes.length, 2);
@@ -669,9 +622,9 @@ test("a container whose last message moves on keeps working without waking the h
 test("a container that said something new since its last wake works on without waking the host", (t) => {
 	const { said, status, wakes, minutes } = works(t);
 
-	status("worker:pane", "idle");
+	status("t20", "idle");
 	t.mock.timers.tick(1000);
-	status("worker:pane", "working");
+	status("t20", "working");
 	said["claude-worker"] = "Steered: rebasing onto main.";
 	minutes(20);
 
@@ -698,23 +651,23 @@ test("a sleep of the Mac wakes the host once and does not count as working time"
 test("a container that starts working after the Mac wakes counts its work from then", (t) => {
 	const { status, wakes, minutes, sleep } = works(t);
 
-	status("worker:pane", "idle");
+	status("t20", "idle");
 	t.mock.timers.tick(1000);
 	sleep(3 * 60 * 60_000);
-	status("worker:pane", "working");
+	status("t20", "working");
 	minutes(20);
 
 	assert.equal(wakes.length, 2);
 	assert.match(wakes[1], /working 20m without settling/);
 });
 
-test("a settle herdr reports again under the same state_change_seq wakes once", (t) => {
+test("a settle hc reports again within the same turn wakes once", (t) => {
 	const { wakes, status } = settles(t, REPORT);
 
-	status("worker:pane", "idle", 7);
+	status("t20", "idle", 7);
 	t.mock.timers.tick(1000);
-	status("worker:pane", "unknown", 7);
-	status("worker:pane", "idle", 7);
+	status("t20", "unknown", 7);
+	status("t20", "idle", 7);
 	t.mock.timers.tick(1000);
 
 	assert.equal(wakes.length, 1);
@@ -729,8 +682,8 @@ test("a wake asks GitHub nothing and carries no pull request line", (t) => {
 	assert.doesNotMatch(wakes[0], /^pr:/m);
 });
 
-test("CLI watch outside herdr follows the containers its session put up, started or steered, and named ones beside them", () => {
-	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "-", sessionId: "s1" });
+test("CLI watch outside Herdr app follows the containers its session put up, started or steered, and named ones beside them", () => {
+	const io = Object.assign(fakeIo({}, SEATS.claude), { terminal: "-", sessionId: "s1" });
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] = [
 		"2026-09-16T10:00:00.000Z - up claude-mine session=s1",
 		"2026-09-16T10:01:00.000Z - up claude-theirs session=s2",
@@ -747,12 +700,12 @@ test("CLI watch outside herdr follows the containers its session put up, started
 	]);
 });
 
-test("a container a session put up outside herdr wakes that session when it settles, and another's does not", (t: TestContext) => {
-	const { io, status } = herdr(t, [
-		{ name: "claude-mine", pane_id: "mine:pane", agent_status: "working" },
-		{ name: "claude-theirs", pane_id: "theirs:pane", agent_status: "working" },
+test("a container a session put up outside Herdr app wakes that session when it settles, and another's does not", (t: TestContext) => {
+	const { io, status } = fleet(t, [
+		{ name: "claude-mine", address: "t23", state: "working" },
+		{ name: "claude-theirs", address: "t24", state: "working" },
 	]);
-	Object.assign(io, { pane: "-", sessionId: "s1" });
+	Object.assign(io, { terminal: "-", sessionId: "s1" });
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] = [
 		"2026-09-16T10:00:00.000Z - up claude-mine session=s1",
 		"2026-09-16T10:01:00.000Z - up claude-theirs session=s2",
@@ -761,17 +714,17 @@ test("a container a session put up outside herdr wakes that session when it sett
 	const handle = watch(sessionScope(io, []), io, (text) => wakes.push(text));
 	t.after(() => handle.stop());
 
-	status("mine:pane", "idle");
-	status("theirs:pane", "idle");
+	status("t23", "idle");
+	status("t24", "idle");
 	t.mock.timers.tick(1000);
 
 	assert.deepEqual(wakes, [`[fleet] claude-mine: idle\n\n${REPORT}`]);
 });
 
 test("CLI watch with no session follows only the containers it names", () => {
-	const io = Object.assign(fakeIo({}, SEATS.claude), { pane: "w1:host" });
+	const io = Object.assign(fakeIo({}, SEATS.claude), { terminal: "t30" });
 	io.files["/home/me/.fleet/tasks/fleet-events.log"] =
-		"2026-09-16T10:00:00.000Z w1:host up claude-pane session=";
+		"2026-09-16T10:00:00.000Z t30 up claude-own session=";
 
 	assert.deepEqual(sessionScope(io, [])(), []);
 	assert.deepEqual(sessionScope(io, ["claude-named"])(), ["claude-named"]);
