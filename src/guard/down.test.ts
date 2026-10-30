@@ -4,7 +4,6 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { agentName } from "../fleet/name.ts";
 import { PRIVATE_PROFILE, REPO_PROFILES } from "../profile/fixture.ts";
 import { downPermission, sandboxDownTarget } from "./down.ts";
 
@@ -126,20 +125,6 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 		sandbox: "pi-auto",
 		level: "none",
 	});
-	const longName = "pi-harness-a-long-container-name-that-herdr-shortens";
-	const shortened = agentName(longName);
-	assert.notEqual(shortened, longName);
-	const target = sandboxDownTarget(shortened, root, root, () =>
-		JSON.stringify([{ name: longName, workspaces: [sandboxes[1].workspaces[0]] }]),
-	);
-	assert.deepEqual(target, { sandbox: longName, level: "auto" });
-	assert.match(
-		downPermission(`fleet down ${shortened}`, () => ({
-			sandbox: longName,
-			level: "human",
-		}))?.reason ?? "",
-		new RegExp(longName),
-	);
 });
 
 test("down must name one sandbox in a bare command regardless of its level", () => {

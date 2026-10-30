@@ -27,7 +27,7 @@ pass	Bash	grep -rn "git push" /Users/alice/.pi/rules
 pass	Bash	echo "never run git push from a container" >> notes.md
 pass	Bash	rg --files-with-matches "git push" ~/.pi/skills
 pass	Bash	cat CONTRIBUTING.md | grep -A2 "git push"
-pass	Read	/Users/alice/.config/herdr/config.toml
+pass	Read	/Users/alice/.config/herdr-app/settings.json
 pass	Read	/Users/alice/Work/storefront/pnpm-workspace.yaml
 pass	Grep	/Users/alice/Work/webapp	useQuery
 pass	Bash	docker ps --format '{{.Names}}'
@@ -37,7 +37,7 @@ allow	Bash	git fetch --prune origin
 allow	Bash	git log --oneline --graph -20
 allow	Bash	sbx ls
 allow	Bash	sbx exec pi-webapp sh -c 'pnpm test'
-allow	Bash	herdr panes list
+allow	Bash	herdr-app ls
 deny	Bash	ssh remote.example docker ps -a
 pass	Bash	git push
 pass	Bash	git add -A && git commit -m "fix: x" && git push origin HEAD

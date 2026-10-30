@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { Host as ProfileHost } from "../profile/profile.ts";
-import { agentName } from "../fleet/name.ts";
 import { repositoryManifest } from "../fleet/repositories.ts";
 import { realIo } from "../fleet/io.ts";
 import { argvsOf } from "./argv.ts";
@@ -87,10 +86,7 @@ export function sandboxDownTarget(
 		throw new Error(`sbx ls --json failed: ${(error as Error).message}`);
 	}
 	if (!Array.isArray(listed)) throw new Error("sbx ls --json gave no list of sandboxes; the guard needs sbx 0.48 or later");
-	const entry = listed.find(
-		(item) =>
-			item.name === sandbox || (item.name && agentName(item.name) === sandbox),
-	);
+	const entry = listed.find((item) => item.name === sandbox);
 	const workspace = entry?.workspaces?.[0];
 	if (!entry?.name || !workspace) return undefined;
 	const manifest = repositoryManifest(entry.name, realIo(home));

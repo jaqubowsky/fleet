@@ -9,6 +9,7 @@ const VALUED: Record<string, { short: string; long: string[] }> = {
 };
 const SPLIT = /^(-S|--split-string)(=?)(.*)$/s;
 const SHELL = /^(\S*\/)?(ba|z|da|k)?sh$/;
+const HC_VALUED = /^--(name|cwd|on|label|parent|env|timeout|if)$/;
 const REDIRECT = /^\d*(?:&>>?|>&|>>?\|?)/;
 const INTERPRETER = /(^|[|;&\t ])((ba|z)?sh|python3?|node|perl|ruby|env)([\t ]|$)/;
 
@@ -137,15 +138,23 @@ type Program = { argv: string[]; piped: boolean };
 function argvs(subject: string, withDelegated: boolean): Program[] {
 	return segmentsOf(scan(subject), withDelegated).flatMap(({ text, piped }) => {
 		let argv = words(text);
+		const typed: string[] = [];
 		for (;;) {
 			if (KEYWORD.test(argv[0] ?? "")) argv = argv.slice(1);
 			else if (WRAPPER.test(argv[0] ?? "")) argv = unwrapped(argv); else if (withDelegated && argv[0] === "sbx" && /^(exec|run|cp)$/.test(argv[1] ?? "")) argv = argv.slice(3);
+			else if (argv[0] === "hc" && argv[1]?.startsWith("-")) argv = ["hc", ...argv.slice(2)];
+			else if (argv[0] === "hc" && /^(run|exec)$/.test(argv[1] ?? "")) argv = hcCommand(argv);
+			else if (argv[0] === "herdr-app" && argv[1] === "do" && argv.some((word) => /^(--(argv|task)(=|$)|\{)/.test(word))) {
+				const [program, task] = launched(argv);
+				typed.push(task);
+				argv = program;
+			}
 			else break;
 		}
 
-		const script = argv[0] === "herdr" ? argv.slice(2).join(" ") : argv[0] === "eval" ? argv.slice(1).join(" ") : SHELL.test(argv[0] ?? "") ? shellScript(argv) : "";
+		const script = argv[0] === "hc" && argv[1] === "send" ? hcOperands(argv).slice(1).join(" ") : argv[0] === "eval" ? argv.slice(1).join(" ") : SHELL.test(argv[0] ?? "") ? shellScript(argv) : "";
 
-		return script ? [{ argv, piped }, ...argvs(script, withDelegated)] : [{ argv, piped }];
+		return [{ argv, piped }, ...[...typed, script].filter(Boolean).flatMap((line) => argvs(line, withDelegated))];
 	});
 }
 
@@ -167,6 +176,46 @@ export function redirections(argv: string[]): { redirected: string[]; named: str
 		else if (argv[i + 1] !== undefined) redirected.push(argv[++i]);
 	}
 	return { redirected, named };
+}
+
+function hcCommand(argv: string[]): string[] {
+	let i = 2;
+	while (argv[i]?.startsWith("-") && argv[i] !== "--") i += HC_VALUED.test(argv[i]) ? 2 : 1;
+	const command = argv.slice(argv[i] === "--" ? i + 1 : i);
+	return command.length === 1 && /\s/.test(command[0]) ? ["sh", "-c", command[0]] : command;
+}
+
+function hcOperands(argv: string[]): string[] {
+	const operands: string[] = [];
+	for (let i = 2; i < argv.length; i++) {
+		if (argv[i] === "--") return [...operands, ...argv.slice(i + 1)];
+		if (!argv[i].startsWith("-")) operands.push(argv[i]);
+		else if (HC_VALUED.test(argv[i])) i++;
+	}
+	return operands;
+}
+
+function launched(argv: string[]): [string[], string] {
+	const object = argv.slice(2).find((word) => word.startsWith("{"));
+	if (object) {
+		const args = parsed(object) as { argv?: unknown; task?: unknown } | undefined;
+		return args ? [Array.isArray(args.argv) ? args.argv.map(String) : [], String(args.task ?? "")] : [["sh", "-c", object], ""];
+	}
+	const value = (flag: string) => {
+		const i = argv.findIndex((word) => word === flag || word.startsWith(`${flag}=`));
+		return i < 0 ? "" : argv[i] === flag ? argv[i + 1] ?? "" : argv[i].slice(flag.length + 1);
+	};
+	const program = value("--argv");
+	const list = parsed(program || "[]");
+	return [Array.isArray(list) ? list.map(String) : ["sh", "-c", program], value("--task")];
+}
+
+function parsed(json: string): unknown {
+	try {
+		return JSON.parse(json);
+	} catch {
+		return undefined;
+	}
 }
 
 function unwrapped(argv: string[]): string[] {

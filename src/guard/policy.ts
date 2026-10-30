@@ -24,7 +24,7 @@ const granted = (reason: string): Decision => ({
 	reason,
 	explicit: true,
 });
-const PLAIN = /^\s*(git|sbx|herdr)\s[^\n;&|`$()<>]*$/;
+const PLAIN = /^\s*(git|sbx|hc|herdr-app)\s[^\n;&|`$()<>]*$/;
 const plain = (subject: string, reason: string): Decision =>
 	PLAIN.test(subject) ? granted(reason) : allow(reason);
 const deny = (reason: string): Decision => ({ decision: "deny", reason });
@@ -194,13 +194,14 @@ const ASSIGNMENT = /(?<=^|[;\n])[ \t]*(\w+)=([\w./:@%+,~-]+)[ \t]*(?=[;\n]|$)/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
 
 const RECURSIVE_RM = command(
-	String.raw`rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`,
+	String.raw`(\S*/)?rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`,
 );
-const RM_PROTECTED = command(String.raw`rm\s[^;&|]*\s${PROTECTED}`);
-const RM_ROOTS = command(String.raw`rm\s[^;&|]*\s${ROOTS}`);
-const ORCHESTRATION = /(^|[;&|]|&&)\s*(sbx|herdr)(\s|$)/;
-const SSH = command(String.raw`ssh(\s|$)`);
-const SSH_LOCAL = command(String.raw`ssh\s+-(V|G|Q)\b`);
+const RM_PROTECTED = command(String.raw`(\S*/)?rm\s[^;&|]*\s${PROTECTED}`);
+const RM_ROOTS = command(String.raw`(\S*/)?rm\s[^;&|]*\s${ROOTS}`);
+const ORCHESTRATION = /(^|[;&|]|&&)\s*(sbx|hc|herdr-app)(\s|$)/;
+const SSH = command(String.raw`(\S*/)?ssh(\s|$)`);
+const REMOTE_RUN = /\bhc\s[^\n]*?\s--on(=|\s)|\bhc\s+machine\s+add\b|\bherdr-app\s+do\s[^\n]*(--machine(=|\s)|"machine"\s*:)/;
+const SSH_LOCAL = command(String.raw`(\S*/)?ssh\s+-(V|G|Q)\b`);
 const READ_ONLY_GIT =
 	/(^|[;&|]|&&)\s*git\s+(status|log|diff|show|fetch|ls-remote|ls-files|branch|rev-parse|remote|blame|describe|shortlog)\b/;
 
@@ -380,14 +381,18 @@ export function decide(
 		);
 	if (sbxRuns("stop"))
 		return deny(
-			"Agents stop sandboxes through fleet stop <sandbox>; sbx stop saves no tab, so the watch loses the container and fleet start cannot resume it.",
+			"Agents stop sandboxes through fleet stop <sandbox>, which also logs the stop the task's runtime counts and closes the agent's tab.",
 		);
-	if (ORCHESTRATION.test(subject))
-		return plain(subject, "sbx/herdr orchestration.");
 	if (hit(SSH) && !hit(SSH_LOCAL))
 		return deny(
 			"Remote shell access runs commands on another machine, where this guard cannot see them. Run the command here, or ask the person to run it on that machine.",
 		);
+	if (REMOTE_RUN.test(subject))
+		return deny(
+			"hc and Herdr app run nothing on another machine here: --on, --machine and hc machine add reach a machine this guard cannot see. Run the command here, or ask the person to run it on that machine.",
+		);
+	if (ORCHESTRATION.test(subject))
+		return plain(subject, "sbx, hc and herdr-app orchestration.");
 	if (READ_ONLY_GIT.test(subject)) return plain(subject, "Read-only git.");
 
 	return allow("Allowed by Bash policy.");
