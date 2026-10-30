@@ -1,6 +1,6 @@
 # 3. Sync
 
-`sync.sh` installs the harness for each agent whose CLI is on `PATH`: it renders its home and builds its sandbox image. For Claude Code it also writes the host settings and links the guard hook and the status line. Whichever agents are installed, it links `fleet`, a `gh` wrapper and herdr's config into place. An agent it skips gets a line under `== set up by hand`, such as `skipped pi: no pi on PATH`; if the person meant to use it, step 1 installs it and the next sync sets it up.
+`sync.sh` installs the harness for each agent whose CLI is on `PATH`: it renders its home and builds its sandbox image. For Claude Code it also writes the host settings and links the guard hook and the status line. Whichever agents are installed, it links `fleet`, a `gh` wrapper and the Herdr app layout and mods into place. An agent it skips gets a line under `== set up by hand`, such as `skipped pi: no pi on PATH`; if the person meant to use it, step 1 installs it and the next sync sets it up.
 
 ## Before the first `--apply`
 
@@ -8,7 +8,7 @@ The render owns whole directories and makes them match this repository on every 
 
 In `~/.claude/settings.json` it writes only the keys `claude/profiles/host.json` names, and keeps the person's own hook entries beside the repository's.
 
-It links `host/herdr.toml` as herdr's config, `~/.config/herdr/config.toml`, in place of any config the person had; tell them, since the repository's one sets its own theme and sounds. Herdr UI follows that link: a shared setting saved in its Settings window lands in `host/herdr.toml` in this repository, and a personal one belongs in its own `~/.config/herdr/config-gpui.local.toml`.
+It links `host/herdr-app/layouts/fleet.json` and each folder of `host/herdr-app/mods/` into `~/.config/herdr-app`, and Herdr app loads them while it runs. The person's own settings, keys and themes there stay theirs. Ask them to pick the `fleet` layout once, in Settings or with `ctrl-shift-l`: its Agents pane shows a container's pull request and stopped containers, and its tab bar's Changes button shows what the container changed. It copies the file icons of `host/herdr-app/icons/` to `~/.config/herdr-app/fleet-icons/`, because Herdr app draws no image through a symlink. It also links `host/herdr-core/config.toml` to `~/.config/herdr-core/config.toml`, whose `notes = false` keeps hc from wrapping a steer in `<hc from=...>` tags, so the agent reads the text as typed and a steer of `/quit` runs that command.
 
 Everything fleet keeps on the Mac lives under `~/.fleet`: `config/` from step 2, `tasks/` with one folder per sandbox, `cache/<agent>/`, `backups/` and `state/`.
 
@@ -27,8 +27,6 @@ tar -xzf ~/.fleet/backups/<timestamp>.tar.gz -C ~      # everything back in plac
 ```bash
 ./sync.sh            # prints what it would change, changes nothing
 ./sync.sh --apply
-herdr integration install claude    # with Claude Code
-herdr integration install pi        # with pi
 npm test && npm run check
 ```
 
@@ -40,4 +38,4 @@ A profile with `container.linear` set to `read` or `write` names its sandbox Lin
 
 ## Check
 
-A second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, and `zsh -ic 'type gh'` ends with `gh is <home>/.local/bin/gh`. With Claude Code, `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.
+A second `./sync.sh` ends with `In sync: nothing to change.`, `npm test` and `npm run check` exit 0, `herdr-app status` names the `fleet` layout with no errors, and `zsh -ic 'type gh'` ends with `gh is <home>/.local/bin/gh`. With Claude Code, `jq -r '.hooks.PreToolUse[0].hooks[0].command' ~/.claude/settings.json` prints a path ending in `.claude/hooks/guard.sh`.

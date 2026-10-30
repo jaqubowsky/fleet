@@ -2,7 +2,7 @@
 
 ## Status
 
-Superseded by [007](007-state-from-herdr.md).
+Superseded by [007](007-state-from-agent-status.md).
 
 ## Context
 

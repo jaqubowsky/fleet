@@ -11,6 +11,7 @@ Check all of them first and report the full list, passed and missing, in one mes
 | zsh as the login shell | `echo $SHELL` ends in `zsh` | `chsh -s /bin/zsh`; the setup edits `~/.zshrc` and checks with `zsh -ic` |
 | Homebrew | `command -v brew` | brew.sh |
 | git, jq, python3, gh | `command -v git jq python3 gh` prints four paths | `brew install jq gh`; git and python3 come with the Xcode command line tools |
+| Herdr app | `command -v herdr-app hc` prints two paths | download it from https://herdr.dev and start it once; it puts `herdr-app` and `hc` in `~/.local/bin` |
 | bash 5 | `bash --version` prints 5 or higher | `brew install bash`; macOS ships 3.2, and the test suite the setup runs needs 5, as the sandboxes have |
 | Node 22.19 or newer | `node --version` | pi's minimum |
 
@@ -20,9 +21,6 @@ Ask the person which agents they will use: Claude Code, pi, or both. Install at 
 
 ```bash
 brew trust docker/tap && brew install docker/tap/sbx    # Docker Sandboxes, free locally
-brew install herdr                                      # terminal workspace the agents run in
-brew install penso/tap/herdr-gpui                       # Herdr UI, a native window on the same herdr daemon, if they want one
-brew install hunk                                       # diff viewer behind the Changes pane, Ctrl+B then D
 npm install -g @earendil-works/pi-coding-agent          # pi, if they use it
 curl -fsSL https://claude.ai/install.sh | bash          # Claude Code, if they use it; updates itself
 ```
@@ -42,8 +40,8 @@ Person:
 
 ## Check
 
-- `command -v sbx herdr hunk` prints three paths, and `command -v claude pi` prints the path of each agent the person chose
-- with Herdr UI: `open -a Herdr` shows the herdr tabs; it reads the same `~/.config/herdr/config.toml` as the terminal client
+- `command -v sbx herdr-app hc` prints three paths, and `command -v claude pi` prints the path of each agent the person chose
+- `herdr-app status` prints the open window's layout and no errors
 - `sbx version` prints v0.48.0 or newer; fleet reads the JSON lists sbx prints since 0.48, and `brew upgrade docker/tap/sbx` updates an older one
 - `sbx ls` answers without an authentication error; if not, the person signs in to sbx again
 - with pi: `test -f ~/.pi/agent/auth.json && echo ok` prints `ok`; if not, the login above is missing

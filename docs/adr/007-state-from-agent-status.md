@@ -1,0 +1,17 @@
+# Take task state from the agent's status and a closing message
+
+## Status
+
+Accepted. Supersedes [003](003-error-recovery.md); replaces the `status.md` parts of [001](001-stopped-containers.md), the session-handoff parts of [002](002-final-verification.md), and the final task status in `logs/usage.json` of [005](005-runtime-analytics.md). Its third-wake rule is replaced by [012](012-wake-on-news.md).
+
+## Context
+
+An audit of ten container runs found 9% of container tool calls and about a quarter of pi output tokens spent writing task documents, chiefly `status.md` (187 writes). Code existed only to keep that file true: snapshots, error attention written and cleared, handoff suggestions, a watch that parsed it. Status went stale after provider errors, turns ended with a working status left behind, and conditional rules about session handoffs misfired. Every status line showed a GitHub error, because the fine-grained token cannot read checks.
+
+## Decision
+
+For pi and Claude, the agent writes no task state. The agent's own status says whether a container works or has settled: Claude Code and pi report it to Herdr app with OSC 7501, and hc keeps it per terminal, which for a container carries the labels `fleet=1`, `fleet.sandbox` and `fleet.task`. Every turn ends with a closing message in prose: what changed, the checks as an ASCII table, the commits, and the open questions last when there are any. A settle wakes the host with that status and the agent's last message from its newest session transcript, its text or the error it stopped on, unlabeled: the host reads the closing message there itself. Terminal lines carry the agent UI around that message and cut a longer one; the transcript holds it whole for both pi and Claude. The watch follows `hc events --label fleet=1`, deduplicates on hc's `turn` counter, drops an idle or done whose message its previous wake already carried and a third wake about the same state between steers, and keeps no log of its wakes; the closing messages stay in the session transcripts under `logs/sessions/`. `fleet ls` and the wake read no pull request. Nothing replaces the session handoff: a session runs until its task ends, and automatic compaction at 400000 tokens (`src/compaction.json`) is the only bound on its context. Measured on 30 runs, response time stayed flat across context size and a fresh session per commit would cut processed input by at most 20%.
+
+## Consequences
+
+No harness code or rule reads `status.md`; an old task directory that holds one still lists. A wake shows what the agent last said rather than a curated summary, so a container that ends a turn without the closing message wakes the host with the error that stopped it or its last words. Nothing resumes a container an account limit stopped: the limit message reaches the host in the wake, and the host decides. Readiness is the host's reading of the closing message, the ticket's ticks and git, not a field. `logs/activity.jsonl` stays for `fleet ls` and `logs/usage.json`.

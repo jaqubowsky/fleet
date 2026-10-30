@@ -61,7 +61,7 @@ You only talk to one agent, the host, on your Mac. It starts a sandbox per issue
 
 ## Quickstart
 
-You need a Mac with Apple Silicon and zsh, [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/), [herdr](https://github.com/herdrdev/herdr), Node, Claude Code and pi, and a Claude plan and a model provider for pi (setup step 1 matches the models to what you have).
+You need a Mac with Apple Silicon and zsh, [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/), [Herdr app](https://herdr.dev), Node, Claude Code and pi, and a Claude plan and a model provider for pi (setup step 1 matches the models to what you have).
 
 ```bash
 git clone https://github.com/jaqubowsky/fleet ~/fleet
@@ -70,7 +70,7 @@ cd ~/fleet && claude
 
 Then tell your agent: **"read SETUP.md and set me up"**. It checks what you have, asks what it can't know, and ends by starting and stopping one test sandbox.
 
-After setup you work from [herdr](https://github.com/herdrdev/herdr): open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own herdr tab started. [Herdr UI](https://github.com/penso/herdr-gpui) shows the same tabs in a native window, if you prefer one to the terminal.
+After setup you work from [Herdr app](https://herdr.dev) in its `fleet` layout: open a tab in your repository and run plain `claude` or `pi`. The host only wakes for the sandboxes its own session started or steered.
 
 Rather do it by hand? Follow the same steps yourself: [`SETUP.md`](SETUP.md) lists them, one file each.
 
@@ -120,14 +120,14 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | Command | What it does | What it changes |
 | --- | --- | --- |
 | `./sync.sh` | shows what `--apply` would change for each agent whose CLI is on `PATH`, and names the backup archive it would write | nothing |
-| `./sync.sh --apply` | installs the harness for each agent whose CLI is on `PATH` and builds its sandbox image | first packs every file it will change into `~/.fleet/backups/<UTC timestamp>.tar.gz`; replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}` of the agents it sets up; writes keys into `~/.claude/settings.json` and links the guard hook into `~/.claude/hooks` with claude; links `fleet` and a `gh` wrapper into `~/.local/bin` and herdr's config |
-| `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a herdr tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.fleet/tasks/` |
-| `fleet stop <sandbox>` | stops the sandbox, keeping its files and herdr tab | ends guest processes; the tab and watch status show `stopped` |
-| `fleet start <sandbox>` | restarts in the saved tab with the last saved session when one exists | starts the sandbox and agent; sends no prompt |
+| `./sync.sh --apply` | installs the harness for each agent whose CLI is on `PATH` and builds its sandbox image | first packs every file it will change into `~/.fleet/backups/<UTC timestamp>.tar.gz`; replaces `~/.claude/{rules,refs,skills,agents}` and `~/.pi/{skills,agent/refs,agent/agents,agent/themes}` of the agents it sets up; writes keys into `~/.claude/settings.json` and links the guard hook into `~/.claude/hooks` with claude; links `fleet` and a `gh` wrapper into `~/.local/bin`, and the `fleet` layout and its mods into `~/.config/herdr-app` |
+| `fleet up <label> --repo <path>` | starts a sandbox for a task, its agent waiting in a Herdr app tab | creates a sandbox with a private clone and your repository's ignored `.env` files; stores the profile's GitHub token as an sbx secret; adds a task folder under `~/.fleet/tasks/` |
+| `fleet stop <sandbox>` | stops the sandbox, keeping its files | ends guest processes and closes its tab; `fleet ls` and the watch show `stopped` |
+| `fleet start <sandbox>` | opens a new tab with the last saved session when one exists | starts the sandbox and agent; sends no prompt |
 | `fleet steer <sandbox> "<text>"` | sends the sandbox agent its next instruction | nothing outside the sandbox |
 | `fleet watch` | wakes the host when a sandbox settles, with its closing message | nothing |
 | `fleet ls`, `fleet peek <sandbox>` | list the sandboxes, show what one is doing | nothing |
-| `fleet diff [<sandbox>]` | toggles a live diff beside the current container's terminal | opens or closes its Herdr pane; saves the selected file and scroll position in the host cache; reads Git without changing the checkout |
+| `fleet patch <sandbox>` | print the sandbox's changes as one patch; the Changes panel reads it | nothing |
 | `fleet artifacts` | list task folders | nothing |
 | `fleet exec <sandbox> -- <command>` | runs a command inside a sandbox | whatever that command changes there |
 | `fleet copy <src> <dst>` | copies a file in or out of a sandbox | the destination file |
@@ -141,10 +141,9 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 
 `fleet --help` lists every flag.
 
-In a container's Herdr tab, press **Ctrl+B, then D** to toggle its Changes pane. It works with both pi and Claude and leaves focus in the agent terminal. The host needs `hunk` on `PATH`. Reload Herdr's configuration after installing the binding with `herdr server reload-config`.
-The pane shows the container's changes in [hunk](https://github.com/modem-dev/hunk), split side by side with the files pane, wrapped lines and the Ayu Mirage theme. hunk's own keys and mouse apply; `q` closes the pane. Write a note on a line with `c` and save it with Ctrl+S, then press **Ctrl+B, then M** to send your notes to the container's agent; the sent notes leave the pane. The pane reads the changes again two seconds after the previous read finishes, and hunk reloads them in place, keeping the file you are reading. Changes compare the working tree to the merge base of HEAD and the container's origin base branch, so rebasing does not include unrelated upstream changes. No fetch runs while viewing. A task with several repositories shows them in one review, each path under its repository's name. New untracked files are included; ignored files are excluded. A stopped or removed container leaves the last changes on screen, without starting the container. Files larger than 4 MiB show only their name.
+In the `fleet` layout, the Agents pane shows a **PR #n** pill in a container's row once its agent opened a pull request, and a click opens it on GitHub. Stopped containers stay listed there under Stopped. The tab bar's **Changes** button turns that tab's work area into what the container changed, read-only, the way GitHub's Files changed view does: a file tree with a filter, and each file as a card with its coloured diff. It stays on that tab only. In any other tab it shows the local checkout's changes. Changes compare the working tree to the merge base of HEAD and the container's origin base branch, so rebasing does not include unrelated upstream changes. No fetch runs while viewing. A task with several repositories shows them in one tree, each path under its repository's name. New untracked files are included; ignored files are excluded. A stopped container is not read and not started. Files larger than 4 MiB show only their name, and a diff over 400 lines waits for a click.
 
-Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in the same tab, not an interrupted tool call or app server. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
+Use `fleet stop` to release a sandbox's resources without deleting its work. `fleet start` restores the saved conversation in a new tab, not an interrupted tool call or app server. `fleet ls`, `fleet peek` and the watch leave stopped sandboxes asleep; steer and exec require a start first. Raw `sbx exec` starts a stopped sandbox, even for a read.
 
 ## Also in the box
 

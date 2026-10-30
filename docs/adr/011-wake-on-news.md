@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Replaces the third-wake rule of [007](007-state-from-herdr.md).
+Accepted. Replaces the third-wake rule of [007](007-state-from-agent-status.md).
 
 ## Context
 

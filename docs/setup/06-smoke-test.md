@@ -8,7 +8,7 @@ fleet build --pi     && fleet up smoke --pi --repo <path>      # with pi
 fleet build --claude && fleet up smoke --claude --repo <path>  # with Claude Code
 ```
 
-Person: open each herdr tab `up` created and send the agent "hello". The first Claude sandbox asks for `/login` there (step 5). Then, for each sandbox started:
+Person: open each Herdr app tab `up` created and send the agent "hello". The first Claude sandbox asks for `/login` there (step 5). Then, for each sandbox started:
 
 ```bash
 fleet down pi-<repo>-smoke
