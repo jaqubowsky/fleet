@@ -241,3 +241,19 @@ test("a typed Claude prompt files its turns as direct until they read a skill", 
 
 	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["babysit-pr", 3], ["direct", 1]]);
 });
+
+test("a commit made while a sub-agent runs belongs to the main session's run", () => {
+	const sidechain = (line: string) => JSON.stringify({ ...JSON.parse(line), isSidechain: true });
+	const reviewer = [claudeTurn("r1", "2026-10-30T10:05:00.000Z"), claudeTurn("r2", "2026-10-30T10:25:00.000Z")].map(sidechain).join("\n");
+
+	const summary = summarize(overlapping(mainSession, reviewer), [{ sha: "ddd4444", at: "2026-10-30T10:22:00.000Z" }]);
+
+	assert.deepEqual(
+		summary.runs.map((r) => [r.skill, r.started_at, r.commits]),
+		[
+			["direct", "2026-10-30T10:00:00.000Z", []],
+			["direct", "2026-10-30T10:05:00.000Z", []],
+			["babysit-pr", "2026-10-30T10:20:00.000Z", ["ddd4444"]],
+		],
+	);
+});

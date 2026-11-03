@@ -9,6 +9,7 @@ type Entry = {
 	timestamp?: string;
 	session?: number;
 	repeat?: boolean;
+	sidechain?: boolean;
 	modelId?: string;
 	kind?: string;
 	usage?: Usage;
@@ -85,7 +86,7 @@ function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
 	return tokens / 1_000_000 + advice;
 }
 type ClaudePart = { type: string; name?: string; input?: { file_path?: string; skill?: string } };
-type ClaudeLine = { type: string; subtype?: string; timestamp?: string; origin?: { kind?: string }; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
+type ClaudeLine = { type: string; subtype?: string; timestamp?: string; origin?: { kind?: string }; isSidechain?: boolean; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
 
 function claudeCalls(content: ClaudePart[] | string | undefined): ToolCall[] {
 	if (!Array.isArray(content)) return [];
@@ -110,6 +111,7 @@ function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
 		{
 			type: "message",
 			timestamp: line.timestamp,
+			sidechain: line.isSidechain,
 			message: {
 				role: "assistant",
 				model: line.message?.model,
@@ -151,6 +153,7 @@ function emptyRun(skill: string, model: string, at: string): Run {
 
 export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 	const runs: Run[] = [];
+	const sidechainRuns = new Set<Run>();
 	const sessions = new Map<number | undefined, { skill: string; model: string; run?: Run }>();
 	let modelChanges = -1;
 	let warm = 0;
@@ -186,6 +189,7 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 		if (!lane.run || lane.run.skill !== lane.skill || lane.run.model !== lane.model) {
 			lane.run = emptyRun(lane.skill, lane.model, at);
 			runs.push(lane.run);
+			if (entry.sidechain) sidechainRuns.add(lane.run);
 		}
 		const run = lane.run;
 		run.finished_at = at;
@@ -200,7 +204,8 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 	}
 
 	for (const commit of commits) {
-		const run = runs.find((r) => r.started_at <= commit.at && commit.at <= r.finished_at) ?? runs.find((r) => commit.at < r.started_at);
+		const live = runs.filter((r) => r.started_at <= commit.at && commit.at <= r.finished_at);
+		const run = live.find((r) => !sidechainRuns.has(r)) ?? live[0] ?? runs.find((r) => commit.at < r.started_at);
 		(run ?? runs.at(-1))?.commits.push(commit.sha);
 	}
 
