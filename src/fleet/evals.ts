@@ -11,10 +11,12 @@ const RENDERED = [...OWNED.claude, "CLAUDE.md"];
 type Expect = { tool: string; input?: string; absent?: true } | { text: string; absent?: true };
 type Call = { tool: string; input: unknown };
 type EvalInput = { root: string; cases: string[]; reps: number };
-type Result = { case: string; control: boolean; passes: number; reps: number; prompt_sha256: string; check_sha256: string; fixture_sha256: string };
+type Result = { case: string; kind: Kind; passes: number; reps: number; prompt_sha256: string; check_sha256: string; fixture_sha256: string };
 type Stream = { type?: string; message?: { content?: { type?: string; name?: string; input?: unknown }[] }; result?: string; is_error?: boolean; total_cost_usd?: number; usage?: Record<string, number>; permission_denials?: { tool_name: string; tool_input: unknown }[] };
 
 const EXPECT_KEYS = ["tool", "input", "text", "absent"];
+const KINDS_OF_CASE = ["bad", "guard", "control"] as const;
+type Kind = (typeof KINDS_OF_CASE)[number];
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 const evalsDir = (io: Io) => `${io.home}/${FLEET.bench}/evals`;
 
@@ -47,10 +49,11 @@ function files(dir: string, io: Io, prefix = ""): string[] {
 
 function loadCase(evals: string, id: string, io: Io) {
 	const dir = `${evals}/cases/${id}`;
-	const { source, control } = JSON.parse(need(io, `${dir}/case.json`)) as { source: string; control: boolean };
+	const { source, kind } = JSON.parse(need(io, `${dir}/case.json`)) as { source: string; kind: Kind };
+	if (!KINDS_OF_CASE.includes(kind)) throw new Error(`${dir}/case.json: kind takes bad, guard or control, not ${String(kind)}`);
 	const prompt = need(io, `${dir}/prompt.md`);
 	const check = need(io, `${dir}/check.json`);
-	return { id, dir, source, control, prompt, check, expect: expectations(`${dir}/check.json`, check), fixture_sha256: sha256(files(`${dir}/fixture`, io).join("\0\0")) };
+	return { id, dir, source, kind, prompt, check, expect: expectations(`${dir}/check.json`, check), fixture_sha256: sha256(files(`${dir}/fixture`, io).join("\0\0")) };
 }
 
 function transcript(stream: string) {
@@ -131,7 +134,7 @@ export async function evalRun(input: EvalInput, io: Io): Promise<void> {
 		}
 		const passes = runs.filter((run) => run.pass).length;
 		const reps = runs.filter((run) => !run.error).length;
-		const result = { case: one.id, variant, root: input.root, model, source: one.source, control: one.control, passes, reps, errors: input.reps - reps, prompt_sha256: sha256(one.prompt), check_sha256: sha256(one.check), fixture_sha256: one.fixture_sha256, runs };
+		const result = { case: one.id, variant, root: input.root, model, source: one.source, kind: one.kind, passes, reps, errors: input.reps - reps, prompt_sha256: sha256(one.prompt), check_sha256: sha256(one.check), fixture_sha256: one.fixture_sha256, runs };
 		io.write(`${out}/result.json`, `${JSON.stringify(result, null, 2)}\n`);
 		io.log(`${one.id}: ${passes}/${reps} on ${variant}${reps < input.reps ? `, ${input.reps - reps} errored` : ""} -> ${out}`);
 	}
@@ -153,9 +156,9 @@ export function evalCompare(a: string, b: string, io: Io): void {
 	const rows = ids.map((id) => {
 		const base = left.get(id);
 		const next = right.get(id);
-		const notes = [];
-		if (base?.control ?? next?.control) notes.push("control");
-		else if (base && base.reps > 0 && base.passes * 2 >= base.reps) notes.push(`invalid: ${a} passes ${base.passes} of ${base.reps}, so it does not reproduce the original behaviour`);
+		const kind = base?.kind ?? next?.kind;
+		const notes: string[] = kind ? [kind] : [];
+		if (kind === "bad" && base && base.reps > 0 && base.passes * 2 >= base.reps) notes.push(`invalid: ${a} passes ${base.passes} of ${base.reps}, so it does not reproduce the original behaviour`);
 		if (base && next && (["prompt_sha256", "check_sha256", "fixture_sha256"] as const).some((key) => base[key] !== next[key])) notes.push("not comparable: prompt, check or fixture differs");
 		return [id, count(base), count(next), notes.join(", ")];
 	});

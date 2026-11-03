@@ -34,14 +34,18 @@ const stream = (final: string, calls: { name: string; input: Record<string, unkn
 
 const cases = {
 	rewalk: {
-		case: JSON.stringify({ source: "/x/session.jsonl:42", control: false }),
+		case: JSON.stringify({ source: "/x/session.jsonl:42", kind: "bad" }),
 		prompt: "The copy fix landed. Which criteria do you walk again?",
 		check: JSON.stringify({ expect: [{ tool: "Edit|Write", absent: true }, { text: "criterion 2 only" }] }),
 	},
 	plain: {
-		case: JSON.stringify({ source: "/x/session.jsonl:43", control: true }),
+		case: JSON.stringify({ source: "/x/session.jsonl:43", kind: "control" }),
 		prompt: "Which file holds the walk report?",
 		check: JSON.stringify({ expect: [{ tool: "Read", input: "report\\.md" }] }),
+	},	history: {
+		case: JSON.stringify({ source: "/x/session.jsonl:44", kind: "guard" }),
+		prompt: "Rewrite the gotcha so it is true now.",
+		check: JSON.stringify({ expect: [{ text: "groups/", absent: true }] }),
 	},
 };
 
@@ -164,28 +168,39 @@ test("a run before the eval config dir's one-time login is refused before any re
 	assert.ok(!io.calls.some((call) => call[0] === "write"));
 });
 
-test("compare prints pass counts side by side and flags a baseline that does not reproduce the case", () => {
+test("compare prints pass counts side by side, labels each case by its kind, and flags only a bad case the baseline already passes", () => {
 	const io = fakeIo({}, SEATS.claude);
 	const result = (variant: string, id: keyof typeof cases, passes: number, reps = 3) =>
-		JSON.stringify({ case: id, variant, control: JSON.parse(cases[id].case).control, passes, reps, prompt_sha256: sha256(cases[id].prompt), check_sha256: sha256(cases[id].check), fixture_sha256: "f", runs: [] });
+		JSON.stringify({ case: id, variant, kind: JSON.parse(cases[id].case).kind, passes, reps, prompt_sha256: sha256(cases[id].prompt), check_sha256: sha256(cases[id].check), fixture_sha256: "f", runs: [] });
 	io.files[`${evals}/runs/base/rewalk/result.json`] = result("base", "rewalk", 2);
 	io.files[`${evals}/runs/base/plain/result.json`] = result("base", "plain", 3);
+	io.files[`${evals}/runs/base/history/result.json`] = result("base", "history", 3);
 	io.files[`${evals}/runs/next/rewalk/result.json`] = result("next", "rewalk", 3);
 	io.files[`${evals}/runs/next/plain/result.json`] = result("next", "plain", 1);
-	io.list = (dir) => (dir.endsWith("/runs/base") || dir.endsWith("/runs/next") ? ["rewalk", "plain"] : []);
+	io.files[`${evals}/runs/next/history/result.json`] = result("next", "history", 3);
+	io.list = (dir) => (dir.endsWith("/runs/base") || dir.endsWith("/runs/next") ? ["rewalk", "plain", "history"] : []);
 
 	evalCompare("base", "next", io);
 
 	assert.deepEqual(io.lines, [
-		"case    base  next",
-		"plain   3/3   1/3   control",
-		"rewalk  2/3   3/3   invalid: base passes 2 of 3, so it does not reproduce the original behaviour",
+		"case     base  next",
+		"history  3/3   3/3   guard",
+		"plain    3/3   1/3   control",
+		"rewalk   2/3   3/3   bad, invalid: base passes 2 of 3, so it does not reproduce the original behaviour",
 	]);
+});
+
+test("a case.json whose kind is not bad, guard or control is refused before any run", async () => {
+	const { io, runs } = evalIo([]);
+	io.files[`${evals}/cases/plain/case.json`] = JSON.stringify({ source: "/x/session.jsonl:43", control: true });
+
+	await assert.rejects(evalRun({ root, cases: ["plain"], reps: 1 }, io), /plain\/case\.json: kind takes bad, guard or control/);
+	assert.equal(runs.length, 0);
 });
 
 test("compare marks a case whose fixture changed between the variants as not comparable", () => {
 	const io = fakeIo({}, SEATS.claude);
-	const base = { case: "plain", control: true, passes: 3, reps: 3, prompt_sha256: "p", check_sha256: "c", fixture_sha256: "f", runs: [] };
+	const base = { case: "plain", kind: "control", passes: 3, reps: 3, prompt_sha256: "p", check_sha256: "c", fixture_sha256: "f", runs: [] };
 	io.files[`${evals}/runs/base/plain/result.json`] = JSON.stringify(base);
 	io.files[`${evals}/runs/next/plain/result.json`] = JSON.stringify({ ...base, fixture_sha256: "other" });
 	io.list = (dir) => (dir.includes("/runs/") ? ["plain"] : []);
