@@ -22,6 +22,7 @@ export type Io = {
 	mkdir(path: string): void;
 	log(line: string): void;
 	run(command: string, args: string[], cwd?: string): void;
+	capture(command: string, args: string[], opts: { cwd: string; env: Record<string, string>; timeoutMs?: number }): string;
 	sleep(ms: number): Promise<void>;
 	now(): Date;
 	home: string;
@@ -117,6 +118,7 @@ export function realIo(home: string, seat?: Seat): Io {
 			if (result.error) throw result.error;
 			if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 		},
+		capture: (command, args, opts) => shell(command, args, { quiet: true, ...opts }),
 		sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 		now: () => new Date(),
 		home,

@@ -130,6 +130,10 @@ export function fakeIo(
 		run: (command, args, cwd) => {
 			calls.push(["run", ...(cwd === undefined ? [] : [cwd]), command, ...args]);
 		},
+		capture: (command, args, opts) => {
+			calls.push(["capture", opts.cwd, command, ...args]);
+			return text(`capture ${command} ${args.join(" ")}`);
+		},
 		sleep: async () => {
 			tick += 1;
 		},

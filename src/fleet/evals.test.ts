@@ -1,0 +1,187 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { resolve } from "node:path";
+import { test } from "node:test";
+import { SEATS } from "../harness.ts";
+import { evalCompare, evalRun } from "./evals.ts";
+import { fakeIo } from "./fake-io.ts";
+import { realIo } from "./io.ts";
+
+const root = resolve(import.meta.dirname, "../..");
+const evals = "/home/me/.fleet/bench/evals";
+const config = `${evals}/config`;
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
+const editAttempt = { file_path: "/tmp/x/ticket.md", old_string: "- [ ] walked", new_string: "- [x] walked" };
+const stream = (final: string, calls: { name: string; input: Record<string, unknown> }[], denied: string[] = []) =>
+	[
+		{ type: "system", subtype: "init", model: "claude-opus-5-5[1m]" },
+		...calls.map((call, index) => ({ type: "assistant", message: { content: [{ type: "tool_use", id: `u${index}`, name: call.name, input: call.input }] } })),
+		{ type: "assistant", message: { content: [{ type: "text", text: final }] } },
+		{
+			type: "result",
+			subtype: "success",
+			result: final,
+			total_cost_usd: 0.25,
+			usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 300, cache_creation_input_tokens: 40 },
+			permission_denials: calls
+				.map((call, index) => ({ tool_name: call.name, tool_use_id: `u${index}`, tool_input: call.input }))
+				.filter((denial) => denied.includes(denial.tool_name)),
+		},
+	]
+		.map((event) => JSON.stringify(event))
+		.join("\n");
+
+const cases = {
+	rewalk: {
+		case: JSON.stringify({ source: "/x/session.jsonl:42", control: false }),
+		prompt: "The copy fix landed. Which criteria do you walk again?",
+		check: JSON.stringify({ expect: [{ tool: "Edit|Write", absent: true }, { text: "criterion 2 only" }] }),
+	},
+	plain: {
+		case: JSON.stringify({ source: "/x/session.jsonl:43", control: true }),
+		prompt: "Which file holds the walk report?",
+		check: JSON.stringify({ expect: [{ tool: "Read", input: "report\\.md" }] }),
+	},
+};
+
+function evalIo(streams: string[]) {
+	const answers: Record<string, unknown> = {
+		[`git ${root} status --porcelain`]: "",
+		[`git ${root} log -1 --format=%h`]: "abc1234",
+		[`stat ${config}`]: { size: 0, mtime: new Date(0), dir: true },
+	};
+	for (const [id, body] of Object.entries(cases)) {
+		answers[`read ${evals}/cases/${id}/case.json`] = body.case;
+		answers[`read ${evals}/cases/${id}/prompt.md`] = body.prompt;
+		answers[`read ${evals}/cases/${id}/check.json`] = body.check;
+	}
+	const io = fakeIo(answers, SEATS.claude);
+	const real = realIo(io.home);
+	const fake = { read: io.read, list: io.list, stat: io.stat };
+	const own = (path: string) => path.startsWith(`${root}/`);
+	io.read = (path) => (own(path) ? real.read(path) : fake.read(path));
+	io.list = (dir) => (own(dir) ? real.list(dir) : fake.list(dir));
+	io.stat = (path) => (own(path) ? real.stat(path) : fake.stat(path));
+	const runs: { args: string[]; cwd: string; env: Record<string, string> }[] = [];
+	io.capture = (command, args, opts) => {
+		io.calls.push(["capture", opts.cwd, command, ...args]);
+		runs.push({ args, cwd: opts.cwd, env: opts.env });
+		return streams[runs.length - 1] ?? "";
+	};
+	return { io, runs };
+}
+
+test("a run renders the variant into the eval config dir and keeps its login", async () => {
+	const { io } = evalIo([stream("criterion 2 only", [])]);
+
+	await evalRun({ root, cases: ["rewalk"], reps: 1 }, io);
+
+	const removed = io.calls.filter((call) => call[0] === "remove" && call[1].startsWith(config)).map((call) => call[1]);
+	assert.deepEqual(removed.sort(), ["CLAUDE.md", "agents", "refs", "rules", "skills"].map((name) => `${config}/${name}`));
+	const copied = io.calls.filter((call) => call[0] === "run" && call[1] === "cp" && call.at(-1)?.startsWith(config)).map((call) => call.at(-1));
+	assert.deepEqual(copied.sort(), ["CLAUDE.md", "agents", "refs", "rules", "skills"].map((name) => `${config}/${name}`));
+	const stage = io.calls.find((call) => call[0] === "run" && call[1] === "cp" && call.at(-1) === `${config}/rules`)![3].replace(/\/home\/rules$/, "");
+	assert.ok(io.calls.some((call) => call[0] === "write" && call[1] === `${stage}/home/rules/sandbox.md`));
+	assert.ok(io.calls.some((call) => call[0] === "remove" && call[1] === stage));
+	assert.ok(!io.calls.some((call) => call[0] === "run" && String(call.at(-1)).endsWith(`${config}/settings.json`)));
+});
+
+test("a run copies the fixture to a fresh scratch dir and runs claude -p read-only in it", async () => {
+	const { io, runs } = evalIo([stream("criterion 2 only", [])]);
+
+	await evalRun({ root, cases: ["rewalk"], reps: 1 }, io);
+
+	const [run] = runs;
+	assert.equal(run.env.CLAUDE_CONFIG_DIR, config);
+	assert.deepEqual(io.calls.find((call) => call[0] === "run" && call[1] === "cp" && call[3]?.endsWith("/fixture/.")), ["run", "cp", "-R", `${evals}/cases/rewalk/fixture/.`, run.cwd]);
+	assert.deepEqual(run.args, [
+		"-p",
+		cases.rewalk.prompt,
+		"--model",
+		"claude-opus-5-5[1m]",
+		"--output-format",
+		"stream-json",
+		"--verbose",
+		"--permission-mode",
+		"default",
+		"--allowedTools",
+		"Read,Grep,Glob,Skill",
+	]);
+	assert.ok(io.calls.some((call) => call[0] === "remove" && call[1] === run.cwd));
+});
+
+test("a denied write stays in the transcript and fails the check that forbids it", async () => {
+	const transcript = stream("criterion 2 only", [{ name: "Edit", input: editAttempt }], ["Edit"]);
+	const { io } = evalIo([transcript]);
+
+	await evalRun({ root, cases: ["rewalk"], reps: 1 }, io);
+
+	const result = JSON.parse(io.files[`${evals}/runs/abc1234/rewalk/result.json`]);
+	assert.equal(io.files[`${evals}/runs/abc1234/rewalk/1.jsonl`], transcript);
+	assert.equal(result.passes, 0);
+	assert.deepEqual(result.runs[0].denied, [{ tool: "Edit", input: editAttempt }]);
+	assert.deepEqual(result.runs[0].failed, [{ tool: "Edit|Write", absent: true }]);
+});
+
+test("a run counts passes over reps with cost, tokens and each transcript", async () => {
+	const { io } = evalIo([stream("criterion 2 only", []), stream("I walk every criterion again", []), stream("Criterion 2 only.", [])]);
+
+	await evalRun({ root, cases: ["rewalk"], reps: 3 }, io);
+
+	const result = JSON.parse(io.files[`${evals}/runs/abc1234/rewalk/result.json`]);
+	assert.equal(result.variant, "abc1234");
+	assert.equal(result.model, "claude-opus-5-5[1m]");
+	assert.equal(result.passes, 2);
+	assert.equal(result.reps, 3);
+	assert.equal(result.prompt_sha256, sha256(cases.rewalk.prompt));
+	assert.equal(result.check_sha256, sha256(cases.rewalk.check));
+	assert.deepEqual(result.runs[1], {
+		rep: 2,
+		pass: false,
+		failed: [{ text: "criterion 2 only" }],
+		denied: [],
+		cost_usd: 0.25,
+		tokens: { input: 10, output: 20, cache_read: 300, cache_write: 40 },
+		transcript: "2.jsonl",
+	});
+});
+
+test("a dirty variant is refused, naming its files, since a variant is one commit", async () => {
+	const { io, runs } = evalIo([]);
+	io.git = (args) => (args[0] === "status" ? "M skills/container/check-feature/SKILL.md" : "abc1234");
+
+	await assert.rejects(evalRun({ root, cases: ["rewalk"], reps: 1 }, io), /uncommitted changes in skills\/container\/check-feature\/SKILL\.md/);
+	assert.equal(runs.length, 0);
+});
+
+test("compare prints pass counts side by side and flags a baseline that does not reproduce the case", () => {
+	const io = fakeIo({}, SEATS.claude);
+	const result = (variant: string, id: keyof typeof cases, passes: number, reps = 3) =>
+		JSON.stringify({ case: id, variant, control: JSON.parse(cases[id].case).control, passes, reps, prompt_sha256: sha256(cases[id].prompt), check_sha256: sha256(cases[id].check), runs: [] });
+	io.files[`${evals}/runs/base/rewalk/result.json`] = result("base", "rewalk", 2);
+	io.files[`${evals}/runs/base/plain/result.json`] = result("base", "plain", 3);
+	io.files[`${evals}/runs/next/rewalk/result.json`] = result("next", "rewalk", 3);
+	io.files[`${evals}/runs/next/plain/result.json`] = result("next", "plain", 1);
+	io.list = (dir) => (dir.endsWith("/runs/base") || dir.endsWith("/runs/next") ? ["rewalk", "plain"] : []);
+
+	evalCompare("base", "next", io);
+
+	assert.deepEqual(io.lines, [
+		"case    base  next",
+		"plain   3/3   1/3   control",
+		"rewalk  2/3   3/3   invalid: base passes 2 of 3, so it does not reproduce the original behaviour",
+	]);
+});
+
+test("compare marks a case whose prompt or check changed between the variants as not comparable", () => {
+	const io = fakeIo({}, SEATS.claude);
+	const base = { case: "plain", control: true, passes: 3, reps: 3, prompt_sha256: "p", check_sha256: "c", runs: [] };
+	io.files[`${evals}/runs/base/plain/result.json`] = JSON.stringify(base);
+	io.files[`${evals}/runs/next/plain/result.json`] = JSON.stringify({ ...base, check_sha256: "other" });
+	io.list = (dir) => (dir.includes("/runs/") ? ["plain"] : []);
+
+	evalCompare("base", "next", io);
+
+	assert.deepEqual(io.lines, ["case   base  next", "plain  3/3   3/3   control, not comparable: prompt or check differs"]);
+});

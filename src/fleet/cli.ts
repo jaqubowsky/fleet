@@ -17,6 +17,7 @@ import {
 	stop,
 } from "./commands.ts";
 import { benchRun } from "./bench.ts";
+import { evalCompare, evalRun } from "./evals.ts";
 import { init } from "./init.ts";
 import { containerPatch } from "./diff.ts";
 import { realIo, seatOf } from "./io.ts";
@@ -54,6 +55,8 @@ const usage = `usage:
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head on its recorded base or on its clone's origin counts as landed; the task directory stays
   ${CLI} build [--pi|--claude] [--tag <variant>] [--root <worktree>]   render the container seat and rebuild that agent's image from it, the seat's own without a flag; --tag builds my-<agent>:<variant> beside v1 with its own stamp, --root renders from that harness checkout
   ${CLI} bench run --image my-claude:<tag> --tasks <id,...> [--reps 1] [--parallel 1] [--timeout 180] [--repo <path>]   for each task of ~/.fleet/bench/tasks and each rep in that order: up from the tag on the task's frozen base under ~/.fleet/bench/runs/<tag>/<task>-<rep>/ with its own runbook copy and push, pr and linear none, write the ticket, steer delivery, wait for the settle or --timeout minutes, then keep diff.patch, usage.json and result.json beside the task directory and stop the container; prints the down commands, which stay yours
+  ${CLI} eval run --variant <harness root> --cases <id,...> [--reps 1]   render that committed checkout's container rules into ~/.fleet/bench/evals/config, then for each case of ~/.fleet/bench/evals/cases and each rep run one fresh headless agent turn there on a scratch copy of its fixture, reads allowed and every other call denied, and keep each stream transcript and result.json with pass count, cost and tokens under ~/.fleet/bench/evals/runs/<variant commit>/<case>/
+  ${CLI} eval compare <baseline> <variant>          per case, the pass counts of two variant commits side by side; a case the baseline passes in half its reps or more is invalid, and a changed prompt or check is not comparable
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
 
@@ -312,6 +315,21 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 				reps: count(opts.reps, 1, "reps"),
 				parallel: count(opts.parallel, 1, "parallel"),
 				timeoutMs: count(opts.timeout, 180, "timeout") * 60_000,
+			},
+			io,
+		);
+	},
+	async eval(args) {
+		const { opts, rest } = flags(args, ["variant", "cases", "reps"]);
+		if (rest[0] === "compare" && rest.length === 3) return evalCompare(rest[1], rest[2], io);
+		if (rest[0] !== "run") throw new Error(`${CLI} eval takes run or compare <baseline> <variant>\n${usage}`);
+		const reps = opts.reps === undefined ? 1 : Number(opts.reps);
+		if (!Number.isInteger(reps) || reps < 1) throw new Error("--reps takes a whole number from 1");
+		await evalRun(
+			{
+				root: checkout(need(opts.variant as string | undefined, "--variant")),
+				cases: need(opts.cases as string | undefined, "--cases").split(",").filter(Boolean),
+				reps,
 			},
 			io,
 		);
