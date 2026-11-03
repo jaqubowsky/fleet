@@ -17,7 +17,7 @@ head="$(git rev-parse HEAD)" || exit 1
 bundled=0
 if ! git merge-base --is-ancestor HEAD "$base"; then git bundle create --quiet "$2" "$base..HEAD" || exit 1; bundled=1; fi
 printf '%s\t%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')" "$bundled"`;
-const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
+const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md"]);
 
 const unticked = (ticket: string | undefined) => /^\s*[-*] \[ \]/m.test(ticket ?? "");
 const LIMIT = /hit your [^\n]*limit[^\n]*/i;
@@ -112,8 +112,6 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				finished_at: io.now().toISOString(),
 				transcripts: `${run.sandbox}/logs/sessions`,
 				task_dir: run.sandbox,
-				graders: null,
-				judge: null,
 			};
 			io.write(`${run.dir}/result.json`, `${JSON.stringify(result, null, 2)}\n`);
 			io.log(`${run.sandbox}: ${outcome.status} -> ${run.dir}`);

@@ -36,6 +36,7 @@ A new or reworded rule is a hypothesis: added lines often leave the behaviour un
 
 - One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `{{root}}/docs/adr/018-micro-evals.md` says; the runner renders the claude container rules only. It counts only if the current rules fail it in half its reps or more
 - Behaviour spread over a ticket, such as repeat walks, screenshots or requests: the same count on ordinary tickets delivered before and after the change, from each task's `logs/usage.json` and its transcripts
+- A model or seat swap: `fleet bench run` of both image tags on the same seeds, as `{{root}}/docs/adr/017-internal-benchmark.md` says
 - A deletion: the rule's `guard` case on a variant without the rule
 
 A check that does not exist yet is part of the proposal: draft the eval case, its source line, prompt, expectations and control, or name the count and the tickets it compares. A candidate is ready when its evidence, cause, smallest fix, check and cost are known.

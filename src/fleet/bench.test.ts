@@ -34,7 +34,7 @@ function bench() {
 		"hc get t9": { state: "live", status: { state: "idle" } },
 		"read /home/me/.fleet/cache/claude/image-stamp-x": "a1b2c3d\n",
 		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
-		[`list ${seeds}/t1`]: ["ticket.md", "task.json", "rubric.md", "graders", "screen.png"],
+		[`list ${seeds}/t1`]: ["ticket.md", "task.json", "rubric.md", "screen.png"],
 		[`list ${seeds}/t2`]: ["ticket.md", "task.json"],
 	};
 	for (const id of ["t1", "t2"] as const) {
@@ -160,7 +160,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 		assert.deepEqual(final.slice(7), [shas[id], `${dir}/head.bundle`]);
 		assert.ok(io.calls.indexOf(final) < io.calls.findIndex((c) => c[0] === "sbx" && c[1] === "stop" && c[2] === name));
 		assert.deepEqual(
-			{ image: result.image, seed: result.seed, base: result.base, head: result.head, dirty: result.dirty, bundle: result.bundle, diff: result.diff, usage: result.usage, actions: result.actions, transcripts: result.transcripts, task_dir: result.task_dir, graders: result.graders, judge: result.judge },
+			{ image: result.image, seed: result.seed, base: result.base, head: result.head, dirty: result.dirty, bundle: result.bundle, diff: result.diff, usage: result.usage, actions: result.actions, transcripts: result.transcripts, task_dir: result.task_dir },
 			{
 				image: { ref: "my-claude:x", stamp: "a1b2c3d" },
 				seed: { ticket_sha256: sha256(seed(id).ticket), task_sha256: sha256(seed(id).task) },
@@ -173,8 +173,6 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 				actions: { screenshots_read: { main: 0, subagents: 0 }, browser_runs: 0 },
 				transcripts: `${name}/logs/sessions`,
 				task_dir: name,
-				graders: null,
-				judge: null,
 			},
 		);
 	}

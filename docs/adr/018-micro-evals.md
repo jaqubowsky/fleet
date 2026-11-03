@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Narrows 017 for rule wording: full-ticket runs stay for model choice, compaction and chained containers, and a rule's wording, a needless rule, a false instruction or a proof choice is tested as a micro-eval.
+Accepted. Narrows 017 for rule wording: full-ticket runs stay for a model or seat swap, and a rule's wording, a needless rule, a false instruction or a proof choice is tested as a micro-eval.
 
 ## Context
 
@@ -29,4 +29,4 @@ Results go to `~/.fleet/bench/evals/runs/<variant>/<case>/`: one stream-json tra
 
 ## Consequences
 
-A rule variant is one commit on a branch. It ships only when its cases flip and its controls hold, so the shipped rules are never edited to run an eval. Nothing in this container has run a real `claude -p`: the flag names, the stream-json fields (`tool_use` blocks, `result`, `is_error`, `total_cost_usd`, `usage`, `permission_denials`), the exit status after a denial, whether `Read` reaches the config dir outside the scratch dir, whether a run started from inside a host agent session works, and whether `Skill` needs an allow entry were proven only on the fake IO, and the first host run is the check. A managed-settings file on the Mac would still load and could change permissions. The runner is claude only: the ticket fixes `claude -p` and a claude config-dir login, and the rules under test are text the two harnesses share.
+A rule variant is one commit on a branch. It ships only when its cases flip and its controls hold, so the shipped rules are never edited to run an eval. The first cases ran on the host on 2026-11-03 at five reps each, and on baseline a9f9da1 every one passed in four or five of them, so each is a `guard`; a `bad` case comes from a correction the current rules still fail. A managed-settings file on the Mac would still load and could change permissions. The runner is claude only: the ticket fixes `claude -p` and a claude config-dir login, and the rules under test are text the two harnesses share.
