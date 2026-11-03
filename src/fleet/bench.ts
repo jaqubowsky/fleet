@@ -20,6 +20,7 @@ printf '%s\t%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')" "$bu
 const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
 
 const unticked = (ticket: string | undefined) => /^\s*[-*] \[ \]/m.test(ticket ?? "");
+const LIMIT = /hit your [^\n]*limit[^\n]*/i;
 
 export type Settled = { state: "done" | "idle" | "blocked" | "error" | "timeout"; said: string };
 type Wait = (sandbox: string, io: Io, timeoutMs: number, start: () => void) => Promise<Settled>;
@@ -93,6 +94,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 	const live = sandboxes(io).find((sandbox) => names.includes(sandbox.name));
 	if (live) throw new Error(`${live.name} already exists; take it down with ${CLI} down --force ${live.name} before the batch reuses its name`);
 	const seeded = new Map(input.tasks.map((task) => [task, readSeed(`${seeds}/${task}`, io)]));
+	let limit: string | undefined;
 	const one = async (run: (typeof runs)[number]) => {
 		const seed = seeded.get(run.task)!;
 		const task = `${run.dir}/${run.sandbox}`;
@@ -136,8 +138,11 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 			const settled = await wait(run.sandbox, io, input.timeoutMs, () =>
 				steer(resolveSandbox(run.sandbox, io), `Deliver the ticket in ${task}/ticket.md end to end on its frozen base ${seed.base}. Commit locally and stop at Done; nothing leaves this container. Wait for background work in the foreground: end your turn only at Done or on an open question, since the run ends when your turn does.`, io, input.root),
 			);
+			const limited = LIMIT.exec(settled.said)?.[0];
+			if (limited) limit = limited;
 			const status =
-				settled.state === "timeout" ? "timeout"
+				limited ? "limit"
+				: settled.state === "timeout" ? "timeout"
 				: settled.state === "error" ? "error"
 				: settled.state === "blocked" || unticked(io.read(`${task}/ticket.md`)) ? "blocked"
 				: "done";
@@ -168,9 +173,10 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 	try {
 		await Promise.all(
 			Array.from({ length: input.parallel }, async () => {
-				for (let run = queue.shift(); run; run = queue.shift()) await one(run);
+				for (let run = limit ? undefined : queue.shift(); run; run = limit ? undefined : queue.shift()) await one(run);
 			}),
 		);
+		if (limit) throw new Error(`the account hit its usage limit (${limit}), so the batch stopped before ${queue.map((run) => `${run.task}-${run.rep}`).join(", ") || "nothing"}; run those again after the reset`);
 	} finally {
 		const kept = sandboxes(io).filter((sandbox) => names.includes(sandbox.name));
 		if (kept.length) io.log("Stopped, with their files kept; discarding them is yours:");

@@ -270,6 +270,20 @@ test("a run that fails is recorded as an error and stopped, and the batch goes o
 	assert.deepEqual(stopped, names.slice(0, 2));
 });
 
+test("a run that ends on the account's usage limit is recorded as limit and the batch stops before the next rep starts", async () => {
+	const { io, created, stopped } = bench();
+
+	await assert.rejects(
+		benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t1", "t2"], reps: 2, parallel: 1, timeoutMs: 1 }, io, outcome("error", "You've hit your 5-hour limit · resets 4:30pm (UTC)")),
+		/usage limit.*resets 4:30pm \(UTC\).*t1-2, t2-1, t2-2/,
+	);
+
+	assert.equal(JSON.parse(io.files[`${runs}/t1-1/result.json`]).status, "limit");
+	assert.deepEqual(created, names.slice(0, 1));
+	assert.deepEqual(stopped, names.slice(0, 1));
+	assert.equal(io.files[`${runs}/t1-2/result.json`], undefined);
+});
+
 test("a run whose container came up but whose agent is not logged in is an error, stopped, and on the down list", async () => {
 	const { io, stopped } = bench();
 	let reads = 0;
