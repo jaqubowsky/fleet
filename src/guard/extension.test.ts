@@ -315,6 +315,29 @@ test("pi asks before a fetch or pull, blocks it without a dialog, and a deny bes
 	assert.equal(forced, true);
 });
 
+test("pi asks before a Linear call replaces the whole text of an existing comment, and blocks it without a dialog", async () => {
+	const root = privateRoot();
+	let captured:
+		| ((
+				event: { toolName: string; input: Record<string, unknown> },
+				ctx: { cwd: string; hasUI?: boolean; ui?: { confirm(title: string, message: string): Promise<boolean> } },
+		  ) => unknown)
+		| undefined;
+	guard(KINDS.pi, root, EMPTY_HOME)({
+		on: (_event, fn) => {
+			captured = fn as typeof captured;
+		},
+	});
+	assert.ok(captured);
+	const blocked = async (input: Record<string, unknown>, ui?: { confirm(title: string, message: string): Promise<boolean> }) =>
+		((await captured!({ toolName: "mcp__linear-automee__save_comment", input }, { cwd: root, hasUI: ui !== undefined, ui })) as { block?: boolean } | undefined)?.block === true;
+
+	assert.equal(await blocked({ id: "c1", body: "Question 2" }, { confirm: async () => true }), false);
+	assert.equal(await blocked({ id: "c1", body: "Question 2" }, { confirm: async () => false }), true);
+	assert.equal(await blocked({ id: "c1", body: "Question 2" }), true);
+	assert.equal(await blocked({ issueId: "FLO-2112", body: "Six questions" }), false);
+});
+
 test("pi checks the raw down command before bash prepends input.cwd", () => {
 	const root = privateRoot();
 	let captured:

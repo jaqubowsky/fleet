@@ -6,6 +6,7 @@ import { landPermission } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
 import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../../src/guard/own-config.ts";
 import { decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
+import { trackerEditQuestion } from "../../src/guard/tracker.ts";
 
 type HookInput = {
 	tool_name?: string;
@@ -69,9 +70,11 @@ export function answer(
 		hostAt(cwd, root, home),
 	);
 	const question =
-		verdict.decision === "allow" && tool === "Bash"
-			? fetchQuestion(String(input.tool_input?.command ?? ""))
-			: undefined;
+		verdict.decision !== "allow"
+			? undefined
+			: tool === "Bash"
+				? fetchQuestion(String(input.tool_input?.command ?? ""))
+				: trackerEditQuestion(tool, input.tool_input ?? {});
 	if (question)
 		return JSON.stringify({
 			hookSpecificOutput: {

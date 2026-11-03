@@ -288,6 +288,18 @@ test("the claude hook asks before a fetch or pull, and a deny beside one still w
 	assert.match(decide("git log origin/main"), /"permissionDecision":"allow"/);
 });
 
+test("the claude hook asks before a Linear call replaces the whole text of an existing comment or description", () => {
+	const root = privateRoot();
+	const call = (tool: string, input: Record<string, unknown>) =>
+		answer({ tool_name: `mcp__linear-automee__${tool}`, tool_input: input, cwd: root }, root);
+
+	assert.match(call("save_comment", { id: "c1", body: "Question 2 reworded" }), /"permissionDecision":"ask"/);
+	assert.match(call("save_issue", { id: "FLO-2112", description: "New scope" }), /"permissionDecision":"ask"/);
+	assert.doesNotMatch(call("save_comment", { issueId: "FLO-2112", body: "Six questions" }), /"ask"|"deny"/);
+	assert.doesNotMatch(call("save_issue", { id: "FLO-2112", patch: { from: "a", to: "b" } }), /"ask"|"deny"/);
+	assert.doesNotMatch(call("save_issue", { id: "FLO-2112", state: "Done" }), /"ask"|"deny"/);
+});
+
 test("the claude hook lets a GitHub read run in any shell form and refuses a pull request write the policy cannot place", () => {
 	const root = privateRoot();
 	const own = checkout(`git@github.com:${PRIVATE_REPO}.git`);

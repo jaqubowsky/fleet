@@ -7,6 +7,7 @@ import { hostAt } from "../src/guard/host.ts";
 import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../src/guard/own-config.ts";
 import { decide, unknownTool } from "../src/guard/policy.ts";
 import { TRUSTED, translate } from "../src/guard/translate.ts";
+import { trackerEditQuestion } from "../src/guard/tracker.ts";
 
 type ToolCallEvent = { toolName: string; input?: Record<string, unknown> };
 type GuardContext = {
@@ -81,11 +82,12 @@ export default function guard(
 			if (verdict.decision !== "allow") return { block: true, reason: verdict.reason };
 
 			const command = "command" in payload.tool_input ? String(payload.tool_input.command) : "";
-			const question = payload.tool_name === "Bash" ? fetchQuestion(command) : undefined;
+			const fetching = payload.tool_name === "Bash" ? fetchQuestion(command) : undefined;
+			const question = fetching ?? trackerEditQuestion(payload.tool_name, payload.tool_input);
 			if (!question) return;
 			if (!ctx.hasUI || !ctx.ui) return { block: true, reason: question };
 			return ctx.ui
-				.confirm("Fetch from a remote?", command)
+				.confirm(fetching ? "Fetch from a remote?" : "Replace Linear text?", fetching ? command : JSON.stringify(payload.tool_input))
 				.then((approved) => (approved ? undefined : { block: true, reason: question }));
 		});
 	};
