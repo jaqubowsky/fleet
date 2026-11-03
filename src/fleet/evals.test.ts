@@ -155,6 +155,15 @@ test("a dirty variant is refused, naming its files, since a variant is one commi
 	assert.equal(runs.length, 0);
 });
 
+test("a run before the eval config dir's one-time login is refused before any render", async () => {
+	const { io, runs } = evalIo([]);
+	io.stat = () => undefined;
+
+	await assert.rejects(evalRun({ root, cases: ["rewalk"], reps: 1 }, io), /evals\/config is not logged in yet/);
+	assert.equal(runs.length, 0);
+	assert.ok(!io.calls.some((call) => call[0] === "write"));
+});
+
 test("compare prints pass counts side by side and flags a baseline that does not reproduce the case", () => {
 	const io = fakeIo({}, SEATS.claude);
 	const result = (variant: string, id: keyof typeof cases, passes: number, reps = 3) =>

@@ -25,7 +25,7 @@ A case lives outside the public repository, in `~/.fleet/bench/evals/cases/<id>/
 
 The run allows only `Read`, `Grep`, `Glob` and `Skill`, with `--permission-mode default`. Every other call is denied, never hidden: `--tools` would hide the write tools so a write could never be attempted. A denied attempt stays in the stream transcript, where the check sees it. The main model is the variant's `sbx` seat, so a model variant is one `models.json` commit.
 
-Results go to `~/.fleet/bench/evals/runs/<variant>/<case>/`: one stream-json transcript per rep, plus a `result.json` holding the pass count, the failed expectations, the denied calls, cost and tokens per rep, and sha256 hashes of the prompt and check. A case that already has results under that variant is refused. `fleet eval compare <baseline> <variant>` prints per-case pass counts side by side. It marks a case not comparable when its prompt or check hash differs between the two. It flags a non-control case invalid when the baseline passes it in half or more of its reps, since that baseline does not reproduce the original behaviour.
+Results go to `~/.fleet/bench/evals/runs/<variant>/<case>/`: one stream-json transcript per rep, plus a `result.json` holding the pass count, the failed expectations, the denied calls, cost and tokens per rep, and sha256 hashes of the prompt and check. Running a case again under the same variant replaces its results. `fleet eval compare <baseline> <variant>` prints per-case pass counts side by side. It marks a case not comparable when its prompt or check hash differs between the two. It flags a non-control case invalid when the baseline passes it in half or more of its reps, since that baseline does not reproduce the original behaviour.
 
 ## Consequences
 

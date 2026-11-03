@@ -5,7 +5,7 @@ import { FLEET } from "./home.ts";
 import type { Io } from "./io.ts";
 import { harnessStamp, uncommittedImageSources } from "./up.ts";
 
-export const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Skill"];
+const READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "Skill"];
 const RENDERED = [...OWNED.claude, "CLAUDE.md"];
 
 type Expect = { tool?: string; input?: string; text?: string; absent?: true };
@@ -71,8 +71,6 @@ export async function evalRun(input: EvalInput, io: Io): Promise<void> {
 	if (!io.stat(config)) throw new Error(`${config} is not logged in yet: run CLAUDE_CONFIG_DIR=${config} claude once and /login`);
 	const variant = harnessStamp(input.root, kind, io);
 	const model = seatTokens(io, input.root, kind.name)["models.sbx"];
-	const kept = input.cases.find((id) => io.stat(`${evals}/runs/${variant}/${id}`));
-	if (kept) throw new Error(`${evals}/runs/${variant}/${kept} already holds results; move it away before running ${kept} on ${variant} again`);
 	renderInto(input.root, config, io);
 	for (const id of input.cases) {
 		const dir = `${evals}/cases/${id}`;
