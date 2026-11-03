@@ -26,7 +26,7 @@ import {
 	type Row,
 	type Sandbox,
 } from "./status.ts";
-import { oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
+import { mergeSessions, oneLine, parseEntries, summarize, type Summary } from "./usage.ts";
 
 export function resolveSandbox(name: string, io: Io): Sandbox {
 	const all = sandboxes(io);
@@ -385,7 +385,7 @@ function artifactListing(root: string, io: Io): string {
 	].join("\n");
 }
 
-function sessionUsage(
+export function sessionUsage(
 	task: string,
 	io: Io,
 	branch?: string,
@@ -397,13 +397,10 @@ function sessionUsage(
 		(f) => f.path.endsWith(".jsonl") && !f.path.includes("subagent-artifacts/"),
 	);
 	if (!files.length) return undefined;
-	const firstAt = (session: ReturnType<typeof parseEntries>) =>
-		session.find((e) => e.timestamp)?.timestamp ?? "";
 	const seen = new Set<string>();
-	const entries = files
-		.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? "", seen))
-		.sort((a, b) => firstAt(a).localeCompare(firstAt(b)))
-		.flat().filter((entry) =>
+	const entries = mergeSessions(
+		files.map((f) => parseEntries(io.read(`${task}/logs/sessions/${f.path}`) ?? "", seen)),
+	).filter((entry) =>
 			(!from || !!entry.timestamp && Date.parse(entry.timestamp) >= Date.parse(from)) &&
 			(!until || !!entry.timestamp && Date.parse(entry.timestamp) <= Date.parse(until)));
 	const first = entries.find(

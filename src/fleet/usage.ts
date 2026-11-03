@@ -7,6 +7,7 @@ type ToolCall = { type: string; name?: string; arguments?: { path?: string } };
 type Entry = {
 	type: string;
 	timestamp?: string;
+	session?: number;
 	modelId?: string;
 	kind?: string;
 	usage?: Usage;
@@ -147,16 +148,16 @@ function emptyRun(skill: string, model: string, at: string): Run {
 
 export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 	const runs: Run[] = [];
-	let skill = DIRECT;
-	let model = "";
+	const lanes = new Map<number | undefined, { skill: string; model: string; run?: Run }>();
 	let modelChanges = -1;
 	let warm = 0;
 	let misses = 0;
-	const current = () => runs[runs.length - 1];
 
 	for (const entry of entries) {
+		const lane = lanes.get(entry.session) ?? { skill: DIRECT, model: "" };
+		lanes.set(entry.session, lane);
 		if (entry.type === "model_change") {
-			model = entry.modelId ?? model;
+			lane.model = entry.modelId ?? lane.model;
 			modelChanges++;
 			continue;
 		}
@@ -165,20 +166,24 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 			continue;
 		}
 		if (entry.type === "compaction") {
-			if (current()) current().compactions++;
+			const run = lane.run ?? runs.at(-1);
+			if (run) run.compactions++;
 			continue;
 		}
 		if (entry.type === "message" && entry.message?.role === "user") {
-			skill = DIRECT;
+			lane.skill = DIRECT;
 			continue;
 		}
 		if (entry.type !== "message" || entry.message?.role !== "assistant") continue;
 		const usage = entry.message.usage ?? {};
 		const at = entry.timestamp ?? "";
-		skill = skillRead(entry.message.content) ?? skill;
-		model = entry.message.model ?? model;
-		if (!current() || current().skill !== skill || current().model !== model) runs.push(emptyRun(skill, model, at));
-		const run = current();
+		lane.skill = skillRead(entry.message.content) ?? lane.skill;
+		lane.model = entry.message.model ?? lane.model;
+		if (!lane.run || lane.run.skill !== lane.skill || lane.run.model !== lane.model) {
+			lane.run = emptyRun(lane.skill, lane.model, at);
+			runs.push(lane.run);
+		}
+		const run = lane.run;
 		run.finished_at = at;
 		run.requests++;
 		run.input += usage.input ?? 0;
@@ -192,7 +197,7 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 
 	for (const commit of commits) {
 		const run = runs.find((r) => r.started_at <= commit.at && commit.at <= r.finished_at) ?? runs.find((r) => commit.at < r.started_at);
-		(run ?? current())?.commits.push(commit.sha);
+		(run ?? runs.at(-1))?.commits.push(commit.sha);
 	}
 
 	const totals = runs.reduce(
@@ -216,4 +221,17 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 export function oneLine(summary: Summary): string {
 	const t = summary.totals;
 	return `${t.requests} requests, ${summary.runs.length} run(s), cache hit ${Math.round(summary.cache_hit_ratio * 100)}% (${summary.cache_misses} miss), ${t.compactions} compaction(s), ${summary.model_changes} model change(s), cost ${t.cost.toFixed(2)}`;
+}
+
+export function mergeSessions(sessions: Entry[][]): Entry[] {
+	return sessions
+		.flatMap((entries, session) => {
+			let at = 0;
+			return entries.map((entry) => {
+				at = Date.parse(entry.timestamp ?? "") || at;
+				return { entry: { ...entry, session }, at };
+			});
+		})
+		.sort((a, b) => a.at - b.at)
+		.map(({ entry }) => entry);
 }

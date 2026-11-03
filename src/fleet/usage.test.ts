@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { oneLine, parseEntries, summarize } from "./usage.ts";
+import { mergeSessions, oneLine, parseEntries, summarize } from "./usage.ts";
 
 const request = (at: string, usage: Record<string, number>, calls: string[] = [], model = "gpt-5.6-sol") =>
 	JSON.stringify({
@@ -122,4 +122,84 @@ test("usage survives an empty or broken transcript", () => {
 	assert.deepEqual(summarize(parseEntries("")).runs, []);
 	assert.deepEqual(summarize(parseEntries("{not json\n")).runs, []);
 	assert.equal(summarize(parseEntries("")).cache_hit_ratio, 0);
+});
+
+const claudeTurn = (id: string, at: string, skill?: string) =>
+	JSON.stringify({
+		type: "assistant",
+		timestamp: at,
+		message: {
+			id,
+			role: "assistant",
+			model: "claude-opus-5-5",
+			usage: { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 9000 },
+			content: skill ? [{ type: "tool_use", name: "Skill", input: { skill } }] : [],
+		},
+	});
+
+const mainSession = [
+	claudeTurn("m1", "2026-10-30T10:00:00.000Z"),
+	claudeTurn("m2", "2026-10-30T10:20:00.000Z", "babysit-pr"),
+	claudeTurn("m3", "2026-10-30T10:30:00.000Z"),
+].join("\n");
+
+const subAgent = [claudeTurn("s1", "2026-10-30T10:05:00.000Z"), claudeTurn("s2", "2026-10-30T10:15:00.000Z")].join("\n");
+
+const overlapping = (...files: string[]) => {
+	const seen = new Set<string>();
+	return mergeSessions(files.map((file) => parseEntries(file, seen)));
+};
+
+test("runs of overlapping session files follow time and never end before they start", () => {
+	const summary = summarize(overlapping(mainSession, subAgent));
+
+	assert.deepEqual(
+		summary.runs.map((r) => [r.skill, r.started_at, r.finished_at, r.requests]),
+		[
+			["direct", "2026-10-30T10:00:00.000Z", "2026-10-30T10:00:00.000Z", 1],
+			["direct", "2026-10-30T10:05:00.000Z", "2026-10-30T10:15:00.000Z", 2],
+			["babysit-pr", "2026-10-30T10:20:00.000Z", "2026-10-30T10:30:00.000Z", 2],
+		],
+	);
+});
+
+test("a skill read in one session file labels only that file", () => {
+	const reviewer = [claudeTurn("r1", "2026-10-30T10:22:00.000Z", "two-axis-review"), claudeTurn("r2", "2026-10-30T10:25:00.000Z")].join("\n");
+
+	const summary = summarize(overlapping(mainSession, subAgent, reviewer));
+
+	assert.deepEqual(
+		summary.runs.map((r) => [r.skill, r.requests]),
+		[
+			["direct", 1],
+			["direct", 2],
+			["babysit-pr", 2],
+			["two-axis-review", 2],
+		],
+	);
+});
+
+test("merging session files keeps the totals and puts commits in the run live at the time", () => {
+	const summary = summarize(overlapping(mainSession, subAgent), [{ sha: "ccc3333", at: "2026-10-30T10:25:00.000Z" }]);
+
+	assert.equal(summary.totals.requests, 5);
+	assert.equal(summary.totals.input, 5000);
+	assert.equal(summary.totals.cached_input, 45000);
+	assert.equal(summary.totals.output, 500);
+	assert.ok(Math.abs(summary.totals.cost - 5 * (1000 * 4 + 100 * 20 + 9000 * 0.2) / 1_000_000) < 1e-9);
+	assert.deepEqual(summary.runs.map((r) => r.commits), [[], [], ["ccc3333"]]);
+});
+
+test("pi compactions count once each when a later session file compacts before it answers", () => {
+	const resumed = [
+		JSON.stringify({ type: "session", version: 3, id: "s2", timestamp: "2026-09-21T13:00:00Z" }),
+		JSON.stringify({ type: "compaction", timestamp: "2026-09-21T13:00:05Z", summary: "...", firstKeptEntryId: "y", tokensBefore: 60000 }),
+		request("2026-09-21T13:01:00Z", { input: 500, cacheRead: 30000, cost: 0.01 }, [], "gpt-6-astra"),
+	].join("\n");
+
+	const summary = summarize(overlapping(session, resumed));
+
+	assert.equal(summary.totals.compactions, 2);
+	assert.equal(summary.totals.requests, 6);
+	assert.equal(summary.model_changes, 1);
 });

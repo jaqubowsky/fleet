@@ -10,6 +10,7 @@ import {
 	ls,
 	peek,
 	resolveSandbox,
+	sessionUsage,
 	steer,
 } from "./commands.ts";
 import { fakeIo, liveTerminals } from "./fake-io.ts";
@@ -381,6 +382,48 @@ test("down counts each message once when a resumed session repeats the one befor
 	const usage = JSON.parse(io.files[`${task}/logs/usage.json`]);
 	assert.equal(usage.totals.requests, 2);
 	assert.equal(usage.totals.cost, 8);
+});
+
+test("a sandbox's usage reads main and sub-agent transcripts in time order without a down", () => {
+	const turn = (id: string, at: string, skill?: string) =>
+		JSON.stringify({ type: "assistant", timestamp: at, message: { id, role: "assistant", model: "claude-opus-5-5", usage: { input_tokens: 1000, cache_read_input_tokens: 200_000 }, content: skill ? [{ type: "tool_use", name: "Skill", input: { skill } }] : [] } });
+	const dir = `${task}/logs/sessions/projects/-w-webapp`;
+	const folder = { size: 0, mtime: new Date(0), dir: true };
+	const file = { size: 10, mtime: new Date(0), dir: false };
+	const io = fakeIo({
+		[`list ${task}/logs/sessions`]: ["projects"],
+		[`stat ${task}/logs/sessions/projects`]: folder,
+		[`list ${task}/logs/sessions/projects`]: ["-w-webapp"],
+		[`stat ${dir}`]: folder,
+		[`list ${dir}`]: ["main.jsonl", "main"],
+		[`stat ${dir}/main.jsonl`]: file,
+		[`stat ${dir}/main`]: folder,
+		[`list ${dir}/main`]: ["subagents"],
+		[`stat ${dir}/main/subagents`]: folder,
+		[`list ${dir}/main/subagents`]: ["agent-a1.jsonl"],
+		[`stat ${dir}/main/subagents/agent-a1.jsonl`]: file,
+		[`read ${dir}/main.jsonl`]: [
+			turn("m1", "2026-10-30T10:00:00.000Z"),
+			turn("m2", "2026-10-30T10:40:00.000Z", "resolving-merge-conflicts"),
+			turn("m3", "2026-10-30T10:50:00.000Z"),
+		].join("\n"),
+		[`read ${dir}/main/subagents/agent-a1.jsonl`]: [
+			turn("s1", "2026-10-30T10:10:00.000Z"),
+			turn("s2", "2026-10-30T10:30:00.000Z"),
+		].join("\n"),
+	});
+
+	const runs = sessionUsage(task, io)?.runs ?? [];
+
+	assert.deepEqual(
+		runs.map((r) => [r.skill, r.started_at, r.finished_at]),
+		[
+			["direct", "2026-10-30T10:00:00.000Z", "2026-10-30T10:00:00.000Z"],
+			["direct", "2026-10-30T10:10:00.000Z", "2026-10-30T10:30:00.000Z"],
+			["resolving-merge-conflicts", "2026-10-30T10:40:00.000Z", "2026-10-30T10:50:00.000Z"],
+		],
+	);
+	assert.ok(!io.calls.some((c) => c[0] === "write" || c[0] === "sbx"));
 });
 
 test("down excludes a stopped night from running time", () => {
