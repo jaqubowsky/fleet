@@ -80,7 +80,7 @@ Every sandbox agent follows the same run. It works out the task, cuts it into sm
 
 Then a second agent reviews the change whenever it reaches beyond its own feature. It never saw the implementation, so it reads the diff the way a stranger would, for bugs and for code quality. When the change is something users see, the sandbox opens the running app in a real browser and takes one screenshot per acceptance criterion. It records a video walkthrough when you ask for one.
 
-Once the pull request is open, tell the sandbox to babysit it. It answers review comments and fixes red checks, round after round.
+Once the pull request is open, the sandbox babysits it without being told. It answers review comments and fixes red checks, round after round, until the pull request is ready.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/sandbox-to-host-dark.svg">
