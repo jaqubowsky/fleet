@@ -18,6 +18,16 @@ function judgeIo(verdicts: string[]) {
 			[`list ${bench}/runs/b3b`]: ["t1-1"],
 			[`stat ${run}`]: dir,
 			[`stat ${task}/browser`]: dir,
+			[`stat ${task}/logs`]: dir,
+			[`list ${task}/logs`]: ["gate-1", "sessions", "usage.json", "image-stamp"],
+			[`stat ${task}/logs/gate-1`]: dir,
+			[`list ${task}/logs/gate-1`]: ["side.log"],
+			[`stat ${task}/logs/gate-1/side.log`]: { size: 1, mtime: new Date(0), dir: false },
+			[`stat ${task}/logs/sessions`]: dir,
+			[`list ${task}/logs/sessions`]: ["s.jsonl"],
+			[`stat ${task}/logs/sessions/s.jsonl`]: { size: 1, mtime: new Date(0), dir: false },
+			[`stat ${task}/logs/usage.json`]: { size: 1, mtime: new Date(0), dir: false },
+			[`stat ${task}/logs/image-stamp`]: { size: 1, mtime: new Date(0), dir: false },
 			[`stat ${bench}/evals/config`]: dir,
 			[`read ${bench}/tasks/t1/task.json`]: JSON.stringify({ base: "1".repeat(40), reference_head: "f".repeat(40) }),
 			[`read ${bench}/tasks/t1/ticket.md`]: "# Ticket t1\n\nExclude the side.\n",
@@ -29,6 +39,8 @@ function judgeIo(verdicts: string[]) {
 	io.files[`${run}/result.json`] = JSON.stringify({ task: "t1", rep: 1, status: "done", task_dir: "claude-webapp-b3b-t1-1", closing_message: "Done at 9d290c9.", diff: "diff.patch" });
 	io.files[`${run}/diff.patch`] = "diff --git a/run b/run\n";
 	io.files[`${task}/ticket.md`] = "- [x] side excluded, test `side.pg.test.ts`\n";
+	io.files[`${task}/review.md`] = "PASS on 9d290c9\n";
+	io.files[`${task}/logs/gate-1/side.log`] = "5 passed in /runs/b3b/t1-1/claude-webapp-b3b-t1-1\n";
 	const prompts: { cwd: string; args: string[]; env: Record<string, string>; seen: Record<string, string> }[] = [];
 	io.capture = (command, args, opts) => {
 		io.calls.push(["capture", opts.cwd, command, ...args]);
@@ -59,6 +71,8 @@ test("judge reads every run of a tag twice with Fable in a scratch copy that nam
 		"diff.patch": "diff --git a/run b/run\n",
 		"criteria.md": "- [x] side excluded, test `side.pg.test.ts`\n",
 		"closing.md": "Done at 9d290c9.",
+		"review.md": "PASS on 9d290c9\n",
+		"logs/gate-1/side.log": "5 passed in /runs/candidate/t1-1/candidate\n",
 	});
 	const judged = JSON.parse(io.files[`${run}/judge.json`]);
 	assert.equal(judged.verdict, "merge");

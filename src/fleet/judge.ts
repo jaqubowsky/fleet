@@ -18,27 +18,26 @@ const SCHEMA = JSON.stringify({
 	},
 	required: ["verdict", "fix", "reasons", "rubric", "false_claims"],
 });
-const PROMPT = `You review one candidate change for the ticket in ticket.md and decide whether it merges. The files in this directory: ticket.md, the ticket as written; rubric.md, what this ticket's reviewers checked, when present; diff.patch, the change; criteria.md, the acceptance criteria as the author ticked them with their evidence, when present; closing.md, the author's closing message, when present; browser/, walk reports and screenshots, when present.
+const PROMPT = `You review one candidate change for the ticket in ticket.md and decide whether it merges. The files in this directory: ticket.md, the ticket as written; rubric.md, what this ticket's reviewers checked, when present; diff.patch, the change; criteria.md, the acceptance criteria as the author ticked them with their evidence, when present; closing.md, the author's closing message, when present; analysis.md and review.md, the author's analysis and its independent review, when present; browser/, walk reports and screenshots, and logs/, the check logs the criteria cite, when present.
 
-Read the whole diff and open the evidence it names. Judge the behaviour the ticket asks for, never the code's likeness to another solution. Answer merge when it merges as is, merge_after_fix when one small fix would make it mergeable (name it in fix), reject when it should not merge (say why in reasons), and unknown when these files cannot settle it. Rate every rubric item yes, no or unknown with one sentence why. List in false_claims every ticked criterion or claimed check whose evidence is missing or says otherwise.`;
+Read the whole diff and open the evidence it names. The verdict is about the change alone: would a reviewer who reads the ticket and the diff merge it. Judge the behaviour the ticket asks for, never the code's likeness to another solution, and never lower the verdict for evidence, a closing message or answers to the ticket's questions that this directory lacks; those belong in false_claims only where the author claimed them. Answer merge when it merges as is, merge_after_fix when one small fix would make it mergeable (name it in fix), reject when it should not merge (say why in reasons), and unknown when these files cannot settle it. Rate every rubric item yes, no or unknown with one sentence why. List in false_claims every ticked criterion or claimed check whose evidence is missing or says otherwise.`;
 
 type Pass = { verdict?: string; error?: string; cost_usd?: number | null; [field: string]: unknown };
-type Candidate = { files: Record<string, string>; browser?: { from: string; scrub: string[] } };
+type Candidate = { files: Record<string, string>; dirs?: { from: string; to: string; skip?: string[] }[]; scrub?: string[] };
+const BINARY = /\.(png|jpe?g|gif|webp|webm|mp4|pdf|zip|gz|bundle)$/i;
 
 function onePass(candidate: Candidate, config: string, scratch: string, io: Io): Pass {
 	io.remove(scratch);
 	io.mkdir(scratch);
 	try {
 		for (const [name, body] of Object.entries(candidate.files)) io.write(`${scratch}/${name}`, body);
-		if (candidate.browser) {
-			const { from, scrub } = candidate.browser;
+		for (const { from, to, skip = [] } of candidate.dirs ?? []) {
 			for (const { path } of collect(from, "", io, [])) {
-				const target = `${scratch}/browser/${path}`;
-				if (path.endsWith(".md")) io.write(target, scrub.reduce((text, name) => text.replaceAll(name, "candidate"), io.read(`${from}/${path}`) ?? ""));
-				else {
-					io.mkdir(target.slice(0, target.lastIndexOf("/")));
-					io.run("cp", [`${from}/${path}`, target]);
-				}
+				if (skip.some((name) => path === name || path.startsWith(`${name}/`))) continue;
+				const target = `${scratch}/${to}/${path}`;
+				io.mkdir(target.slice(0, target.lastIndexOf("/")));
+				if (BINARY.test(path)) io.run("cp", [`${from}/${path}`, target]);
+				else io.write(target, (candidate.scrub ?? []).reduce((text, name) => text.replaceAll(name, "candidate"), io.read(`${from}/${path}`) ?? ""));
 			}
 		}
 		const out = io.capture("claude", ["-p", PROMPT, "--model", JUDGE, "--setting-sources", "project", "--tools", TOOLS, "--allowedTools", TOOLS, "--no-session-persistence", "--output-format", "json", "--json-schema", SCHEMA], { cwd: scratch, env: { CLAUDE_CONFIG_DIR: config } });
@@ -86,7 +85,15 @@ export async function benchJudge(input: { tag: string; repo: string; passes: num
 		const criteria = io.read(`${task}/ticket.md`);
 		if (criteria !== undefined) files["criteria.md"] = scrub.reduce((text, word) => text.replaceAll(word, "candidate"), criteria);
 		if (result.closing_message) files["closing.md"] = result.closing_message;
-		const judged = judge({ files, browser: io.stat(`${task}/browser`)?.dir ? { from: `${task}/browser`, scrub } : undefined }, input.passes, config, io, next);
+		for (const name of ["analysis.md", "review.md"]) {
+			const body = io.read(`${task}/${name}`);
+			if (body !== undefined) files[name] = scrub.reduce((text, word) => text.replaceAll(word, "candidate"), body);
+		}
+		const dirs = [
+			{ from: `${task}/browser`, to: "browser" },
+			{ from: `${task}/logs`, to: "logs", skip: ["sessions", "activity.jsonl", "usage.json", "memory.json", "image-stamp"] },
+		].filter((one) => io.stat(one.from)?.dir);
+		const judged = judge({ files, dirs, scrub }, input.passes, config, io, next);
 		io.write(`${runs}/${name}/judge.json`, `${JSON.stringify(judged, null, 2)}\n`);
 		io.write(`${runs}/${name}/result.json`, `${JSON.stringify({ ...JSON.parse(body), judge: "judge.json" }, null, 2)}\n`);
 		io.log(`${name}: ${judged.verdict}`);
