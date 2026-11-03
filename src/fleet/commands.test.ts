@@ -160,6 +160,29 @@ test("steer asks for a build first when the image is older than the harness too"
 	assert.match(io.lines[0], /^pi-webapp-web-1 was built from harness 31e3d51, .*fleet build --pi.*down and up again/);
 });
 
+test("steer of a variant sandbox names it stale only when its tag was rebuilt, never because this checkout moved", () => {
+	const answers = {
+		...liveTerminals("claude-webapp-web-1"),
+		"git log -1 --format=%h": "f7e7f1a",
+		"read /home/me/.fleet/config/fleet/claude-webapp-web-1.json": JSON.stringify({
+			version: 1,
+			task: "/home/me/.fleet/tasks/r/claude-webapp-web-1",
+			image: "my-claude:x",
+			repositories: [{ repo: "/w/webapp", name: "acme/webapp", base: "main", baseSha: "3".repeat(40), branch: "web-1", workspace: "/w/webapp", served: "" }],
+		}),
+		"read /home/me/.fleet/tasks/r/claude-webapp-web-1/logs/image-stamp": "a1b2c3d\n",
+	};
+	const variant = { name: "claude-webapp-web-1", status: "running", workspaces: ["/w/webapp"], kind: KINDS.claude };
+	const same = fakeIo({ ...answers, "read /home/me/.fleet/cache/claude/image-stamp-x": "a1b2c3d\n" }, SEATS.claude);
+	const rebuilt = fakeIo({ ...answers, "read /home/me/.fleet/cache/claude/image-stamp-x": "e5f6a7b\n" }, SEATS.claude);
+
+	steer(variant, "go", same, "/root");
+	steer(variant, "go", rebuilt, "/root");
+
+	assert.ok(!same.lines.some((line) => /built from/.test(line)), same.lines.join("\n"));
+	assert.match(rebuilt.lines[0], /^claude-webapp-web-1 was built from harness a1b2c3d, and my-claude:x is now e5f6a7b: take it down and up again/);
+});
+
 test("steer says a sandbox with no recorded stamp came from an unknown harness", () => {
 	const io = fakeIo({
 		...liveTerminals("pi-webapp-web-1"),

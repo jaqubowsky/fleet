@@ -1621,6 +1621,47 @@ test("up records in the task directory the image stamp it created the sandbox fr
 	);
 });
 
+test("up of a variant image runs that tag, records it on the sandbox with its stamp, and never compares it with this checkout", async () => {
+	const io = fakeIo(
+		{
+			...base,
+			"git log -1 --format=%h": "f7e7f1a",
+			"read /home/me/.fleet/cache/claude/image-stamp": "f7e7f1a\n",
+			"read /home/me/.fleet/cache/claude/image-stamp-x": "a1b2c3d\n",
+		},
+		SEATS.claude,
+	);
+
+	await up({ repo, label: "web-1", root: "/root", image: "my-claude:x" }, io);
+
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.equal(run[run.indexOf("-t") + 1], "my-claude:x");
+	assert.equal(run.filter((arg) => arg === "-t").length, 1);
+	assert.equal(JSON.parse(io.files["/home/me/.fleet/config/fleet/claude-webapp-web-1.json"]).image, "my-claude:x");
+	assert.equal(io.files["/home/me/.fleet/tasks/webapp/claude-webapp-web-1/logs/image-stamp"], "a1b2c3d\n");
+	assert.ok(!io.lines.some((line) => /built from/.test(line)), io.lines.join("\n"));
+});
+
+test("up without --image runs v1 and records no tag", async () => {
+	const io = fakeIo(base, SEATS.claude);
+
+	await up({ repo, label: "web-1", root: "/root" }, io);
+
+	const run = io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.equal(run[run.indexOf("-t") + 1], "my-claude:v1");
+	assert.equal(JSON.parse(io.files["/home/me/.fleet/config/fleet/claude-webapp-web-1.json"]).image, undefined);
+});
+
+test("up refuses a variant image for pi, whose tag its kit names, and one of another agent, before anything exists", async () => {
+	const pi = fakeIo(base, SEATS.pi);
+	const claude = fakeIo(base, SEATS.claude);
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root", image: "my-pi:x" }, pi), /pi\/kits\/pi\/spec\.yaml/);
+	await assert.rejects(up({ repo, label: "web-1", root: "/root", image: "my-pi:x" }, claude), /my-claude:<tag>/);
+
+	for (const io of [pi, claude]) assert.ok(!io.calls.some((c) => c[0] === "sbx" && (c[1] === "run" || c[1] === "secret")));
+});
+
 test("up with no image stamp leaves no stamp from an earlier container in the task directory", async () => {
 	const io = fakeIo(base);
 	io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/logs/image-stamp"] = "31e3d51\n";

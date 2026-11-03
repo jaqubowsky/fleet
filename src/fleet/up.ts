@@ -69,6 +69,13 @@ export function staleSandbox(
 	io: Io,
 ): string | undefined {
 	const built = io.read(builtStampPath(taskDir(sandbox.workspaces[0], sandbox.name, io)))?.trim();
+	const image = repositoryManifest(sandbox.name, io)?.image;
+	if (image) {
+		const current = io.read(imageStampPath(sandbox.kind, io, image))?.trim();
+		if (built === current) return undefined;
+		const build = current ? "" : `run ${CLI} build --${sandbox.kind.name} --tag ${image.split(":")[1]}, then `;
+		return `${sandbox.name} was built from ${built ? `harness ${built}` : "an unknown harness"}, and ${image} is now ${current ?? "unbuilt"}: ${build}take it down and up again before its next ticket, since it keeps its image until then`;
+	}
 	const current = harnessStamp(root, sandbox.kind, io);
 	if (built === current) return undefined;
 	const build = staleImage(root, sandbox.kind, io) ? `run ${CLI} build --${sandbox.kind.name}, then ` : "";
@@ -123,6 +130,7 @@ type UpInput = {
 	cpus?: string;
 	model?: string;
 	kind?: AgentName;
+	image?: string;
 	root: string;
 };
 type RepoPlan = {
@@ -261,7 +269,13 @@ export async function up(
 ): Promise<{ sandbox: string; terminal: string }> {
 	const seat = seatOf(io);
 	const kind = KINDS[input.kind ?? seat.name];
-	const stale = staleImage(input.root, kind, io);
+	if (input.image && kind.kitImage)
+		throw new Error(`${kind.name} takes its image tag from the kit's image: in ${kind.kitImage}, and sbx run -t is not known to override it, so --image runs claude containers only`);
+	const repository = kind.image.split(":")[0];
+	if (input.image && !input.image.startsWith(`${repository}:`))
+		throw new Error(`--image takes a ${repository}:<tag> that ${CLI} build --${kind.name} --tag built, not ${input.image}`);
+	const image = input.image ?? kind.image;
+	const stale = image === kind.image ? staleImage(input.root, kind, io) : undefined;
 	if (stale) io.log(stale);
 	input = {
 		...input,
@@ -323,7 +337,7 @@ export async function up(
 		}
 		layoutTask(task, io);
 		create(input, sandbox, profile, kind, io, task);
-		const built = io.read(imageStampPath(kind, io));
+		const built = io.read(imageStampPath(kind, io, image));
 		if (built) io.write(builtStampPath(task), built);
 		else io.remove(builtStampPath(task));
 		logEvent(io, "created", sandbox);
@@ -450,7 +464,7 @@ export async function up(
 				served,
 			}),
 		);
-		saveRepositories(sandbox, task, { version: 1, task, repositories }, io);
+		saveRepositories(sandbox, task, { version: 1, task, ...(input.image ? { image: input.image } : {}), repositories }, io);
 		if (group) {
 			for (const plan of plans.slice(1)) {
 				const otherOverlay = projectOverlay(plan.name, io);
@@ -582,6 +596,7 @@ function create(
 	io.sbx([
 		"run",
 		"-d",
+		...(h.kitImage ? [] : ["-t", input.image ?? h.image]),
 		...h.sbxFlags,
 		"--name",
 		sandbox,

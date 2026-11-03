@@ -16,6 +16,7 @@ type Repository = {
 export type RepositoryManifest = {
 	version: 1;
 	task: string;
+	image?: string;
 	repositories: Repository[];
 };
 

@@ -18,6 +18,7 @@ export type Kind = {
 	prefix: string;
 	image: string;
 	sbxFlags: string[];
+	kitImage?: string;
 	env: string[];
 	agentSpec(root: string): string;
 	agentArgs: string[];
@@ -47,6 +48,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		prefix: "pi-",
 		image: "my-pi:v1",
 		sbxFlags: ["--skills=off"],
+		kitImage: "pi/kits/pi/spec.yaml",
 		env: [],
 		agentSpec: (root) => `${root}/pi/kits/pi`,
 		agentArgs: ["--approve"],
@@ -82,7 +84,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		home: ".claude",
 		prefix: "claude-",
 		image: "my-claude:v1",
-		sbxFlags: ["-t", "my-claude:v1", "--skills=off"],
+		sbxFlags: ["--skills=off"],
 		env: ["FORCE_COLOR=3"],
 		agentSpec: () => "claude",
 		agentArgs: [],
