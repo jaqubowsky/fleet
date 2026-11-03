@@ -272,3 +272,15 @@ test("a steer queued while Claude works files the turns after it as direct", () 
 
 	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["design-tokens", 2], ["direct", 1]]);
 });
+
+test("a commit between two main-session runs goes to the next main run, not a sub-agent's", () => {
+	const sidechain = (line: string) => JSON.stringify({ ...JSON.parse(line), isSidechain: true });
+	const reviewer = [claudeTurn("r1", "2026-10-30T10:05:00.000Z"), claudeTurn("r2", "2026-10-30T10:25:00.000Z")].map(sidechain).join("\n");
+
+	const summary = summarize(overlapping(mainSession, reviewer), [
+		{ sha: "eee5555", at: "2026-10-30T10:03:00.000Z" },
+		{ sha: "fff6666", at: "2026-10-30T10:10:00.000Z" },
+	]);
+
+	assert.deepEqual(summary.runs.map((r) => r.commits), [[], [], ["eee5555", "fff6666"]]);
+});

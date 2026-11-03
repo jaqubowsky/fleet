@@ -206,10 +206,11 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 		if (!(usage.cacheRead ?? 0)) misses++;
 	}
 
+	const mainRuns = runs.filter((r) => !sidechainRuns.has(r));
+	const owners = mainRuns.length ? mainRuns : runs;
 	for (const commit of commits) {
-		const live = runs.filter((r) => r.started_at <= commit.at && commit.at <= r.finished_at);
-		const run = live.find((r) => !sidechainRuns.has(r)) ?? live[0] ?? runs.find((r) => commit.at < r.started_at);
-		(run ?? runs.at(-1))?.commits.push(commit.sha);
+		const run = owners.find((r) => r.started_at <= commit.at && commit.at <= r.finished_at) ?? owners.find((r) => commit.at < r.started_at);
+		(run ?? owners.at(-1))?.commits.push(commit.sha);
 	}
 
 	const totals = runs.reduce(
