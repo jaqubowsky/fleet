@@ -27,7 +27,11 @@ main() {
       continue
     fi
     failed=0
-    if [[ "$pending" == 0 && "$total" != 0 && ( "$state" != pending || "$statuses" == 0 ) ]]; then
+    if [[ "$total" == 0 && "$(gh api "repos/$repo/pulls/$pr" --jq .mergeable_state || true)" == dirty ]]; then
+      echo "head $sha conflicts with its base, so no run will start until the conflict is resolved"
+      exit 3
+    fi
+    if [[ "$pending" == 0 && "$total" != 0&& ( "$state" != pending || "$statuses" == 0 ) ]]; then
       gh run list --repo "$repo" --commit "$sha" --json name,status,conclusion,url
       gh api "repos/$repo/commits/$sha/status" --jq '{state, contexts: [.statuses[] | {context, state}]}'
       exit 0

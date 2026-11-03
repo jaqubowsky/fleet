@@ -18,6 +18,7 @@ function ciWait(
 		contexts?: string;
 		failedReads?: number;
 		interval?: string;
+		mergeable?: string;
 	},
 	...args: string[]
 ) {
@@ -27,6 +28,7 @@ function ciWait(
 		`#!/usr/bin/env bash
 case "$*" in
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
+  *"pulls/7 --jq .mergeable_state"*) echo '${gh.mergeable ?? "clean"}' ;;
   *"run list"*"select"*)
     n=$(( $(cat "${bin}/reads" 2>/dev/null || echo 0) + 1 )); echo "$n" > "${bin}/reads"
     if (( n <= ${gh.failedReads ?? 0} )); then echo 'failed to get runs: EOF' >&2; exit 1; fi
@@ -92,6 +94,14 @@ test("no runs registered yet keeps waiting", () => {
 	const run = ciWait({ pending: "0", total: "0", state: "success" });
 
 	assert.equal(run.status, 1);
+});
+
+test("a head that conflicts with its base ends the wait, since no run will start", () => {
+	const run = ciWait({ pending: "0", total: "0", state: "pending", contexts: "0", mergeable: "dirty" });
+
+	assert.equal(run.status, 3);
+	assert.match(run.out, /conflicts with its base/);
+	assert.doesNotMatch(run.out, /read 2\//);
 });
 
 test("ci settled before the wait starts ends it without sleeping", () => {

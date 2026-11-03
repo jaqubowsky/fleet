@@ -17,7 +17,7 @@ A **round** is one push: wait for the pull request to change, fix everything fix
 ci-wait <owner>/<repo> <number>
 ```
 
-Exit 0 prints the settled runs and commit status of the head. Exit 1, still pending after its last read, and exit 2, a failed read, are findings to report, never a reason for a loop of your own.
+Exit 0 prints the settled runs and commit status of the head. Exit 1, still pending after its last read, exit 2, a failed read, and exit 3, a head that conflicts with its base so no run starts, are findings to report, never a reason for a loop of your own.
 
 {{ci.wait}}
 The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
