@@ -1168,6 +1168,13 @@ test("build of a tag renders that worktree into its own image, tar and stamp, an
 	assert.equal(io.read("/home/me/.fleet/cache/claude/image-stamp"), "31e3d51\n");
 });
 
+test("build from another checkout needs a tag, so v1 and its stamp stay this checkout's", () => {
+	const io = fakeIo({}, SEATS.claude);
+
+	assert.throws(() => build("/root", "claude", io, { source: "/variant" }), /--tag/);
+	assert.ok(!io.calls.some((c) => c[0] === "run" || c[0] === "write"));
+});
+
 test("both agent Dockerfiles select Docker-capable bases and request nested Docker", () => {
 	const pi = readFileSync(
 		new URL("../../pi/sbx/Dockerfile", import.meta.url),

@@ -252,6 +252,8 @@ export function build(
 	io: Io,
 	{ tag, source = root }: { tag?: string; source?: string } = {},
 ): void {
+	if (source !== root && !tag)
+		throw new Error(`a build from ${source} needs --tag, so ${CLI} build without one keeps v1 on this checkout`);
 	const kind = KINDS[name ?? seatOf(io).name];
 	const image = tag ? `${kind.image.split(":")[0]}:${tag}` : kind.image;
 	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;
