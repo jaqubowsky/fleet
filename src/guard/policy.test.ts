@@ -202,6 +202,27 @@ test("a refusal says whether the command named the permissions file or only a va
 	);
 });
 
+test("a variable or glob passes where no value it can take leads to a permissions file", () => {
+	for (const command of [
+		'cd "$TMPDIR" && sort "voice note.txt" | uniq -c',
+		"ls ~/.fleet/tasks/flowMEE/$s/logs/sessions/*/* | sort",
+		"cd /opt/homebrew/Cellar/herdr/*/ && grep -n path share/* | sort",
+		'herdr-app check "$HOME/.config/herdr-app/mods/$m"',
+		'cd /tmp/shots && python3 crop.py "$PWD/$f"',
+		"cd ~ && ls */subagents/* | sort",
+	]) {
+		assert.equal(decide("Bash", { command }, here).decision, "allow", command);
+	}
+	for (const command of [
+		"cp draft.json ~/.fleet/con*/*",
+		"sed -i s/none/auto/ $X/*.json",
+		"cd $DIR && sed -i s/none/auto/ *",
+		'cp draft.json "$HOME/.fleet/config/$f"',
+	]) {
+		assert.equal(decide("Bash", { command }, here).decision, "deny", command);
+	}
+});
+
 test("every spelling of the path to the host's permissions reaches the same refusal", () => {
 	const root = privateRoot();
 	const host = hostAt(root, root, EMPTY_HOME);

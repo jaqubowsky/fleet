@@ -239,13 +239,21 @@ function expanded(text: string): string {
 	);
 }
 
+function knownPath(word: string): string {
+	const tmp = process.env.TMPDIR?.replace(/\/$/, "");
+	const named = word
+		.replace(/^\$\{?HOME\}?(?=\/|$)/, "~")
+		.replace(/^\$\{?PWD\}?(?=\/|$)/, ".");
+	return (tmp ? named.replace(/^\$\{?TMPDIR\}?(?=\/|$)/, tmp) : named).replace(EXPANSION, "*");
+}
+
 function namesProfiles(text: string, host: Host): boolean {
 	const plain = literal(expanded(text));
-	const dirs = ["", ...[...plain.matchAll(CD)].map((match) => match[3])];
+	const dirs = ["", ...[...plain.matchAll(CD)].map((match) => knownPath(match[3]))];
 	return plain.split(/[\s\x60()=:;<>|&]+/).some((word) => {
 		if (word.toLowerCase().includes("repos.json")) return true;
 
-		const pattern = word.replace(EXPANSION, "*");
+		const pattern = knownPath(word);
 		const dir = pattern.slice(0, pattern.lastIndexOf("/") + 1);
 		const name = pattern.slice(dir.length);
 		const glob = new RegExp(
@@ -257,13 +265,8 @@ function namesProfiles(text: string, host: Host): boolean {
 		);
 		if (!/[*?]/.test(name) || !glob.test("repos.json")) return false;
 
-		return (
-			/[*?]/.test(dir) ||
-			dirs.some(
-				(cd) =>
-					/[$*?[{]/.test(cd) ||
-					host.reaches(`${cd}${cd ? "/" : ""}${dir}repos.json`),
-			)
+		return dirs.some((cd) =>
+			host.reaches(/^[/~*]/.test(dir) || !cd ? `${dir}repos.json` : `${cd.replace(/\/$/, "")}/${dir}repos.json`),
 		);
 	});
 }

@@ -40,8 +40,18 @@ export function hostAt(cwd: string, root = ROOT, home = homedir()): Host {
 		};
 		return config.some(ghElsewhere) ? { ...granted, pr: "none" as const, merge: "none" as const } : granted;
 	};
-	const reaches = (path: string) => profiles.some((file) => within(file, resolve(cwd, path.replace(/^(~|\$HOME)(?=\/|$)/, home))));
+	const reaches = (path: string) => {
+		const named = path.replace(/^(~|\$HOME)(?=\/|$)/, home);
+		if (!/[*?]/.test(named)) return profiles.some((file) => within(file, resolve(cwd, named)));
+		const glob = globOf(named.startsWith("*") ? named : resolve(cwd, named));
+		return profiles.some((file) => glob.test(file) || glob.test(real(file)));
+	};
 	return { levels, reaches };
+}
+
+function globOf(pattern: string): RegExp {
+	const source = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+	return new RegExp(`^${source}$`, "i");
 }
 
 export function within(path: string, root: string): boolean {
