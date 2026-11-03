@@ -93,6 +93,25 @@ test("a Claude transcript is priced from its tokens", () => {
 	assert.ok(Math.abs(summary.totals.cost - (4 + 2 + 0.2 + 2.5 + 4 + 2)) < 1e-9, String(summary.totals.cost));
 });
 
+const haikuTurn = (usage: object) =>
+	JSON.stringify({ type: "assistant", timestamp: "2026-11-03T12:00:00Z", message: { id: "h", role: "assistant", model: "claude-haiku-5-5", usage, content: [] } });
+
+test("a Haiku 5.5 prompt of 100K tokens is priced on the lower card", () => {
+	const transcript = haikuTurn({ input_tokens: 4, output_tokens: 1000, cache_read_input_tokens: 99_996 });
+
+	const summary = summarize(parseEntries(transcript));
+
+	assert.ok(Math.abs(summary.totals.cost - 0.00150036) < 1e-12, String(summary.totals.cost));
+});
+
+test("a Haiku 5.5 prompt one token past 100K is priced on the higher card", () => {
+	const transcript = haikuTurn({ input_tokens: 1, output_tokens: 1000, cache_read_input_tokens: 99_996, cache_creation_input_tokens: 4 });
+
+	const summary = summarize(parseEntries(transcript));
+
+	assert.ok(Math.abs(summary.totals.cost - 0.0075028) < 1e-12, String(summary.totals.cost));
+});
+
 test("an advisor's answer inside a Claude turn is priced at the advisor's model", () => {
 	const transcript = JSON.stringify({
 		type: "assistant",

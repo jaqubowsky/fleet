@@ -59,20 +59,25 @@ type ClaudeUsage = {
 	iterations?: (ClaudeUsage & { type?: string; model?: string })[];
 };
 
-const CLAUDE_USD_PER_MTOK: Record<string, { input: number; output: number; cacheRead: number }> = {
+type Card = { input: number; output: number; cacheRead: number };
+
+const CLAUDE_USD_PER_MTOK: Record<string, Card & { above?: Card & { tokens: number } }> = {
 	"claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
 	"claude-fable-5": { input: 10, output: 50, cacheRead: 1 },
 	"claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2 },
 	"claude-opus-5": { input: 5, output: 25, cacheRead: 0.5 },
 	"claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.2 },
 	"claude-sonnet-5": { input: 2, output: 10, cacheRead: 0.2 },
+	"claude-haiku-5-5": { input: 0.1, output: 0.5, cacheRead: 0.01, above: { tokens: 100_000, input: 0.5, output: 2.5, cacheRead: 0.05 } },
 	"claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1 },
 };
 
 function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
-	const price = CLAUDE_USD_PER_MTOK[(model ?? "").replace(/\[.*\]$/, "")];
-	if (!price) return 0;
+	const card = CLAUDE_USD_PER_MTOK[(model ?? "").replace(/\[.*\]$/, "")];
+	if (!card) return 0;
 	const written = usage.cache_creation_input_tokens ?? 0;
+	const prompt = (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + written;
+	const price = card.above && prompt > card.above.tokens ? card.above : card;
 	const hour = usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
 	const tokens =
 		(usage.input_tokens ?? 0) * price.input +
