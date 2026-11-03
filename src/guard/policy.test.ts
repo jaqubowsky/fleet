@@ -214,6 +214,7 @@ test("a variable or glob passes where no value it can take leads to a permission
 		'herdr-app check "$HOME/.config/herdr-app/mods/$m"',
 		'cd /tmp/shots && python3 crop.py "$PWD/$f"',
 		"cd ~ && ls */subagents/* | sort",
+		"mkdir -p /tmp/dl && cd $_ && curl -o a.pdf https://example.com/a > b.md",
 	]) {
 		assert.equal(decide("Bash", { command }, here).decision, "allow", command);
 	}
@@ -222,6 +223,8 @@ test("a variable or glob passes where no value it can take leads to a permission
 		"sed -i s/none/auto/ $X/*.json",
 		"cd $DIR && sed -i s/none/auto/ *",
 		'cp draft.json "$HOME/.fleet/config/$f"',
+		"ls host && cd $_ && sed -i s/none/auto/ *",
+		"ls host > out && cd $_ && sed -i s/none/auto/ *",
 	]) {
 		assert.equal(decide("Bash", { command }, here).decision, "deny", command);
 	}

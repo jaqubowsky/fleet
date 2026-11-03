@@ -192,6 +192,7 @@ const LEAD_END =
 	/&&|\|\||[|&(){}'"`]|\$\(|\b(if|then|else|elif|fi|for|select|while|until|do|done|case|esac|function|coproc)\b/;
 const ASSIGNMENT = /(?<=^|[;\n])[ \t]*(\w+)=([\w./:@%+,~-]+)[ \t]*(?=[;\n]|$)/g;
 const CD = /(^|[;&|\n(]|&&)\s*(cd|pushd)\s+([^\s;&|)]+)/g;
+const CD_LAST_ARGUMENT = /(?<=[^\s<>]\s+)([^\s;&|<>$`'"(){}]+)(\s*&&\s*(?:cd|pushd)\s+)\$_(?!\w)/g;
 
 const RECURSIVE_RM = command(
 	String.raw`(\S*/)?rm\s+(-[A-Za-z0-9]*[rR][A-Za-z0-9]*\s+)*-?[A-Za-z0-9]*[rR]`,
@@ -223,7 +224,8 @@ function leadingStatements(text: string): string {
 	return text.slice(0, last + 1);
 }
 
-function expanded(text: string): string {
+function expanded(command: string): string {
+	const text = command.replace(CD_LAST_ARGUMENT, "$1$2$1");
 	return [...leadingStatements(text).matchAll(ASSIGNMENT)].reduceRight(
 		(done, { 0: assignment, 1: name, 2: value, index }) => {
 			const reference = new RegExp(String.raw`\$${name}\b|\$\{${name}\}`, "g");
