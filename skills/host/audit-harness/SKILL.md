@@ -1,6 +1,6 @@
 ---
 name: audit-harness
-description: 'Review a coding session for friction, mistakes and slack. Suggest the smallest harness changes, backed by evidence. Report only; nothing is edited.'
+description: 'Review a coding session for friction, mistakes and slack. Suggest the smallest harness changes, each with evidence and the check that would settle it. Report only; nothing is edited.'
 disable-model-invocation: true
 ---
 
@@ -10,11 +10,11 @@ Improve the agent's environment at `{{root}}`, not its compliance score. End wit
 
 ## 1. Read the session
 
-Use the session the user names, or the current session by default. Session stores and extraction commands are in [references/extract.md](references/extract.md). Include child transcripts when the problem occurred in delegated work. Read enough surrounding messages to establish the task, outcome and what led to the problem.
+Use the session the user names, or the current session by default, with its child transcripts when the problem occurred in delegated work. Session stores and extraction commands are in [references/extract.md](references/extract.md). A bench run, `~/.fleet/bench/runs/<tag>/<task>-<rep>/`, is a session too: its `result.json` counts the screenshots read and browser runs and its `usage.json` the requests and tokens, so two tags show what a variant changed.
 
 ## 2. Find friction
 
-Look for mistakes, repeated commands, tool errors, user corrections, slow navigation, missing information and oversized tool results. Include instructions that were followed but produced a bad outcome, and the person's own habits that cost turns, such as a setting on the Mac that stops the work. Each candidate needs a quote and source line, or a measured tool-call count.
+Look for mistakes, repeated commands, tool errors, user corrections, slow navigation, missing information and oversized tool results. Include instructions that were followed but produced a bad outcome, and the person's own habits that cost turns, such as a setting on the Mac that stops the work.
 
 ## 3. Find slack
 
@@ -26,19 +26,20 @@ Read the same runs for what the environment makes the agent and the person carry
 - Work the person did that the agent could have done, and a decision the agent took that was the person's
 - Skills the runs need together that never name each other
 
-Each candidate needs a quote and source line, a count or a size. If neither step finds a candidate, say so and stop.
+Each candidate of steps 2 and 3 needs a quote and source line, a count or a size. If neither step finds one, say so and stop.
 
 ## 4. Find the smallest fix
 
-For each candidate, inspect the relevant harness source and check whether a solution already exists. Consult historical instructions only when the finding depends on what the session actually carried.
+For each candidate, inspect the harness source and check whether a solution already exists; read the instructions the session carried when the finding depends on them. Mechanical errors belong in deterministic checks: inspect the project's declared checks, hooks and CI first, since an existing check that was not run may be the cause. Prefer removing the cause over adding instructions or tooling. Check shared sources and both `pi/` and `claude/`; state when a proposal applies to only one. Label an uncertain cause as unverified.
 
-- Mechanical errors belong in deterministic checks. Inspect the project's declared checks, hooks and CI before proposing another one; an existing check that was not run may be the cause.
-- Navigation and information gaps may need a pointer or access to an existing source.
-- Instructions needing judgement may need deletion or clarification rather than another rule.
-- Expensive tool calls may need narrower queries or output.
+A new or reworded rule is a hypothesis: added lines often leave the behaviour unchanged, and some add work on other tasks. Name the cheapest check that could show the fix does nothing:
 
-Prefer removing the cause over adding instructions or tooling. Check shared sources and both `pi/` and `claude/`; state when a proposal applies to only one. A candidate is ready when its evidence, cause, smallest fix and cost are known. Label an uncertain cause as unverified.
+- One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `docs/adr/018-micro-evals.md` says. It counts only if the current rules fail it in half its reps or more
+- Behaviour spread over a ticket, such as repeat walks, screenshots, requests or needless code: `fleet bench run` of the variant against the baseline tag on the seeds that reach it, or a line in the judge's rubric when no count sees it
+- A deletion: the rule's `guard` case on a variant without the rule
+
+A candidate is ready when its evidence, cause, smallest fix, check and cost are known.
 
 ## 5. Report
 
-Use [references/report.md](references/report.md). Order friction proposals by impact on safety and task completion, then wasted work, and slack by what it saves. Merge candidates with the same cause. Show the report in the conversation. Save it only if the user asks, in the artifacts directory rather than the working tree. Stop without editing the harness.
+Use [references/report.md](references/report.md). Order friction proposals by impact on safety and task completion, then wasted work, and slack by what it saves. Merge candidates with the same cause. Show the report in the conversation and stop without editing the harness.
