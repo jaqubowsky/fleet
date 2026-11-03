@@ -18,7 +18,7 @@ Cause: <what in the environment caused the problem; mark uncertainty>.
 
 Fix: <smallest concrete change, its location and applicability to pi and Claude>.
 
-Check: <the eval case or bench count that settles it, and what the current rules score there when measured>.
+Check: <the eval case or bench count that settles it, and what the current rules score there when measured; for a check that does not exist yet, its draft: case kind, source line, prompt, expectations and control, or the bench seed and what its grader counts>.
 
 Cost: <implementation or maintenance cost and what the change gives up>.
 

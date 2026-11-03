@@ -10,6 +10,7 @@ Every store at once, by modification time and size; filter on the day, or grep a
 setopt nullglob
 stat -f '%Sm %z %N' -t '%F_%T' ~/.claude/projects/*/*.jsonl ~/.pi/agent/sessions/*/*.jsonl \
   ~/.fleet/tasks/*/*/logs/sessions/*.jsonl ~/.fleet/tasks/*/*/logs/sessions/projects/*/*.jsonl \
+  ~/.fleet/bench/runs/*/*/*/logs/sessions/projects/*/*.jsonl \
   | awk '$1 ~ /^<YYYY-MM-DD>/' | sort
 ```
 

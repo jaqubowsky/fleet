@@ -34,12 +34,12 @@ For each candidate, inspect the harness source and check whether a solution alre
 
 A new or reworded rule is a hypothesis: added lines often leave the behaviour unchanged, and some add work on other tasks. Name the cheapest check that could show the fix does nothing:
 
-- One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `docs/adr/018-micro-evals.md` says. It counts only if the current rules fail it in half its reps or more
+- One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `{{root}}/docs/adr/018-micro-evals.md` says; the runner renders the claude container rules only, so a pi-only change takes a bench run. It counts only if the current rules fail it in half its reps or more
 - Behaviour spread over a ticket, such as repeat walks, screenshots, requests or needless code: `fleet bench run` of the variant against the baseline tag on the seeds that reach it, or a line in the judge's rubric when no count sees it
 - A deletion: the rule's `guard` case on a variant without the rule
 
-A candidate is ready when its evidence, cause, smallest fix, check and cost are known.
+A check that does not exist yet is part of the proposal: draft the eval case, its source line, prompt, expectations and control, or name the merged ticket that would become a bench seed and what its grader counts. A candidate is ready when its evidence, cause, smallest fix, check and cost are known.
 
 ## 5. Report
 
-Use [references/report.md](references/report.md). Order friction proposals by impact on safety and task completion, then wasted work, and slack by what it saves. Merge candidates with the same cause. Show the report in the conversation and stop without editing the harness.
+Use [references/report.md](references/report.md). Order friction proposals by impact on safety and task completion, then wasted work, and slack by what it saves. Merge candidates with the same cause. Show the report in the conversation, save it only if the user asks, and stop without editing the harness.
