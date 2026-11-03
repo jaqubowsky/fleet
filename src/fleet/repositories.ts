@@ -11,6 +11,7 @@ type Repository = {
 	branch: string;
 	workspace: string;
 	served: string;
+	frozen?: true;
 };
 
 export type RepositoryManifest = {

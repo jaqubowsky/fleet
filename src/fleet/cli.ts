@@ -36,7 +36,7 @@ const io = realIo(
 );
 
 const usage = `usage:
-  ${CLI} up <label> [--repo <path> ...] [--pi|--claude] [--branch <name>] [--base <name> ...] [--model <model>] [--image my-claude:<tag>] [--memory 8g] [--cpus 4]   clone one repo, or repeat --repo for N private repos (first primary, additional clones imported via Git bundles); each takes its own fetched origin base and branch, one --base applies to all and one --base per repo selects bases in --repo order, --branch names a branch in each, never the default; bind each profile, lay out the task directory with permissions.md and, when ~/.fleet/config/projects holds an overlay, project.md, start the container's agent in a Herdr app tab, the seat's own without --pi|--claude, send nothing; --image runs a tag fleet build --tag built and records it on the sandbox, for claude only since pi's kit names its tag
+  ${CLI} up <label> [--repo <path> ...] [--pi|--claude] [--branch <name>] [--base <name> ...] [--model <model>] [--image my-claude:<tag>] [--base-commit <sha>] [--memory 8g] [--cpus 4]   clone one repo, or repeat --repo for N private repos (first primary, additional clones imported via Git bundles); each takes its own fetched origin base and branch, one --base applies to all and one --base per repo selects bases in --repo order, --branch names a branch in each, never the default; bind each profile, lay out the task directory with permissions.md and, when ~/.fleet/config/projects holds an overlay, project.md, start the container's agent in a Herdr app tab, the seat's own without --pi|--claude, send nothing; --image runs a tag fleet build --tag built and records it on the sandbox, for claude only since pi's kit names its tag; --base-commit starts a new branch at that commit of the base branch and records the base as frozen
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
   ${CLI} profile [<repo>] [--apply [--brief]]         what ~/.fleet/config/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.fleet/config/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell; --brief prints only what --apply changed, and nothing outside a GitHub checkout, for a session start
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
@@ -152,6 +152,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			"base",
 			"model",
 			"image",
+			"base-commit",
 			"memory",
 			"cpus",
 			"pi",
@@ -179,6 +180,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 				bases: Array.isArray(bases) ? bases : undefined,
 				model: opts.model as string | undefined,
 				image: opts.image as string | undefined,
+				baseCommit: opts["base-commit"] as string | undefined,
 				memory: opts.memory as string | undefined,
 				cpus: opts.cpus as string | undefined,
 				root,

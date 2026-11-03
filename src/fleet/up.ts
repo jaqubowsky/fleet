@@ -112,12 +112,18 @@ export const TICKET_STUB =
 export const SWITCH_TO_BRANCH = `cd "$WORKSPACE_DIR" || exit 1
 git fetch --quiet origin "$2" || { echo "cannot refresh origin/$2; refusing stale base" >&2; exit 1; }
 base_sha="$(git rev-parse 'FETCH_HEAD^{commit}')" || exit 1
+from="origin/$2"
+if [ -n "\${3:-}" ]; then
+git cat-file -e "$3^{commit}" 2>/dev/null || git fetch --quiet origin "$3" || { echo "cannot fetch $3" >&2; exit 1; }
+git merge-base --is-ancestor "$3" "$base_sha" || { echo "$3 is not on origin/$2; refusing a frozen base off the base branch" >&2; exit 1; }
+base_sha="$(git rev-parse "$3^{commit}")" || exit 1; from="$base_sha, frozen on origin/$2"; fi
 git update-ref refs/fleet/base "$base_sha" || exit 1
 if git fetch --quiet origin "$1" 2>/dev/null; then remote_branch="$(git rev-parse 'FETCH_HEAD^{commit}')" || exit 1
 else git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; status=$?; [ "$status" -eq 2 ] || { echo "cannot check origin/$1; refusing stale branch" >&2; exit 1; }; remote_branch=""; fi
+if [ -n "\${3:-}" ] && { [ -n "$remote_branch" ] || git show-ref --verify --quiet "refs/heads/$1"; }; then echo "$1 already exists; a frozen base starts a new branch" >&2; exit 1; fi
 if [ -n "$remote_branch" ]; then git switch --quiet -C "$1" "$remote_branch" && echo "$1 continues the existing branch origin/$1"
 elif git switch --quiet "$1" 2>/dev/null; then echo "$1 continues the local branch $1"
-else git switch --quiet --no-track -c "$1" "$base_sha" && echo "$1 is new from origin/$2"; fi`;
+else git switch --quiet --no-track -c "$1" "$base_sha" && echo "$1 is new from $from"; fi`;
 
 type UpInput = {
 	repo: string;
@@ -131,6 +137,7 @@ type UpInput = {
 	model?: string;
 	kind?: AgentName;
 	image?: string;
+	baseCommit?: string;
 	root: string;
 };
 type RepoPlan = {
@@ -275,6 +282,10 @@ export async function up(
 	if (input.image && !input.image.startsWith(`${repository}:`))
 		throw new Error(`--image takes a ${repository}:<tag> that ${CLI} build --${kind.name} --tag built, not ${input.image}`);
 	const image = input.image ?? kind.image;
+	if (input.baseCommit && !/^[0-9a-f]{7,64}$/.test(input.baseCommit))
+		throw new Error(`--base-commit takes a commit SHA of the base branch, not ${input.baseCommit}`);
+	if (input.baseCommit && input.repos?.length)
+		throw new Error("--base-commit freezes the base of one repository; leave out --repo for the others");
 	const stale = image === kind.image ? staleImage(input.root, kind, io) : undefined;
 	if (stale) io.log(stale);
 	input = {
@@ -365,7 +376,7 @@ export async function up(
 					{ quiet: true },
 				);
 			for (const line of io
-				.sbx(["exec", sandbox, "sh", "-c", SWITCH_TO_BRANCH, "--", branch, base], {
+				.sbx(["exec", sandbox, "sh", "-c", SWITCH_TO_BRANCH, "--", branch, base, ...(input.baseCommit ? [input.baseCommit] : [])], {
 					quiet: true,
 				})
 				.split("\n")
@@ -462,6 +473,7 @@ export async function up(
 				branch,
 				workspace,
 				served,
+				...(input.baseCommit ? { frozen: true as const } : {}),
 			}),
 		);
 		saveRepositories(sandbox, task, { version: 1, task, ...(input.image ? { image: input.image } : {}), repositories }, io);

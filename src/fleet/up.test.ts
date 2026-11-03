@@ -1255,6 +1255,13 @@ const branchScript = (workspace: string, branch: string) =>
 		encoding: "utf8",
 	}).trim();
 
+const frozenScript = (workspace: string, branch: string, sha: string) =>
+	execFileSync("sh", ["-c", SWITCH_TO_BRANCH, "--", branch, "main", sha], {
+		env: { ...process.env, WORKSPACE_DIR: workspace },
+		encoding: "utf8",
+		stdio: ["ignore", "pipe", "pipe"],
+	}).trim();
+
 const pushTicket = (
 	seed: string,
 	git: (dir: string, ...args: string[]) => string,
@@ -1427,6 +1434,57 @@ test("up refuses a stale local base when the remote base cannot be fetched", (t)
 	assert.throws(() =>
 		git(workspace, "show-ref", "--verify", "refs/heads/ticket/05"),
 	);
+});
+
+test("up --base-commit starts a new branch at that commit of the base, newer base commits left out", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+	const frozen = git(seed, "rev-parse", "HEAD");
+	git(seed, "commit", "--quiet", "--allow-empty", "-m", "the reference fix");
+	git(seed, "push", "--quiet", "origin", "main");
+
+	const out = frozenScript(workspace, "bench-1", frozen);
+
+	assert.equal(git(workspace, "rev-parse", "HEAD"), frozen);
+	assert.equal(git(workspace, "rev-parse", "refs/fleet/base"), frozen);
+	assert.equal(git(workspace, "branch", "--show-current"), "bench-1");
+	assert.match(out, new RegExp(`^bench-1 is new from ${frozen}, frozen on origin/main$`, "m"));
+});
+
+test("up --base-commit refuses a commit that is not on the base branch", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+	git(seed, "switch", "--quiet", "-c", "side");
+	git(seed, "commit", "--quiet", "--allow-empty", "-m", "off the base");
+	git(seed, "push", "--quiet", "origin", "side");
+	const side = git(seed, "rev-parse", "HEAD");
+
+	assert.throws(() => frozenScript(workspace, "bench-1", side), (error: Error) => /is not on origin\/main/.test(error.message));
+	assert.throws(() => git(workspace, "show-ref", "--verify", "refs/heads/bench-1"));
+});
+
+test("up --base-commit refuses a branch that already exists, locally or on origin", (t) => {
+	const { seed, workspace, git } = originWithClone(t);
+	const frozen = git(seed, "rev-parse", "HEAD");
+	pushTicket(seed, git);
+	git(workspace, "branch", "local-work");
+
+	for (const branch of ["ticket/04", "local-work"])
+		assert.throws(() => frozenScript(workspace, branch, frozen), (error: Error) => /already exists/.test(error.message), branch);
+});
+
+test("up --base-commit hands the commit to the branch switch and records the base as frozen", async () => {
+	const io = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root", baseCommit: "3".repeat(40) }, io);
+
+	const switched = io.calls.find((c) => c[0] === "sbx" && c[5] === SWITCH_TO_BRANCH)!;
+	assert.deepEqual(switched.slice(7), ["web-1", "main", "3".repeat(40)]);
+	const [primary] = JSON.parse(io.files["/home/me/.fleet/config/fleet/pi-webapp-web-1.json"]).repositories;
+	assert.deepEqual([primary.baseSha, primary.frozen], ["3".repeat(40), true]);
+});
+
+test("up --base-commit refuses a value that is no commit SHA, and a second repository", async () => {
+	await assert.rejects(up({ repo, label: "web-1", root: "/root", baseCommit: "main" }, fakeIo(base)), /commit SHA/);
+	await assert.rejects(up({ repo, repos: ["/w/api"], label: "web-1", root: "/root", baseCommit: "3".repeat(40) }, fakeIo(base)), /one repository/);
 });
 
 test("up logs which start the branch took", async () => {
