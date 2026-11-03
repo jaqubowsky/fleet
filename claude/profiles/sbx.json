@@ -58,7 +58,7 @@
   },
   "model": "{{models.sbx}}",
   "effortLevel": "{{thinking.sbx}}",
-  "advisorModel": "claude-opus-5-5",
+  "advisorModel": "{{models.advisor}}",
   "autoCompactEnabled": true,
   "remoteControlAtStartup": false,
   "autoMemoryEnabled": false,

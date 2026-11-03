@@ -271,6 +271,26 @@ test("claude agents and container settings take their seat's model and effort", 
 	});
 });
 
+test("the container's advisor follows the advisor seat of models.json", () => {
+	const io = fakeIo(
+		sources({
+			"read /root/claude/profiles/models.json": JSON.stringify({
+				seats: {
+					sbx: { model: "anthropic/claude-haiku-5-5", thinking: "medium" },
+					advisor: { model: "anthropic/claude-sonnet-5-5", thinking: "medium" },
+				},
+			}),
+			"read /root/claude/profiles/sbx.json": readFileSync(join(root, "claude/profiles/sbx.json"), "utf8"),
+			"read /root/src/compaction.json": readFileSync(join(root, "src/compaction.json"), "utf8"),
+		}),
+		SEATS.claude,
+	);
+
+	render({ root: "/root", agent: "claude", seat: "container", out: "/stage" }, io);
+
+	assert.equal(JSON.parse(io.files["/stage/context/settings.json"]!).advisorModel, "claude-sonnet-5-5");
+});
+
 test("a skill, rule or agent gone from the sources is gone from the home after the next render", () => {
 	const io = fakeIo(sources(), SEATS.claude);
 	io.files["/home/skills/retired/SKILL.md"] = "old";
