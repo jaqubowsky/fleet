@@ -1175,6 +1175,17 @@ test("build from another checkout needs a tag, so v1 and its stamp stay this che
 	assert.ok(!io.calls.some((c) => c[0] === "run" || c[0] === "write"));
 });
 
+test("build from another checkout refuses uncommitted changes, naming the files, since a variant is one commit", () => {
+	const io = fakeIo({ "git /variant status --porcelain": " M rules/core.md\n?? skills/new/SKILL.md" }, SEATS.claude);
+
+	assert.throws(
+		() => build("/root", "claude", io, { tag: "x", source: "/variant" }),
+		(error: Error) =>
+			/rules\/core\.md/.test(error.message) && /skills\/new\/SKILL\.md/.test(error.message) && /one commit/.test(error.message) && /ADR 017/.test(error.message),
+	);
+	assert.ok(!io.calls.some((c) => c[0] === "run" || c[0] === "write"));
+});
+
 test("both agent Dockerfiles select Docker-capable bases and request nested Docker", () => {
 	const pi = readFileSync(
 		new URL("../../pi/sbx/Dockerfile", import.meta.url),

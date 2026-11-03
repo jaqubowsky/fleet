@@ -16,7 +16,7 @@ import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
 import { fleetTerminals, statusOf, terminalOf } from "./terminals.ts";
-import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
+import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox, uncommittedImageSources } from "./up.ts";
 import {
 	checkoutProbe,
 	commitsOf,
@@ -255,6 +255,11 @@ export function build(
 	if (source !== root && !tag)
 		throw new Error(`a build from ${source} needs --tag, so ${CLI} build without one keeps v1 on this checkout`);
 	const kind = KINDS[name ?? seatOf(io).name];
+	const uncommitted = source === root ? "" : uncommittedImageSources(source, kind, io);
+	if (uncommitted)
+		throw new Error(
+			`${source} has uncommitted changes in ${uncommitted.split("\n").map((line) => line.slice(3)).join(", ")}; a variant is one commit (ADR 017), so commit them before ${CLI} build --tag`,
+		);
 	const image = tag ? `${kind.image.split(":")[0]}:${tag}` : kind.image;
 	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;
 	render({ root: source, agent: kind.name, seat: "container", out: stage }, io);

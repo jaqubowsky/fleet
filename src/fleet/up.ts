@@ -36,10 +36,13 @@ export function imageStampPath(kind: Kind, io: Io, image = kind.image): string {
 	return image === kind.image ? stamp : `${stamp}-${image.split(":")[1]}`;
 }
 
+export function uncommittedImageSources(root: string, kind: Kind, io: Io): string {
+	return io.git(["status", "--porcelain", "--", ...IMAGE_SOURCES, kind.name], root);
+}
+
 export function harnessStamp(root: string, kind: Kind, io: Io): string {
-	const paths = [...IMAGE_SOURCES, kind.name];
-	const commit = io.git(["log", "-1", "--format=%h", "--", ...paths], root);
-	return io.git(["status", "--porcelain", "--", ...paths], root)
+	const commit = io.git(["log", "-1", "--format=%h", "--", ...IMAGE_SOURCES, kind.name], root);
+	return uncommittedImageSources(root, kind, io)
 		? `${commit} with uncommitted changes`
 		: commit;
 }
