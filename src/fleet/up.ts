@@ -284,8 +284,6 @@ export async function up(
 ): Promise<{ sandbox: string; terminal: string }> {
 	const seat = seatOf(io);
 	const kind = KINDS[input.kind ?? seat.name];
-	if (input.image && kind.kitImage)
-		throw new Error(`${kind.name} takes its image tag from the kit's image: in ${kind.kitImage}, and sbx run -t is not known to override it, so --image runs claude containers only`);
 	const repository = kind.image.split(":")[0];
 	if (input.image && !input.image.startsWith(`${repository}:`))
 		throw new Error(`--image takes a ${repository}:<tag> that ${CLI} build --${kind.name} --tag built, not ${input.image}`);
@@ -621,7 +619,7 @@ function create(
 	io.sbx([
 		"run",
 		"-d",
-		...(h.kitImage ? [] : ["-t", input.image ?? h.image]),
+		...(h.kitImage && !input.image ? [] : ["-t", input.image ?? h.image]),
 		...h.sbxFlags,
 		"--name",
 		sandbox,

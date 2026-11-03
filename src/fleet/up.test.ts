@@ -1755,14 +1755,24 @@ test("up without --image runs v1 and records no tag", async () => {
 	assert.equal(JSON.parse(io.files["/home/me/.fleet/config/fleet/claude-webapp-web-1.json"]).image, undefined);
 });
 
-test("up refuses a variant image for pi, whose tag its kit names, and one of another agent, before anything exists", async () => {
-	const pi = fakeIo(base, SEATS.pi);
+test("a pi variant image overrides the kit's image, and pi without one keeps the kit's", async () => {
+	const variant = fakeIo(base, SEATS.pi);
+	const kit = fakeIo(base, SEATS.pi);
+
+	await up({ repo, label: "web-1", root: "/root", image: "my-pi:x" }, variant);
+	await up({ repo, label: "web-1", root: "/root" }, kit);
+
+	const run = (io: ReturnType<typeof fakeIo>) => io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	assert.equal(run(variant)[run(variant).indexOf("-t") + 1], "my-pi:x");
+	assert.ok(!run(kit).includes("-t"), run(kit).join(" "));
+});
+
+test("up refuses a variant image of another agent before anything exists", async () => {
 	const claude = fakeIo(base, SEATS.claude);
 
-	await assert.rejects(up({ repo, label: "web-1", root: "/root", image: "my-pi:x" }, pi), /pi\/kits\/pi\/spec\.yaml/);
 	await assert.rejects(up({ repo, label: "web-1", root: "/root", image: "my-pi:x" }, claude), /my-claude:<tag>/);
 
-	for (const io of [pi, claude]) assert.ok(!io.calls.some((c) => c[0] === "sbx" && (c[1] === "run" || c[1] === "secret")));
+	assert.ok(!claude.calls.some((c) => c[0] === "sbx" && (c[1] === "run" || c[1] === "secret")));
 });
 
 test("up with no image stamp leaves no stamp from an earlier container in the task directory", async () => {
