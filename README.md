@@ -137,6 +137,7 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet tokens [set <name>]` | lists the GitHub tokens the profiles name and marks the ones missing from the macOS keychain; `set` asks for one and stores it | with `set`: one keychain item under `fleet-gh`. Run it yourself; the guard refuses it to agents |
 | `fleet build [--pi\|--claude] [--tag <variant>]` | rebuilds a sandbox image, or builds a variant beside it | the local sbx image; with `--tag`, a `my-<agent>:<variant>` image and its own stamp, leaving `v1` alone |
 | `fleet bench run --image <tag> --tasks <id,...>` | reruns frozen past tickets from `~/.fleet/bench/tasks` under a variant image, as `docs/adr/017-internal-benchmark.md` describes | one stopped sandbox per task and rep, and its result folder under `~/.fleet/bench/runs/`; prints the `fleet down --force` list for you |
+| `fleet eval run --variant <root> --cases <id,...>` and `fleet eval compare <a> <b>` | runs one rule's decision-point cases from `~/.fleet/bench/evals/cases` as fresh read-only `claude -p` turns under a committed harness checkout, then compares two variants' pass counts, as `docs/adr/018-micro-evals.md` describes | the variant's rules in `~/.fleet/bench/evals/config` and a result folder per case under `~/.fleet/bench/evals/runs/` |
 | `fleet init <repo>` | lays out `AGENTS.md` and `spec/vision.md` | adds those files to the repository, never overwriting one |
 | `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
 
