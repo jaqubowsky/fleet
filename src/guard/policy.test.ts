@@ -202,7 +202,11 @@ test("a refusal says whether the command named the permissions file or only a va
 	);
 });
 
-test("a variable or glob passes where no value it can take leads to a permissions file", () => {
+test("a variable or glob passes where no value it can take leads to a permissions file", (t) => {
+	const tmpdir = process.env.TMPDIR;
+	process.env.TMPDIR = "/private/var/folders/xy/T/";
+	t.after(() => (tmpdir === undefined ? delete process.env.TMPDIR : (process.env.TMPDIR = tmpdir)));
+
 	for (const command of [
 		'cd "$TMPDIR" && sort "voice note.txt" | uniq -c',
 		"ls ~/.fleet/tasks/flowMEE/$s/logs/sessions/*/* | sort",
