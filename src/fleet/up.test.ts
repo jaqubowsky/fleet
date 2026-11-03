@@ -1516,6 +1516,17 @@ test("up --base-commit hands the commit to the branch switch and records the bas
 	assert.deepEqual([primary.baseSha, primary.frozen], ["3".repeat(40), true]);
 });
 
+test("up refuses --base-commit or --image for a sandbox that already exists, since it would only reopen it", async () => {
+	const answers = { ...base, "sbx ls --json": [{ name: "claude-webapp-web-1", agent: "claude", status: "stopped", workspaces: [repo] }] };
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root", baseCommit: "3".repeat(40) }, fakeIo(answers, SEATS.claude)), /already exists/);
+	await assert.rejects(up({ repo, label: "web-1", root: "/root", image: "my-claude:x" }, fakeIo(answers, SEATS.claude)), /already exists/);
+});
+
+test("up refuses an artifacts root of its own for more than one repository", async () => {
+	await assert.rejects(up({ repo, repos: ["/w/api"], label: "web-1", root: "/root", artifacts: "/bench/run" }, fakeIo(base)), /one repository/);
+});
+
 test("up --base-commit refuses a value that is no commit SHA, and a second repository", async () => {
 	await assert.rejects(up({ repo, label: "web-1", root: "/root", baseCommit: "main" }, fakeIo(base)), /commit SHA/);
 	await assert.rejects(up({ repo, repos: ["/w/api"], label: "web-1", root: "/root", baseCommit: "3".repeat(40) }, fakeIo(base)), /one repository/);

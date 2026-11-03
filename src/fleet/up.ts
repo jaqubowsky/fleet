@@ -286,8 +286,8 @@ export async function up(
 	const image = input.image ?? kind.image;
 	if (input.baseCommit && !/^[0-9a-f]{7,64}$/.test(input.baseCommit))
 		throw new Error(`--base-commit takes a commit SHA of the base branch, not ${input.baseCommit}`);
-	if (input.baseCommit && input.repos?.length)
-		throw new Error("--base-commit freezes the base of one repository; leave out --repo for the others");
+	if ((input.baseCommit || input.artifacts) && input.repos?.length)
+		throw new Error("a frozen base or an artifacts root of its own takes one repository; leave out --repo for the others");
 	const stale = image === kind.image ? staleImage(input.root, kind, io) : undefined;
 	if (stale) io.log(stale);
 	input = {
@@ -301,6 +301,8 @@ export async function up(
 	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
 	const profile = withLevels(repoProfile(input.root, name, io), input);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
+	if (existing && (input.baseCommit || input.image))
+		throw new Error(`${sandbox} already exists, and up would only reopen it; --base-commit and --image start a new sandbox, so take it down first`);
 	const inner = labelInSandboxName(input.repo, input.label, kind.prefix);
 	if (!existing && inner)
 		throw new Error(`${input.label} is a sandbox name; its label is ${inner}`);
