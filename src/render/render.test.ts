@@ -493,6 +493,14 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
+	test(`${name} leaves a ticket on a frozen base where it is, and names that base in the checks table`, () => {
+		renderSeats(name, (out) => {
+			const finish = rendered(out, "container", "deliver-ticket/SKILL.md").split("## 4. Branch update and final checks\n")[1]!;
+
+			assert.match(finish, /A ticket with a `Frozen base: <sha>` line skips the update, and the checks table names that SHA as the base its checks ran on/);
+		});
+	});
+
 	test(`${name} runs the simplicity pass in every round that wrote code, before its checks`, () => {
 		renderSeats(name, (out) => {
 			const delivery = rendered(out, "container", "deliver-ticket/SKILL.md");
