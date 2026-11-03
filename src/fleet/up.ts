@@ -31,10 +31,6 @@ const IMAGE_SOURCES = [
 	"src",
 ];
 
-export function imageOf(kind: Kind, tag: string | undefined): string {
-	return tag ? `${kind.image.split(":")[0]}:${tag}` : kind.image;
-}
-
 export function imageStampPath(kind: Kind, io: Io, image = kind.image): string {
 	const stamp = `${io.home}/${agentCache(kind.name)}/image-stamp`;
 	return image === kind.image ? stamp : `${stamp}-${image.split(":")[1]}`;

@@ -16,7 +16,7 @@ import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
 import { fleetTerminals, statusOf, terminalOf } from "./terminals.ts";
-import { harnessStamp, imageOf, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
+import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
 import {
 	checkoutProbe,
 	commitsOf,
@@ -253,7 +253,7 @@ export function build(
 	{ tag, source = root }: { tag?: string; source?: string } = {},
 ): void {
 	const kind = KINDS[name ?? seatOf(io).name];
-	const image = imageOf(kind, tag);
+	const image = tag ? `${kind.image.split(":")[0]}:${tag}` : kind.image;
 	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;
 	render({ root: source, agent: kind.name, seat: "container", out: stage }, io);
 	const stamp = harnessStamp(source, kind, io);

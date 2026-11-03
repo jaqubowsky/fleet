@@ -13,7 +13,7 @@ const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
 const OPEN_QUESTIONS = /^[#*\s]*open questions\b/im;
 
 export type Settled = { state: "done" | "idle" | "blocked" | "error" | "timeout"; said: string };
-export type Wait = (sandbox: string, io: Io, timeoutMs: number, start: () => void) => Promise<Settled>;
+type Wait = (sandbox: string, io: Io, timeoutMs: number, start: () => void) => Promise<Settled>;
 
 type BenchInput = {
 	root: string;
@@ -129,7 +129,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 	const queue = [...runs];
 	try {
 		await Promise.all(
-			Array.from({ length: Math.max(1, input.parallel) }, async () => {
+			Array.from({ length: input.parallel }, async () => {
 				for (let run = queue.shift(); run; run = queue.shift()) await one(run);
 			}),
 		);
