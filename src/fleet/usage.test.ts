@@ -203,3 +203,22 @@ test("pi compactions count once each when a later session file compacts before i
 	assert.equal(summary.totals.requests, 6);
 	assert.equal(summary.model_changes, 1);
 });
+
+test("a resumed session file that repeats a skill read keeps that skill for its new turns", () => {
+	const first = claudeTurn("a", "2026-10-30T10:00:00.000Z", "babysit-pr");
+	const resumed = [claudeTurn("a", "2026-10-30T10:00:00.000Z", "babysit-pr"), claudeTurn("b", "2026-10-30T10:30:00.000Z")].join("\n");
+
+	const summary = summarize(overlapping(first, resumed));
+
+	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["babysit-pr", 1], ["babysit-pr", 1]]);
+	assert.equal(summary.totals.requests, 2);
+});
+
+test("a skill read on a later line of one Claude message labels the turns after it", () => {
+	const thinking = JSON.stringify({ type: "assistant", timestamp: "2026-10-30T10:00:00.000Z", message: { id: "m", role: "assistant", model: "claude-opus-5-5", usage: { input_tokens: 1000 }, content: [{ type: "thinking" }] } });
+	const call = claudeTurn("m", "2026-10-30T10:00:01.000Z", "deliver-ticket");
+
+	const summary = summarize(overlapping([thinking, call, claudeTurn("n", "2026-10-30T10:01:00.000Z")].join("\n")));
+
+	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["direct", 1], ["deliver-ticket", 1]]);
+});

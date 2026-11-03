@@ -8,6 +8,7 @@ type Entry = {
 	type: string;
 	timestamp?: string;
 	session?: number;
+	repeat?: boolean;
 	modelId?: string;
 	kind?: string;
 	usage?: Usage;
@@ -101,8 +102,9 @@ function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
 	const usage = line.message?.usage;
 	if (line.type !== "assistant" || !usage) return [];
 	const id = line.message?.id;
-	if (id && seen.has(id)) return [];
+	const repeat = !!id && seen.has(id);
 	if (id) seen.add(id);
+	if (repeat) return [{ type: "message", timestamp: line.timestamp, repeat, message: { role: "assistant", model: line.message?.model, content: claudeCalls(line.message?.content) } }];
 	return [
 		{
 			type: "message",
@@ -148,14 +150,14 @@ function emptyRun(skill: string, model: string, at: string): Run {
 
 export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 	const runs: Run[] = [];
-	const lanes = new Map<number | undefined, { skill: string; model: string; run?: Run }>();
+	const sessions = new Map<number | undefined, { skill: string; model: string; run?: Run }>();
 	let modelChanges = -1;
 	let warm = 0;
 	let misses = 0;
 
 	for (const entry of entries) {
-		const lane = lanes.get(entry.session) ?? { skill: DIRECT, model: "" };
-		lanes.set(entry.session, lane);
+		const lane = sessions.get(entry.session) ?? { skill: DIRECT, model: "" };
+		sessions.set(entry.session, lane);
 		if (entry.type === "model_change") {
 			lane.model = entry.modelId ?? lane.model;
 			modelChanges++;
@@ -175,10 +177,11 @@ export function summarize(entries: Entry[], commits: Commit[] = []): Summary {
 			continue;
 		}
 		if (entry.type !== "message" || entry.message?.role !== "assistant") continue;
-		const usage = entry.message.usage ?? {};
-		const at = entry.timestamp ?? "";
 		lane.skill = skillRead(entry.message.content) ?? lane.skill;
 		lane.model = entry.message.model ?? lane.model;
+		if (entry.repeat) continue;
+		const usage = entry.message.usage ?? {};
+		const at = entry.timestamp ?? "";
 		if (!lane.run || lane.run.skill !== lane.skill || lane.run.model !== lane.model) {
 			lane.run = emptyRun(lane.skill, lane.model, at);
 			runs.push(lane.run);
