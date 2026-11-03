@@ -44,9 +44,22 @@ test("a commit message that is not one conventional line is refused with the for
 		"git add src && git commit -qm 'feat: add a dry run'",
 		"git commit --amend --no-edit",
 		'git commit --mes="fix: return an empty document"',
+		'git commit -m "fix(import): read UTF-8 names and SHA-256 sums"',
 	]) {
 		assert.equal(commitFormatRefusal(command), undefined, command);
 		assert.equal(refusal(command, import.meta.dirname), undefined, command);
+	}
+});
+
+test("a subject that carries a ticket id is refused, wherever the id sits", () => {
+	for (const command of [
+		'git commit -m "fix(api): FLO-2098 approve a bulk selection one document at a time"',
+		'git commit -m "fix(api): approve a bulk selection one document at a time (FLO-2098)"',
+		'git commit -m "feat(MAS-75): return a full image link"',
+	]) {
+		const reason = commitFormatRefusal(command) ?? "";
+
+		assert.match(reason, /ticket id stays out of the commit/, command);
 	}
 });
 

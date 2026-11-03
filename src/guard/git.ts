@@ -49,6 +49,7 @@ export function hooksRefusal(command: string): string | undefined {
 }
 
 const ONE_LINE = /^[a-z]+(\([^()\s]+\))?!?: [^A-Z\s](.*[^.\s])?$/;
+const TICKET_ID = /\b(?!(?:UTF|SHA|ISO|UCS)-)[A-Z][A-Z0-9]+-\d+\b/;
 
 function longOption(arg: string, name: string): boolean {
 	const key = arg.split("=")[0];
@@ -84,9 +85,9 @@ export function commitFormatRefusal(command: string): string | undefined {
 			const messages = commitMessages(call!.args);
 			if (messages === undefined) return true;
 			if (messages.length === 0) return false;
-			return messages.length > 1 || !ONE_LINE.test(messages[0]);
+			return messages.length > 1 || !ONE_LINE.test(messages[0]) || TICKET_ID.test(messages[0]);
 		});
 	return bad
-		? "A commit message is one line, `type(scope): subject`: a conventional type, an optional scope, a lowercase imperative subject with no trailing period, and no body or trailer. Pass it as one literal `-m`."
+		? "A commit message is one line, `type(scope): subject`: a conventional type, an optional scope, a lowercase imperative subject with no trailing period, and no body or trailer. A ticket id stays out of the commit, in the scope and the subject alike. Pass it as one literal `-m`."
 		: undefined;
 }
