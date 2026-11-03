@@ -10,7 +10,7 @@ Improve the agent's environment at `{{root}}`, not its compliance score. End wit
 
 ## 1. Read the session
 
-Use the session the user names, or the current session by default, with its child transcripts when the problem occurred in delegated work. Session stores and extraction commands are in [references/extract.md](references/extract.md). A bench run, `~/.fleet/bench/runs/<tag>/<task>-<rep>/`, is a session too: its `result.json` counts the screenshots read and browser runs and its `usage.json` the requests and tokens, so two tags show what a variant changed.
+Use the session the user names, or the current session by default, with its child transcripts when the problem occurred in delegated work. Session stores and extraction commands are in [references/extract.md](references/extract.md). A bench run, `~/.fleet/bench/runs/<tag>/<task>-<rep>/`, is a session too.
 
 ## 2. Find friction
 
@@ -34,11 +34,11 @@ For each candidate, inspect the harness source and check whether a solution alre
 
 A new or reworded rule is a hypothesis: added lines often leave the behaviour unchanged, and some add work on other tasks. Name the cheapest check that could show the fix does nothing:
 
-- One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `{{root}}/docs/adr/018-micro-evals.md` says; the runner renders the claude container rules only, so a pi-only change takes a bench run. It counts only if the current rules fail it in half its reps or more
-- Behaviour spread over a ticket, such as repeat walks, screenshots, requests or needless code: `fleet bench run` of the variant against the baseline tag on the seeds that reach it, or a line in the judge's rubric when no count sees it
+- One decision in one turn, such as stopping, reading a file before writing, or a phrase the text must not hold: a `fleet eval` case of kind `bad` with its control, laid out as `{{root}}/docs/adr/018-micro-evals.md` says; the runner renders the claude container rules only. It counts only if the current rules fail it in half its reps or more
+- Behaviour spread over a ticket, such as repeat walks, screenshots or requests: the same count on ordinary tickets delivered before and after the change, from each task's `logs/usage.json` and its transcripts
 - A deletion: the rule's `guard` case on a variant without the rule
 
-A check that does not exist yet is part of the proposal: draft the eval case, its source line, prompt, expectations and control, or name the merged ticket that would become a bench seed and what its grader counts. A candidate is ready when its evidence, cause, smallest fix, check and cost are known.
+A check that does not exist yet is part of the proposal: draft the eval case, its source line, prompt, expectations and control, or name the count and the tickets it compares. A candidate is ready when its evidence, cause, smallest fix, check and cost are known.
 
 ## 5. Report
 

@@ -153,7 +153,7 @@ Use `fleet stop` to release a sandbox's resources without deleting its work. `fl
 - **Permissions per repository.** `fleet profile` shows who may push, open and merge pull requests, for the host and for the sandbox.
 - **Cost per task.** `fleet ls` shows what each sandbox has spent so far.
 - **A record of every task.** Plan, review and logs stay in a task folder after the sandbox is gone.
-- **Session retrospectives.** `audit-harness` reads a selected session, defaults to the current one, and proposes the smallest environment changes for observed friction and mistakes. Each proposal includes evidence, cost and the eval case or bench count that would settle it, since a new rule is a hypothesis until a run shows the behaviour change; nothing is edited.
+- **Session retrospectives.** `audit-harness` reads a selected session, defaults to the current one, and proposes the smallest environment changes for observed friction and mistakes. Each proposal includes evidence, cost and the eval case or ticket count that would settle it, since a new rule is a hypothesis until a run shows the behaviour change; nothing is edited.
 - **Your phone as a remote.** Drive pi sessions from your phone over Tailscale, set up as [extensions/pi-remote](extensions/pi-remote/README.md) describes.
 
 ## Trust model
