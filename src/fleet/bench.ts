@@ -5,12 +5,22 @@ import { containerPatch } from "./diff.ts";
 import { FLEET } from "./home.ts";
 import type { Io } from "./io.ts";
 import { sandboxName, slug } from "./name.ts";
+import { sandboxes } from "./status.ts";
 import { TICKET_STUB, up } from "./up.ts";
 import { watch } from "./watch.ts";
 
 export const FROZEN_BASE = "Frozen base:";
 const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
-const OPEN_QUESTIONS = /^[#*\s]*open questions\b/im;
+
+function asksQuestions(said: string): boolean {
+	const lines = said.split("\n");
+	const heading = lines.findIndex((line) => /^[#*\s]*open questions\b/i.test(line));
+	if (heading < 0) return false;
+	const next = lines.findIndex((line, index) => index > heading && /^#/.test(line));
+	return lines
+		.slice(heading + 1, next < 0 ? undefined : next)
+		.some((line) => line.trim() && !/^[-*\d.)\s]*none\.?$/i.test(line.trim()));
+}
 
 export type Settled = { state: "done" | "idle" | "blocked" | "error" | "timeout"; said: string };
 type Wait = (sandbox: string, io: Io, timeoutMs: number, start: () => void) => Promise<Settled>;
@@ -69,62 +79,71 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 	const names = runs.map((run) => run.sandbox);
 	if (new Set(names).size !== names.length)
 		throw new Error(`two runs would share the sandbox name ${names.find((name, index) => names.indexOf(name) !== index)}; shorten the tag or the task ids`);
+	const kept = runs.find((run) => io.stat(run.dir));
+	if (kept) throw new Error(`${kept.dir} already holds a run; a rep starts from an empty directory, so move it away or take another tag`);
+	const live = sandboxes(io).find((sandbox) => names.includes(sandbox.name));
+	if (live) throw new Error(`${live.name} already exists; take it down with ${CLI} down --force ${live.name} before the batch reuses its name`);
 	const seeded = new Map(input.tasks.map((task) => [task, readSeed(`${seeds}/${task}`, io)]));
 	const started: string[] = [];
 	const one = async (run: (typeof runs)[number]) => {
 		const seed = seeded.get(run.task)!;
+		const task = `${run.dir}/${run.sandbox}`;
 		const startedAt = io.now().toISOString();
-		io.mkdir(run.dir);
-		const { sandbox } = await up(
-			{
-				repo: input.repo,
-				label: run.label,
-				root: input.root,
-				kind: kind.name,
-				image: input.image,
-				baseCommit: seed.base,
-				artifacts: run.dir,
-				container: { push: "none", pr: "none", linear: "none" },
-			},
-			io,
-		);
-		started.push(sandbox);
-		const task = `${run.dir}/${sandbox}`;
-		io.write(`${task}/ticket.md`, `${TICKET_STUB}${FROZEN_BASE} ${seed.base}\n\n${seed.ticket}`);
-		for (const name of seed.attachments) io.run("cp", ["-R", `${seeds}/${run.task}/${name}`, `${task}/`]);
-		const row = () => resolveSandbox(sandbox, io);
-		const settled = await wait(sandbox, io, input.timeoutMs, () =>
-			steer(row(), `Deliver the ticket in ${task}/ticket.md end to end on its frozen base ${seed.base}. Commit locally and stop at Done; nothing leaves this container.`, io, input.root),
-		);
-		const status =
-			settled.state === "timeout" ? "timeout"
-			: settled.state === "error" ? "error"
-			: settled.state === "blocked" || OPEN_QUESTIONS.test(settled.said) ? "blocked"
-			: "done";
-		io.write(`${run.dir}/diff.patch`, containerPatch(sandbox, io) ?? "");
-		const usage = sessionUsage(task, io);
-		if (usage) io.write(`${run.dir}/usage.json`, `${JSON.stringify(usage, null, 2)}\n`);
-		stop(row(), io);
-		const result = {
-			task: run.task,
-			rep: run.rep,
-			sandbox,
-			status,
-			image: { ref: input.image, stamp: io.read(`${task}/logs/image-stamp`)?.trim() ?? null },
-			seed: { ticket_sha256: sha256(seed.ticket), task_sha256: sha256(seed.spec) },
-			base: seed.base,
-			started_at: startedAt,
-			finished_at: io.now().toISOString(),
-			closing_message: settled.said,
-			diff: "diff.patch",
-			usage: usage ? "usage.json" : null,
-			transcripts: `${sandbox}/logs/sessions`,
-			task_dir: sandbox,
-			graders: null,
-			judge: null,
+		const record = (outcome: { status: string } & Record<string, unknown>) => {
+			const result = {
+				task: run.task,
+				rep: run.rep,
+				sandbox: run.sandbox,
+				...outcome,
+				image: { ref: input.image, stamp: io.read(`${task}/logs/image-stamp`)?.trim() ?? null },
+				seed: { ticket_sha256: sha256(seed.ticket), task_sha256: sha256(seed.spec) },
+				base: seed.base,
+				started_at: startedAt,
+				finished_at: io.now().toISOString(),
+				transcripts: `${run.sandbox}/logs/sessions`,
+				task_dir: run.sandbox,
+				graders: null,
+				judge: null,
+			};
+			io.write(`${run.dir}/result.json`, `${JSON.stringify(result, null, 2)}\n`);
+			io.log(`${run.sandbox}: ${outcome.status} -> ${run.dir}`);
 		};
-		io.write(`${run.dir}/result.json`, `${JSON.stringify(result, null, 2)}\n`);
-		io.log(`${sandbox}: ${status} -> ${run.dir}`);
+		io.mkdir(run.dir);
+		try {
+			await up(
+				{
+					repo: input.repo,
+					label: run.label,
+					root: input.root,
+					kind: kind.name,
+					image: input.image,
+					baseCommit: seed.base,
+					artifacts: run.dir,
+					container: { push: "none", pr: "none", linear: "none" },
+				},
+				io,
+			);
+			started.push(run.sandbox);
+			io.write(`${task}/ticket.md`, `${TICKET_STUB}${FROZEN_BASE} ${seed.base}\n\n${seed.ticket}`);
+			for (const name of seed.attachments) io.run("cp", ["-R", `${seeds}/${run.task}/${name}`, `${task}/`]);
+			const settled = await wait(run.sandbox, io, input.timeoutMs, () =>
+				steer(resolveSandbox(run.sandbox, io), `Deliver the ticket in ${task}/ticket.md end to end on its frozen base ${seed.base}. Commit locally and stop at Done; nothing leaves this container. Wait for background work in the foreground: end your turn only at Done or on an open question, since the run ends when your turn does.`, io, input.root),
+			);
+			const status =
+				settled.state === "timeout" ? "timeout"
+				: settled.state === "error" ? "error"
+				: settled.state === "blocked" || asksQuestions(settled.said) ? "blocked"
+				: "done";
+			io.write(`${run.dir}/diff.patch`, containerPatch(run.sandbox, io) ?? "");
+			const usage = sessionUsage(task, io);
+			if (usage) io.write(`${run.dir}/usage.json`, `${JSON.stringify(usage, null, 2)}\n`);
+			stop(resolveSandbox(run.sandbox, io), io);
+			record({ status, closing_message: settled.said, diff: "diff.patch", usage: usage ? "usage.json" : null });
+		} catch (error) {
+			const running = sandboxes(io).find((sandbox) => sandbox.name === run.sandbox && sandbox.status !== "stopped");
+			if (running) stop(running, io);
+			record({ status: "error", error: (error as Error).message });
+		}
 	};
 	const queue = [...runs];
 	try {

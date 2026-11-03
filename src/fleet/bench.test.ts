@@ -80,6 +80,11 @@ const outcomes: Record<string, Settled> = {
 	"claude-webapp-x-t2-2": { state: "blocked", said: "Which base?" },
 };
 
+const outcome = (state: Settled["state"], said: string) => async (_sandbox: string, _io: unknown, _ms: number, start: () => void): Promise<Settled> => {
+	start();
+	return { state, said };
+};
+
 test("bench run puts each task and rep up on its frozen base, steers it, and keeps a result directory a grader can score without a container", async () => {
 	const { io, created, stopped } = bench();
 	const steered: string[] = [];
@@ -132,6 +137,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 	assert.deepEqual(statuses, { "t1-1": "done", "t1-2": "blocked", "t2-1": "timeout", "t2-2": "blocked" });
 	const steer = io.calls.find((c) => c[0] === "hc" && c[1] === "send")!;
 	assert.match(steer[3], /ticket\.md/);
+	assert.match(steer[3], /end your turn only at Done or on an open question/);
 	assert.deepEqual(io.calls.filter((c) => c[0] === "run" && c[1] === "cp" && c[3].startsWith(seeds)).map((c) => c[3]), Array(2).fill(`${seeds}/t1/screen.png`));
 	assert.ok(io.calls.some((c) => c[0] === "run" && c[1] === "cp" && c[3] === "/home/me/.fleet/tasks/webapp/runbook" && c[4] === `${runs}/t1-1/runbook`));
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c.includes("claude") && c[1] === "exec" && c[3] === "claude"));
@@ -172,4 +178,42 @@ test("settle starts the run once the watch is on, and answers with the container
 	assert.deepEqual(await done, { state: "done", said: "Done at 9d290c9." });
 	assert.equal((await capped).state, "timeout");
 	assert.ok(io.followers.every((follower) => follower.stopped));
+});
+
+test("a closing message whose open questions are none is done, not blocked", async () => {
+	const { io } = bench();
+
+	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t2"], reps: 1, parallel: 1, timeoutMs: 1 }, io, outcome("done", "Done.\n\n## Open questions\n\n- None."));
+
+	assert.equal(JSON.parse(io.files[`${runs}/t2-1/result.json`]).status, "done");
+});
+
+test("bench run refuses before anything starts when a run directory or a sandbox of the batch is already there", async () => {
+	const kept = bench();
+	kept.io.stat = (path) => (path === `${runs}/t1-2` ? { size: 0, mtime: new Date(0), dir: true } : undefined);
+	const live = bench();
+	live.created.push("claude-webapp-x-t1-1");
+	live.stopped.push("claude-webapp-x-t1-1");
+
+	await assert.rejects(benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t1"], reps: 2, parallel: 1, timeoutMs: 1 }, kept.io, outcome("done", "")), /t1-2 already holds a run/);
+	await assert.rejects(benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t1"], reps: 2, parallel: 1, timeoutMs: 1 }, live.io, outcome("done", "")), /claude-webapp-x-t1-1 already exists/);
+	assert.deepEqual(kept.created, []);
+	assert.deepEqual(live.created, ["claude-webapp-x-t1-1"]);
+});
+
+test("a run that fails is recorded as an error and stopped, and the batch goes on in its order", async () => {
+	const { io, created, stopped } = bench();
+	const send = io.hc;
+	io.hc = <T>(args: string[]) => {
+		if (args[0] === "send" && args[1] === "t-claude-webapp-x-t1-1") throw new Error("hc send failed");
+		return send<T>(args);
+	};
+
+	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t1"], reps: 2, parallel: 1, timeoutMs: 1 }, io, outcome("done", "Done."));
+
+	const failed = JSON.parse(io.files[`${runs}/t1-1/result.json`]);
+	assert.deepEqual([failed.status, failed.error], ["error", "hc send failed"]);
+	assert.equal(JSON.parse(io.files[`${runs}/t1-2/result.json`]).status, "done");
+	assert.deepEqual(created, names.slice(0, 2));
+	assert.deepEqual(stopped, names.slice(0, 2));
 });
