@@ -255,10 +255,10 @@ export function build(
 	if (source !== root && !tag)
 		throw new Error(`a build from ${source} needs --tag, so ${CLI} build without one keeps v1 on this checkout`);
 	const kind = KINDS[name ?? seatOf(io).name];
-	const uncommitted = source === root ? "" : uncommittedImageSources(source, kind, io);
-	if (uncommitted)
+	const uncommitted = source === root ? [] : uncommittedImageSources(source, kind, io);
+	if (uncommitted.length)
 		throw new Error(
-			`${source} has uncommitted changes in ${uncommitted.split("\n").map((line) => line.slice(3)).join(", ")}; a variant is one commit (ADR 017), so commit them before ${CLI} build --tag`,
+			`${source} has uncommitted changes in ${uncommitted.join(", ")}; a variant is one commit (ADR 017), so commit them before ${CLI} build --tag`,
 		);
 	const image = tag ? `${kind.image.split(":")[0]}:${tag}` : kind.image;
 	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;

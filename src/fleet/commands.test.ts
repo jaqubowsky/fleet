@@ -1176,7 +1176,7 @@ test("build from another checkout needs a tag, so v1 and its stamp stay this che
 });
 
 test("build from another checkout refuses uncommitted changes, naming the files, since a variant is one commit", () => {
-	const io = fakeIo({ "git /variant status --porcelain": " M rules/core.md\n?? skills/new/SKILL.md" }, SEATS.claude);
+	const io = fakeIo({ "git /variant status --porcelain": "M rules/core.md\n?? skills/new/SKILL.md" }, SEATS.claude);
 
 	assert.throws(
 		() => build("/root", "claude", io, { tag: "x", source: "/variant" }),
