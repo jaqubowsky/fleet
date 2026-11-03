@@ -143,6 +143,12 @@ function checkout(path: string): string {
 	return full;
 }
 
+function count(value: string | true | string[] | undefined, fallback: number, what: string): number {
+	const n = value === undefined ? fallback : Number(value);
+	if (!Number.isInteger(n) || n < 1) throw new Error(`--${what} takes a whole number from 1`);
+	return n;
+}
+
 function repoOf(opts: Record<string, string | true | string[]>): string {
 	if (Array.isArray(opts.repo))
 		throw new Error("--repo may only be repeated for fleet up");
@@ -301,11 +307,6 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 	async bench(args) {
 		const { opts, rest } = flags(args, ["image", "tasks", "reps", "parallel", "timeout", "repo"]);
 		if (rest[0] !== "run") throw new Error(`${CLI} bench takes run\n${usage}`);
-		const count = (value: string | true | string[] | undefined, fallback: number, what: string) => {
-			const n = value === undefined ? fallback : Number(value);
-			if (!Number.isInteger(n) || n < 1) throw new Error(`--${what} takes a whole number from 1`);
-			return n;
-		};
 		await benchRun(
 			{
 				root,
@@ -323,13 +324,11 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		const { opts, rest } = flags(args, ["variant", "cases", "reps"]);
 		if (rest[0] === "compare" && rest.length === 3) return evalCompare(rest[1], rest[2], io);
 		if (rest[0] !== "run") throw new Error(`${CLI} eval takes run or compare <baseline> <variant>\n${usage}`);
-		const reps = opts.reps === undefined ? 1 : Number(opts.reps);
-		if (!Number.isInteger(reps) || reps < 1) throw new Error("--reps takes a whole number from 1");
 		await evalRun(
 			{
 				root: checkout(need(opts.variant as string | undefined, "--variant")),
 				cases: need(opts.cases as string | undefined, "--cases").split(",").filter(Boolean),
-				reps,
+				reps: count(opts.reps, 1, "reps"),
 			},
 			io,
 		);

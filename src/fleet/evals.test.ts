@@ -167,7 +167,7 @@ test("a run before the eval config dir's one-time login is refused before any re
 test("compare prints pass counts side by side and flags a baseline that does not reproduce the case", () => {
 	const io = fakeIo({}, SEATS.claude);
 	const result = (variant: string, id: keyof typeof cases, passes: number, reps = 3) =>
-		JSON.stringify({ case: id, variant, control: JSON.parse(cases[id].case).control, passes, reps, prompt_sha256: sha256(cases[id].prompt), check_sha256: sha256(cases[id].check), runs: [] });
+		JSON.stringify({ case: id, variant, control: JSON.parse(cases[id].case).control, passes, reps, prompt_sha256: sha256(cases[id].prompt), check_sha256: sha256(cases[id].check), fixture_sha256: "f", runs: [] });
 	io.files[`${evals}/runs/base/rewalk/result.json`] = result("base", "rewalk", 2);
 	io.files[`${evals}/runs/base/plain/result.json`] = result("base", "plain", 3);
 	io.files[`${evals}/runs/next/rewalk/result.json`] = result("next", "rewalk", 3);
@@ -183,14 +183,73 @@ test("compare prints pass counts side by side and flags a baseline that does not
 	]);
 });
 
-test("compare marks a case whose prompt or check changed between the variants as not comparable", () => {
+test("compare marks a case whose fixture changed between the variants as not comparable", () => {
 	const io = fakeIo({}, SEATS.claude);
-	const base = { case: "plain", control: true, passes: 3, reps: 3, prompt_sha256: "p", check_sha256: "c", runs: [] };
+	const base = { case: "plain", control: true, passes: 3, reps: 3, prompt_sha256: "p", check_sha256: "c", fixture_sha256: "f", runs: [] };
 	io.files[`${evals}/runs/base/plain/result.json`] = JSON.stringify(base);
-	io.files[`${evals}/runs/next/plain/result.json`] = JSON.stringify({ ...base, check_sha256: "other" });
+	io.files[`${evals}/runs/next/plain/result.json`] = JSON.stringify({ ...base, fixture_sha256: "other" });
 	io.list = (dir) => (dir.includes("/runs/") ? ["plain"] : []);
 
 	evalCompare("base", "next", io);
 
-	assert.deepEqual(io.lines, ["case   base  next", "plain  3/3   3/3   control, not comparable: prompt or check differs"]);
+	assert.deepEqual(io.lines, ["case   base  next", "plain  3/3   3/3   control, not comparable: prompt, check or fixture differs"]);
+});
+
+test("a run points the rendered rules' ~/.claude paths at the eval config dir and keeps the variant's effort and memory settings", async () => {
+	const { io } = evalIo([stream("criterion 2 only", [])]);
+	const written: Record<string, string> = {};
+	const write = io.write;
+	io.write = (path, body) => {
+		written[path] = body;
+		write(path, body);
+	};
+
+	await evalRun({ root, cases: ["rewalk"], reps: 1 }, io);
+
+	const core = Object.entries(written).find(([path]) => path.endsWith("/home/rules/core.md"))![1];
+	assert.match(core, new RegExp(`${config}/refs/prose\\.md`));
+	assert.doesNotMatch(core, /~\/\.claude\//);
+	assert.deepEqual(JSON.parse(io.files[`${config}/settings.json`]), { effortLevel: "medium", autoMemoryEnabled: false });
+});
+
+test("a rep whose claude fails or ends in error is recorded as an error, its scratch dir removed, and the batch goes on", async () => {
+	const { io } = evalIo([]);
+	const errored = [{ type: "result", subtype: "error_during_execution", is_error: true, result: "API Error" }].map((event) => JSON.stringify(event)).join("\n");
+	const streams = [new Error("claude -p failed (1)\nNot logged in"), errored, stream("criterion 2 only", []), stream("x", [{ name: "Read", input: { file_path: "report.md" } }])];
+	io.capture = (_command, _args, opts) => {
+		io.calls.push(["capture", opts.cwd]);
+		const next = streams.shift()!;
+		if (next instanceof Error) throw next;
+		return next;
+	};
+
+	await evalRun({ root, cases: ["rewalk", "plain"], reps: 3 }, io);
+
+	const rewalk = JSON.parse(io.files[`${evals}/runs/abc1234/rewalk/result.json`]);
+	assert.deepEqual([rewalk.passes, rewalk.reps, rewalk.errors], [1, 1, 2]);
+	assert.match(rewalk.runs[0].error, /Not logged in/);
+	assert.match(rewalk.runs[1].error, /API Error/);
+	assert.ok(io.calls.some((call) => call[0] === "remove" && call[1] === "/tmp/fleet-eval-abc1234-rewalk-1"));
+	assert.equal(JSON.parse(io.files[`${evals}/runs/abc1234/plain/result.json`]).passes, 1);
+});
+
+test("a rerun of a case under the same variant replaces its earlier results", async () => {
+	const { io } = evalIo([stream("criterion 2 only", [])]);
+
+	await evalRun({ root, cases: ["rewalk"], reps: 1 }, io);
+
+	const out = `${evals}/runs/abc1234/rewalk`;
+	const removed = io.calls.findIndex((call) => call[0] === "remove" && call[1] === out);
+	assert.ok(removed >= 0 && removed < io.calls.findIndex((call) => call[0] === "write" && call[1] === `${out}/1.jsonl`));
+});
+
+test("a check with a stray key, a bad pattern or no tool or text is refused before any render or run", async () => {
+	for (const check of [{ expect: [{ text: "x", absnet: true }] }, { expect: [{ text: "(" }] }, { expect: [{ absent: true }] }, { expect: [] }]) {
+		const { io, runs } = evalIo([]);
+		io.files[`${evals}/cases/rewalk/check.json`] = JSON.stringify(check);
+
+		await assert.rejects(evalRun({ root, cases: ["rewalk"], reps: 1 }, io));
+		assert.equal(runs.length, 0);
+		assert.ok(!io.calls.some((call) => call[0] === "remove" && call[1].startsWith(config)));
+	}
 });
