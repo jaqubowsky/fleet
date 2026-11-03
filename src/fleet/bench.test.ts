@@ -47,7 +47,7 @@ function bench() {
 		const sessions = `${task}/logs/sessions/projects/-w-webapp`;
 		answers[`sbx exec ${name} git -C ${repo} rev-parse refs/fleet/base`] = index < 2 ? shas.t1 : shas.t2;
 		answers[`sbx exec ${name} node -e`] = JSON.stringify(`diff --git a/${run} b/${run}\n`);
-		answers[`sbx exec ${name} sh -c ${FINAL_COMMITS}`] = `${"e".repeat(40)}\t${index}`;
+		answers[`sbx exec ${name} sh -c ${FINAL_COMMITS}`] = `${"e".repeat(40)}\t${index}\t${index === 0 ? 0 : 1}`;
 		answers[`list ${task}/logs/sessions`] = ["projects"];
 		answers[`stat ${task}/logs/sessions/projects`] = { size: 0, mtime: new Date(0), dir: true };
 		answers[`list ${task}/logs/sessions/projects`] = ["-w-webapp"];
@@ -135,7 +135,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 				base: shas[id],
 				head: "e".repeat(40),
 				dirty: index,
-				bundle: "head.bundle",
+				bundle: index === 0 ? null : "head.bundle",
 				diff: "diff.patch",
 				usage: "usage.json",
 				transcripts: `${name}/logs/sessions`,
@@ -262,12 +262,36 @@ test("base plus the run's bundle rebuilds the final commit, and a run with no co
 	execFileSync("sh", ["-c", "printf 'a\\r\\nb\\0' > blob.bin && echo x > left.txt"], { cwd: work });
 	git(work, "add", "blob.bin");
 	git(work, "commit", "--quiet", "-m", "work");
-	const [head, dirty] = final(join(root, "head.bundle")).split("\t");
+	const [head, dirty, bundled] = final(join(root, "head.bundle")).split("\t");
 	git(grader, "fetch", "--quiet", join(root, "head.bundle"), "HEAD");
 
-	assert.equal(untouched, `${base}\t0`);
+	assert.equal(untouched, `${base}\t0\t0`);
 	assert.throws(() => execFileSync("test", ["-e", join(root, "none.bundle")]));
 	assert.equal(head, git(work, "rev-parse", "HEAD"));
 	assert.equal(dirty, "1");
+	assert.equal(bundled, "1");
 	assert.equal(git(grader, "rev-parse", "FETCH_HEAD^{tree}"), git(work, "rev-parse", "HEAD^{tree}"));
+});
+
+test("a run reset below its base, or given its base as a short sha, writes no bundle and still reports its head", (t) => {
+	const root = realpathSync(mkdtempSync(join(tmpdir(), "bench-bundle-")));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	const git = (dir: string, ...args: string[]) =>
+		execFileSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" }).trim();
+	const work = join(root, "work");
+	execFileSync("git", ["init", "--quiet", "-b", "main", work]);
+	git(work, "commit", "--quiet", "--allow-empty", "-m", "before");
+	const before = git(work, "rev-parse", "HEAD");
+	git(work, "commit", "--quiet", "--allow-empty", "-m", "base");
+	const base = git(work, "rev-parse", "HEAD");
+	const final = (sha: string) =>
+		execFileSync("sh", ["-c", FINAL_COMMITS, "--", sha, join(root, "head.bundle")], { env: { ...process.env, WORKSPACE_DIR: work }, encoding: "utf8" }).trim();
+
+	const short = final(base.slice(0, 7));
+	git(work, "reset", "--quiet", "--hard", before);
+	const below = final(base);
+
+	assert.equal(short, `${base}\t0\t0`);
+	assert.equal(below, `${before}\t0\t0`);
+	assert.throws(() => execFileSync("test", ["-e", join(root, "head.bundle")]));
 });

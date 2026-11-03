@@ -11,9 +11,11 @@ import { watch } from "./watch.ts";
 
 export const FROZEN_BASE = "Frozen base:";
 export const FINAL_COMMITS = `cd "$WORKSPACE_DIR" || exit 1
+base="$(git rev-parse "$1^{commit}")" || exit 1
 head="$(git rev-parse HEAD)" || exit 1
-if [ "$head" != "$1" ]; then git bundle create --quiet "$2" "$1..HEAD" || exit 1; fi
-printf '%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')"`;
+bundled=0
+if ! git merge-base --is-ancestor HEAD "$base"; then git bundle create --quiet "$2" "$base..HEAD" || exit 1; bundled=1; fi
+printf '%s\t%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')" "$bundled"`;
 const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
 
 function asksQuestions(said: string): boolean {
@@ -136,7 +138,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				: settled.state === "error" ? "error"
 				: settled.state === "blocked" || asksQuestions(settled.said) ? "blocked"
 				: "done";
-			const [head, dirty] = io
+			const [head, dirty, bundled] = io
 				.sbx(["exec", run.sandbox, "sh", "-c", FINAL_COMMITS, "--", seed.base, `${run.dir}/head.bundle`], { quiet: true })
 				.split("\t");
 			io.write(`${run.dir}/diff.patch`, containerPatch(run.sandbox, io) ?? "");
@@ -148,7 +150,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				closing_message: settled.said,
 				head,
 				dirty: Number(dirty),
-				bundle: head === seed.base ? null : "head.bundle",
+				bundle: bundled === "1" ? "head.bundle" : null,
 				diff: "diff.patch",
 				usage: usage ? "usage.json" : null,
 			});
