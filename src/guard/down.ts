@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import type { Host as ProfileHost } from "../profile/profile.ts";
 import { repositoryManifest } from "../fleet/repositories.ts";
 import { realIo } from "../fleet/io.ts";
-import { argvsOf } from "./argv.ts";
+import { argvsOf, untrimmed } from "./argv.ts";
 import { hostAt } from "./host.ts";
 
 type DownTarget = { sandbox: string; level: ProfileHost["down"] };
@@ -22,13 +22,13 @@ export function downPermission(
 ): DownVerdict | undefined {
 	const invokesDown = argvsOf(command).some(
 		(argv) =>
-			(/(?:^|\/)fleet$/.test(argv[0] ?? "") && argv[1] === "down") ||
+			(/(?:^|\/)fleet$/.test(argv[0] ?? "") && argv[1] === "down" && !argv.includes("--help")) ||
 			(/(?:^|\/)sh$/.test(argv[0] ?? "") &&
 				argv.includes("--") &&
 				argv.some((part, i) => part === "fleet" && argv[i + 1] === "down")),
 	);
 	if (!invokesDown) return undefined;
-	const match = BARE.exec(command);
+	const match = BARE.exec(untrimmed(command));
 	if (!match)
 		return {
 			decision: "deny",

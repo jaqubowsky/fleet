@@ -130,7 +130,7 @@ test("down reads the target workspace profile instead of the host checkout", (t)
 test("down must name one sandbox in a bare command regardless of its level", () => {
 	const level = (sandbox: string) => ({ sandbox, level: "auto" as const });
 	for (const command of [
-		"fleet down x | tail",
+		"fleet down x | tail -5; rm -rf build",
 		"cd /r && fleet down x",
 		"bash -c 'fleet down x'",
 		"env fleet down x",
@@ -148,4 +148,16 @@ test("down must name one sandbox in a bare command regardless of its level", () 
 		"deny",
 	);
 	assert.equal(downPermission("echo 'fleet down x'", level), undefined);
+});
+
+test("down passes with its output trimmed by tail or head, and its help is no close", () => {
+	const level = (sandbox: string) => ({ sandbox, level: "auto" as const });
+
+	for (const command of [
+		"fleet down x 2>&1 | tail -5",
+		"fleet down x | tail",
+		"fleet down x 2>&1 | head -n 1",
+	])
+		assert.equal(downPermission(command, level)?.decision, "allow", command);
+	assert.equal(downPermission("fleet down --help 2>&1 | head -15", level), undefined);
 });

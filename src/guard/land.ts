@@ -1,4 +1,4 @@
-import { argvsOf } from "./argv.ts";
+import { argvsOf, untrimmed } from "./argv.ts";
 
 type LandPermission = {
 	decision: "ask" | "deny";
@@ -17,13 +17,13 @@ const BARE =
 export function landPermission(command: string): LandPermission | undefined {
 	const invokesLand = argvsOf(command).some(
 		(argv) =>
-			(/(?:^|\/)fleet$/.test(argv[0] ?? "") && argv[1] === "land") ||
+			(/(?:^|\/)fleet$/.test(argv[0] ?? "") && argv[1] === "land" && !argv.includes("--help")) ||
 			(/(?:^|\/)sh$/.test(argv[0] ?? "") &&
 				argv.includes("--") &&
 				argv.some((part, i) => part === "fleet" && argv[i + 1] === "land")),
 	);
 	if (!invokesLand) return undefined;
-	const match = BARE.exec(command);
+	const match = BARE.exec(untrimmed(command));
 	if (!match)
 		return {
 			decision: "deny",

@@ -166,6 +166,10 @@ export function argvsOf(subject: string): string[][] {
 	return argvs(subject, false).map(({ argv }) => argv);
 }
 
+export function untrimmed(command: string): string {
+	return command.trim().replace(/(?:\s+2>&1)?(?:\s*\|\s*(?:tail|head)(?:\s+(?:-n\s*)?-?\d+)?)?$/, "");
+}
+
 export function redirections(argv: string[]): { redirected: string[]; named: string[] } {
 	const redirected: string[] = [];
 	const named: string[] = [];

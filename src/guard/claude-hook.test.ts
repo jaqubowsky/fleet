@@ -245,7 +245,7 @@ test("the claude hook follows the target sandbox's down level and asks in auto p
 	);
 	assert.match(
 		hook(
-			{ ...command, tool_input: { command: "fleet down pi-harness-demo | tail" } },
+			{ ...command, tool_input: { command: "fleet down pi-harness-demo; ls" } },
 			root,
 			EMPTY_HOME,
 			() => ({ sandbox: "pi-harness-demo", level: "auto" }),
@@ -265,6 +265,7 @@ test("the claude hook asks separately for landing, signing and pushing", () => {
 		"fleet land pi-harness-demo --push",
 		"fleet land --sign --push pi-harness-demo",
 		"fleet land pi-harness-demo --branch flo-1946 --base main --push",
+		"fleet land --push pi-harness-demo 2>&1 | tail -15",
 	])
 		assert.match(decide(command), /"permissionDecision":"ask"/, command);
 	for (const command of ["bash -c 'fleet land pi-harness-demo'"])

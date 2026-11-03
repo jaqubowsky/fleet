@@ -142,7 +142,7 @@ for (const { name, sandbox, command, timeout, title, message, reason } of [
 		approved = true;
 		for (const wrapped of [
 			`bash -c '${command}'`, `env ${command}`, `cd /tmp && ${command}`,
-			`${command} && echo done`, `${command}; echo done`, `${command} | tail`,
+			`${command} && echo done`, `${command}; echo done`, `${command} | grep x`,
 			`${command}\necho done`, `${command} --force`, `${command} another`,
 		]) {
 			const denied = await invoke(wrapped, timeout);
