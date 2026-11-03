@@ -6,7 +6,7 @@ Accepted.
 
 ## Context
 
-A container that opened a pull request ended its turn after `gh pr create`. `babysit-pr` started only when someone steered "babysit PR #n", and the README told the person to give that order. On 2026-11-03 the person asked for the babysit to start on its own whenever a container opens a pull request, since they saw no reason to skip it. In one past task, flo-2094, the babysit work took about 70 tool calls, a small share of the task.
+A container that opened a pull request ended its turn after `gh pr create`. `babysit-pr` started only when someone steered "babysit PR #n", and the README told the person to give that order. On 2026-11-03 the person asked for the babysit to start on its own whenever a container opens a pull request, since they saw no reason to skip it. In one past task, flo-2094, the babysit work took about 70 tool calls.
 
 The host steers a container after every land with one sentence from the land line of `permissions.md`. With container push `none`, each babysit round with fixes goes back to the host to land, so that steer arrives again when the pull request is already open.
 
