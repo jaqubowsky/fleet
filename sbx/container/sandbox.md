@@ -53,5 +53,5 @@ slice tests                  pass    9d290c9  logs/gate-20261011T182717/web.log
 
 1. Commit unsigned on the task branch. Nothing in the task directory is committed, so keep code and secrets out
 2. A pushed branch follows the stale-base rules of skill `babysit-pr`
-3. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around
+3. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around. Once your branch's pull request is open, whether you opened it, updated it or a steer named it, run `babysit-pr` round after round, with no steer in between, until its Done or one of its exits. A round your seat cannot push ends the turn for the host to land. The closing message comes there, not after `gh pr create`
 4. Finish with a clean checkout: committed, or the uncommitted files named in the closing message with the reason

@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: 'Answering an open pull request round after round. Use when the user says to babysit or watch a pushed PR, and again each time a new round of findings or a red check lands.'
+description: 'Answering an open pull request round after round. Use right after this container opens or updates its pull request, when a steer names one, and again each time a new round of findings or a red check lands.'
 ---
 
 # Babysit a pull request

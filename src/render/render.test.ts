@@ -487,6 +487,18 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
+	test(`${name} babysits its pull request right after opening it, with no steer in between`, () => {
+		renderSeats(name, (out) => {
+			const sandbox = rendered(out, "container", name === "claude" ? "rules/sandbox.md" : "AGENTS.md");
+			const finish = sandbox.split("## Finish\n")[1]!;
+			const babysit = rendered(out, "container", "babysit-pr/SKILL.md");
+
+			assert.match(finish, /^3\. .*Once your branch's pull request is open, whether you opened it, updated it or a steer named it, run `babysit-pr` round after round, with no steer in between, until its Done or one of its exits\. A round your seat cannot push ends the turn for the host to land\. The closing message comes there, not after `gh pr create`$/m);
+			assert.match(babysit, /^description: '.*Use right after this container opens or updates its pull request, when a steer names one, and again each time a new round of findings or a red check lands\.'$/m);
+			assert.doesNotMatch(babysit, /when the user says to babysit/);
+		});
+	});
+
 	test(`${name} renders no Next step`, () => {
 		renderSeats(name, (out) => {
 			const naming = (readdirSync(out, { recursive: true }) as string[])
