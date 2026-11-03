@@ -493,7 +493,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			const finish = sandbox.split("## Finish\n")[1]!;
 			const babysit = rendered(out, "container", "babysit-pr/SKILL.md");
 
-			assert.match(finish, /^3\. .*Once your branch's pull request is open, whether you opened it, updated it or a steer named it, run `babysit-pr` round after round, with no steer in between, until its Done or one of its exits\. A round your seat cannot push ends the turn for the host to land\. The closing message comes there, not after `gh pr create`$/m);
+			assert.match(finish, /^3\. .*Once your branch's pull request is open, whether you opened it, updated it or a steer named it, run `babysit-pr` round after round, with no steer in between, until its Done or one of its exits\. A round your seat cannot push ends the turn for the host to land\. A round you push starts the next one at once\. The closing message comes at Done, an exit or that hand-back, never right after `gh pr create`, and holds the record of every round this turn ran$/m);
 			assert.match(babysit, /^description: '.*Use right after this container opens or updates its pull request, when a steer names one, and again each time a new round of findings or a red check lands\.'$/m);
 			assert.doesNotMatch(babysit, /when the user says to babysit/);
 		});
