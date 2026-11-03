@@ -7,6 +7,7 @@ export const FLEET = {
 	tasks: `${FLEET_HOME}/tasks`,
 	cache: `${FLEET_HOME}/cache`,
 	backups: `${FLEET_HOME}/backups`,
+	bench: `${FLEET_HOME}/bench`,
 };
 
 export const agentCache = (agent: AgentName) => `${FLEET.cache}/${agent}`;

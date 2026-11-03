@@ -16,6 +16,7 @@ import {
 	steer,
 	stop,
 } from "./commands.ts";
+import { benchRun } from "./bench.ts";
 import { init } from "./init.ts";
 import { containerPatch } from "./diff.ts";
 import { realIo, seatOf } from "./io.ts";
@@ -52,6 +53,7 @@ const usage = `usage:
   ${CLI} land <sandbox> [--branch <name>] [--base <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; skips a repo on its recorded base or detached at a commit its origin holds; --branch lands another branch and --base records the branch the work now builds on, both for the one repo with work
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head on its recorded base or on its clone's origin counts as landed; the task directory stays
   ${CLI} build [--pi|--claude] [--tag <variant>] [--root <worktree>]   render the container seat and rebuild that agent's image from it, the seat's own without a flag; --tag builds my-<agent>:<variant> beside v1 with its own stamp, --root renders from that harness checkout
+  ${CLI} bench run --image my-claude:<tag> --tasks <id,...> [--reps 1] [--parallel 1] [--timeout 180] [--repo <path>]   for each task of ~/.fleet/bench/tasks and each rep in that order: up from the tag on the task's frozen base under ~/.fleet/bench/runs/<tag>/<task>-<rep>/ with its own runbook copy and push, pr and linear none, write the ticket, steer delivery, wait for the settle or --timeout minutes, then keep diff.patch, usage.json and result.json beside the task directory and stop the container; prints the down commands, which stay yours
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
 
@@ -292,6 +294,27 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			render({ root, agent: seatOf(io).name, seat, out: resolve(opts.out) }, io);
 		else if (seat === "host") renderHost(root, io);
 		else throw new Error("the container seat needs --out <dir>");
+	},
+	async bench(args) {
+		const { opts, rest } = flags(args, ["image", "tasks", "reps", "parallel", "timeout", "repo"]);
+		if (rest[0] !== "run") throw new Error(`${CLI} bench takes run\n${usage}`);
+		const count = (value: string | true | string[] | undefined, fallback: number, what: string) => {
+			const n = value === undefined ? fallback : Number(value);
+			if (!Number.isInteger(n) || n < 1) throw new Error(`--${what} takes a whole number from 1`);
+			return n;
+		};
+		await benchRun(
+			{
+				root,
+				repo: repoOf(opts),
+				image: need(opts.image as string | undefined, "--image"),
+				tasks: need(opts.tasks as string | undefined, "--tasks").split(",").filter(Boolean),
+				reps: count(opts.reps, 1, "reps"),
+				parallel: count(opts.parallel, 1, "parallel"),
+				timeoutMs: count(opts.timeout, 180, "timeout") * 60_000,
+			},
+			io,
+		);
 	},
 	async watch(args) {
 		const { opts, rest } = flags(args, ["json", "every"]);
