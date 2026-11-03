@@ -48,7 +48,7 @@ async function run(files: Record<string, string>, tools: Record<string, string> 
 	try {
 		log = execFileSync("bash", ["-c", `exec 2>&1\n${installScript(setup)}`], {
 			env: {
-				...process.env,
+				...Object.fromEntries(Object.entries(process.env).filter(([key]) => key !== "BASH_ENV" && !key.startsWith("FNM_"))),
 				WORKSPACE_DIR: workspace,
 				PATH: `${bin}:${process.env.PATH}`,
 			},
