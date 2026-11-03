@@ -48,6 +48,18 @@ test("every repository of a task is read from its private checkout, its paths un
 	]);
 });
 
+test("a task on a frozen base diffs from that commit, even after a merge moved the branch past it", () => {
+	const io = fakeIo({
+		"sbx ls": [{ name: "claude-app-task", agent: "claude", status: "running", workspaces: ["/app"] }],
+		"read /home/me/.fleet/config/fleet/claude-app-task.json": JSON.stringify({ version: 1, task: "/task", repositories: [{ repo: "/app", workspace: "/app", name: "app", base: "main", baseSha: "a".repeat(40), branch: "task", served: "", frozen: true }] }),
+		"sbx exec": JSON.stringify(""),
+	});
+
+	containerPatch("claude-app-task", io);
+
+	assert.equal(JSON.parse(io.calls.find(c => c[0] === "sbx" && c[1] === "exec")!.at(-1)!).base, "a".repeat(40));
+});
+
 test("terminal escapes in repository content never reach the viewer", () => {
 	const io = fakeIo({ ...RUNNING, "sbx exec": JSON.stringify("+safe\x1b]52;c;ZXZpbA==\x07\x1b[2Jtext\r\n+\tindented\n") });
 

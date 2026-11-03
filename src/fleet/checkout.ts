@@ -13,6 +13,6 @@ export function checkouts(name: string, io: Io): Checkout[] | undefined {
 	if (sandboxes(io).find(s => s.name === name)?.status !== "running") return undefined;
 	const repositories = repositoryManifest(name, io)?.repositories ?? [];
 	return repositories.length
-		? repositories.map(r => ({ workspace: r.workspace, base: `refs/remotes/origin/${r.base}`, prefix: repositories.length > 1 ? `${basename(r.repo)}/` : "" }))
+		? repositories.map(r => ({ workspace: r.workspace, base: r.frozen ? r.baseSha : `refs/remotes/origin/${r.base}`, prefix: repositories.length > 1 ? `${basename(r.repo)}/` : "" }))
 		: [{ workspace: "", base: "", prefix: "" }];
 }
