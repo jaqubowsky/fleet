@@ -318,11 +318,11 @@ test("the description carries each sentence a seat would otherwise choose by lev
 	for (const { outside } of [none, human, unsignedLand])
 		assert.match(
 			outside,
-			/^- land: `fleet land --push <sandbox>` puts the container's branch on GitHub, then `fleet steer <sandbox> "resync and open the PR"`; if landing signed commits, resync before further work because their SHAs changed$/m,
+			/^- land: `fleet land --push <sandbox>` puts the container's branch on GitHub, then `fleet steer <sandbox> "resync, open the PR if none is open, and babysit it"`; if landing signed commits, resync before further work because their SHAs changed$/m,
 		);
 	assert.match(
 		hostless.outside,
-		/^- land: `fleet land <sandbox>` brings the container's branch here and the person pushes it from their own shell, then `fleet steer <sandbox> "resync and open the PR"`; if landing signed commits, resync before further work because their SHAs changed$/m,
+		/^- land: `fleet land <sandbox>` brings the container's branch here and the person pushes it from their own shell, then `fleet steer <sandbox> "resync, open the PR if none is open, and babysit it"`; if landing signed commits, resync before further work because their SHAs changed$/m,
 	);
 	assert.match(
 		noDown.outside,

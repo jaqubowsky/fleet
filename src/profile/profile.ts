@@ -223,7 +223,7 @@ const linear = (entry: Host | Container, seat: keyof typeof WRITES): string =>
 		: `${entry.linear === "read" ? "read" : "read and write"} Linear through \`${entry.linearServer}\`${entry.linear === "read" ? "; nothing can be written there" : `; ${WRITES[seat]}, and say what you posted`}`;
 
 function says(): Record<string, Record<string, Record<string, string>>> {
-	const resync = `then \`${CLI} steer <sandbox> "resync and open the PR"\`; if landing signed commits, resync before further work because their SHAs changed`;
+	const resync = `then \`${CLI} steer <sandbox> "resync, open the PR if none is open, and babysit it"\`; if landing signed commits, resync before further work because their SHAs changed`;
 	return {
 		container: {
 			push: {
