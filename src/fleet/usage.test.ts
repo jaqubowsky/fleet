@@ -257,3 +257,18 @@ test("a commit made while a sub-agent runs belongs to the main session's run", (
 		],
 	);
 });
+
+test("a steer queued while Claude works files the turns after it as direct", () => {
+	const queued = (at: string, extra: object) => JSON.stringify({ type: "attachment", timestamp: at, attachment: { type: "queued_command", prompt: "New rule in ticket", origin: { kind: "human" }, ...extra } });
+	const transcript = [
+		claudeTurn("a", "2026-10-30T10:00:00.000Z", "design-tokens"),
+		queued("2026-10-30T10:01:00.000Z", { isMeta: true }),
+		claudeTurn("b", "2026-10-30T10:02:00.000Z"),
+		queued("2026-10-30T10:03:00.000Z", { humanTurn: true }),
+		claudeTurn("c", "2026-10-30T10:04:00.000Z"),
+	].join("\n");
+
+	const summary = summarize(overlapping(transcript));
+
+	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["design-tokens", 2], ["direct", 1]]);
+});
