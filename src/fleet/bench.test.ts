@@ -145,7 +145,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 			},
 		);
 	}
-	assert.deepEqual(statuses, { "t1-1": "done", "t1-2": "blocked", "t2-1": "timeout", "t2-2": "blocked" });
+	assert.deepEqual(statuses, { "t1-1": "done", "t1-2": "done", "t2-1": "timeout", "t2-2": "blocked" });
 	const steer = io.calls.find((c) => c[0] === "hc" && c[1] === "send")!;
 	assert.match(steer[3], /ticket\.md/);
 	assert.match(steer[3], /end your turn only at Done or on an open question/);
@@ -191,12 +191,20 @@ test("settle starts the run once the watch is on, and answers with the container
 	assert.ok(io.followers.every((follower) => follower.stopped));
 });
 
-test("a closing message whose open questions are none is done, not blocked", async () => {
-	const { io } = bench();
+test("a run is blocked by the criteria its ticket left unticked, not by follow-up questions after the work", async () => {
+	const ticking = (ticket: string, said: string) => async (sandbox: string, io: unknown, _ms: number, start: () => void): Promise<Settled> => {
+		start();
+		(io as ReturnType<typeof fakeIo>).files[`${runs}/t2-1/${sandbox}/ticket.md`] = ticket;
+		return { state: "done", said };
+	};
+	const finished = bench();
+	const unfinished = bench();
 
-	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t2"], reps: 1, parallel: 1, timeoutMs: 1 }, io, outcome("done", "Done.\n\n## Open questions\n\n- None."));
+	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t2"], reps: 1, parallel: 1, timeoutMs: 1 }, finished.io, ticking("- [x] fixed\n- [x] tested\n", "Done.\n\n## Open questions\n\n- File a follow-up for the chip?"));
+	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t2"], reps: 1, parallel: 1, timeoutMs: 1 }, unfinished.io, ticking("- [x] fixed\n- [ ] tested\n", "Stopped."));
 
-	assert.equal(JSON.parse(io.files[`${runs}/t2-1/result.json`]).status, "done");
+	assert.equal(JSON.parse(finished.io.files[`${runs}/t2-1/result.json`]).status, "done");
+	assert.equal(JSON.parse(unfinished.io.files[`${runs}/t2-1/result.json`]).status, "blocked");
 });
 
 test("bench run refuses before anything starts when a run directory or a sandbox of the batch is already there", async () => {

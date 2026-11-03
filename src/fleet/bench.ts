@@ -18,15 +18,7 @@ if ! git merge-base --is-ancestor HEAD "$base"; then git bundle create --quiet "
 printf '%s\t%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')" "$bundled"`;
 const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
 
-function asksQuestions(said: string): boolean {
-	const lines = said.split("\n");
-	const heading = lines.findIndex((line) => /^[#*\s]*open questions\b/i.test(line));
-	if (heading < 0) return false;
-	const next = lines.findIndex((line, index) => index > heading && /^#/.test(line));
-	return lines
-		.slice(heading + 1, next < 0 ? undefined : next)
-		.some((line) => line.trim() && !/^[-*\d.)\s]*none\.?$/i.test(line.trim()));
-}
+const unticked = (ticket: string | undefined) => /^\s*[-*] \[ \]/m.test(ticket ?? "");
 
 export type Settled = { state: "done" | "idle" | "blocked" | "error" | "timeout"; said: string };
 type Wait = (sandbox: string, io: Io, timeoutMs: number, start: () => void) => Promise<Settled>;
@@ -136,7 +128,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 			const status =
 				settled.state === "timeout" ? "timeout"
 				: settled.state === "error" ? "error"
-				: settled.state === "blocked" || asksQuestions(settled.said) ? "blocked"
+				: settled.state === "blocked" || unticked(io.read(`${task}/ticket.md`)) ? "blocked"
 				: "done";
 			const [head, dirty, bundled] = io
 				.sbx(["exec", run.sandbox, "sh", "-c", FINAL_COMMITS, "--", seed.base, `${run.dir}/head.bundle`], { quiet: true })
