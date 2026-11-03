@@ -135,7 +135,8 @@ The host agent runs these for you. Each one is listed with what it changes, so n
 | `fleet down <sandbox> [--force]` | closes the sandbox, keeping its task folder | removes the sandbox; refuses unlanded work, which `--force` throws away |
 | `fleet profile [<repo>] [--apply]` | shows who may push, open and merge pull requests, per repository | with `--apply`: the checkout's git config (signing, HTTPS origin, credential helper) and its Linear MCP registration. Every host session start runs this on its own checkout |
 | `fleet tokens [set <name>]` | lists the GitHub tokens the profiles name and marks the ones missing from the macOS keychain; `set` asks for one and stores it | with `set`: one keychain item under `fleet-gh`. Run it yourself; the guard refuses it to agents |
-| `fleet build [--pi\|--claude]` | rebuilds a sandbox image | the local sbx image |
+| `fleet build [--pi\|--claude] [--tag <variant>]` | rebuilds a sandbox image, or builds a variant beside it | the local sbx image; with `--tag`, a `my-<agent>:<variant>` image and its own stamp, leaving `v1` alone |
+| `fleet bench run --image <tag> --tasks <id,...>` | reruns frozen past tickets from `~/.fleet/bench/tasks` under a variant image, as `docs/adr/017-internal-benchmark.md` describes | one stopped sandbox per task and rep, and its result folder under `~/.fleet/bench/runs/`; prints the `fleet down --force` list for you |
 | `fleet init <repo>` | lays out `AGENTS.md` and `spec/vision.md` | adds those files to the repository, never overwriting one |
 | `fleet render` | renders one seat's files | the seat's home, or `--out <dir>` |
 
