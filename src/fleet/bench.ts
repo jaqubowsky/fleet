@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { CLI, KINDS } from "../harness.ts";
-import { resolveSandbox, sessionUsage, steer, stop } from "./commands.ts";
+import { collect, resolveSandbox, sessionUsage, steer, stop } from "./commands.ts";
 import { containerPatch } from "./diff.ts";
 import { FLEET } from "./home.ts";
 import type { Io } from "./io.ts";
 import { sandboxName, slug } from "./name.ts";
 import { sandboxes } from "./status.ts";
 import { TICKET_STUB, up } from "./up.ts";
+import { parseEntries } from "./usage.ts";
 import { watch } from "./watch.ts";
 
 export const FROZEN_BASE = "Frozen base:";
@@ -62,6 +63,16 @@ function readSeed(dir: string, io: Io): Seed {
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
+export function actions(task: string, io: Io) {
+	const sessions = `${task}/logs/sessions`;
+	const screenshots_read = { main: 0, subagents: 0 };
+	for (const { path } of collect(sessions, "", io, []).filter((file) => file.path.endsWith(".jsonl") && !file.path.includes("subagent-artifacts/"))) {
+		const calls = parseEntries(io.read(`${sessions}/${path}`) ?? "").flatMap((entry) => (Array.isArray(entry.message?.content) ? entry.message.content : []));
+		screenshots_read[path.includes("/subagents/") ? "subagents" : "main"] += calls.filter((call) => call.type === "toolCall" && call.name === "read" && /\.png$/i.test(call.arguments?.path ?? "")).length;
+	}
+	return { screenshots_read, browser_runs: io.list(`${task}/browser`).filter((name) => io.stat(`${task}/browser/${name}`)?.dir).length };
+}
 
 export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): Promise<void> {
 	const kind = Object.values(KINDS).find((entry) => input.image.startsWith(`${entry.image.split(":")[0]}:`));
@@ -145,6 +156,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				bundle: bundled === "1" ? "head.bundle" : null,
 				diff: "diff.patch",
 				usage: usage ? "usage.json" : null,
+				actions: actions(task, io),
 			});
 		} catch (error) {
 			const running = sandboxes(io).find((sandbox) => sandbox.name === run.sandbox && sandbox.status !== "stopped");

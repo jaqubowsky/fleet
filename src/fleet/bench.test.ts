@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { SEATS } from "../harness.ts";
-import { benchRun, FINAL_COMMITS, FROZEN_BASE, settle, type Settled } from "./bench.ts";
+import { actions, benchRun, FINAL_COMMITS, FROZEN_BASE, settle, type Settled } from "./bench.ts";
 import { fakeIo } from "./fake-io.ts";
 import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import { TICKET_STUB } from "./up.ts";
@@ -90,6 +90,38 @@ const outcome = (state: Settled["state"], said: string) => async (_sandbox: stri
 	return { state, said };
 };
 
+test("a run counts the screenshots its agents read, main session and subagents apart, and its browser runs", () => {
+	const task = "/runs/x/t1-1/claude-webapp-x-t1-1";
+	const sessions = `${task}/logs/sessions/projects/-w-webapp`;
+	const dir = { size: 0, mtime: new Date(0), dir: true };
+	const file = { size: 1, mtime: new Date(0), dir: false };
+	const reads = (id: string, ...paths: string[]) =>
+		JSON.stringify({ type: "assistant", message: { id, role: "assistant", usage: { input_tokens: 1, output_tokens: 1 }, content: paths.map((file_path) => ({ type: "tool_use", name: "Read", input: { file_path } })) } });
+	const io = fakeIo({
+		[`list ${task}/logs/sessions`]: ["projects"],
+		[`stat ${task}/logs/sessions/projects`]: dir,
+		[`list ${task}/logs/sessions/projects`]: ["-w-webapp"],
+		[`stat ${task}/logs/sessions/projects/-w-webapp`]: dir,
+		[`list ${sessions}`]: ["s.jsonl", "s"],
+		[`stat ${sessions}/s.jsonl`]: file,
+		[`stat ${sessions}/s`]: dir,
+		[`list ${sessions}/s`]: ["subagents"],
+		[`stat ${sessions}/s/subagents`]: dir,
+		[`list ${sessions}/s/subagents`]: ["agent-a.jsonl"],
+		[`stat ${sessions}/s/subagents/agent-a.jsonl`]: file,
+		[`read ${sessions}/s.jsonl`]: [reads("m1", "/t/browser/walk-1/01.png", "/w/src/app.ts"), reads("m2", "/t/browser/walk-2/01.PNG")].join("\n"),
+		[`read ${sessions}/s/subagents/agent-a.jsonl`]: reads("m3", "/t/browser/walk-2/02.png"),
+		[`list ${task}/browser`]: ["walk-1", "walk-2", "notes.md"],
+		[`stat ${task}/browser/walk-1`]: dir,
+		[`stat ${task}/browser/walk-2`]: dir,
+		[`stat ${task}/browser/notes.md`]: file,
+	});
+
+	const counted = actions(task, io);
+
+	assert.deepEqual(counted, { screenshots_read: { main: 2, subagents: 1 }, browser_runs: 2 });
+});
+
 test("bench run puts each task and rep up on its frozen base, steers it, and keeps a result directory a grader can score without a container", async () => {
 	const { io, created, stopped } = bench();
 	const steered: string[] = [];
@@ -128,7 +160,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 		assert.deepEqual(final.slice(7), [shas[id], `${dir}/head.bundle`]);
 		assert.ok(io.calls.indexOf(final) < io.calls.findIndex((c) => c[0] === "sbx" && c[1] === "stop" && c[2] === name));
 		assert.deepEqual(
-			{ image: result.image, seed: result.seed, base: result.base, head: result.head, dirty: result.dirty, bundle: result.bundle, diff: result.diff, usage: result.usage, transcripts: result.transcripts, task_dir: result.task_dir, graders: result.graders, judge: result.judge },
+			{ image: result.image, seed: result.seed, base: result.base, head: result.head, dirty: result.dirty, bundle: result.bundle, diff: result.diff, usage: result.usage, actions: result.actions, transcripts: result.transcripts, task_dir: result.task_dir, graders: result.graders, judge: result.judge },
 			{
 				image: { ref: "my-claude:x", stamp: "a1b2c3d" },
 				seed: { ticket_sha256: sha256(seed(id).ticket), task_sha256: sha256(seed(id).task) },
@@ -138,6 +170,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 				bundle: index === 0 ? null : "head.bundle",
 				diff: "diff.patch",
 				usage: "usage.json",
+				actions: { screenshots_read: { main: 0, subagents: 0 }, browser_runs: 0 },
 				transcripts: `${name}/logs/sessions`,
 				task_dir: name,
 				graders: null,

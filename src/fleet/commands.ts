@@ -275,7 +275,7 @@ export function copy(from: string, to: string, io: Io): void {
 
 type Artifact = { path: string; size: number; mtime: Date };
 
-function collect(
+export function collect(
 	root: string,
 	rel: string,
 	io: Io,
