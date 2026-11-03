@@ -30,3 +30,9 @@ ask	Bash	find ~/.claude/skills -name SKILL.md
 ask	Bash	git -C ~/.pi log
 ask	Bash	cd ~/.claude && for f in hooks/guard.sh agents/reviewer.md; do cat "$f"; done
 allow	Bash	for f in core host; do cat ~/.claude/rules/$f.md; done
+allow	Bash	cp ~/.claude/uploads/s1/pick.png /Users/alice/.fleet/tasks/app/t1/pick.png
+allow	Bash	cp ~/.claude/rules/delegation.md /tmp/arms/current.md
+deny	Bash	cp -t ~/.claude/hooks guard.sh
+deny	Bash	cp --target-directory=/Users/alice/.claude/hooks guard.sh
+allow	Bash	mkdir -p ~/.claude/jobs/ddfaf1b8/tmp/condensed
+allow	Write	~/.claude/jobs/ddfaf1b8/tmp/notes.md

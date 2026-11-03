@@ -4,11 +4,13 @@ import { argvsOf, redirections } from "./argv.ts";
 import { within } from "./host.ts";
 
 const HOMES = Object.values(KINDS);
-const RUNTIME: Record<AgentName, string[]> = { pi: [], claude: ["projects", "todos"] };
+const RUNTIME: Record<AgentName, string[]> = { pi: [], claude: ["projects", "todos", "jobs"] };
 const EDITS = new Set(["Edit", "Write"]);
 const READS = /^(\S*\/)?(cat|head|tail|less|wc|jq|grep|rg|diff|ls|stat|file|readlink|realpath|echo|printf|test|\[|cd|pushd)$/;
 const WRITES = /^(\S*\/)?(cp|mv|rm|rmdir|tee|touch|mkdir|ln|chmod|chown|install|rsync|dd|truncate|unlink)$/;
 const IN_PLACE = /^(\S*\/)?(sed|perl)$/;
+const COPY = /^(\S*\/)?cp$/;
+const TARGET_OPTION = /^(-[^-]*t|--target-directory)/;
 
 const READERS = "Read, Grep and Glob tools, or cat, head, tail, less, wc, jq, grep, rg, diff, ls, stat, file, readlink or realpath";
 export const OWN_CONFIG = `~/.pi and ~/.claude hold the settings, rules, refs, agents and skills the harness renders from its repo, so a write there skips git and the other harness, and the next render overwrites it. Change the source in the harness repo; the person renders it home. To read there, use the ${READERS}.`;
@@ -22,6 +24,13 @@ function located(word: string, dir: string, home: string): string {
 
 function own(path: string, home: string): boolean {
 	return HOMES.some((h) => within(path, `${home}/${h.home}`) && !RUNTIME[h.name].some((state) => within(path, `${home}/${h.home}/${state}`)));
+}
+
+function targets(named: string[]): string[] {
+	const [program = "", ...rest] = named;
+	if (!COPY.test(program)) return rest;
+	if (rest.some((word) => TARGET_OPTION.test(word))) return rest.map((word) => word.replace(/^--target-directory=/, ""));
+	return rest.filter((word) => !word.startsWith("-")).slice(-1);
 }
 
 function writes(named: string[]): boolean {
@@ -39,7 +48,7 @@ export function ownConfig(tool: string, input: Record<string, unknown>, cwd: str
 		if (/^(cd|pushd)$/.test(named[0] ?? "")) dir = located(named.find((word, i) => i > 0 && word !== "--") ?? home, dir, home);
 		const inHome = (word: string) => own(located(word, dir, home), home);
 		if (redirected.some(inHome)) return "deny";
-		if (READS.test(named[0] ?? "") || !named.slice(1).some(inHome)) continue;
+		if (READS.test(named[0] ?? "") || !targets(named).some(inHome)) continue;
 		if (writes(named)) return "deny";
 		verdict = "ask";
 	}
