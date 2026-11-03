@@ -38,6 +38,8 @@ On a task the user handed you end to end: steer with the order in your own words
 
 Stop for the user on a decision that is theirs, and on one that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 
+A user's question whether more places or cases exist is answered with the list. A steer that reaches past the ticket's acceptance criteria carries the items the user picked from it.
+
 When the user hands you a project, a plan or several tickets to run as a whole, read [references/coordinating.md](references/coordinating.md) before the first `{{cli}} up`: the tracker as the plan, waves, the review, acceptance and the merge.
 
 The host checkout stays on the default branch: it is also the user's window. A fresh host session resumes from the tracker and `{{cli}} ls`.
@@ -46,9 +48,13 @@ The host checkout stays on the default branch: it is also the user's window. A f
 
 A `[fleet]` line or a question about a task starts at the closing message the wake carries, then the one file that answers it: [references/reading.md](references/reading.md).
 
+A report to the user on a change a user sees names the absolute path of the newest `browser/<run-id>/report.md`, and of `mockup/index.html` when the task has one.
+
 ## Landing
 
-The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word. `{{cli}} land` and `{{cli}} down` run bare: one line, one sandbox name, no pipe, `cd` or `2>&1`, their flags read from `{{cli}} --help`. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
+The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word. `{{cli}} land` and `{{cli}} down` each run alone, one sandbox name, their flags read from `{{cli}} --help`. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
+
+The user's word that a container's pull request merged is the word to run `{{cli}} down` on it in the same turn, unless the user or a queued steer keeps work there.
 
 Posting the container's rejections of review findings is the user's call, because this session reaches GitHub through its own credential rather than the container's. The container's closing message for that round holds them, and a line pasted into a thread opens with `[container / babysit-pr] answered on the user's behalf` so nobody reads it as the user typing.
 

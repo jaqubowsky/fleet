@@ -10,6 +10,7 @@ Reached from the skill for a question about a task: the one file that answers it
 | what did the analysis find | `analysis.md` |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. The checks table of the closing message names each check, its result, the commit it passed on and its log |
 | what is happening on the PR | the pull request on GitHub, and the closing message of the container's last round |
+| how does it look in the app | the newest `<task dir>/browser/<run-id>/report.md`, one line per frame beside its screenshots and walkthrough video |
 | how will it look | open <task dir>/mockup/index.html#<slug> on the Mac, the slug from the closing message; the user's pick goes back as a steer naming the slug and the variant |
 | what is it doing this minute | `{{cli}} peek` |
 | why did that test fail, what exactly was said | the file under `logs/` that one of the above points at |
