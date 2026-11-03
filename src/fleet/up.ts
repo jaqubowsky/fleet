@@ -138,6 +138,8 @@ type UpInput = {
 	kind?: AgentName;
 	image?: string;
 	baseCommit?: string;
+	artifacts?: string;
+	container?: Partial<Pick<Profile["container"], "push" | "pr" | "linear">>;
 	root: string;
 };
 type RepoPlan = {
@@ -193,9 +195,13 @@ function planRepositories(input: UpInput, branch: string, io: Io): RepoPlan[] {
 			baseSha: "",
 			workspace,
 			served,
-			profile: repoProfile(input.root, name, io),
+			profile: withLevels(repoProfile(input.root, name, io), input),
 		};
 	});
+}
+
+function withLevels(profile: Profile, input: UpInput): Profile {
+	return { ...profile, container: { ...profile.container, ...input.container } };
 }
 
 function cloneSecondary(
@@ -297,13 +303,13 @@ export async function up(
 	};
 	const sandbox = sandboxName(input.repo, input.label, kind.prefix);
 	const name = repoName(io.git(["remote", "get-url", "origin"], input.repo));
-	const profile = repoProfile(input.root, name, io);
+	const profile = withLevels(repoProfile(input.root, name, io), input);
 	const existing = sandboxes(io).find((s) => s.name === sandbox);
 	const inner = labelInSandboxName(input.repo, input.label, kind.prefix);
 	if (!existing && inner)
 		throw new Error(`${input.label} is a sandbox name; its label is ${inner}`);
 	const live = terminalOf(sandbox, fleetTerminals(io));
-	const task = taskDir(input.repo, sandbox, io, input.repos ?? []);
+	const task = input.artifacts ? `${input.artifacts}/${sandbox}` : taskDir(input.repo, sandbox, io, input.repos ?? []);
 	if (existing) layoutTask(task, io);
 	if (existing && input.repos?.length && !repositoryManifest(sandbox, io))
 		throw new Error(`${sandbox} already exists with different repositories`);
@@ -347,6 +353,9 @@ export async function up(
 				);
 		}
 		layoutTask(task, io);
+		const shared = `${artifactsDir(input.repo, io)}/runbook`;
+		if (input.artifacts && io.stat(shared)?.dir && !io.stat(`${input.artifacts}/runbook`))
+			io.run("cp", ["-R", shared, `${input.artifacts}/runbook`]);
 		create(input, sandbox, profile, kind, io, task);
 		const built = io.read(imageStampPath(kind, io, image));
 		if (built) io.write(builtStampPath(task), built);
@@ -602,7 +611,7 @@ function create(
 	const codex = h.codex
 		? codexArgs(io.read(`${io.home}/${h.home}/${h.codex.auth}`))
 		: undefined;
-	const runbooks = [...new Set([input.repo, ...(input.repos ?? [])].map((repo) => `${artifactsDir(repo, io)}/runbook`))]
+	const runbooks = [...new Set([...(input.artifacts ? [] : [input.repo]), ...(input.repos ?? [])].map((repo) => `${artifactsDir(repo, io)}/runbook`))]
 		.filter((dir) => dir !== `${artifacts}/runbook`);
 	for (const dir of runbooks) io.mkdir(dir);
 	io.sbx([

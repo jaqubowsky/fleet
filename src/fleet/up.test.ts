@@ -307,6 +307,40 @@ test("a single-repository sandbox mounts no other runbook", async () => {
 	assert.ok(!run.some((arg) => arg.endsWith("/runbook")), run.join(" "));
 });
 
+test("up under an artifacts root of its own copies the shared runbook there, mounts no shared one, and keeps the task there", async () => {
+	const own = "/home/me/.fleet/bench/runs/x/t1-1";
+	const io = fakeIo({
+		...base,
+		"stat /home/me/.fleet/tasks/webapp/runbook": { size: 0, mtime: new Date(0), dir: true },
+	});
+
+	await up({ repo, label: "web-1", root: "/root", artifacts: own }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	const copied = io.calls.findIndex((call) => call[0] === "run" && call[1] === "cp");
+	assert.deepEqual(io.calls[copied], ["run", "cp", "-R", "/home/me/.fleet/tasks/webapp/runbook", `${own}/runbook`]);
+	assert.ok(copied < io.calls.indexOf(run), "the copy exists before the sandbox mounts its root");
+	assert.ok(run.includes(`FLEET_ARTIFACTS=${own}`), run.join(" "));
+	assert.ok(!run.some((arg) => arg.includes("/.fleet/tasks/")), run.join(" "));
+	assert.equal(JSON.parse(io.files[manifestPath("pi-webapp-web-1", io)]).task, `${own}/pi-webapp-web-1`);
+	assert.ok(io.files[`${own}/pi-webapp-web-1/permissions.md`]);
+	assert.ok(io.files[`${own}/pi-webapp-web-1/ticket.md`]);
+	assert.ok(!io.calls.some((call) => ["write", "remove", "rename"].includes(call[0]) && call[1].startsWith("/home/me/.fleet/tasks/webapp/runbook")));
+});
+
+test("up with container levels of its own attaches no Linear server and writes those levels into permissions.md", async () => {
+	const io = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root", container: { push: "none", pr: "none", linear: "none" } }, io);
+
+	const run = io.calls.find((call) => call[0] === "sbx" && call[1] === "run")!;
+	const permissions = io.files["/home/me/.fleet/tasks/webapp/pi-webapp-web-1/permissions.md"];
+	assert.ok(!run.includes("--static-mcp"), run.join(" "));
+	assert.match(permissions, /^- push `none`/m);
+	assert.match(permissions, /^- pr `none`/m);
+	assert.match(permissions, /^- linear `none`/m);
+});
+
 test("two clones of the same GitHub repository are refused before anything is created", async () => {
 	const copy = "/Users/me/Copy/webapp";
 	const io = fakeIo(base);
