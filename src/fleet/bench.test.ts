@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { SEATS } from "../harness.ts";
-import { benchRun, FROZEN_BASE, settle, type Settled } from "./bench.ts";
+import { benchRun, FINAL_COMMITS, FROZEN_BASE, settle, type Settled } from "./bench.ts";
 import { fakeIo } from "./fake-io.ts";
 import { SAMPLE_PROFILES } from "../profile/fixture.ts";
 import { TICKET_STUB } from "./up.ts";
@@ -43,6 +47,7 @@ function bench() {
 		const sessions = `${task}/logs/sessions/projects/-w-webapp`;
 		answers[`sbx exec ${name} git -C ${repo} rev-parse refs/fleet/base`] = index < 2 ? shas.t1 : shas.t2;
 		answers[`sbx exec ${name} node -e`] = JSON.stringify(`diff --git a/${run} b/${run}\n`);
+		answers[`sbx exec ${name} sh -c ${FINAL_COMMITS}`] = `${"e".repeat(40)}\t${index}`;
 		answers[`list ${task}/logs/sessions`] = ["projects"];
 		answers[`stat ${task}/logs/sessions/projects`] = { size: 0, mtime: new Date(0), dir: true };
 		answers[`list ${task}/logs/sessions/projects`] = ["-w-webapp"];
@@ -119,12 +124,18 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 		assert.match(io.files[`${dir}/${name}/permissions.md`], /^- push `none`/m);
 		assert.equal(io.files[`${dir}/diff.patch`], `diff --git a/${run} b/${run}\n`);
 		assert.equal(JSON.parse(io.files[`${dir}/usage.json`]).totals.cost, 4);
+		const final = io.calls.find((c) => c[0] === "sbx" && c[2] === name && c[5] === FINAL_COMMITS)!;
+		assert.deepEqual(final.slice(7), [shas[id], `${dir}/head.bundle`]);
+		assert.ok(io.calls.indexOf(final) < io.calls.findIndex((c) => c[0] === "sbx" && c[1] === "stop" && c[2] === name));
 		assert.deepEqual(
-			{ image: result.image, seed: result.seed, base: result.base, diff: result.diff, usage: result.usage, transcripts: result.transcripts, task_dir: result.task_dir, graders: result.graders, judge: result.judge },
+			{ image: result.image, seed: result.seed, base: result.base, head: result.head, dirty: result.dirty, bundle: result.bundle, diff: result.diff, usage: result.usage, transcripts: result.transcripts, task_dir: result.task_dir, graders: result.graders, judge: result.judge },
 			{
 				image: { ref: "my-claude:x", stamp: "a1b2c3d" },
 				seed: { ticket_sha256: sha256(seed(id).ticket), task_sha256: sha256(seed(id).task) },
 				base: shas[id],
+				head: "e".repeat(40),
+				dirty: index,
+				bundle: "head.bundle",
 				diff: "diff.patch",
 				usage: "usage.json",
 				transcripts: `${name}/logs/sessions`,
@@ -216,4 +227,47 @@ test("a run that fails is recorded as an error and stopped, and the batch goes o
 	assert.equal(JSON.parse(io.files[`${runs}/t1-2/result.json`]).status, "done");
 	assert.deepEqual(created, names.slice(0, 2));
 	assert.deepEqual(stopped, names.slice(0, 2));
+});
+
+test("a run whose container came up but whose agent is not logged in is an error, stopped, and on the down list", async () => {
+	const { io, stopped } = bench();
+	let reads = 0;
+	const read = io.hcText;
+	io.hcText = (args) => (args[0] === "read" && reads++ === 0 ? "Not logged in" : read(args));
+
+	await benchRun({ root: "/root", repo, image: "my-claude:x", tasks: ["t1"], reps: 2, parallel: 1, timeoutMs: 1 }, io, outcome("done", "Done."));
+
+	const failed = JSON.parse(io.files[`${runs}/t1-1/result.json`]);
+	assert.equal(failed.status, "error");
+	assert.match(failed.error, /not logged in/);
+	assert.deepEqual(stopped, names.slice(0, 2));
+	for (const name of names.slice(0, 2)) assert.ok(io.lines.includes(`fleet down --force ${name}`), io.lines.join("\n"));
+});
+
+test("base plus the run's bundle rebuilds the final commit, and a run with no commit writes no bundle", (t) => {
+	const root = realpathSync(mkdtempSync(join(tmpdir(), "bench-bundle-")));
+	t.after(() => rmSync(root, { recursive: true, force: true }));
+	const git = (dir: string, ...args: string[]) =>
+		execFileSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" }).trim();
+	const work = join(root, "work");
+	execFileSync("git", ["init", "--quiet", "-b", "main", work]);
+	git(work, "commit", "--quiet", "--allow-empty", "-m", "base");
+	const base = git(work, "rev-parse", "HEAD");
+	const grader = join(root, "grader");
+	execFileSync("git", ["clone", "--quiet", work, grader], { stdio: "ignore" });
+	const final = (bundle: string) =>
+		execFileSync("sh", ["-c", FINAL_COMMITS, "--", base, bundle], { env: { ...process.env, WORKSPACE_DIR: work }, encoding: "utf8" }).trim();
+
+	const untouched = final(join(root, "none.bundle"));
+	execFileSync("sh", ["-c", "printf 'a\\r\\nb\\0' > blob.bin && echo x > left.txt"], { cwd: work });
+	git(work, "add", "blob.bin");
+	git(work, "commit", "--quiet", "-m", "work");
+	const [head, dirty] = final(join(root, "head.bundle")).split("\t");
+	git(grader, "fetch", "--quiet", join(root, "head.bundle"), "HEAD");
+
+	assert.equal(untouched, `${base}\t0`);
+	assert.throws(() => execFileSync("test", ["-e", join(root, "none.bundle")]));
+	assert.equal(head, git(work, "rev-parse", "HEAD"));
+	assert.equal(dirty, "1");
+	assert.equal(git(grader, "rev-parse", "FETCH_HEAD^{tree}"), git(work, "rev-parse", "HEAD^{tree}"));
 });

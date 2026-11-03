@@ -10,6 +10,10 @@ import { TICKET_STUB, up } from "./up.ts";
 import { watch } from "./watch.ts";
 
 export const FROZEN_BASE = "Frozen base:";
+export const FINAL_COMMITS = `cd "$WORKSPACE_DIR" || exit 1
+head="$(git rev-parse HEAD)" || exit 1
+if [ "$head" != "$1" ]; then git bundle create --quiet "$2" "$1..HEAD" || exit 1; fi
+printf '%s\t%s' "$head" "$(git status --porcelain | wc -l | tr -d ' ')"`;
 const HIDDEN = new Set(["ticket.md", "task.json", "rubric.md", "graders"]);
 
 function asksQuestions(said: string): boolean {
@@ -84,7 +88,6 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 	const live = sandboxes(io).find((sandbox) => names.includes(sandbox.name));
 	if (live) throw new Error(`${live.name} already exists; take it down with ${CLI} down --force ${live.name} before the batch reuses its name`);
 	const seeded = new Map(input.tasks.map((task) => [task, readSeed(`${seeds}/${task}`, io)]));
-	const started: string[] = [];
 	const one = async (run: (typeof runs)[number]) => {
 		const seed = seeded.get(run.task)!;
 		const task = `${run.dir}/${run.sandbox}`;
@@ -123,7 +126,6 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				},
 				io,
 			);
-			started.push(run.sandbox);
 			io.write(`${task}/ticket.md`, `${TICKET_STUB}${FROZEN_BASE} ${seed.base}\n\n${seed.ticket}`);
 			for (const name of seed.attachments) io.run("cp", ["-R", `${seeds}/${run.task}/${name}`, `${task}/`]);
 			const settled = await wait(run.sandbox, io, input.timeoutMs, () =>
@@ -134,11 +136,22 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 				: settled.state === "error" ? "error"
 				: settled.state === "blocked" || asksQuestions(settled.said) ? "blocked"
 				: "done";
+			const [head, dirty] = io
+				.sbx(["exec", run.sandbox, "sh", "-c", FINAL_COMMITS, "--", seed.base, `${run.dir}/head.bundle`], { quiet: true })
+				.split("\t");
 			io.write(`${run.dir}/diff.patch`, containerPatch(run.sandbox, io) ?? "");
 			const usage = sessionUsage(task, io);
 			if (usage) io.write(`${run.dir}/usage.json`, `${JSON.stringify(usage, null, 2)}\n`);
 			stop(resolveSandbox(run.sandbox, io), io);
-			record({ status, closing_message: settled.said, diff: "diff.patch", usage: usage ? "usage.json" : null });
+			record({
+				status,
+				closing_message: settled.said,
+				head,
+				dirty: Number(dirty),
+				bundle: head === seed.base ? null : "head.bundle",
+				diff: "diff.patch",
+				usage: usage ? "usage.json" : null,
+			});
 		} catch (error) {
 			const running = sandboxes(io).find((sandbox) => sandbox.name === run.sandbox && sandbox.status !== "stopped");
 			if (running) stop(running, io);
@@ -153,7 +166,8 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 			}),
 		);
 	} finally {
-		if (started.length) io.log("Stopped, with their files kept; discarding them is yours:");
-		for (const name of started) io.log(`${CLI} down --force ${name}`);
+		const kept = sandboxes(io).filter((sandbox) => names.includes(sandbox.name));
+		if (kept.length) io.log("Stopped, with their files kept; discarding them is yours:");
+		for (const sandbox of kept) io.log(`${CLI} down --force ${sandbox.name}`);
 	}
 }
