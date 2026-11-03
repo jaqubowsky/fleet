@@ -16,7 +16,7 @@ import { isAncestor, landedRef, onRemote } from "./land.ts";
 import { EVENTS_LOG, logEvent, runtimeOf } from "./events.ts";
 import { agentCache, FLEET, FLEET_HOME } from "./home.ts";
 import { fleetTerminals, statusOf, terminalOf } from "./terminals.ts";
-import { harnessStamp, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
+import { harnessStamp, imageOf, imageStampPath, resumeAgent, staleOnce, staleSandbox } from "./up.ts";
 import {
 	checkoutProbe,
 	commitsOf,
@@ -246,14 +246,20 @@ export function renderHost(root: string, io: Io): void {
 	);
 }
 
-export function build(root: string, name: AgentName | undefined, io: Io): void {
+export function build(
+	root: string,
+	name: AgentName | undefined,
+	io: Io,
+	{ tag, source = root }: { tag?: string; source?: string } = {},
+): void {
 	const kind = KINDS[name ?? seatOf(io).name];
+	const image = imageOf(kind, tag);
 	const stage = `${io.tmp}/${kind.name}-sbx-stage-${io.now().getTime()}`;
-	render({ root, agent: kind.name, seat: "container", out: stage }, io);
-	const stamp = harnessStamp(root, kind, io);
-	io.run(`${root}/sbx/build.sh`, [kind.name, kind.image, stage]);
+	render({ root: source, agent: kind.name, seat: "container", out: stage }, io);
+	const stamp = harnessStamp(source, kind, io);
+	io.run(`${root}/sbx/build.sh`, [kind.name, image, stage, `${io.tmp}/${image.replace(/[:/]/g, "-")}.tar`]);
 	io.mkdir(`${io.home}/${agentCache(kind.name)}`);
-	io.write(imageStampPath(kind, io), `${stamp}\n`);
+	io.write(imageStampPath(kind, io, image), `${stamp}\n`);
 }
 
 export function copy(from: string, to: string, io: Io): void {

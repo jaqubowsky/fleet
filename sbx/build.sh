@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: build.sh <harness> <image> <stage the fleet build command rendered>"
+usage="usage: build.sh <harness> <image> <stage the fleet build command rendered> <tar path>"
 NAME="${1:?$usage}"
 IMAGE="${2:?$usage}"
 RENDERED="${3:?$usage}"
+TAR="${4:?$usage}"
 STAGE="$RENDERED/home"
 BUILD_ARGS=(--build-arg "UPDATE_BUST=$(date +%Y%m%d)-$("$NAME" --version 2>/dev/null | tr -cd '0-9.' || true)")
 trap 'rm -rf "$RENDERED"' EXIT
@@ -12,7 +13,6 @@ trap 'rm -rf "$RENDERED"' EXIT
 cp -RL "$HOME/.fleet/config/git" "$STAGE/git"
 find "$STAGE" -name .DS_Store -delete
 
-TAR="${TMPDIR:-/tmp}/${IMAGE%%:*}.tar"
 docker buildx build --provenance=false --sbom=false \
 	${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"} \
 	--build-context "$NAME-home=$STAGE" \

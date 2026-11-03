@@ -51,7 +51,7 @@ const usage = `usage:
   ${CLI} copy <src> <dst>                             sbx cp; one side is <sandbox>:<path>
   ${CLI} land <sandbox> [--branch <name>] [--base <name>] [--sign] [--push]   fetch every repo's branch from the sandbox, preflight all, then move each host branch; signs per profile or with --sign, --push pushes after every repo is signed; a rerun resumes, pushes stay fast-forward; skips a repo on its recorded base or detached at a commit its origin holds; --branch lands another branch and --base records the branch the work now builds on, both for the one repo with work
   ${CLI} down <sandbox> [--force]                     write logs/usage.json from the task's sessions and logs/memory.json from the guest's peak and anon memory and its high and oom counts, close the tab, remove the container; a head on its recorded base or on its clone's origin counts as landed; the task directory stays
-  ${CLI} build [--pi|--claude]                        render the container seat and rebuild that agent's image from it, the seat's own without a flag
+  ${CLI} build [--pi|--claude] [--tag <variant>] [--root <worktree>]   render the container seat and rebuild that agent's image from it, the seat's own without a flag; --tag builds my-<agent>:<variant> beside v1 with its own stamp, --root renders from that harness checkout
   ${CLI} render [--seat host|container] [--out <dir>]  render the seat's rules, skills, agents and settings into its home, or a seat into <dir>
   ${CLI} watch [<sandbox>...] [--every] [--json]      print a [fleet] line each time a container this session put up, started or steered, or one named, settles; --every follows every container; --json prints each wake, notice and watched set as one JSON line
 
@@ -273,8 +273,11 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 		down(sandboxOf(rest[0]).name, { force: opts.force === true }, io);
 	},
 	build(args) {
-		const { opts } = flags(args, ["pi", "claude"]);
-		build(root, kindOf(opts), io);
+		const { opts } = flags(args, ["pi", "claude", "tag", "root"]);
+		build(root, kindOf(opts), io, {
+			tag: opts.tag as string | undefined,
+			source: typeof opts.root === "string" ? checkout(opts.root) : undefined,
+		});
 	},
 	render(args) {
 		const { opts } = flags(args, ["seat", "out"]);

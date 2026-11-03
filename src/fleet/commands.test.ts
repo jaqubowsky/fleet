@@ -1111,8 +1111,38 @@ test("build renders the container seat into a stage and hands it to the shared b
 		[run, script, name, image],
 		["run", "/root/sbx/build.sh", "pi", "my-pi:v1"],
 	);
+	assert.equal(io.calls.find((c) => c[0] === "run")?.[5], "/tmp/my-pi-v1.tar");
 	assert.match(io.files[`${stage}/home/agent/AGENTS.md`] ?? "", /a fresh rule/);
 	assert.equal(io.files["/home/me/.fleet/cache/pi/image-stamp"], "31e3d51\n");
+});
+
+test("build of a tag renders that worktree into its own image, tar and stamp, and leaves v1's stamp alone", () => {
+	const io = fakeIo(
+		{
+			"list /variant/rules": ["core.md"],
+			"read /variant/rules/core.md": "# Core\n\n- a variant rule\n",
+			"read /variant/sbx/container/sandbox.md": "# Container\n",
+			"read /variant/agents/explorer.md": "---\nname: explorer\n---\n",
+			"read /variant/agents/researcher.md": "---\nname: researcher\n---\n",
+			"read /variant/agents/reviewer.md": "---\nname: reviewer\n---\n",
+			"read /variant/claude/CLAUDE.md": "Rules live in rules/.\n",
+			"read /variant/sbx/container/toolchain.Dockerfile": "RUN install node\n",
+			"read /variant/claude/sbx/Dockerfile": "FROM base\n{{toolchain}}\n",
+			"git /variant log -1 --format=%h": "a1b2c3d",
+			"git /variant status --porcelain": "",
+			"read /home/me/.fleet/cache/claude/image-stamp": "31e3d51\n",
+		},
+		SEATS.claude,
+	);
+
+	build("/root", "claude", io, { tag: "x", source: "/variant" });
+
+	const [, script, name, image, stage, tar] = io.calls.find((c) => c[0] === "run") ?? [];
+	assert.deepEqual([script, name, image, tar], ["/root/sbx/build.sh", "claude", "my-claude:x", "/tmp/my-claude-x.tar"]);
+	assert.match(io.files[`${stage}/home/rules/core.md`] ?? "", /a variant rule/);
+	assert.equal(io.files["/home/me/.fleet/cache/claude/image-stamp-x"], "a1b2c3d\n");
+	assert.equal(io.files["/home/me/.fleet/cache/claude/image-stamp"], undefined);
+	assert.equal(io.read("/home/me/.fleet/cache/claude/image-stamp"), "31e3d51\n");
 });
 
 test("both agent Dockerfiles select Docker-capable bases and request nested Docker", () => {

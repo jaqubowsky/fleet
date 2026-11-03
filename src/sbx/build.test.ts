@@ -34,7 +34,7 @@ test("the image home takes the person's git directory as it is", () => {
 		`for arg; do case "$arg" in pi-home=*) (cd "\${arg#pi-home=}" && find . -type f | sort | while read -r f; do printf '%s %s\\n' "$f" "$(head -n 2 "$f" | tail -n 1)"; done) > ${seen};; esac; done`,
 	);
 
-	const run = spawnSync("bash", [script, "pi", "my-pi:v1", rendered], {
+	const run = spawnSync("bash", [script, "pi", "my-pi:v1", rendered, join(root, "my-pi-v1.tar")], {
 		encoding: "utf8",
 		env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}`, TMPDIR: root },
 	});
