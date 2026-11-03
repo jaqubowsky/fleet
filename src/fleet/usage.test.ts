@@ -222,3 +222,22 @@ test("a skill read on a later line of one Claude message labels the turns after 
 
 	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["direct", 1], ["deliver-ticket", 1]]);
 });
+
+const claudeUser = (at: string, origin?: string, content: unknown = "Zrób rebase") =>
+	JSON.stringify({ type: "user", timestamp: at, ...(origin ? { origin: { kind: origin } } : {}), message: { role: "user", content } });
+
+test("a typed Claude prompt files its turns as direct until they read a skill", () => {
+	const transcript = [
+		claudeTurn("a", "2026-10-30T10:00:00.000Z", "babysit-pr"),
+		claudeUser("2026-10-30T10:01:00.000Z", undefined, [{ type: "tool_result", content: "ok" }]),
+		claudeTurn("b", "2026-10-30T10:02:00.000Z"),
+		claudeUser("2026-10-30T10:03:00.000Z", "task-notification", "<task-notification>done</task-notification>"),
+		claudeTurn("c", "2026-10-30T10:04:00.000Z"),
+		claudeUser("2026-10-30T10:05:00.000Z", "human"),
+		claudeTurn("d", "2026-10-30T10:06:00.000Z"),
+	].join("\n");
+
+	const summary = summarize(overlapping(transcript));
+
+	assert.deepEqual(summary.runs.map((r) => [r.skill, r.requests]), [["babysit-pr", 3], ["direct", 1]]);
+});

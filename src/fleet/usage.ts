@@ -85,7 +85,7 @@ function claudeCost(model: string | undefined, usage: ClaudeUsage): number {
 	return tokens / 1_000_000 + advice;
 }
 type ClaudePart = { type: string; name?: string; input?: { file_path?: string; skill?: string } };
-type ClaudeLine = { type: string; subtype?: string; timestamp?: string; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
+type ClaudeLine = { type: string; subtype?: string; timestamp?: string; origin?: { kind?: string }; message?: { id?: string; role?: string; model?: string; usage?: ClaudeUsage; content?: ClaudePart[] | string } };
 
 function claudeCalls(content: ClaudePart[] | string | undefined): ToolCall[] {
 	if (!Array.isArray(content)) return [];
@@ -99,6 +99,7 @@ function claudeCalls(content: ClaudePart[] | string | undefined): ToolCall[] {
 
 function fromClaude(line: ClaudeLine, seen: Set<string>): Entry[] {
 	if (line.type === "system" && line.subtype === "compact_boundary") return [{ type: "compaction", timestamp: line.timestamp }];
+	if (line.type === "user") return line.origin?.kind === "human" ? [{ type: "message", timestamp: line.timestamp, message: { role: "user" } }] : [];
 	const usage = line.message?.usage;
 	if (line.type !== "assistant" || !usage) return [];
 	const id = line.message?.id;
@@ -130,7 +131,7 @@ export function parseEntries(jsonl: string, seen = new Set<string>()): Entry[] {
 			} catch {
 				return [];
 			}
-			return parsed.type === "assistant" || parsed.type === "system" ? fromClaude(parsed, seen) : [parsed as Entry];
+			return ["assistant", "system", "user"].includes(parsed.type) ? fromClaude(parsed, seen) : [parsed as Entry];
 		});
 }
 
