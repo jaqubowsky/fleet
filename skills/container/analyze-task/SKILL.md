@@ -70,7 +70,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-The reply is the report: the three sections below, in this order, two screens at most. A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed and keeps the same three sections, whatever the size of the task.
+The written copy is the report: `Commit: <sha7>` of the HEAD analyzed, then the three sections below, in this order, whatever the size of the task. The reply is short: the Verdict, the absolute path of the report's page, then the open questions.
 
 Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
 
@@ -153,7 +153,6 @@ Rules for the report:
 - Cite inside the Evidence column: `path:line`, issue ID, commit. Never a separate section listing what you read.
 - No sentence about your own process. Not "I read", not "this changes my earlier conclusion". State the conclusion that holds now.
 - A finding that needs a paragraph is two findings, or it belongs in Out of scope.
-- At most one small ASCII diagram, beside the steps of `How it connects`, and only when the flow branches.
 - Detail beyond these slots goes to the ticket's criteria or to Decisions.
 
 ## Rationalizations
@@ -163,4 +162,4 @@ Each row quotes a run that went wrong: the first without this document in contex
 | Excuse | Reality |
 | --- | --- |
 | "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |
-| "The analysis is in the file", followed by one paragraph of prose | The reply is the report, in its slots. The file is the copy the next session reads; the person reads the chat. |
+| "The analysis is in the file", followed by one paragraph of prose | The reply fills its slots: the Verdict, the page's path, the open questions. One paragraph of prose fills none of them. |

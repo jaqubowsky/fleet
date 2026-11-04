@@ -36,7 +36,7 @@ Deliver the ticket in <task dir, absolute, never ~>/ticket.md. Restoring a proje
 
 On a task the user handed you end to end: steer with the order in your own words, act on each wake, repeat. The container stops on open questions, then on its Plan, and once the Plan is approved it works every slice and its final checks in one run, so a settle is either a finished run, with the final checks in its closing message, or a stop to steer on.
 
-The Plan's approval follows the user's order. On a task handed to you end to end, it is yours: read the Decisions and the Plan of `analysis.md` against the ticket, then steer the approval or what has to change. On any other task, show the user the Plan and end the turn; their word goes to the container as a steer.
+The Plan's approval follows the user's order. On a task handed to you end to end, it is yours: read the Decisions and the Plan of `analysis.md` against the ticket, then steer the approval or what has to change. On any other task, give the user the absolute path of `analysis.html` and end the turn; their word goes to the container as a steer.
 
 Stop for the user on a decision that is theirs, and on one that `analysis.md`, the repo and the task directory leave open. A decision the container has not yet looked for in the code and the tracker goes back to it as a research order first.
 

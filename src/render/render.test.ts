@@ -467,6 +467,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(analyze, /With a decision open, this section holds one line: waiting on the open questions\./);
 			assert.match(analyze, /`Technical choices`: what you chose or assumed by default, one line each, with the reason and the option it turned down/);
 			assert.match(analyze, /`How it connects`: numbered steps in the order they run, from the trigger to the outcome/);
+			assert.match(analyze, /The reply is short: the Verdict, the absolute path of the report's page, then the open questions/);
+			assert.match(rules, /A turn that wrote or changed an analysis runs skill `analysis-page` before its closing message/);
+			assert.match(rendered(out, "container", "analysis-page/SKILL.md"), /Copy `assets\/template\.html` from this skill's directory/);
+			assert.match(rendered(out, "container", "analysis-page/assets/template.html"), /\[\[fill: the decision the reader makes\]\]/);
 			assert.match(rules, /runs skill `deliver-ticket`/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);

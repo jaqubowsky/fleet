@@ -12,6 +12,8 @@ An order to deliver end to end let a container answer its own open decisions and
 
 Every delivery stops after the analysis. `analyze-task` ends on the open questions, and writes the Plan only once none is left. `deliver-ticket` starts its slices on a steer that approves the Plan, or on an order that approves it in advance. The container never needs to know who approved. The host's half, reading `analysis.md` against the ticket or showing the Plan to the person, is in `orchestrating-agent-sessions`.
 
+The person reads the analysis as a page, `analysis.html`, which skill `analysis-page` fills from a fixed template after every turn that writes or changes the analysis. The chat carries the verdict, the page's path and the open questions. `analysis.md` stays the source for the host and for later steps.
+
 `fleet bench` has no host to approve anything, and a run ends at its first settle, so its steer approves the Plan in advance.
 
 ## Consequences

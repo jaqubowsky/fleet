@@ -13,6 +13,7 @@ project.md     how the primary project does what the rules require, when ~/.flee
 projects/      additional repos' project overlays, named by their workspace basenames, when present
 ticket.md      the host's requirement, copied at start below the first line {{cli}} up writes, then the Acceptance criteria the analysis writes; each criterion ticked with its evidence at the end
 analysis.md    Findings, Decisions, Plan
+analysis.html  the same analysis as a page for a person
 review.md      the one review of the whole branch: Review and Required fixes lines, findings, checks read, shared seams
 browser/       <run-id>/report.md, a list of frames, one line each with the criterion and verdict, beside the screenshots and a walkthrough video; scripts/, the login, seed and walk scripts every run reuses
 mockup/        on an order for one: index.html, the task's one board, and board.js: live pages of changes before they are built, one <slug>/ per mockup with its screenshots

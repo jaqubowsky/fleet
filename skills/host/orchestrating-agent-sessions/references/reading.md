@@ -7,7 +7,7 @@ Reached from the skill for a question about a task: the one file that answers it
 | where is it, does it need anyone | its last closing message: the wake, or `{{cli}} peek` |
 | what happened, in order | `git log` in the container; each turn's closing message is in the session transcripts under `logs/sessions/` |
 | which commits | `{{cli}} ls` for each repo's branch, dirty count and full SHA; `repositories.json` records each repo's base and branch, `refs/fleet/<sandbox>/<repo>/landed` in the host repo is the container head last landed, and `git log <base>..<branch>` shows the host history after land |
-| what did the analysis find | `analysis.md` |
+| what did the analysis find | `analysis.md`; the same analysis for a person, `analysis.html` on the Mac |
 | what did the reviewer find, which checks ran with which exit | `review.md`; its `Range:` is what it covered. The checks table of the closing message names each check, its result, the commit it passed on and its log |
 | what is happening on the PR | the pull request on GitHub, and the closing message of the container's last round |
 | how does it look in the app | the newest `<task dir>/browser/<run-id>/report.md`, one line per frame beside its screenshots and walkthrough video |

@@ -48,6 +48,7 @@ A round that changes one file opens with the first three lines and `Plan: <one l
 ## Every round
 
 - A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it, so they run once on the code that stays
+- A turn that wrote or changed an analysis runs skill `analysis-page` before its closing message
 - When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, and the frames the change alters, picked by diffing the output first
 - A round whose commits change what the code decides, such as a condition, a query, state, an API call or a migration, gets a review of those commits once its checks pass
