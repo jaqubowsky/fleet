@@ -109,20 +109,30 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 `Settled`: what will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is an open question below.
 
-`Technical choices`: what you chose or assumed by default, one line each, with the reason and the option it turned down.
+`Technical choices`: what you chose or assumed by default, one block each, written for a reader who has not met the mechanism.
+
+```md
+- Lock the project while it restores
+  Problem: the cleanup job deletes projects after 30 days. Run at the same moment, it and the restore both read "deleted", so the owner gets a project with no files.
+  How it works: `SELECT ... FOR UPDATE` holds the project's row until the transaction ends. The job waits, then sees an active project and skips it.
+  Turned down: a `restoring` flag, which a crash leaves set for good.
+  Worth remembering: this is a check-then-act race. A lock makes the second reader wait for the first write.
+```
 
 ### Plan
 
 With a decision open, this section holds one line: waiting on the open questions. With none open, the Plan is the last thing the analysis writes.
 
-A numbered list of slices in implementation order, each one commit: what it delivers, the acceptance criteria it closes, and its test seam, plus the slices it waits for. Group by the behaviour a user sees, in full sentences, naming a file only where the behaviour leaves it unclear. A small change has one slice. Every criterion is closed by some slice.
+A numbered list of slices in implementation order, each one commit: what it delivers, the acceptance criteria it closes, and its test seam, plus what it changes and the slices it waits for. Group by the behaviour a user sees, in full sentences, naming a file only where the behaviour leaves it unclear. A small change has one slice. Every criterion is closed by some slice.
 
 ```md
 1. Restoring a project with its files
    Delivers: the owner gets the project back with the files deleted with it. Files deleted earlier stay in the trash.
+   Changes: `~ restoreProject`, `~ files.deleted_batch_id`.
    Closes criteria 1 and 2, proved by a `restoreProject` service test. Waits for nothing.
 2. The restored count on the trash list
    Delivers: after a restore the list says how many files came back.
+   Changes: `+ restoredFiles`, `~ TrashPage`.
    Closes criterion 3, proved by a trash page component test. Waits for slice 1.
 ```
 
@@ -132,6 +142,15 @@ Under the list, `How it connects`: numbered steps in the order they run, from th
 1. The restore button on `TrashPage` calls `POST /projects/:id/restore`.
 2. The endpoint calls `restoreProject`, which opens one transaction.
 3. The transaction clears `deleted_at` on the project and on the files of its `deleted_batch_id`, so a failure brings nothing back.
+```
+
+Under it, `What changes`: one line per changed thing, grouped by kind, marked `+` new, `~` changed or `-` removed. A kind is what the change touches, such as database, API, config, job or screen. A database line gives the table, column and type, and an index names the query it serves. The database kind opens with what the migration does to existing rows and whether it reverts. A screen is listed when a mockup exists, by its slug.
+
+```md
+Database: adds an index, existing rows stay, reverts.
+- `~ files.deleted_batch_id` uuid, new index: the restore finds a batch's files by it
+API
+- `+ restoredFiles` in the 200 of `POST /projects/:id/restore`
 ```
 
 The reply ends with the open questions as a list, outside the three sections; the written copy leaves them out. List only unresolved decisions; with none left, the unapproved Plan is the one question. For an accepted Plan, cite its approval and state the approved next step.

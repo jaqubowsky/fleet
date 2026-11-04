@@ -3,123 +3,265 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>[[fill: task title]]</title>
+<title>[[fill: page title]]</title>
 <style>
-:root{color-scheme:light dark;--bg:#fbfbfa;--text:#1d1f21;--muted:#5c6166;--line:#d5d8da;--soft:#f0f1f1;--accent:#0b5cad;--accent-bg:#e6f0fa}
-@media (prefers-color-scheme:dark){:root{--bg:#17191b;--text:#e6e7e8;--muted:#a3a8ad;--line:#3d4145;--soft:#212427;--accent:#7db8f2;--accent-bg:#1b2f44}}
+:root{color-scheme:light dark;
+--bg:#fbfbfa;--soft:#f0f1f1;--text:#1d1f21;--muted:#5c6166;--line:#d5d8da;--edge:#7f858c;
+--add:#1a7f37;--add-text:#1a7f37;--chg:#8a5a00;--del:#b62324;--on:#fff;
+--f-xl:2rem;--f-lg:1.5rem;--f-md:1.125rem;--f-base:1rem;--f-sm:.875rem;
+--g-xs:.25rem;--g-sm:.5rem;--g-md:1rem;--g-lg:1.5rem;--g-xl:2rem;--g-2xl:3rem;
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#17191b;--soft:#212427;--text:#e6e7e8;--muted:#a3a8ad;--line:#3d4145;--edge:#767c82;--add:#1f7a33;--add-text:#4ac26b}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-wrap:break-word}
-main{max-width:42rem;margin:0 auto;padding:clamp(1.25rem,4vh,2.5rem) 1.25rem 4rem}
-p{margin:0}
-code{font:.875em ui-monospace,SFMono-Regular,Menlo,monospace}
-h1{font-size:1.75rem;line-height:1.2;margin:0 0 .5rem}
-h2{font-size:1rem;margin:1.75rem 0 .4rem}
-figure{margin:1.25rem 0 0}
-svg{display:block;width:100%;height:auto;color:var(--text)}
-ol{margin:0;padding-left:1.4rem}
-ol li{margin-bottom:.2rem}
-.foot{margin-top:1.75rem;padding:1rem 0;border-top:1px solid var(--line)}
-.foot b{color:var(--accent)}
-.meta{color:var(--muted);font-size:.8125rem;margin-top:2.5rem}
-details{border-top:1px solid var(--line);margin-top:0}
-summary{cursor:pointer;color:var(--muted);padding:.6rem 0}
-summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-details>:not(summary){margin-bottom:1rem}
-ul{margin:0 0 1rem;padding-left:1.2rem}
-.n{fill:var(--bg);stroke:var(--muted);stroke-width:1.25}
-.n-ch{fill:var(--accent-bg);stroke:var(--accent);stroke-width:2}
-.t{fill:currentColor;font:600 14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.s{fill:var(--muted);font:13.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.s-ch{fill:var(--accent);font:600 13.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.e{fill:none;stroke:var(--muted);stroke-width:1.5}
-.e-ch{fill:none;stroke:var(--accent);stroke-width:2.25}
-.e-no{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 5}
-.ah{fill:var(--muted)}
-.ah-ch{fill:var(--accent)}
+body{margin:0;background:var(--bg);color:var(--text);font:var(--f-base)/1.5 var(--sans);overflow-wrap:break-word}
+h1,h2,h3,h4,p,ol,ul,dl,dd,figure{margin:0;padding:0}
+ol,ul{list-style:none}
+h1{font-size:var(--f-xl);line-height:1.2;margin-bottom:var(--g-sm)}
+h2{font-size:var(--f-lg);line-height:1.25;margin-bottom:var(--g-md)}
+h3{font-size:var(--f-md);line-height:1.35;margin-bottom:var(--g-sm)}
+h3 span{font-size:var(--f-sm);font-weight:400;color:var(--muted);margin-left:var(--g-sm)}
+h4{font-size:var(--f-sm);margin-bottom:var(--g-xs)}
+code{font-family:var(--mono);font-size:var(--f-sm)}
 
-.calls{list-style:none;padding:0;margin:.25rem 0 0;counter-reset:c}
-.calls li{display:grid;grid-template-columns:1.6rem minmax(0,12rem) minmax(0,1fr);gap:.75rem;padding:.45rem .6rem;margin:0;align-items:baseline}
-.calls li:not(.tx-head){counter-increment:c}
-.calls li:not(.tx-head)::before{content:counter(c);color:var(--muted);font-weight:600}
-.calls .who{color:var(--muted);font-size:.9rem}
-.calls .tx,.calls .tx-head{background:var(--soft)}
-.calls .tx-head{display:block;font-size:.9rem;font-weight:600;margin-top:.35rem;border-radius:6px 6px 0 0}
-.calls .tx:has(+ :not(.tx)){border-radius:0 0 6px 6px;margin-bottom:.35rem}
-.calls .ch span:last-child{color:var(--accent);font-weight:600}
-.calls .ch::before{color:var(--accent)!important}
-.calls em{font-style:normal;font-weight:400;font-size:.875rem;margin-left:.35rem}
-.key{color:var(--muted);font-size:.875rem;margin-top:.5rem}
-@media (max-width:34rem){.calls li{grid-template-columns:1.6rem minmax(0,1fr)}.calls li>span:last-child{grid-column:2}}
+section{padding:var(--g-2xl) var(--g-md)}
+section>*{max-width:42rem;margin-inline:auto}
+section:nth-of-type(even){background:var(--soft)}
+section.head{padding-top:var(--g-xl)}
+
+.keybar{display:flex;flex-wrap:wrap;gap:var(--g-sm);margin-top:var(--g-md);margin-bottom:var(--g-lg);font-size:var(--f-sm)}
+.k,.tag{padding:0 var(--g-sm);border-radius:4px;color:var(--on);font-weight:600;font-size:var(--f-sm)}
+.add{background:var(--add)}.chg{background:var(--chg)}.del{background:var(--del)}
+.k.old{color:var(--muted);font-weight:400;border:1px solid var(--line)}
+.tag{font-family:var(--mono);white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:var(--g-xs) var(--g-sm)}
+
+.block+.block{margin-top:var(--g-xl)}
+.after{margin-top:var(--g-md)}
+.before{margin-bottom:var(--g-md)}
+
+figure{overflow-x:auto}
+img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
+a{color:inherit}
+svg{display:block;width:100%;min-width:33rem;height:auto;color:var(--text)}
+.t,.t-on{font:600 16px var(--sans)}
+.s,.s-on{font:14px var(--sans)}
+.s-add{font:600 14px var(--sans);fill:var(--add-text)}
+.m,.m-on{font:14px var(--mono)}
+.m-on{font-weight:600}
+.t{fill:var(--text)}
+.s,.m{fill:var(--muted)}
+.t-on,.s-on,.m-on{fill:var(--on)}
+.today .s{fill:var(--text)}
+.n,.fr{fill:none;stroke:var(--edge);stroke-width:1.25}
+.f-add{fill:var(--add)}.f-chg{fill:var(--chg)}.f-del{fill:var(--del)}
+.hr{fill:none;stroke:var(--edge);stroke-width:1.25}
+.e{fill:none;stroke:var(--edge);stroke-width:1.5}
+.e-no{fill:none;stroke:var(--edge);stroke-width:1.5;stroke-dasharray:5 5}
+.e-add{fill:none;stroke:var(--add-text);stroke-width:3}
+.ah{fill:var(--edge)}.ah-add{fill:var(--add-text)}
+
+table{border-collapse:collapse;width:100%}
+th{color:var(--muted);font-size:var(--f-sm);font-weight:600;text-align:left;border-bottom:1px solid var(--edge)}
+th,td{padding:var(--g-sm) var(--g-md) var(--g-sm) 0;vertical-align:baseline;overflow-wrap:anywhere}
+th{padding-top:0}
+td{border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+.diff td{padding-left:var(--g-sm);color:var(--muted)}
+.diff td:first-child{width:2rem}
+.diff tr:is(.add,.chg,.del) td{color:var(--on);font-weight:600}
+
+.panel,details{background:var(--soft);border-radius:8px;padding:var(--g-md)}
+.panel+.panel,details+details{margin-top:var(--g-sm)}
+section:nth-of-type(even) :is(.panel,details){background:var(--bg)}
+.steps{counter-reset:step}
+.steps>li{counter-increment:step}
+.steps h3::before{content:counter(step) ". "}
+
+.choices>li{padding-block:var(--g-lg);border-top:1px solid var(--line)}
+.choices>li:first-child{border-top:0;padding-top:0}
+.choices>li:last-child{padding-bottom:0}
+.facts{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:var(--g-sm) var(--g-md);align-items:baseline}
+.facts dt{color:var(--muted);font-size:var(--f-sm)}
+.learn{font-weight:600}
+
+summary{cursor:pointer;font-size:var(--f-md);font-weight:600}
+summary span{color:var(--muted);font-weight:400;font-size:var(--f-sm);margin-left:var(--g-sm)}
+summary:focus-visible{outline:2px solid var(--text);outline-offset:4px}
+details[open] summary{border-bottom:1px solid var(--edge);padding-bottom:var(--g-md);margin-bottom:var(--g-md)}
+details h4:not(:first-child){margin-top:var(--g-lg)}
+
+.seq{counter-reset:call}
+.seq li{display:grid;grid-template-columns:1.5rem minmax(0,11rem) minmax(0,1fr) auto;gap:var(--g-sm);align-items:baseline;padding:var(--g-xs) var(--g-sm) var(--g-xs) var(--g-md);border-radius:4px;counter-increment:call}
+.seq li::before{content:counter(call);font-size:var(--f-sm);font-weight:600;color:var(--muted)}
+.seq .who{color:var(--muted);font-size:var(--f-sm)}
+.seq em{font-style:normal;font-size:var(--f-sm)}
+.seq .tx{box-shadow:inset 3px 0 var(--edge)}
+.seq .add{margin-block:var(--g-xs)}
+.seq .add,.seq .add *,.seq .add::before{color:var(--on)}
+.seq .add .what{font-weight:600}
+.seq .add .what::before{content:"+ "}
+
+.meta{color:var(--muted);font-size:var(--f-sm);margin-top:var(--g-lg)}
+
+@media (max-width:34rem){
+:root{--f-xl:1.625rem;--f-lg:1.375rem;--g-2xl:2rem}
+.facts{grid-template-columns:minmax(0,1fr);gap:0}
+.facts dd{margin-bottom:var(--g-sm)}
+.facts dd:last-child{margin-bottom:0}
+.seq li{grid-template-columns:1.5rem minmax(0,1fr)}
+.seq .what,.seq em{grid-column:2}
+summary span{display:block;margin-left:0}
+}
 </style>
 </head>
 <body>
 <main>
+<section class="head">
 <h1>[[fill: what the change does, one sentence]]</h1>
-<p>[[fill: how it works today, and what this adds]]</p>
-
-<figure><svg viewBox="0 0 620 190" role="img" aria-label="[[fill: what the code does after the change]]">
-<defs><marker id="after" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker><marker id="afterc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="ah-ch" d="M0 0L10 5L0 10z"/></marker></defs>
-<rect class="n" x="6" y="70" width="114" height="50" rx="6"/><text class="t" x="63" y="92" text-anchor="middle">[[fill: name]]</text><text class="s" x="63" y="109" text-anchor="middle">[[fill: role]]</text>
-<rect class="n-ch" x="222" y="70" width="120" height="50" rx="6"/><text class="t" x="282" y="92" text-anchor="middle">[[fill: name]]</text><text class="s-ch" x="282" y="109" text-anchor="middle">[[fill: role or change]]</text>
-<rect class="n" x="504" y="20" width="110" height="50" rx="6"/><text class="t" x="559" y="42" text-anchor="middle">[[fill: name]]</text><text class="s" x="559" y="59" text-anchor="middle">[[fill: role]]</text>
-<rect class="n-ch" x="504" y="120" width="110" height="50" rx="6"/><text class="t" x="559" y="142" text-anchor="middle">[[fill: name]]</text><text class="s-ch" x="559" y="159" text-anchor="middle">[[fill: role or change]]</text>
-<path class="e" d="M120 95H220" marker-end="url(#after)"/><text class="s" x="170" y="87" text-anchor="middle">[[fill: verb]]</text>
-<path class="e" d="M342 85H362V45H502" marker-end="url(#after)"/><text class="s" x="432" y="37" text-anchor="middle">[[fill: verb]]</text>
-<path class="e-ch" d="M342 105H362V145H502" marker-end="url(#afterc)"/><text class="s-ch" x="432" y="137" text-anchor="middle">[[fill: verb]]</text>
+<p>[[fill: how it works today]]</p>
+<p class="keybar"><span class="k add">+ [[fill: new]]</span><span class="k chg">~ [[fill: changed]]</span><span class="k del">− [[fill: removed]]</span><span class="k old">[[fill: grey already exists]]</span></p>
+<figure><svg viewBox="0 15 672 170" role="img" aria-label="[[fill: what the code does after the change]]">
+<defs><marker id="after" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker><marker id="after-add" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="ah-add" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="n" x="1" y="72" width="130" height="56" rx="6"/><text class="t" x="66" y="96" text-anchor="middle">[[fill: name]]</text><text class="s" x="66" y="116" text-anchor="middle">[[fill: role]]</text>
+<rect class="f-chg" x="250" y="72" width="150" height="56" rx="6"/><text class="t-on" x="325" y="96" text-anchor="middle">~ [[fill: name]]</text><text class="s-on" x="325" y="116" text-anchor="middle">[[fill: role]]</text>
+<rect class="n" x="551" y="16" width="120" height="56" rx="6"/><text class="t" x="611" y="40" text-anchor="middle">[[fill: name]]</text><text class="s" x="611" y="60" text-anchor="middle">[[fill: role]]</text>
+<rect class="n" x="551" y="128" width="120" height="56" rx="6"/><text class="t" x="611" y="152" text-anchor="middle">[[fill: name]]</text><text class="s" x="611" y="172" text-anchor="middle">[[fill: role]]</text>
+<path class="e" d="M131 100H248" marker-end="url(#after)"/><text class="s" x="190" y="92" text-anchor="middle">[[fill: verb]]</text>
+<path class="e" d="M400 88H424V44H549" marker-end="url(#after)"/><text class="s" x="486" y="36" text-anchor="middle">[[fill: verb]]</text>
+<path class="e-add" d="M400 112H424V156H547" marker-end="url(#after-add)"/><text class="s-add" x="486" y="146" text-anchor="middle">+ [[fill: verb]]</text>
 </svg></figure>
+</section>
 
+<section>
+<h2>What changes</h2>
+<div class="block">
+<h3>Database <span>[[fill: what the migration does to existing rows, and whether it reverts]]</span></h3>
+<figure><svg viewBox="0 0 672 150" role="img" aria-label="[[fill: the tables and what changes in them]]">
+<defs><marker id="fk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+<text class="t" x="13" y="24">[[fill: table]]</text><path class="hr" d="M1 36H281"/>
+<text class="m" x="13" y="55">[[fill: column]]</text><text class="s" x="233" y="55" text-anchor="end">[[fill: type]]</text><text class="s" x="271" y="55" text-anchor="end">PK</text>
+<text class="m" x="13" y="83">[[fill: column]]</text><text class="s" x="233" y="83" text-anchor="end">[[fill: type]]</text>
+<path class="f-add" d="M1 92H281V114a6 6 0 0 1-6 6H7a6 6 0 0 1-6-6z"/><text class="m-on" x="13" y="111">+ [[fill: column]]</text><text class="s-on" x="233" y="111" text-anchor="end">[[fill: type]]</text>
+<rect class="fr" x="1" y="1" width="280" height="119" rx="6"/>
+<text class="t" x="403" y="24">[[fill: table]]</text><path class="hr" d="M391 36H671"/>
+<text class="m" x="403" y="55">[[fill: column]]</text><text class="s" x="623" y="55" text-anchor="end">[[fill: type]]</text><text class="s" x="661" y="55" text-anchor="end">PK</text>
+<text class="m" x="403" y="83">[[fill: column]]</text><text class="s" x="623" y="83" text-anchor="end">[[fill: type]]</text><text class="s" x="661" y="83" text-anchor="end">FK</text>
+<text class="m" x="403" y="111">[[fill: column]]</text><text class="s" x="623" y="111" text-anchor="end">[[fill: type]]</text>
+<path class="f-chg" d="M391 120H671V142a6 6 0 0 1-6 6H397a6 6 0 0 1-6-6z"/><text class="m-on" x="403" y="139">~ [[fill: column]]</text><text class="s-on" x="623" y="139" text-anchor="end">[[fill: type]]</text><text class="s-on" x="661" y="139" text-anchor="end">IDX</text>
+<rect class="fr" x="391" y="1" width="280" height="147" rx="6"/>
+<path class="e" d="M391 78H336V50H283" marker-end="url(#fk)"/><text class="s" x="336" y="40" text-anchor="middle">[[fill: relation]]</text>
+</svg></figure>
+<p class="after">[[fill: what an index or constraint is for: the query it serves, and what that query does without it]]</p>
+</div>
+<div class="block">
+<h3>[[fill: kind, such as API]] <span>[[fill: the endpoint or place]]</span></h3>
+<table class="diff">
+<tr class="add"><td>+</td><td><code>[[fill: name]]</code></td><td>[[fill: what it is]]</td></tr>
+<tr class="chg"><td>~</td><td><code>[[fill: name]]</code></td><td>[[fill: what it becomes]]</td></tr>
+<tr class="del"><td>−</td><td><code>[[fill: name]]</code></td><td>[[fill: what replaces it]]</td></tr>
+<tr><td></td><td>[[fill: what stays]]</td><td>[[fill: why callers keep working]]</td></tr>
+</table>
+</div>
+<div class="block">
+<h3>Screen <span><a href="mockup/index.html#[[fill: mockup slug]]">[[fill: open the mockup]]</a></span></h3>
+<img src="mockup/[[fill: mockup slug]]/shots/[[fill: screenshot file]]" alt="[[fill: what the screen shows]]">
+</div>
+</section>
+
+<section>
 <h2>Plan</h2>
-<ol>
-<li>[[fill: slice title]]</li>
+<figure class="before"><svg viewBox="0 0 672 122" role="img" aria-label="[[fill: the order of the slices]]">
+<defs><marker id="order" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="n" x="1" y="37" width="240" height="48" rx="6"/><text class="t" x="121" y="66" text-anchor="middle">1. [[fill: short slice title]]</text>
+<rect class="n" x="431" y="1" width="240" height="48" rx="6"/><text class="t" x="551" y="30" text-anchor="middle">2. [[fill: short slice title]]</text>
+<rect class="n" x="431" y="73" width="240" height="48" rx="6"/><text class="t" x="551" y="102" text-anchor="middle">3. [[fill: short slice title]]</text>
+<path class="e" d="M241 61H336V25H429" marker-end="url(#order)"/>
+<path class="e" d="M241 61H336V97H429" marker-end="url(#order)"/>
+</svg></figure>
+<ol class="steps">
+<li class="panel"><h3>[[fill: slice title]]</h3>
+<dl class="facts">
+<dt>Delivers</dt><dd>[[fill: what this slice delivers]]</dd>
+<dt>Changes</dt><dd class="tags"><span class="tag chg">~ [[fill: name]]</span><span class="tag add">+ [[fill: name]]</span></dd>
+<dt>Done when</dt><dd>[[fill: the criteria it closes, in words]]</dd>
+<dt>Proved by</dt><dd>[[fill: the test that proves it]]</dd>
+</dl></li>
 </ol>
+</section>
 
-<h2>Check</h2>
-<p>[[fill: the technical choice, its reason and the option it turned down]]</p>
+<section>
+<h2>Technical choices</h2>
+<ul class="choices">
+<li><h3>[[fill: the choice, as a short sentence]]</h3>
+<dl class="facts">
+<dt>Problem</dt><dd>[[fill: what goes wrong without it, as a concrete failure]]</dd>
+<dt>How it works</dt><dd>[[fill: the mechanism, for a reader who has not met it]]</dd>
+<dt>Turned down</dt><dd>[[fill: the other option and why it fails]]</dd>
+<dt>Worth remembering</dt><dd class="learn">[[fill: what a reader keeps from this choice]]</dd>
+</dl></li>
+</ul>
+</section>
 
-<p class="foot"><b>[[fill: the decision the reader makes]]</b> [[fill: where the reader answers]]</p>
+<section>
+<h2>Open questions</h2>
+<ol class="steps">
+<li class="panel"><h3>[[fill: open question]]</h3>
+<dl class="facts">
+<dt>Recommended</dt><dd>[[fill: option, then its downside]]</dd>
+<dt>Other</dt><dd>[[fill: option, then its downside]]</dd>
+</dl></li>
+</ol>
+</section>
 
+<section>
+<h2>Details</h2>
 <details>
-<summary>Today, for comparison</summary>
-<figure><svg viewBox="0 0 620 190" role="img" aria-label="[[fill: what the code does today]]">
-<defs><marker id="today" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker><marker id="todayc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="ah-ch" d="M0 0L10 5L0 10z"/></marker></defs>
-<rect class="n" x="6" y="70" width="114" height="50" rx="6"/><text class="t" x="63" y="92" text-anchor="middle">[[fill: name]]</text><text class="s" x="63" y="109" text-anchor="middle">[[fill: role]]</text>
-<rect class="n" x="222" y="70" width="120" height="50" rx="6"/><text class="t" x="282" y="92" text-anchor="middle">[[fill: name]]</text><text class="s" x="282" y="109" text-anchor="middle">[[fill: role or change]]</text>
-<rect class="n" x="504" y="20" width="110" height="50" rx="6"/><text class="t" x="559" y="42" text-anchor="middle">[[fill: name]]</text><text class="s" x="559" y="59" text-anchor="middle">[[fill: role]]</text>
-<rect class="n" x="504" y="120" width="110" height="50" rx="6"/><text class="t" x="559" y="142" text-anchor="middle">[[fill: name]]</text><text class="s" x="559" y="159" text-anchor="middle">[[fill: role or change]]</text>
-<path class="e" d="M120 95H220" marker-end="url(#today)"/><text class="s" x="170" y="87" text-anchor="middle">[[fill: verb]]</text>
-<path class="e" d="M342 85H362V45H502" marker-end="url(#today)"/><text class="s" x="432" y="37" text-anchor="middle">[[fill: verb]]</text>
-<path class="e-no" d="M342 105H362V145H502"/><text class="s" x="432" y="137" text-anchor="middle">[[fill: verb]]</text>
+<summary>Today, for comparison<span>[[fill: what this path does before the change]]</span></summary>
+<figure class="today"><svg viewBox="0 15 640 170" role="img" aria-label="[[fill: what the code does today]]">
+<defs><marker id="today" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="n" x="1" y="72" width="130" height="56" rx="6"/><text class="t" x="66" y="96" text-anchor="middle">[[fill: name]]</text><text class="s" x="66" y="116" text-anchor="middle">[[fill: role]]</text>
+<rect class="n" x="230" y="72" width="150" height="56" rx="6"/><text class="t" x="305" y="96" text-anchor="middle">[[fill: name]]</text><text class="s" x="305" y="116" text-anchor="middle">[[fill: role]]</text>
+<rect class="n" x="519" y="16" width="120" height="56" rx="6"/><text class="t" x="579" y="40" text-anchor="middle">[[fill: name]]</text><text class="s" x="579" y="60" text-anchor="middle">[[fill: role]]</text>
+<rect class="n" x="519" y="128" width="120" height="56" rx="6"/><text class="t" x="579" y="152" text-anchor="middle">[[fill: name]]</text><text class="s" x="579" y="172" text-anchor="middle">[[fill: role]]</text>
+<path class="e" d="M131 100H228" marker-end="url(#today)"/><text class="s" x="180" y="92" text-anchor="middle">[[fill: verb]]</text>
+<path class="e" d="M380 88H400V44H517" marker-end="url(#today)"/><text class="s" x="459" y="36" text-anchor="middle">[[fill: verb]]</text>
+<path class="e-no" d="M380 112H400V156H517"/><text class="s" x="459" y="148" text-anchor="middle">[[fill: verb]]</text>
 </svg></figure>
 </details>
 <details>
-<summary>Call order</summary>
-<ol class="calls">
-<li><span class="who">[[fill: caller → callee]]</span><span>[[fill: what it does]]</span></li>
-<li class="tx-head">[[fill: what binds these calls, such as one transaction]]</li>
-<li class="tx"><span class="who">[[fill: caller → callee]]</span><span>[[fill: what it does]]</span></li>
-<li class="tx ch"><span class="who">[[fill: caller → callee]]</span><span>[[fill: what changes]] <em>[[fill: Plan slice]]</em></span></li>
+<summary>Call order<span>[[fill: how many calls, how many new]]</span></summary>
+<div class="seq">
+<h4>[[fill: group, such as the request]]</h4>
+<ol>
+<li><span class="who">[[fill: caller → callee]]</span><span class="what">[[fill: what it does]]</span></li>
 </ol>
-<p class="key">[[fill: the highlighted rows are the change]]</p>
+<h4>[[fill: what binds these calls, such as one transaction]]</h4>
+<ol class="tx">
+<li><span class="who">[[fill: caller → callee]]</span><span class="what">[[fill: what it does]]</span></li>
+<li class="add"><span class="who">[[fill: caller → callee]]</span><span class="what">[[fill: what is new]]</span><em>[[fill: Plan slice]]</em></li>
+</ol>
+</div>
 </details>
 <details>
-<summary>Plan slices: criteria, tests, dependencies</summary>
-<ul>
-<li>[[fill: slice number, criteria it closes, test that proves it, what it waits for]]</li>
-</ul>
+<summary>Settled<span>[[fill: how many decisions]]</span></summary>
+<table>
+<tr><th>Decision</th><th>Source</th><th>Date</th></tr>
+<tr><td>[[fill: the decision]]</td><td>[[fill: its source]]</td><td>[[fill: date]]</td></tr>
+</table>
 </details>
 <details>
-<summary>Settled</summary>
-<ul>
-<li>[[fill: the decision, its source and date]]</li>
-</ul>
-</details>
-<details>
-<summary>Evidence and scope</summary>
-<ul>
-<li>[[fill: finding, evidence, out of scope item, or open item]]</li>
-</ul>
+<summary>Evidence and scope<span>[[fill: what this rests on and what it leaves out]]</span></summary>
+<table>
+<tr><th>Finding</th><th>Evidence</th><th>Consequence</th></tr>
+<tr><td>[[fill: finding]]</td><td><code>[[fill: evidence]]</code></td><td>[[fill: consequence]]</td></tr>
+</table>
+<h4>Out of scope</h4>
+<p>[[fill: what stays out, with the reason]]</p>
+<h4>Open and unverified</h4>
+<p>[[fill: what no source or check settled]]</p>
 </details>
 <p class="meta">[[fill: analyzed commit]]</p>
+</section>
 </main>
 </body>
 </html>
