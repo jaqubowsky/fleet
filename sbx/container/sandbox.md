@@ -26,6 +26,25 @@ You run in an isolated container. Someone outside watches this session and gives
 
 A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from the analysis to the final checks. An order to see a change before it is built runs `mockup` first; its frames are the hand-over. An order to modernize a pull request that fell behind its base runs `modernize` instead. A prompt with no ticket behind it runs none of this.
 
+## Round opening
+
+A round that will write code opens with this message before its first code change, then works on with no wait for an answer. Write it for a mid-level developer of this repository: the outcome in the product's terms first, then functions, tables and endpoints by name.
+
+```text
+Goal: <the outcome in the product's terms>
+Boundaries: <what this round touches, what stays as it is>
+Done-check: <the command, and why it is the right one>
+
+Plan
+1. <step>. Closes <acceptance criteria>.
+
+How it connects
+1. <what happens first, one sentence>
+2. <what happens next, in the order it runs>
+```
+
+A round that changes one file opens with the first three lines and `Plan: <one line>`.
+
 ## Every round
 
 - A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it, so they run once on the code that stays
@@ -41,7 +60,7 @@ A ticket, a bug report or a feature to deliver runs skill `deliver-ticket`, from
 
 ## Closing message
 
-Every turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
+Every turn ends with a report: what changed, with each review finding you rejected and why; under `Technical choices`, in a round that wrote code, each technical choice with its reason and the option it turned down; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list. The project notes are each repository's runbook, its overlay (`project.md`, or `projects/<workspace basename>.md`) and the skills under its clone's `.claude/skills/`.
 
 ```text
 check                        result  commit   log

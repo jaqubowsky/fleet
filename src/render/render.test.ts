@@ -915,8 +915,12 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.ok(
 				rules.includes(
-					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list.",
+					"## Closing message\n\nEvery turn ends with a report: what changed, with each review finding you rejected and why; under `Technical choices`, in a round that wrote code, each technical choice with its reason and the option it turned down; the checks as an ASCII table of result, the commit each passed on and its log, then the checks skipped and why; the commits; the block skill `simplicity-pass` writes, in a round that ran it; the block skill `boy-scout-rule` writes after the final checks; and last, only when there are any, the open questions as a list.",
 				),
+			);
+			assert.match(
+				rules,
+				/## Round opening\n\nA round that will write code opens with this message before its first code change, then works on with no wait for an answer\./,
 			);
 			for (const row of [
 				"| Red test | before the code of each behaviour | 1 per behaviour |",

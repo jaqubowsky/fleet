@@ -19,7 +19,7 @@ The Plan's slices in order: a failing test first with `tdd`, gate output in `log
 
 2. **Load context.** The ticket's acceptance criteria, and the analysis's Findings and Decisions for what the criteria leave open.
 
-3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require, the done-check with why it is the right command.
+3. **Name the goal, the boundaries and the gate.** Before changing the ticket or code, print the three lines your rules require, the done-check with why it is the right command. The first slice's lines head the round opening.
 
    The acceptance criteria the slice closes are the source of the done-check; if they are not checkable by a command, say so and say what you will observe instead. Each commit is green on its own: the done-check covers the tests of the changed files and every test that imports them, anywhere in the repository. A file inside a workspace package is also imported through the package's name: rebuild the package when its `main` points at build output, then run every test that imports that name, in every workspace. Typecheck and lint cover the whole branch diff, so they run once, alongside the review. This is the check step 5 runs, so name it now, not later.
 
