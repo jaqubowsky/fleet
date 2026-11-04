@@ -463,6 +463,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(deliver, /`analyze-task` writes the `Acceptance criteria` section of `ticket\.md`/);
 			assert.match(deliver, /`analysis\.md` with its three sections: Findings, Decisions, Plan/);
 			assert.match(deliver, /The Plan's slices in order: a failing test first with `tdd`/);
+			assert.match(deliver, /Step 2 starts on a steer that approves the Plan, or on an order that approves it in advance\. An order to deliver end to end stops here like any other/);
+			assert.match(analyze, /With a decision open, this section holds one line: waiting on the open questions\./);
+			assert.match(analyze, /`Technical choices`: what you chose or assumed by default, one line each, with the reason and the option it turned down/);
+			assert.match(analyze, /`How it connects`: numbered steps in the order they run, from the trigger to the outcome/);
 			assert.match(rules, /runs skill `deliver-ticket`/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);

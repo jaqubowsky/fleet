@@ -134,7 +134,7 @@ export async function benchRun(input: BenchInput, io: Io, wait: Wait = settle): 
 			io.write(`${task}/ticket.md`, `${TICKET_STUB}${FROZEN_BASE} ${seed.base}\n\n${seed.ticket}`);
 			for (const name of seed.attachments) io.run("cp", ["-R", `${seeds}/${run.task}/${name}`, `${task}/`]);
 			const settled = await wait(run.sandbox, io, input.timeoutMs, () =>
-				steer(resolveSandbox(run.sandbox, io), `Deliver the ticket in ${task}/ticket.md end to end on its frozen base ${seed.base}. Commit locally and stop at Done; nothing leaves this container. Wait for background work in the foreground: end your turn only at Done or on an open question, since the run ends when your turn does.`, io, input.root),
+				steer(resolveSandbox(run.sandbox, io), `Deliver the ticket in ${task}/ticket.md end to end on its frozen base ${seed.base}. Your Plan is approved in advance. Commit locally and stop at Done; nothing leaves this container. Wait for background work in the foreground: end your turn only at Done or on an open question, since the run ends when your turn does.`, io, input.root),
 			);
 			const limited = LIMIT.exec(settled.said)?.[0];
 			if (limited) limit = limited;

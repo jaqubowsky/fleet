@@ -43,7 +43,7 @@ How it connects
 2. <what happens next, in the order it runs>
 ```
 
-A round that changes one file opens with the first three lines and `Plan: <one line>`.
+A round that changes one file opens with the first three lines and `Plan: <one line>`. A round that carries out an approved Plan opens with the first three lines and `Plan: <the slices it works>`.
 
 ## Every round
 

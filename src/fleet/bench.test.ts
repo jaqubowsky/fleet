@@ -180,6 +180,7 @@ test("bench run puts each task and rep up on its frozen base, steers it, and kee
 	const steer = io.calls.find((c) => c[0] === "hc" && c[1] === "send")!;
 	assert.match(steer[3], /ticket\.md/);
 	assert.match(steer[3], /end your turn only at Done or on an open question/);
+	assert.match(steer[3], /Your Plan is approved in advance/);
 	assert.deepEqual(io.calls.filter((c) => c[0] === "run" && c[1] === "cp" && c[3].startsWith(seeds)).map((c) => c[3]), Array(2).fill(`${seeds}/t1/screen.png`));
 	assert.ok(io.calls.some((c) => c[0] === "run" && c[1] === "cp" && c[3] === "/home/me/.fleet/tasks/webapp/runbook" && c[4] === `${runs}/t1-1/runbook`));
 	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c.includes("claude") && c[1] === "exec" && c[3] === "claude"));

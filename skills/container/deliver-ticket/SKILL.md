@@ -9,7 +9,7 @@ Every output goes in the task directory. Every step reads `CONTEXT.md`, when the
 
 ## 1. Analyze
 
-`analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions. An order to deliver end to end answers all but a product decision nothing settled
+`analyze-task` writes the `Acceptance criteria` section of `ticket.md`, in the form of {{refs.ticket}}, starting from any criteria the host copied there, and `analysis.md` with its three sections: Findings, Decisions, Plan. A defect is diagnosed there with `diagnosing-bugs`, before the fix. It ends with every decision still open as the closing message's open questions, and with none open on the Plan. Step 2 starts on a steer that approves the Plan, or on an order that approves it in advance. An order to deliver end to end stops here like any other
 
 ## 2. Implement the slices
 

@@ -70,7 +70,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-The reply is the report: the three sections below, in this order, one screen in all. A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed and keeps the same three sections, whatever the size of the task.
+The reply is the report: the three sections below, in this order, two screens at most. A written copy of the report opens with `Commit: <sha7>` of the HEAD analyzed and keeps the same three sections, whatever the size of the task.
 
 Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
 
@@ -78,7 +78,7 @@ Before the report, write the `Acceptance criteria` section at the end of the tic
 
 #### Verdict
 
-At most three sentences: what the task turns out to be, and whether the ticket's scope holds. For a bug: the symptom the user sees, the cause, the reproduction command and its result. Name the cause, not the layer where you happened to notice it.
+At most three sentences: what the task turns out to be, and whether the ticket's scope holds. One more sentence says what the reader decides: the open questions, or the Plan. For a bug: the symptom the user sees, the cause, the reproduction command and its result. Name the cause, not the layer where you happened to notice it.
 
 #### Where it lands
 
@@ -107,24 +107,43 @@ Open questions with the decision each one blocks. Sources you could not open. Ch
 
 ### Decisions
 
-What will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is an open question below.
+`Settled`: what will be built, one line per decision, each with the source or the user's answer that settled it, and the date of that answer. A product decision no source settles is not written here: it is an open question below.
+
+`Technical choices`: what you chose or assumed by default, one line each, with the reason and the option it turned down.
 
 ### Plan
 
-A numbered list of slices in implementation order, each one commit: what it delivers, the acceptance criteria it closes, and its test seam. A small change has one slice. Every criterion is closed by some slice.
+With a decision open, this section holds one line: waiting on the open questions. With none open, the Plan is the last thing the analysis writes.
+
+A numbered list of slices in implementation order, each one commit: what it delivers, the acceptance criteria it closes, and its test seam, plus the slices it waits for. Group by the behaviour a user sees, in full sentences, naming a file only where the behaviour leaves it unclear. A small change has one slice. Every criterion is closed by some slice.
 
 ```md
-1. Restore brings back only the files deleted with the project. Closes criteria 1, 2. Seam: `restoreProject` service test
-2. The trash list shows the restored count. Closes criterion 3. Seam: trash page component test
+1. Restoring a project with its files
+   Delivers: the owner gets the project back with the files deleted with it. Files deleted earlier stay in the trash.
+   Closes criteria 1 and 2, proved by a `restoreProject` service test. Waits for nothing.
+2. The restored count on the trash list
+   Delivers: after a restore the list says how many files came back.
+   Closes criterion 3, proved by a trash page component test. Waits for slice 1.
 ```
 
-The reply ends with the open questions as a list, outside the three sections; the written copy leaves them out. List only unresolved decisions, with an unapproved Plan last. Cite the approving user decision for an accepted Plan. With none open, state the approved next step.
+Under the list, `How it connects`: numbered steps in the order they run, from the trigger to the outcome, one sentence each, for a mid-level developer of this repository.
+
+```md
+1. The restore button on `TrashPage` calls `POST /projects/:id/restore`.
+2. The endpoint calls `restoreProject`, which opens one transaction.
+3. The transaction clears `deleted_at` on the project and on the files of its `deleted_batch_id`, so a failure brings nothing back.
+```
+
+The reply ends with the open questions as a list, outside the three sections; the written copy leaves them out. List only unresolved decisions; with none left, the unapproved Plan is the one question. For an accepted Plan, cite its approval and state the approved next step.
 
 ```md
 1. <decision>
    - <option> (recommended). Downside: <one>
    - <option>. Downside: <one>
-2. The Plan above
+```
+
+```md
+1. The Plan above
    - as listed (recommended). Downside: <one>
    - <another cut>. Downside: <one>
 ```
@@ -134,7 +153,7 @@ Rules for the report:
 - Cite inside the Evidence column: `path:line`, issue ID, commit. Never a separate section listing what you read.
 - No sentence about your own process. Not "I read", not "this changes my earlier conclusion". State the conclusion that holds now.
 - A finding that needs a paragraph is two findings, or it belongs in Out of scope.
-- At most one small ASCII diagram, and only when the flow has three or more hops and the labels carry the meaning.
+- At most one small ASCII diagram, beside the steps of `How it connects`, and only when the flow branches.
 - Detail beyond these slots goes to the ticket's criteria or to Decisions.
 
 ## Rationalizations
