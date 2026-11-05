@@ -157,6 +157,7 @@ The reply ends with the open questions as a list, outside the three sections; th
 
 ```md
 1. <decision>
+   Checked: <the sources read, and why they leave this open>
    - <option> (recommended). Downside: <one>
    - <option>. Downside: <one>
 ```
