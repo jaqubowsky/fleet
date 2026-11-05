@@ -6,7 +6,7 @@ type Divergence = { where: RegExp; reason: string };
 
 const DIVERGENCES: Divergence[] = [
 	{
-		where: /^rules\/core\.md: 10\. A definition, reference, caller or type/,
+		where: /^rules\/core\.md: 11\. A definition, reference, caller or type/,
 		reason:
 			"claude's typescript-lsp plugin gives it a deferred `LSP` tool; pi has no language server tool",
 	},

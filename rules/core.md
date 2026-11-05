@@ -22,7 +22,8 @@
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
 8. Narrow `unknown` with `instanceof`, a type predicate or a schema parse, and fix a rejected type where it is declared. Each line you write keeps the value's real type, also beside code that casts: a new `as <Type>`, `!` or `any` hides the error the checker would report
-9. A screen, component or layout drawn or built -> {{refs.design}} first
+9. A ternary picks between two values. A third outcome is an early return, a lookup or a named function, also where the code around it chains ternaries
+10. A screen, component or layout drawn or built -> {{refs.design}} first
 {{file:symbols}}
 
 ## Architecture
