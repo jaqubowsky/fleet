@@ -9,7 +9,7 @@ The page is read top to bottom in one pass: what the change does, what changes, 
 
 1. **Copy.** Copy `assets/template.html` from this skill's directory to `analysis.html` beside the report's written copy, where your seat's rules keep outputs, overwriting an earlier page. The style block stays as it is.
 
-2. **Fill.** Replace every `[[fill: ...]]` from the report, in the language of your reply, the template's headings and labels too. Every value comes from the report, and no sentence appears that the report does not support. Repeat a row, card or block once per item, and remove a block or section with nothing to show.
+2. **Fill.** Replace every `[[fill: ...]]` from the report, in Polish, the template's headings and labels too, whatever language the report and your reply are in. This page is the one written file that is not English. Names from the code stay as the code spells them. Every value comes from the report, and no sentence appears that the report does not support. Repeat a row, card or block once per item, and remove a block or section with nothing to show.
 
    - A sign and a colour carry a status, so the words beside them say what the thing is. Mark a row or box `add`, `chg` or `del`, its text opening with `+`, `~` or `−`.
    - `What changes` holds one block per kind in the report's `What changes`: the table figure for a database, a `diff` table for any other kind.
