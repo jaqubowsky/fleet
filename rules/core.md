@@ -21,7 +21,8 @@
 5. Names and structure carry the meaning; comments: none. A comment that feels needed = wrong name or wrong structure. A repository gate that requires one is a policy conflict: report what it printed and ask which wins. A bot's advice that binds nothing can be declined with the reason. Comments in untouched code stay
 6. Name for null/false -> make prop optional, stop passing it
 7. Fix cause, not symptom. No workaround, no fix-on-fix
-8. A screen, component or layout drawn or built -> {{refs.design}} first
+8. Narrow `unknown` with `instanceof`, a type predicate or a schema parse, and fix a rejected type where it is declared. Each line you write keeps the value's real type, also beside code that casts: a new `as <Type>`, `!` or `any` hides the error the checker would report
+9. A screen, component or layout drawn or built -> {{refs.design}} first
 {{file:symbols}}
 
 ## Architecture
