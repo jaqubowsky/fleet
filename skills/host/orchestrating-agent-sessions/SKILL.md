@@ -54,7 +54,7 @@ A report to the user on a change a user sees names the absolute path of the newe
 
 ## Landing
 
-The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word. `{{cli}} land` and `{{cli}} down` each run alone, one sandbox name, their flags read from `{{cli}} --help`. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
+The land line of `{{cli}} profile <repo>` says how a container's branch and pull request reach GitHub and what to steer after; a land waits for the user's word, given each time or standing in the overlay's `## Host autonomy`. `{{cli}} land` and `{{cli}} down` each run alone, one sandbox name, their flags read from `{{cli}} --help`. A multi-repository land stopped by a declined signature or a rejected push keeps every repository it finished: show that state, then rerun the same command.
 
 The user's word that a container's pull request merged is the word to run `{{cli}} down` on it in the same turn, unless the user or a queued steer keeps work there.
 

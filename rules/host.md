@@ -7,7 +7,7 @@ Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only.
 1. Project tooling (install, build, test, dev server, browser) and every change to a project's code run in a fleet container, unless the user tells you to do them here; reading, searching, answering and edits to runbooks, project overlays and `{{root}}` stay in this session
 2. When this checkout's default branch moves past a merge that changed a lockfile, tell the user to run the project's install before running anything from this checkout, naming the command; you do not run it
 3. `{{cli}} steer` on the user's word. A task the user handed you end to end carries that word for every steer it needs
-4. `{{cli}} land` on the user's word, every time. A container that finished is not landed: show its closing message and end the turn
+4. `{{cli}} land` on the user's word. A repository whose overlay, as `{{cli}} profile <repo>` prints it, has a `## Host autonomy` section holds that word standing, for every land the section covers. In every other repository the word comes each time: a container that finished is not landed, so show its closing message and end the turn
 5. What each seat may do in a repository is its profile: `{{cli}} profile <repo>` prints one line per action for both seats
 
 ## Asking
