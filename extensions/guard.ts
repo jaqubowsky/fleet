@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../src/guard/down.ts";
 import { fetchQuestion } from "../src/guard/fetch.ts";
-import { landPermission } from "../src/guard/land.ts";
+import { landPermission, sandboxLandStanding } from "../src/guard/land.ts";
 import type { Kind } from "../src/harness.ts";
 import { hostAt } from "../src/guard/host.ts";
 import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../src/guard/own-config.ts";
@@ -27,6 +27,7 @@ export default function guard(
 	root?: string,
 	home = homedir(),
 	level = (sandbox: string) => sandboxDownTarget(sandbox, root, home),
+	standing = (sandbox: string) => sandboxLandStanding(sandbox, home),
 ) {
 	const trusted = TRUSTED[h.name] ?? new Set<string>();
 	return (pi: GuardApi) => {
@@ -35,7 +36,7 @@ export default function guard(
 
 			if (event.toolName === "bash") {
 				const command = String(event.input?.command ?? "");
-				const landing = landPermission(command);
+				const landing = landPermission(command, standing);
 				if (landing?.decision === "deny")
 					return { block: true, reason: landing.reason };
 				if (landing?.decision === "ask") {
@@ -46,6 +47,7 @@ export default function guard(
 							approved ? undefined : { block: true, reason: landing.reason },
 						);
 				}
+				if (landing) return;
 				const down = downPermission(command, level);
 				if (down?.decision === "deny") return { block: true, reason: down.reason };
 				if (down?.decision === "ask") {

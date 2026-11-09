@@ -482,3 +482,40 @@ test("pi refuses an edit or a shell redirect into its own home, and leaves reads
 	);
 	assert.equal(ask("bash", { command: "grep -r model ~/.pi/agent" }), undefined);
 });
+
+test("pi lands without a dialog when the overlay holds the standing word", async () => {
+	const root = privateRoot();
+	let captured:
+		| ((
+				event: { toolName: string; input: { command: string } },
+				ctx: { cwd: string; hasUI?: boolean; ui?: { confirm(title: string, message: string): Promise<boolean> } },
+		  ) => unknown)
+		| undefined;
+	guard(
+		KINDS.pi,
+		root,
+		EMPTY_HOME,
+		(sandbox) => ({ sandbox, level: "auto" }),
+		() => true,
+	)({
+		on: (_event, fn) => {
+			captured = fn as typeof captured;
+		},
+	});
+	assert.ok(captured);
+
+	const verdict = await captured(
+		{ toolName: "bash", input: { command: "fleet land pi-harness-demo --push" } },
+		{
+			cwd: root,
+			hasUI: true,
+			ui: {
+				confirm: async () => {
+					throw new Error("Unexpected approval prompt");
+				},
+			},
+		},
+	);
+
+	assert.equal(verdict, undefined);
+});

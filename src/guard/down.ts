@@ -72,13 +72,16 @@ export function downPermission(
 	};
 }
 
-export function sandboxDownTarget(
+export type SandboxList = () => string;
+
+const SBX_LIST: SandboxList = () =>
+	execFileSync("sbx", ["ls", "--json"], { encoding: "utf8", timeout: 5000 });
+
+export function sandboxRepositories(
 	sandbox: string,
-	root = resolve(import.meta.dirname, "../.."),
 	home = homedir(),
-	list = () =>
-		execFileSync("sbx", ["ls", "--json"], { encoding: "utf8", timeout: 5000 }),
-): DownTarget | undefined {
+	list = SBX_LIST,
+): { sandbox: string; repos: string[] } | undefined {
 	let listed: { name?: string; workspaces?: string[] }[];
 	try {
 		listed = JSON.parse(list()) as typeof listed;
@@ -90,10 +93,20 @@ export function sandboxDownTarget(
 	const workspace = entry?.workspaces?.[0];
 	if (!entry?.name || !workspace) return undefined;
 	const manifest = repositoryManifest(entry.name, realIo(home));
-	const repos = manifest?.repositories.map((repo) => repo.repo) ?? [workspace];
-	const levels = repos.map((repo) => hostAt(repo, root, home).levels().down);
+	return { sandbox: entry.name, repos: manifest?.repositories.map((repo) => repo.repo) ?? [workspace] };
+}
+
+export function sandboxDownTarget(
+	sandbox: string,
+	root = resolve(import.meta.dirname, "../.."),
+	home = homedir(),
+	list = SBX_LIST,
+): DownTarget | undefined {
+	const target = sandboxRepositories(sandbox, home, list);
+	if (!target) return undefined;
+	const levels = target.repos.map((repo) => hostAt(repo, root, home).levels().down);
 	return {
-		sandbox: entry.name,
+		sandbox: target.sandbox,
 		level: levels.includes("none")
 			? "none"
 			: levels.includes("human")

@@ -327,3 +327,19 @@ test("the claude hook lets a GitHub read run in any shell form and refuses a pul
 	])
 		assert.match(ask(command), /"permissionDecision":"deny"/, command);
 });
+
+test("the claude hook lets a land through when the overlay holds the standing word", () => {
+	const root = privateRoot();
+	const decide = (command: string, held: boolean) =>
+		hook(
+			{ tool_name: "Bash", tool_input: { command }, cwd: root },
+			root,
+			EMPTY_HOME,
+			() => ({ sandbox: "pi-harness-demo", level: "auto" }),
+			() => held,
+		);
+
+	assert.match(decide("fleet land pi-harness-demo", true), /"permissionDecision":"allow"/);
+	assert.match(decide("fleet land pi-harness-demo", false), /"permissionDecision":"ask"/);
+	assert.match(decide("fleet land pi-harness-demo; git push", true), /"permissionDecision":"deny"/);
+});

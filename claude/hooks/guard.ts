@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { downPermission, sandboxDownTarget } from "../../src/guard/down.ts";
 import { fetchQuestion } from "../../src/guard/fetch.ts";
-import { landPermission } from "../../src/guard/land.ts";
+import { landPermission, sandboxLandStanding } from "../../src/guard/land.ts";
 import { hostAt } from "../../src/guard/host.ts";
 import { OWN_CONFIG, OWN_CONFIG_UNREAD, ownConfig } from "../../src/guard/own-config.ts";
 import { decide, POLICY_TOOLS } from "../../src/guard/policy.ts";
@@ -29,13 +29,14 @@ export function answer(
 	root?: string,
 	home = homedir(),
 	level = (sandbox: string) => sandboxDownTarget(sandbox, root, home),
+	standing = (sandbox: string) => sandboxLandStanding(sandbox, home),
 ): string {
 	const input = asPolicyCall(given);
 	const tool = input.tool_name ?? "";
 	if (!POLICY.test(tool)) return "";
 	if (tool === "Bash") {
 		const command = String(input.tool_input?.command ?? "");
-		const landing = landPermission(command);
+		const landing = landPermission(command, standing);
 		if (landing)
 			return JSON.stringify({
 				hookSpecificOutput: {
