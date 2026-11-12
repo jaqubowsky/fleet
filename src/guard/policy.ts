@@ -122,10 +122,6 @@ const BASH_RULES: [RegExp, string][] = [
 		"A GitHub token is used through gh and git, never printed. The human stores tokens in the keychain with fleet tokens set in their own terminal.",
 	],
 	[
-		command(String.raw`(\S*/)?fleet\s+account\s+set\b`),
-		"A Claude account token comes from the person's own claude setup-token. The human stores it with fleet account set in their own terminal.",
-	],
-	[
 		command(
 			String.raw`security\s+(find-(generic|internet)-password|export|dump-keychain)`,
 		),
