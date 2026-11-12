@@ -13,12 +13,12 @@
   },
   "dependencies": {
     "@highlightjs/cdn-assets": "11.12.0",
-    "marked": "18.1.0",
+    "marked": "18.1.3",
     "qrcode-terminal": "0.12.0"
   },
   "devDependencies": {
-    "@playwright/cli": "0.1.22",
-    "@types/node": "26.6.4",
+    "@playwright/cli": "0.1.23",
+    "@types/node": "26.6.6",
     "@types/qrcode-terminal": "0.12.2",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"
