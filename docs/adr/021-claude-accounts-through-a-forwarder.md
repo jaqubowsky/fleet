@@ -22,7 +22,7 @@ sbx holds no Anthropic login. `fleet account serve`, run by launchd as `fleet.cl
 
 A key per sandbox, not one shared placeholder, is what lets one sandbox bill another account than the rest, and it keeps any other process on the Mac, or a web page, from spending a subscription through the forwarder. `FLEET_CLAUDE_ACCOUNT` in the host session pins the account of every container it brings up.
 
-The guard refuses `fleet account set` and `fleet account use` to agents: switching to the other account when one hits its limit is the use Anthropic's terms flag.
+The guard refuses `fleet account set` to agents, since a token is the person's own. It lets `fleet account use` through, on the person's word (2026-11-12: "złagodź regułę również żeby tylko 'set' blokowało"), so an agent can switch accounts when asked. The cost is that nothing stops an agent from switching to the other account when one hits its limit, the use Anthropic's terms flag.
 
 ## Consequences
 

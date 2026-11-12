@@ -26,7 +26,7 @@ fleet account use work          # the account every container bills unless it ha
 sbx policy allow network localhost:18080
 ```
 
-`fleet account use <name>` switches every container without an account of its own from its next request, with no restart. `fleet account use <name> <sandbox>...` moves only those sandboxes. A host session started with `FLEET_CLAUDE_ACCOUNT=<name>` gives every container it brings up that account, which a later default switch leaves alone. `fleet account` lists the default and each sandbox's account. A sandbox made before the forwarder has no key and needs a new `fleet up`. The guard refuses `set` and `use` to agents, so an agent that hits a limit cannot move to the other account.
+`fleet account use <name>` switches every container without an account of its own from its next request, with no restart. `fleet account use <name> <sandbox>...` moves only those sandboxes. A host session started with `FLEET_CLAUDE_ACCOUNT=<name>` gives every container it brings up that account, which a later default switch leaves alone. `fleet account` lists the default and each sandbox's account. A sandbox made before the forwarder has no key and needs a new `fleet up`. The guard refuses `set` to agents and lets `use` through.
 
 Never run `/login` inside a Claude sandbox: sbx would store that login and put it on every request to `api.anthropic.com`. `sbx secret ls` must list no `anthropic` row.
 
