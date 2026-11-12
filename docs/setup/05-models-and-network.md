@@ -17,6 +17,15 @@ Without `~/.config/sbx/credentials.yaml` every model call from a pi sandbox is a
 
 The first `fleet up --claude` stops and asks the person to run `/login` once in its tab. sbx keeps that login for every later sandbox.
 
+With two Claude accounts, such as work and private, the person stores each one once, in their own terminal:
+
+```bash
+claude setup-token              # log in to the account in the browser; prints a token valid for a year
+fleet account set work          # paste it; echo is off
+```
+
+`fleet account use <name>` then switches every container to that account. sbx reads the token on this Mac at most a minute old, so running containers follow without a restart. A sandbox made before the first `use` has no placeholder variable and needs a new `fleet up`. The host session keeps its own login; `/login` inside it switches the host.
+
 ## Network
 
 sbx keeps one allowlist for every sandbox on this Mac, and the pi sandbox adds its own model and package hosts (`pi/kits/pi/spec.yaml`). `sbx policy inspect local-policy` prints the list, and `sbx policy allow network <host>` adds a host.
