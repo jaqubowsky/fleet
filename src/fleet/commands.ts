@@ -1,3 +1,4 @@
+import { release } from "./account.ts";
 import { dirname } from "node:path";
 import { CLI, KINDS, type AgentName } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
@@ -576,7 +577,9 @@ export function down(sandbox: string, opts: { force?: boolean }, io: Io): void {
 		io.log(
 			`${sandbox}: removed, but sbx reported: ${(error as Error).message.split("\n").slice(1).join(" ")}`,
 		);
+		release(sandbox, io);
 		return;
 	}
+	release(sandbox, io);
 	io.log(`${sandbox}: removed`);
 }

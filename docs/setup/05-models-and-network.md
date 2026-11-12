@@ -15,7 +15,20 @@ Without `~/.config/sbx/credentials.yaml` every model call from a pi sandbox is a
 
 ## Claude sandboxes
 
-The first `fleet up --claude` stops and asks the person to run `/login` once in its tab. sbx keeps that login for every later sandbox.
+Claude sandboxes never log in, and sbx holds no Anthropic login. Each one sends its requests to a forwarder on this Mac, `fleet account serve` on `127.0.0.1:18080`, which `./sync.sh --apply` installs as the launchd agent `fleet.claude-forwarder` and keeps running. `fleet up` gives each sandbox a random key of its own; the forwarder swaps that key for the token of the account the sandbox bills and refuses any other key. The token stays on this Mac.
+
+The person stores each account once, in their own terminal, and picks the default:
+
+```bash
+claude setup-token              # log in to the account in the browser; prints a token valid for a year
+fleet account set work          # paste it; echo is off
+fleet account use work          # the account every container bills unless it has one of its own
+sbx policy allow network localhost:18080
+```
+
+`fleet account use <name>` switches every container without an account of its own from its next request, with no restart. `fleet account use <name> <sandbox>...` moves only those sandboxes. A host session started with `FLEET_CLAUDE_ACCOUNT=<name>` gives every container it brings up that account, which a later default switch leaves alone. `fleet account` lists the default and each sandbox's account. A sandbox made before the forwarder has no key and needs a new `fleet up`. The guard refuses `set` and `use` to agents, so an agent that hits a limit cannot move to the other account.
+
+Never run `/login` inside a Claude sandbox: sbx would store that login and put it on every request to `api.anthropic.com`. `sbx secret ls` must list no `anthropic` row.
 
 ## Network
 
@@ -30,4 +43,4 @@ The sandboxes need `github.com`, `api.github.com` and the API hosts of the model
 
 ## Check
 
-`test -f ~/.config/sbx/credentials.yaml && echo ok` prints `ok`, `echo "${CLAUDE_CODE_SUBAGENT_MODEL:-unset}"` prints `unset`, and `sbx policy inspect local-policy` lists every host the person approved.
+`test -f ~/.config/sbx/credentials.yaml && echo ok` prints `ok`, `fleet account` names a default, `launchctl print gui/$(id -u)/fleet.claude-forwarder` shows `state = running`, `sbx secret ls` lists no `anthropic` row, `echo "${CLAUDE_CODE_SUBAGENT_MODEL:-unset}"` prints `unset`, and `sbx policy inspect local-policy` lists every host the person approved.

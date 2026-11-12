@@ -25,6 +25,8 @@ import { land } from "./land.ts";
 import { permissions } from "./permissions.ts";
 import { repositoryManifest } from "./repositories.ts";
 import { loadProfiles } from "../profile/profile.ts";
+import { claudeAccounts, describeAccounts, FORWARDER_PORT, readLedger, accountOf, readToken, useAccount } from "./account.ts";
+import { forwarder } from "./forwarder.ts";
 import { askHidden, keychain, listTokens, setToken } from "./tokens.ts";
 import { up } from "./up.ts";
 import { jsonLines, sessionScope, watch } from "./watch.ts";
@@ -42,6 +44,7 @@ const usage = `usage:
   ${CLI} init <repo>                                  lay the project seed out in <repo>: AGENTS.md, spec/vision.md; a file already there stays as it is
   ${CLI} profile [<repo>] [--apply [--brief]]         what ~/.fleet/config/repos.json, then host/repos.json, lets each seat do in <repo>, a checkout (default here) or owner/name, then its ~/.fleet/config/projects overlay; --apply sets the checkout's commit.gpgsign, where the host pushes on its own an HTTPS origin, and registers the host Linear server in both pi and Claude for this checkout, from a host session or plain shell; --brief prints only what --apply changed, and nothing outside a GitHub checkout, for a session start
   ${CLI} tokens [set <name>]                          list every keychain:<name> GitHub token the profiles name, marking the ones missing from the macOS keychain, never a value; set <name> asks for the token with echo off and stores it there, where up binds it for containers and the gh on PATH reads it for the repository it runs in; run it yourself
+  ${CLI} account [set <name>|use <name> [<sandbox>...]|serve]   the Anthropic account each container bills, the default and each sandbox's own; set <name> asks for the account's setup-token with echo off and stores it in the macOS keychain; use <name> makes it the default from every container's next request, or moves the named sandboxes; up gives a sandbox the account of FLEET_CLAUDE_ACCOUNT when set; serve runs the forwarder on 127.0.0.1:18080 that swaps a container's key for the account's token, as launchd starts it; set and use are yours to run
   ${CLI} ls                                           containers with the agent status hc reports; branch, dirty count and SHA for each repo
   ${CLI} patch <sandbox>                             print the container's changes as one patch, the diff the Changes panel shows
   ${CLI} peek <sandbox> [--lines 40]                  each repo's branch, dirty count, SHA, git status, log, diff, install log and the terminal tail
@@ -219,6 +222,29 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
 			return;
 		}
 		for (const line of listTokens(loadProfiles(io.read, root, home), keychain)) io.log(line);
+	},
+	account(args) {
+		const { rest } = flags(args, []);
+		const [verb, name, ...sandboxes] = rest;
+		if (verb === "set") {
+			const account = need(name, "<name>");
+			io.log(setToken(account, () => askHidden(`setup-token for ${account}: `), claudeAccounts));
+			return;
+		}
+		if (verb === "use") {
+			io.log(useAccount(need(name, "<name>"), sandboxes, claudeAccounts, io));
+			return;
+		}
+		if (verb === "serve") {
+			forwarder(new URL("https://api.anthropic.com"), {
+				account: (key) => accountOf(key, readLedger(io)),
+				token: readToken,
+				log: (line) => io.log(`${new Date().toISOString()} ${line}`),
+			}).listen(FORWARDER_PORT, "127.0.0.1");
+			return;
+		}
+		if (verb !== undefined) throw new Error(`${CLI} account takes set, use or serve, not ${verb}`);
+		for (const line of describeAccounts(io)) io.log(line);
 	},
 	ls(args) {
 		flags(args, []);

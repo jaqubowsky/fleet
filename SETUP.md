@@ -27,4 +27,4 @@ This is for an agent. The person starts you in a fresh clone of this repository 
 3. Each installed agent's smoke sandbox came up, answered and went down
 4. The host session in Herdr app answered and listed the repository's pull requests
 
-Tell the person what stays theirs and where it lives: the logins (step 1), `~/.fleet/config/` (step 2), the keychain tokens (step 4), and the sbx secrets and network policy (step 5).
+Tell the person what stays theirs and where it lives: the logins (step 1), `~/.fleet/config/` (step 2), the keychain tokens (step 4), and the Claude account tokens, the sbx secrets and network policy with its `localhost:18080` rule (step 5).

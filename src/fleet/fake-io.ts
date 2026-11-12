@@ -19,6 +19,7 @@ export function fakeIo(
 	calls: Call[];
 	lines: string[];
 	files: Record<string, string>;
+	modes: Record<string, number>;
 	sbxOpts: ({ quiet?: boolean; stream?: boolean; input?: string } | undefined)[];
 	followers: { args: string[]; onLine: (line: string) => void; onClose: () => void; stopped: boolean }[];
 } {
@@ -30,6 +31,7 @@ export function fakeIo(
 	const lines: string[] = [];
 	const followers: { args: string[]; onLine: (line: string) => void; onClose: () => void; stopped: boolean }[] = [];
 	const files: Record<string, string> = {};
+	const modes: Record<string, number> = {};
 	const answer = (key: string): FixtureAnswer => {
 		const hit = Object.keys(answers)
 			.filter((k) => key.startsWith(k) && !key.slice(k.length).startsWith("/"))
@@ -46,6 +48,7 @@ export function fakeIo(
 		calls,
 		lines,
 		files,
+		modes,
 		home: "/home/me",
 		seat,
 		tmp: "/tmp",
@@ -94,9 +97,10 @@ export function fakeIo(
 			return text(`gh ${args.join(" ")}`);
 		},
 		read: (path) => files[path] ?? (answer(`read ${path}`) as string | undefined),
-		write: (path, body) => {
+		write: (path, body, mode) => {
 			calls.push(["write", path]);
 			files[path] = body;
+			if (mode !== undefined) modes[path] = mode;
 		},
 		rename: (from, to) => {
 			calls.push(["rename", from, to]);

@@ -12,7 +12,7 @@ export type Io = {
 	git(args: string[], cwd: string, opts?: { env?: Record<string, string>; input?: string }): string;
 	gh(args: string[], cwd: string): string;
 	read(path: string): string | undefined;
-	write(path: string, text: string): void;
+	write(path: string, text: string, mode?: number): void;
 	rename(from: string, to: string): void;
 	copy(from: string, to: string): void;
 	remove(path: string): void;
@@ -85,7 +85,10 @@ export function realIo(home: string, seat?: Seat): Io {
 		git: (args, cwd, opts) => shell("git", args, { cwd, quiet: true, ...opts }),
 		gh: (args, cwd) => shell("gh", args, { cwd, quiet: true, timeoutMs: 30_000 }),
 		read: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
-		write: (path, text) => writeFileSync(path, text),
+		write: (path, text, mode) => {
+			writeFileSync(path, text, { mode });
+			if (mode !== undefined) chmodSync(path, mode);
+		},
 		rename: (from, to) => renameSync(from, to),
 		copy: (from, to) => {
 			copyFileSync(from, to);

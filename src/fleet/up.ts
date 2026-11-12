@@ -7,6 +7,7 @@ import { describe, keychainName, repoName, type Profile } from "../profile/profi
 import { type AgentName, CLI, type Kind, KINDS } from "../harness.ts";
 import { type Io, seatOf } from "./io.ts";
 import { baseBranch, isBase } from "./land.ts";
+import { enrol } from "./account.ts";
 import { labelInSandboxName, sandboxName, slug } from "./name.ts";
 import { projectOverlay, repoProfile } from "./permissions.ts";
 import { claudeProject, sessionsDir } from "./sessions.ts";
@@ -358,7 +359,7 @@ export async function up(
 		const shared = `${artifactsDir(input.repo, io)}/runbook`;
 		if (input.artifacts && io.stat(shared)?.dir && !io.stat(`${input.artifacts}/runbook`))
 			io.run("cp", ["-R", shared, `${input.artifacts}/runbook`]);
-		create(input, sandbox, profile, kind, io, task);
+		create(input, sandbox, profile, kind, io, task, kind.name === "claude" ? enrol(sandbox, io) : []);
 		const built = io.read(imageStampPath(kind, io, image));
 		if (built) io.write(builtStampPath(task), built);
 		else io.remove(builtStampPath(task));
@@ -590,6 +591,7 @@ function create(
 	h: Kind,
 	io: Io,
 	task: string,
+	forwarded: string[],
 ): void {
 	const artifacts = dirname(task);
 	const cache = cacheDir(input.repo, h, io);
@@ -641,7 +643,7 @@ function create(
 		`FLEET_CACHE=${cache}`,
 		"-e",
 		`npm_config_cache=${cache}/npm`,
-		...h.env.flatMap((entry) => ["-e", entry]),
+		...[...h.env, ...forwarded].flatMap((entry) => ["-e", entry]),
 
 		...(h.sessionEnv ? ["-e", `${h.sessionEnv}=${task}/logs/sessions`] : []),
 		"--kit",
@@ -987,7 +989,7 @@ async function waitForAgent(
 			if (runs) {
 				if (kind.name !== "pi" && io.hcText(["read", terminal, "--lines", "40"]).includes("Not logged in"))
 					throw new Error(
-						`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; run /login in its tab, then steer`,
+						`${sandbox}: the container's agent is not logged in, so it cannot take a prompt; check ${CLI} account and that the forwarder answers on localhost, docs/setup/05-models-and-network.md, then bring the container up again`,
 					);
 				return;
 			}

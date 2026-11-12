@@ -160,6 +160,17 @@ by_hand() {
 	' "$ROOT" "$HOME"
 }
 
+forwarder_service() {
+	local label=fleet.claude-forwarder plist="$HOME/Library/LaunchAgents/fleet.claude-forwarder.plist" rendered="$WORK/claude-forwarder.plist"
+	sed -e "s#{{node}}#$(command -v node)#" -e "s#{{cli}}#$ROOT/src/fleet/cli.ts#" -e "s#{{log}}#$HOME/.fleet/logs/claude-forwarder.log#" \
+		"$ROOT/host/launchd/claude-forwarder.plist" >"$rendered"
+	if cmp -s "$rendered" "$plist" && launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then return; fi
+	keep "$plist"
+	queue mkdir -p "$(dirname "$plist")" "$HOME/.fleet/logs"
+	act cp "$rendered" "$plist"
+	act sh -c 'launchctl bootout "gui/$(id -u)/$1" 2>/dev/null; launchctl bootstrap "gui/$(id -u)" "$2"' sh "$label" "$plist"
+}
+
 template_loaded() {
 	sbx template ls --json 2>/dev/null | jq -e --arg r "${1%%:*}" --arg t "${1##*:}" \
 		'.[] | select((.repository | endswith("/" + $r)) and .tag == $t)' >/dev/null
@@ -189,7 +200,10 @@ link "$ROOT/host/herdr-app/layouts/fleet.json" "$HOME/.config/herdr-app/layouts/
 for mod in "$ROOT"/host/herdr-app/mods/*/; do link "${mod%/}" "$HOME/.config/herdr-app/mods/$(basename "$mod")"; done
 for icon in "$ROOT"/host/herdr-app/icons/*.svg; do copy "$icon" "$HOME/.config/herdr-app/fleet-icons/$(basename "$icon")"; done
 link "$ROOT/host/herdr-core/config.toml" "$HOME/.config/herdr-core/config.toml"
-if set_up claude; then link "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"; fi
+if set_up claude; then
+	link "$ROOT/claude/statusline.mjs" "$HOME/.claude/statusline.mjs"
+	forwarder_service
+fi
 
 while read -r name home image owned <&3; do
 	echo "== $name: host seat in ~/$home"

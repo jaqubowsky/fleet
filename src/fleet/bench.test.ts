@@ -26,6 +26,7 @@ const transcript = JSON.stringify({ type: "assistant", timestamp: "2026-11-03T12
 function bench() {
 	const answers: Record<string, unknown> = {
 		"read /root/host/repos.json": SAMPLE_PROFILES,
+		"read /home/me/.fleet/claude-accounts.json": JSON.stringify({ default: "work", sandboxes: {} }),
 		"git remote get-url origin": "git@github.com:acme/webapp.git",
 		"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 		"git rev-parse --show-toplevel": repo,

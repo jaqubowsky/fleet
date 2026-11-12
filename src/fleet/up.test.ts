@@ -27,6 +27,7 @@ const base = {
 	"read /root/host/repos.json": SAMPLE_PROFILES,
 	"read /home/me/.config/sbx/credentials.yaml":
 		"bindings:\n  openai:\n    oauth:\n",
+	"read /home/me/.fleet/claude-accounts.json": JSON.stringify({ default: "work", sandboxes: {} }),
 	"git remote get-url origin": "git@github.com:acme/webapp.git",
 	"git rev-parse --abbrev-ref origin/HEAD": "origin/main",
 	"sbx ls --json": [],
@@ -1566,6 +1567,27 @@ test("a claude container is given colour, a pi container is left as it is", asyn
 	assert.ok(!args(piIo).includes("FORCE_COLOR=3"));
 });
 
+test("a claude container reaches Anthropic through the forwarder with a key of its own, a pi container never", async () => {
+	const claude = fakeIo(base, SEATS.claude);
+	const pi = fakeIo(base);
+
+	await up({ repo, label: "web-1", root: "/root" }, claude);
+	await up({ repo, label: "web-1", root: "/root" }, pi);
+
+	const run = (io: typeof pi) => io.calls.find((c) => c[0] === "sbx" && c[1] === "run")!;
+	const key = run(claude).find((arg) => arg.startsWith("ANTHROPIC_AUTH_TOKEN="))?.slice("ANTHROPIC_AUTH_TOKEN=".length);
+	assert.ok(run(claude).includes("ANTHROPIC_BASE_URL=http://host.docker.internal:18080"));
+	assert.ok(key && claude.files["/home/me/.fleet/claude-accounts.json"].includes(key));
+	assert.ok(!run(pi).some((arg) => arg.startsWith("ANTHROPIC_")));
+});
+
+test("a claude container with no account chosen is refused before anything is created", async () => {
+	const io = fakeIo({ ...base, "read /home/me/.fleet/claude-accounts.json": undefined }, SEATS.claude);
+
+	await assert.rejects(up({ repo, label: "web-1", root: "/root" }, io), /no Claude account: run fleet account use <name>/);
+	assert.ok(!io.calls.some((c) => c[0] === "sbx" && c[1] === "run"));
+});
+
 test("up starts each kind's agent straight through sbx run and copies nothing into the container", async () => {
 	const pi = fakeIo(base, SEATS.pi);
 	const claude = fakeIo(base, SEATS.claude);
@@ -1679,7 +1701,7 @@ test("up of a claude container stops when claude in the new container is not log
 
 	await assert.rejects(
 		up({ repo, label: "web-1", root: "/root" }, io),
-		/the container's agent is not logged in.*\/login in its tab/,
+		/the container's agent is not logged in.*check fleet account and that the forwarder answers/,
 	);
 });
 

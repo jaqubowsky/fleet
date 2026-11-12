@@ -683,6 +683,22 @@ test("down removes a sandbox fleet never laid a task directory for, writing noth
 	assert.deepEqual(io.calls.at(-1), ["sbx", "rm", "-f", "pi-a"]);
 });
 
+test("down retires the sandbox's forwarder key, so it opens no account afterwards", () => {
+	const io = fakeIo({
+		...running,
+		[`sbx exec pi-a sh -c ${checkoutProbe}`]: "web-1\t0\tabc",
+		"sbx exec pi-a cat": "4241653760\nanon 3170893824\nhigh 17\noom 1\n",
+		"read /home/me/.fleet/claude-accounts.json": JSON.stringify({
+			default: "work",
+			sandboxes: { "pi-a": { key: "fleet-a" }, "pi-b": { key: "fleet-b" } },
+		}),
+	});
+
+	down("pi-a", {}, io);
+
+	assert.deepEqual(Object.keys(JSON.parse(io.files["/home/me/.fleet/claude-accounts.json"]).sandboxes), ["pi-b"]);
+});
+
 test("down goes on without the guest's memory files and says so", () => {
 	const io = fakeIo({
 		...running,

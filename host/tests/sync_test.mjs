@@ -27,6 +27,9 @@ function machine(t, agents) {
 		writeFileSync(join(bin, agent), `#!/bin/sh\n${STUBS[agent]}\n`);
 		chmodSync(join(bin, agent), 0o755);
 	}
+	const launchctl = join(dir, "launchctl.log");
+	writeFileSync(join(bin, "launchctl"), `#!/bin/sh\n[ "$1" = print ] && exec grep -q bootstrap "${launchctl}" 2>/dev/null\necho "$*" >> "${launchctl}"\n`);
+	chmodSync(join(bin, "launchctl"), 0o755);
 	const sync = (...args) => {
 		const result = spawnSync(join(root, "sync.sh"), args, {
 			encoding: "utf8",
@@ -137,6 +140,17 @@ test("--apply records the built image under ~/.fleet", (t) => {
 
 	assert.equal(status, 0, out);
 	assert.deepEqual(readdirSync(join(mac.home, ".fleet/state/images")), ["claude"]);
+});
+
+test("--apply on a claude Mac installs the account forwarder as a launch agent running this node", (t) => {
+	const mac = claudeMac(t);
+
+	const { status, out } = mac.sync("--apply");
+
+	const plist = readFileSync(join(mac.home, "Library/LaunchAgents/fleet.claude-forwarder.plist"), "utf8");
+	assert.equal(status, 0, out);
+	assert.match(plist, new RegExp(`<string>${join(mac.dir, "bin/node")}</string>\\s*<string>${root}/src/fleet/cli.ts</string>\\s*<string>account</string>\\s*<string>serve</string>`));
+	assert.match(readFileSync(join(mac.dir, "launchctl.log"), "utf8"), /^bootstrap gui\/\d+ \S+\/Library\/LaunchAgents\/fleet\.claude-forwarder\.plist$/m);
 });
 
 test("--apply with nothing to change writes no archive", (t) => {
