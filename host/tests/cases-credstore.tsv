@@ -12,5 +12,7 @@ pass	Bash	gh auth status
 deny	Bash	printf 'protocol=https\nhost=github.com\n\n' | git credential fill
 deny	Bash	gh auth git-credential get
 deny	Bash	fleet tokens
+deny	Bash	fleet account set work
+pass	Bash	fleet account use private
 pass	Bash	gh pr checks 1
 allow	Bash	sbx secret set github --sandbox x --command 'security find-generic-password -s fleet-gh -a acme -w'
