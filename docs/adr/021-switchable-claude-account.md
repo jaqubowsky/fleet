@@ -14,7 +14,7 @@ Each account's long-lived token from `claude setup-token` sits in the macOS keyc
 
 The switch is global, not per sandbox, because the person switches the account they work under, not the account of one task. The placeholder is fixed, so updating the secret on each `use` leaves the variable in every existing sandbox valid.
 
-The host stays on its own `/login`, which the docs say switches the running session. A session on a token instead loses Remote Control and claude.ai connectors (code.claude.com/docs/en/authentication), which the host uses.
+The host stays on its own `/login`. The documented live switch for a running Claude Code session is `apiKeyHelper`, and a session on a token loses Remote Control and claude.ai connectors (code.claude.com/docs/en/authentication), which the host uses.
 
 ## Consequences
 
