@@ -19,7 +19,7 @@ jobs:
           cache: npm
       - run: brew install bash
       - run: npm ci
-      - run: npm install -g @earendil-works/pi-coding-agent
+      - run: npm install -g @earendil-works/pi-coding-agent@1.5.0
       - run: |
           npm install --prefix "$RUNNER_TEMP/pi-npm" --legacy-peer-deps \
             $(jq -rs 'map(.packages[]) | unique | .[] | sub("^npm:"; "")' pi/profiles/host.json pi/profiles/sbx.json)
