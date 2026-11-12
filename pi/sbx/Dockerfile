@@ -6,7 +6,7 @@ ENV GIT_TERMINAL_PROMPT=0
 {{toolchain}}
 
 ARG UPDATE_BUST=0
-RUN sudo npm install -g --prefix /usr/local/share/npm-global @earendil-works/pi-coding-agent@latest \
+RUN sudo -H npm install -g --prefix /usr/local/share/npm-global @earendil-works/pi-coding-agent@latest \
  && cli="$(readlink -f /usr/local/share/npm-global/bin/pi)" \
  && sudo rm /usr/local/share/npm-global/bin/pi \
  && printf '#!/bin/sh\nexec /usr/bin/node %s "$@"\n' "$cli" | sudo tee /usr/local/bin/pi >/dev/null \

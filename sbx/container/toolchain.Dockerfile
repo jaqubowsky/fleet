@@ -1,7 +1,7 @@
 ARG NODE_MAJOR=24
-ARG NODE_VERSION=24.21.0-1nodesource1
+ARG NODE_VERSION=24.22.2-1nodesource1
 ARG NODESOURCE_GPG_SHA256=7a96b125f721c99e07d3f45b279adbd6884ec4f3f06750f6b54df40cfae36836
-ARG NPM_VERSION=12.2.0
+ARG NPM_VERSION=12.2.2
 ARG TYPESCRIPT_VERSION=6.0.3
 
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp/nodesource.key \
@@ -14,7 +14,7 @@ RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp
  && sudo apt-get update \
  && sudo apt-get install -y "nodejs=$NODE_VERSION" \
  && rm -f /tmp/nodesource.key /tmp/nodesource.gpg \
- && sudo npm install -g --prefix /usr/local/share/npm-global \
+ && sudo -H npm install -g --prefix /usr/local/share/npm-global \
       "npm@$NPM_VERSION" "typescript@$TYPESCRIPT_VERSION" \
  && sudo corepack enable
 
@@ -42,13 +42,12 @@ RUN case "$(dpkg --print-architecture)" in \
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
 
-ARG PLAYWRIGHT_CLI_VERSION=0.1.22
+ARG PLAYWRIGHT_CLI_VERSION=0.1.23
 
-RUN sudo npm install -g --prefix /usr/local/share/npm-global "@playwright/cli@$PLAYWRIGHT_CLI_VERSION" \
- && sudo -E /usr/local/share/npm-global/bin/playwright-cli install-browser --with-deps chromium \
+RUN sudo -H npm install -g --prefix /usr/local/share/npm-global "@playwright/cli@$PLAYWRIGHT_CLI_VERSION" \
+ && sudo -E HOME=/root /usr/local/share/npm-global/bin/playwright-cli install-browser --with-deps chromium \
  && sudo rm -rf /var/lib/apt/lists/* \
- && sudo chmod -R a+rwX "$PLAYWRIGHT_BROWSERS_PATH" \
- && sudo chown -R agent:agent /home/agent/.cache
+ && sudo chmod -R a+rwX "$PLAYWRIGHT_BROWSERS_PATH"
 
 RUN sudo ln -sf "$PLAYWRIGHT_BROWSERS_PATH"/ffmpeg-*/ffmpeg-linux /usr/local/bin/ffmpeg \
  && sudo ln -sf /usr/local/share/npm-global/lib/node_modules/@playwright/cli/node_modules/playwright-core/cli.js /usr/local/bin/playwright-core \
@@ -89,9 +88,9 @@ ENV BASH_ENV=/etc/fnm-bash-env.sh
 ENV LANG=C.UTF-8
 ENV NODE_NO_WARNINGS=1
 
-ARG JSCPD_VERSION=5.4.1
+ARG JSCPD_VERSION=5.4.2
 
-RUN sudo npm install -g --prefix /usr/local/share/npm-global "jscpd@$JSCPD_VERSION" \
+RUN sudo -H npm install -g --prefix /usr/local/share/npm-global "jscpd@$JSCPD_VERSION" \
  && jscpd --version
 
 RUN printf 'ignore-scripts=true\nmin-release-age=7\nsave-exact=true\n' > /home/agent/.npmrc \
