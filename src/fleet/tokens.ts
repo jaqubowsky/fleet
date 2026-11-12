@@ -3,7 +3,7 @@ import { CLI } from "../harness.ts";
 import { KEYCHAIN_NAME, type Profile, keychainName, profileFor, repoName } from "../profile/profile.ts";
 
 type Profiles = Record<string, Profile>;
-export type Keychain = {
+type Keychain = {
 	has(name: string): boolean;
 	read(name: string): string | undefined;
 	write(name: string, value: string): void;
@@ -11,28 +11,24 @@ export type Keychain = {
 
 const SERVICE = "fleet-gh";
 
-export const keychainRead = (name: string, service = SERVICE) => `security find-generic-password -s ${service} -a ${name} -w`;
+export const keychainRead = (name: string) => `security find-generic-password -s ${SERVICE} -a ${name} -w`;
 
-export function keychainFor(service: string): Keychain {
-	return {
-		has(name) {
-			return spawnSync("security", ["find-generic-password", "-s", service, "-a", name], { stdio: "ignore" }).status === 0;
-		},
-		read(name) {
-			const found = spawnSync("security", ["find-generic-password", "-s", service, "-a", name, "-w"], { encoding: "utf8" });
-			return found.status === 0 ? found.stdout.trim() : undefined;
-		},
-		write(name, value) {
-			const added = spawnSync("security", ["-i"], {
-				input: `add-generic-password -U -s ${service} -a "${name}" -w "${value}"\n`,
-				encoding: "utf8",
-			});
-			if (added.status !== 0) throw new Error(`the keychain refused ${name}: ${added.error?.message ?? added.stderr.trim()}`);
-		},
-	};
-}
-
-export const keychain = keychainFor(SERVICE);
+export const keychain: Keychain = {
+	has(name) {
+		return spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", name], { stdio: "ignore" }).status === 0;
+	},
+	read(name) {
+		const found = spawnSync("security", ["find-generic-password", "-s", SERVICE, "-a", name, "-w"], { encoding: "utf8" });
+		return found.status === 0 ? found.stdout.trim() : undefined;
+	},
+	write(name, value) {
+		const added = spawnSync("security", ["-i"], {
+			input: `add-generic-password -U -s ${SERVICE} -a "${name}" -w "${value}"\n`,
+			encoding: "utf8",
+		});
+		if (added.status !== 0) throw new Error(`the keychain refused ${name}: ${added.error?.message ?? added.stderr.trim()}`);
+	},
+};
 
 export function askHidden(prompt: string): string {
 	process.stderr.write(prompt);
