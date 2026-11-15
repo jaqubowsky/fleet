@@ -21,7 +21,7 @@ logs/          sessions/, activity.jsonl, usage.json, memory.json from the agent
 
 `runbook/`, when present at the root of `$FLEET_ARTIFACTS` beside the task directories, is the primary repository's shared app-start and screen-driving instructions. Each other repository of the task has its own at `$FLEET_ARTIFACTS/../<repo>/runbook`. Every task on that repository reads it before it starts, so it holds rules, and the run that found a rule keeps the record of finding it:
 
-- a fact goes where its scope is: starting the app in `run.sh` and `run.md`, one screen in `features/<screen>.md`, what defies a reasonable assumption about the environment, such as a gate that dies or flakes there or an action no script takes, in `gotchas.md`
+- a fact goes where its scope is: starting the app in `run.sh` and `run.md`; one screen, its traps included, in `features/<screen>.md`, which only a task driving that screen reads; what defies a reasonable assumption about the environment and belongs to no screen, such as a gate that dies or flakes there or an action no script takes, in `gotchas.md`
 - each entry states today's design: the symptom, the cause, the fix or the command. Dates, ticket ids, commit SHAs, counts and log paths stay in the task's `logs/` and closing message
 - one entry per cause: search the runbook first, and edit the entry the fact belongs to
 

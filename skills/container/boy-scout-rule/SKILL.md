@@ -1,23 +1,21 @@
 ---
 name: boy-scout-rule
-description: 'Leave the project notes a turn used truer and no longer than it found them: the runbook, the project overlay and the project skills. Use at the end of every turn that ran, followed or wrote an entry of them, before the closing message.'
+description: 'Correct the project notes that misled a turn: the runbook, the project overlay and the project skills. Use before the closing message of a turn that a note misled, or that lost a rerun to a fact no note held.'
 ---
 
 # Boy scout rule
 
-Leave the campsite cleaner than you found it, and only the part you walked through. Every later task acts on these notes before the code, so a stale entry misleads each of them, and an unpruned one settles as sediment.
+Leave the campsite cleaner than you found it, and only the part that tripped you. Every later task acts on these notes before the code, so a stale entry misleads each of them, and an unpruned one settles as sediment.
 
-## 1. The entries this turn used
+## 1. The entries
 
-From this turn's own commands and reads, not from memory, list each entry of the notes that the turn:
+From this turn's own commands and reads, not from memory, list:
 
-- ran: a command, a script, a query;
-- followed: a selector, a route, a label, a port, an env value, a step order;
-- obeyed: a rule that changed what it did;
-- was misled by;
-- wrote or edited, with the entries beside it under the same heading.
+- each entry of the notes that misled the turn;
+- each fact the turn lost a rerun to that no entry held;
+- each entry the turn wrote or edited, with the entries beside it under the same heading.
 
-Reading a file through before the first gate uses none of its entries. Done when each listed entry names its file and heading.
+Done when each listed entry names its file and heading, and each missing fact the file its scope puts it in.
 
 ## 2. A verdict per entry
 
@@ -30,6 +28,7 @@ The next task starts from the base branch, so the source is the base this turn l
 | duplicate | another entry states the same cause | merge both into the one where its scope is |
 | history | it carries a date, a ticket id, a commit SHA, a count, a run-log path or a former state | rewrite it as today's design; the evidence stays in this turn's logs |
 | recipe | this turn ran its steps by hand, one after another | a `run.sh` subcommand or a script in `runbook/bin/` that runs them, proven by this turn's run, and the entry shrinks to the line naming it |
+| missing | the turn lost a rerun to it and no entry held it | one entry in the file its scope names; a screen's trap goes into that screen's `features/<screen>.md` |
 | unverified | neither the code nor this turn's run decides it | none; the report names it |
 
 An entry this turn's own branch makes untrue stays as it is until the branch merges, and the report carries its new text.
