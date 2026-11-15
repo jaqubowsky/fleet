@@ -102,7 +102,7 @@ You win twice: fewer tokens, and a sharper hook for the agent to hang its thinki
 - Write a rule, ref or skill as **today's design**, as if new: what holds now, never an older layout, a legacy path, what changed or what used to happen. The agent acts on every clause, so a history clause reads as one more branch to take, and it is sediment from the day it lands. History lives in git and the ADRs.
 - A constraint a validator, a hook or a regex can enforce is a **mechanism**, not a sentence: automate it, and spend the document on the judgement calls a mechanism cannot make.
 - Hunt **no-ops** sentence by sentence: an instruction the model already obeys by default pays load to say nothing. The test (does it change behaviour versus the default?) is model-relative, not reader-relative: two people disagreeing about a no-op disagree about the default, and settle it by running the document, not by debate. When a sentence fails, delete the whole sentence rather than trim words from it. The test also grades leading words: a word too weak to beat the default (_be thorough_ when the agent is already thorough-ish) is a no-op, and the fix is a stronger word (_relentless_), not a different technique.
-- A line stays because a run shows it changing behaviour, and a cut is tested like an addition: an arm with the line removed that scores like the full document means the line goes. A fix that adds a rule removes the rule it replaces; a document that only grows across fixes is sediment, so each pass ends with its length beside the previous one (`wc -w`)
+- A line stays because a run shows it changing behaviour, and a cut is tested like an addition. A fix that adds a rule removes the rule it replaces; a document that only grows across fixes is sediment, so each pass ends with its length beside the previous one (`wc -w`)
 
 ## Refining against runs
 
@@ -110,11 +110,9 @@ Every lever here is a claim about behaviour, so the document is settled by runni
 
 Two comparisons pay for themselves. Against no document at all: if the unaided run is just as good, the document buys nothing and its load is pure cost. Against the previous version: that is where a wording change proves it generalised rather than fitted the one prompt you were staring at.
 
-Feed corrections back. A mistake you had to fix by hand is a gotcha the document owed the agent; the line stays once a run shows the mistake gone, since a line written after a correction often changes nothing.
+Feed corrections back. A mistake you had to fix by hand is a gotcha the document owed the agent.
 
-Wording is checked before a full run is paid for, with `fleet eval run` on a committed variant and `fleet eval compare` beside the baseline: five or more fresh-context runs per variant, the document in the position it will hold in production, and a control with no guidance at all, since a control that never fails means there is nothing to fix. Read every flagged output yourself; a counted match is often the template echoing. Variance is the score: reps converging on one shape mean the wording binds, five interpretations mean it does not, and the fix is a tighter form before more words. Where the output is creative, a design or a set of ideas, convergence can also be lost range: compare the spread of ideas against the control, since guidance that narrows five ideas to one has bound the wrong thing.
-
-Run the reps on every model the document will run on. A failure can live in one model only: a fix aimed at it, tested on another, measures nothing, and can still narrow the model that never failed.
+Variance is the score: reps converging on one shape mean the wording binds, five interpretations mean it does not, and the fix is a tighter form before more words. Where the output is creative, a design or a set of ideas, convergence can also be lost range: compare the spread of ideas against the control, since guidance that narrows five ideas to one has bound the wrong thing.
 
 The kind of document picks the test. A technique is tested by applying it to a new case, a variation of it, and a case its steps leave a gap on. A reference is tested by retrieval: can the agent find the fact and use it. A pattern is tested by recognition, including the case where it does not apply.
 
