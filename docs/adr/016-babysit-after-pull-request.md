@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Accepted. A pull request from a one-slice Plan gets one round, by [022](022-slim-delivery-chain.md).
 
 ## Context
 

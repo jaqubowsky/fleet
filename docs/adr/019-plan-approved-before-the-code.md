@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Accepted. Its analysis page is removed by [022](022-slim-delivery-chain.md).
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Accepted. Its pattern list and its `added-comments` check are replaced by [022](022-slim-delivery-chain.md).
 
 ## Context
 
