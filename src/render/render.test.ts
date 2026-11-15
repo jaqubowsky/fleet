@@ -517,7 +517,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(finish, /^\n1\. `simplicity-pass` over the whole branch/);
 			assert.match(delivery, /\| `simplicity-pass` over the whole branch, its edits in their own commit \| after the last slice's commit \| 1 \|/);
 			assert.match(sandbox.split("## Every round\n")[1]!, /^\n- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it/);
-			assert.match(sandbox, /^- At that same point `added-comments origin\/<base>` prints nothing/m);
+			assert.match(sandbox, /^- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, `added-comments origin\/<base>` prints nothing/m);
 			assert.match(rendered(out, "container", "simplicity-pass/SKILL.md"), /`added-comments origin\/<base>`/);
 		});
 	});
@@ -1089,7 +1089,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				skill,
-				/A further review is yours, by risk class/,
+				/A further review runs on the user's word/,
 			);
 			assert.match(skill, /yourself with skill `two-axis-review` over the container's range/);
 			assert.match(skill, /independent review of <base>\.\.\.<head>, ending in `review\.md` with its evidence/);
