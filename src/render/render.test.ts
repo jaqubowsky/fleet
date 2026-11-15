@@ -997,6 +997,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					.join("\n");
 
 			assert.match(always("host"), /Patterns to detect and fix/, "host leaves the catalogue unloaded");
+			assert.doesNotMatch(always("host"), /refs\/prose\.md/, "host points at the catalogue it already loads");
 			assert.doesNotMatch(always("container"), /Patterns to detect and fix/, "container always loads the catalogue");
 			assert.match(always("container"), /refs\/prose\.md/, "container has no pointer to the catalogue");
 			assert.match(rendered(out, "container", "refs/prose.md"), /Patterns to detect and fix/);

@@ -38,6 +38,7 @@ const GATES_BESIDE_AGENTS = "`refs/gates.md` beside `AGENTS.md`";
 const TICKET_BESIDE_AGENTS = "`refs/ticket.md` beside `AGENTS.md`";
 const DESIGN_BESIDE_AGENTS = "`refs/design.md` beside `AGENTS.md`";
 const PROSE_BESIDE_AGENTS = "`refs/prose.md` beside `AGENTS.md`";
+const HOST_PROSE = "the Prose rules loaded with these";
 const watchSource = (cli: string) =>
 	`Only the session that ran \`${cli} up\`, \`${cli} start\` or \`${cli} steer\` auto-watches that container, and resuming that session restores its watches. The watch keeps running while the session waits out an account limit. \`fleet_watch <sandbox...>\`, or \`/fleet-watch [names]\` typed by the user, watches any container by the name \`${cli} ls\` prints; no name watches every one. A fleet wake is a follow-up turn after the current run settles, not context saved for the next user prompt.`;
 const RELOAD_MODELS = "after `/reload`";
@@ -77,6 +78,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		},
 		hostTokens: {
 			skills: "`~/.pi/skills/shared/<name>/SKILL.md` for a shared skill, `~/.pi/skills/host/<name>/SKILL.md` for a host one",
+			"refs.prose": HOST_PROSE,
 		},
 	},
 	claude: {
@@ -92,6 +94,7 @@ export const KINDS: Record<AgentName, Kind> = {
 		projectConfig: ".claude",
 		sbxGuidance: "CLAUDE.md",
 		containerSessions: "/home/agent/.claude/projects",
+		hostTokens: { "refs.prose": HOST_PROSE },
 		tokens: {
 			"tool.ask": "AskUserQuestion",
 			"skill.ingest": "/ingest",
