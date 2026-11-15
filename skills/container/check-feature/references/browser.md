@@ -61,9 +61,7 @@ Every capture is read by the agent that took it, before it is filed: the state t
 
 ## Runbook
 
-`features/<screen>.md` holds how a screen is reached and driven, and the traps of driving it. Before driving a screen, read its `features/<screen>.md`.
-
-After cleanup, from the scratch log of this run and not from memory, in English: a screen this run drove gets its `features/<screen>.md` corrected where the run diverged, and an action that failed on it goes there with its workaround. `gotchas.md` takes only a failure no screen owns.
+Before driving a screen, read its `features/<screen>.md`. After cleanup, from the scratch log of this run and not from memory, correct it where the run diverged and add each action that failed on it with its workaround. `gotchas.md` takes only a failure no screen owns.
 
 ## Cleanup
 

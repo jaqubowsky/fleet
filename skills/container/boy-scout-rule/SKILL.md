@@ -28,7 +28,7 @@ The next task starts from the base branch, so the source is the base this turn l
 | duplicate | another entry states the same cause | merge both into the one where its scope is |
 | history | it carries a date, a ticket id, a commit SHA, a count, a run-log path or a former state | rewrite it as today's design; the evidence stays in this turn's logs |
 | recipe | this turn ran its steps by hand, one after another | a `run.sh` subcommand or a script in `runbook/bin/` that runs them, proven by this turn's run, and the entry shrinks to the line naming it |
-| missing | the turn lost a rerun to it and no entry held it | one entry in the file its scope names; a screen's trap goes into that screen's `features/<screen>.md` |
+| missing | the turn lost a rerun to it and no entry held it | one entry in the file its scope names |
 | unverified | neither the code nor this turn's run decides it | none; the report names it |
 
 An entry this turn's own branch makes untrue stays as it is until the branch merges, and the report carries its new text.

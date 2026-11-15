@@ -16,7 +16,7 @@ You run in an isolated container. Someone outside watches this session and gives
 
 1. `$FLEET_ARTIFACTS/$SANDBOX_NAME/` is the task directory, laid out as {{refs}}. Read that file, the ticket the order names, and `repositories.json` when present before your first command. Each additional clone keeps its git dir under the primary's `.git/fleet-repos/`, where `{{cli}} land` fetches it; leave it there
 2. `project.md`, when present, says how the primary project works; when `repositories.json` exists, read each additional repo's overlay in `projects/<workspace basename>.md` when present and use the matching part of `permissions.md` for each repo
-3. Read every repository's runbook `gotchas.md` before the first gate and its `run.sh` before the first app start; where each runbook lives is in {{refs}}. A fact about one repository goes into that repository's runbook; wiring between repositories, such as a callback address, ports or start order, goes into the runbook of the repository that calls the other
+3. Read every repository's runbook `gotchas.md` before the first gate and its `run.sh` before the first app start; where each runbook lives, and which fact goes into which file, is in {{refs}}
 4. A gate that fails, a test gone red or a process killed with exit 137, is attributed as {{refs.gates}} says before you call any failure the base's or run it again
 5. The build cache already points at `$FLEET_CACHE`, shared by every container on this repo, so your build can restore what an earlier container made. A build that restores nothing from a store that already holds entries is a finding, not a slow day: report it
 6. A question for the host goes into the open questions of the closing message. Never a `{{tool.ask}}` dialog here: a steer cannot answer one
