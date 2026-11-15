@@ -31,21 +31,12 @@ Into the evidence directory, `logs/review-<head-sha7>/` beside `review.md`:
 
 ### 3. Name the standards
 
-Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Then the four questions that bear on every review:
-
-| Question | When |
-| --- | --- |
-| one piece of knowledge or two: share technical, copy domain, "can these change independently?" | every duplication |
-| a pro and a con, or a measurement, never a label standing alone | the wording of every finding |
-| delete its folder, count the errors and the silent stumps | a diff that adds or grows a module |
-| invent a fake rule joining two attributes, see whether it sounds absurd | a diff that grows an entity or a type |
-
-Collect the repo paths. The reviewer reads them, and [smells.md](smells.md) beside this file, itself.
+Repo documents on how code is written: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `docs/`. Collect their paths. The reviewer reads them, and [quality.md](quality.md) beside this file, itself.
 
 Supply these two axes in the review packet:
 
 - Axis 1: correctness and fulfillment. Against the original ask and the supplied plan, find missing or partial behavior, unrequested changes, wrong results, reached edge cases, regressions, integration gaps, missing regression evidence, and every stub in production code that the ticket's Out of scope does not name: a fixed or empty value where the requirement asks for a computed one. Quote the requirement for each finding; a derived plan does not replace its source.
-- Axis 2: engineering quality. Apply repository standards, then the four questions above, then the smell baseline. Check unnecessary complexity, architectural fit, scope, and security or performance reached by the diff. Decide each clone pair as shared knowledge or independent copies, with evidence rather than an extraction quota.
+- Axis 2: engineering quality. Apply repository standards, then the questions of `quality.md`. Check unnecessary complexity, architectural fit, scope, and security or performance reached by the diff. Decide each clone pair as shared knowledge or independent copies, with evidence rather than an extraction quota.
 
 ### 4. Run the reviewer
 
@@ -55,7 +46,7 @@ Supply these two axes in the review packet:
 2. the paths of the ticket and the analysis that set the task, those that exist; when none does, the prompt that set the task, quoted. For a delta, the ticket section that set the round, quoted, and the path of the last `review.md`
 3. the evidence directory's path and each file in it except `pairs.tsv` and a log that has a `.changed` cut
 4. each check log from step 2 with its exit code, by its cut where it has one
-5. the standards paths and the four questions from step 3 with their precedence (repo, questions, baseline)
+5. the standards paths from step 3, which come before the quality questions
 6. the two axes from step 3 and `clones.txt` itself, its content inside one fenced block, so the reviewer reads the pairs
 
 Every claim in the brief is a file in the evidence directory, quoted. The reviewer returns `review.md` in the shape its own definition holds.

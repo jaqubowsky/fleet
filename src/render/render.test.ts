@@ -399,13 +399,13 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 		});
 	});
 
-	test(`the ${name} reviewer names the smell baseline where each seat installs it`, () => {
+	test(`the ${name} reviewer names the quality questions where each seat installs them`, () => {
 		renderSeats(name, (out) => {
 			for (const seat of ["host", "container"]) {
 				const [skill] = [...rendered(out, seat, "agents/reviewer.md").matchAll(/`~\/\.(?:pi|claude)\/(skills\/[^`]*)<name>\/SKILL\.md`/g)]
-					.map((match) => `${match[1]}two-axis-review/smells.md`)
+					.map((match) => `${match[1]}two-axis-review/quality.md`)
 					.filter((path) => seatFiles(out, seat).some((f) => f.endsWith(path)));
-				assert.ok(skill, `${seat} reviewer names no installed smells.md`);
+				assert.ok(skill, `${seat} reviewer names no installed quality.md`);
 			}
 		});
 	});
@@ -1017,7 +1017,9 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			const skill = rendered(out, "container", "two-axis-review/SKILL.md");
 			assert.equal(rendered(out, "host", "two-axis-review/SKILL.md"), skill);
 			assert.match(skill, /Axis 1: correctness and fulfillment/);
-			assert.match(skill, /Axis 2: engineering quality/);
+			assert.match(skill, /Axis 2: engineering quality\. Apply repository standards, then the questions of `quality\.md`/);
+			const quality = rendered(out, "container", "two-axis-review/quality.md");
+			for (const question of ["Role", "Written once", "Place", "State", "Already there"]) assert.ok(quality.includes(`**${question}.**`), question);
 			if (name === "pi") {
 				assert.match(skill, /`async: true`/);
 				assert.match(skill, /Leave the working tree untouched until `review\.md` arrives/);

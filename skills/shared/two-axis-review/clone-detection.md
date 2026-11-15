@@ -1,6 +1,6 @@
 # Clone detection
 
-How step 2 collects clone evidence, and what the flags do. Duplicated Code is the one baseline smell a tool finds better than a reader, and the one a reader misses in the direction that matters: code in the diff that repeats something already sitting elsewhere in the repo, outside the diff.
+How step 2 collects clone evidence, and what the flags do. Duplication is the one quality question a tool answers better than a reader, and the one a reader misses in the direction that matters: code in the diff that repeats something already sitting elsewhere in the repo, outside the diff.
 
 Run the detector once, in the skill, before the reviewer is called, into the evidence directory the skill names:
 
