@@ -856,17 +856,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 					/browser/i,
 					file,
 				);
-			const triggers = files
-				.flatMap((file) =>
-					readFileSync(join(out, file), "utf8")
-						.split("\n")
-						.map((line) => `${file}: ${line}`),
-				)
-				.filter((line) =>
-					/changes a shared seam|`check-regressions` (runs|follows)/.test(line),
-				);
-			assert.equal(triggers.length, 1, triggers.join("\n"));
-			assert.match(triggers[0]!, /check-regressions\/SKILL\.md: description:/);
+			const walk = rendered(out, "container", "check-feature/SKILL.md");
+			assert.match(walk, /one criterion per neighbour a user can reach in the browser/);
+			assert.match(walk, /`base-worktree <merge-base>`/);
+			assert.deepEqual(files.filter((file) => file.includes("check-regressions")), []);
 			assert.doesNotMatch(
 				rendered(out, "container", "refs/ticket.md"),
 				/Seen:|## Parent/,
@@ -938,7 +931,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				"| Typecheck and lint of changed files | alongside the review, with no app running | 1 |",
 				"| Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |",
 				"| End-to-end suite, where the project has one | the changed path's specs after its slice; the full suite on the final tree | 1 per slice, plus 1 |",
-				"| Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |",
+				"| Verification of what a user sees, with `check-feature` the way `project.md` names | once the review's fixes are committed, on the final tree | 1 |",
 			])
 				assert.ok(implement.includes(row), row);
 			assert.match(rules, /each check covers only the base or the last `@sha` it passed on, up to HEAD/);

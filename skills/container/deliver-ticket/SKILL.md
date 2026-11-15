@@ -55,8 +55,7 @@ Each check runs once, where it is cheapest:
 | Tests of affected packages, when a slice changed a file no test imports, such as test setup, config or a global mock | alongside the review, with no app running; on the base only the files that failed | 1 |
 | Review fixes | one batch, each with its own test | 1 |
 | End-to-end suite, where the project has one | the changed path's specs after its slice; the full suite on the final tree | 1 per slice, plus 1 |
-| Verification of what a user sees, with `check-feature` the way `project.md` names | last, on the final tree | 1 |
-| `check-regressions`, when the branch modifies a seam that existed on the base | after `check-feature`, on the same tree | 1 |
+| Verification of what a user sees, with `check-feature` the way `project.md` names | once the review's fixes are committed, on the final tree | 1 |
 
 ## 4. Branch update and final checks
 

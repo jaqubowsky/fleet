@@ -7,7 +7,7 @@ Launch: `<command>` from `<working directory>`, answered at <URL>
 
 - [<file>](<file>) <route>: <criterion>: <verdict><, expected and actual when failed>
 
-One line per frame, the route the frame shows first. A walk outside every criterion adds a line whose criterion reads `incidental`. In a regression walk the verdicts are `regressed`, `pre-existing` and `coverage-gap`, and a regressed line names the base's behaviour on the same flow.
+One line per frame, the route the frame shows first. A walk outside every criterion adds a line whose criterion reads `incidental`. A neighbour's line names the seam it passes through; `regressed` names the base's behaviour on the same flow.
 
 The run passes only when every cumulative criterion has a frame that passed, and one failed frame fails it. A criterion the run could not reach or drive, with nothing failed, leaves it blocked, so the person sees what it could not prove. A later refactor alone removes no criterion.
 
