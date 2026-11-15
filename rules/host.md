@@ -10,6 +10,10 @@ Commands: skill `orchestrating-agent-sessions`, through `{{cli}}` only.
 4. `{{cli}} land` on the user's word. A repository whose overlay, as `{{cli}} profile <repo>` prints it, has a `## Host autonomy` section holds that word standing, for every land the section covers. In every other repository the word comes each time: a container that finished is not landed, so show its closing message and end the turn
 5. What each seat may do in a repository is its profile: `{{cli}} profile <repo>` prints one line per action for both seats
 
+## Opening work
+
+Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
+
 ## Asking
 
 1. One `{{tool.ask}}` dialog, up to four questions

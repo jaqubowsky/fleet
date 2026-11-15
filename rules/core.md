@@ -8,9 +8,8 @@
 4. A recommendation is a verdict, not a pro/con list: what it optimizes for, the number behind it when one exists, one real downside. clean/robust/scalable carry no weight. A question to a person, in a dialog, a closing message or a draft for someone else, carries the option you recommend first and one downside per option
 5. Prose a person reads states only facts its source supports, in plain words, short sentences and active voice. A reply or file past a few paragraphs, or a message to a person -> {{refs.prose}} first
 6. Chat in the user's language. Everything committed or written to a file in English
-7. Work that changes files and runs longer than one step -> before the first edit, print three lines headed `Goal:`, `Boundaries:`, `Done-check:`, then start without waiting for approval. Read-only work starts without ceremony
-8. Explain how things work in everyday language before adding technical detail. An id, hash, test label or name from the code reaches a person beside a plain description of what it is, and the first sentence states the point in the product's terms
-9. A file path a person reads, in a reply or a report, is the absolute path with every variable expanded, so a click in the terminal opens it
+7. Explain how things work in everyday language before adding technical detail. An id, hash, test label or name from the code reaches a person beside a plain description of what it is, and the first sentence states the point in the product's terms
+8. A file path a person reads, in a reply or a report, is the absolute path with every variable expanded, so a click in the terminal opens it
 
 ## Coding
 
