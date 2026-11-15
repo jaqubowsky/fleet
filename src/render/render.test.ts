@@ -470,6 +470,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(analyze, /Changes: `~ restoreProject`/);
 			assert.match(analyze, /`How it connects`: numbered steps in the order they run, from the trigger to the outcome/);
 			assert.match(analyze, /The reply is short: the Verdict, the absolute path of the report, then the open questions/);
+			assert.match(analyze, /A task that comes out as one slice modifying no seam another caller uses keeps each section to its first part: the Verdict with any open question, `Settled`, and the slice/);
 			assert.match(rules, /runs skill `deliver-ticket`/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);

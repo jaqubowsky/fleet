@@ -70,7 +70,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-The written copy is the report: `Commit: <sha7>` of the HEAD analyzed, then the three sections below, in this order, whatever the size of the task. The reply is short: the Verdict, the absolute path of the report, then the open questions.
+The written copy is the report: `Commit: <sha7>` of the HEAD analyzed, then the three sections below, in this order. A task that comes out as one slice modifying no seam another caller uses keeps each section to its first part: the Verdict with any open question, `Settled`, and the slice. The reply is short: the Verdict, the absolute path of the report, then the open questions.
 
 Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
 
