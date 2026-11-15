@@ -70,7 +70,7 @@ Example: continuation reaches a server error dialog that hides rejected document
 
 ## Present
 
-The written copy is the report: `Commit: <sha7>` of the HEAD analyzed, then the three sections below, in this order, whatever the size of the task. The reply is short: the Verdict, the absolute path of the report's page, then the open questions.
+The written copy is the report: `Commit: <sha7>` of the HEAD analyzed, then the three sections below, in this order, whatever the size of the task. The reply is short: the Verdict, the absolute path of the report, then the open questions.
 
 Before the report, write the `Acceptance criteria` section at the end of the ticket in the ticket template's form: concrete values, boundary cases, the adjacent behaviour that must stay. Criteria already there are the starting point; keep them and add what the sources require. Every criterion is one the Plan closes.
 
@@ -182,4 +182,4 @@ Each row quotes a run that went wrong: the first without this document in contex
 | Excuse | Reality |
 | --- | --- |
 | "The linked issue is a separate bug, a separate ticket." | Reachability during use of the changed flow decides scope, not which ticket first named the defect. A feature that reads through a path inherits that path's bug. |
-| "The analysis is in the file", followed by one paragraph of prose | The reply fills its slots: the Verdict, the page's path, the open questions. One paragraph of prose fills none of them. |
+| "The analysis is in the file", followed by one paragraph of prose | The reply fills its slots: the Verdict, the report's path, the open questions. One paragraph of prose fills none of them. |

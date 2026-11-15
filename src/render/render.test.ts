@@ -469,11 +469,7 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(analyze, /`What changes`: one line per changed thing, grouped by kind, marked `\+` new, `~` changed or `-` removed/);
 			assert.match(analyze, /Changes: `~ restoreProject`/);
 			assert.match(analyze, /`How it connects`: numbered steps in the order they run, from the trigger to the outcome/);
-			assert.match(analyze, /The reply is short: the Verdict, the absolute path of the report's page, then the open questions/);
-			assert.match(rules, /A turn that wrote or changed an analysis runs skill `analysis-page` before its closing message/);
-			assert.match(rendered(out, "container", "analysis-page/SKILL.md"), /Copy `assets\/template\.html` from this skill's directory/);
-			const page = rendered(out, "container", "analysis-page/assets/template.html");
-			for (const slot of ["what this slice delivers", "what a reader keeps from this choice", "open question"]) assert.ok(page.includes(`[[fill: ${slot}]]`), slot);
+			assert.match(analyze, /The reply is short: the Verdict, the absolute path of the report, then the open questions/);
 			assert.match(rules, /runs skill `deliver-ticket`/);
 			assert.match(analyze, /write the `Acceptance criteria` section at the end of the ticket/);
 			for (const section of ["### Findings", "### Decisions", "### Plan"]) assert.ok(analyze.includes(section), section);
@@ -586,15 +582,6 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 }
 
 for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
-	test(`${name} analysis page sizes its text and space from its scale alone`, () => {
-		renderSeats(name, (out) => {
-			const page = rendered(out, "container", "analysis-page/assets/template.html");
-			const style = page.slice(page.indexOf("<style>"), page.indexOf("</style>")).replace(/:root\{[^}]*\}/g, "");
-
-			assert.deepEqual(style.match(/(?:font-size|margin|padding|gap)[a-z-]*:[^;}]*\d(?:rem|em|px)/g), null);
-		});
-	});
-
 	test(`${name} gives both seats the one ticket template, and to-tickets and the host point at it without a copy`, () => {
 		renderSeats(name, (out) => {
 			const pointer = KINDS[name].tokens["refs.ticket"]!;
