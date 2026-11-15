@@ -18,7 +18,7 @@ The work has two zones. The **parts** come from the project unchanged: tokens (c
 
 ## Craft
 
-- Each variant is a proposal a product designer would present: one focal point, hierarchy through scale and contrast, real imagery
+- Each variant is a proposal a product designer would present, with real imagery
 - A control inside the thing does what it will do in the app. One that leads out of it, a link to an offer or "see more", shows hover and focus and leads nowhere: what it would open is another mockup
 - Every word on a page is in the app's language and belongs to the design; the page says nothing about itself
 - Names, numbers and listings come from the project's seed or content data where it has them

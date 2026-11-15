@@ -20,7 +20,7 @@ What a tool finds, the tool finds first.
 - `touched-comments --all origin/<base>`, the mode for a repository that keeps no comments, prints each comment line in every file the range touches, and each one goes.
 - The repository's unused-code check, where its scripts declare one, such as `knip`: what it reports inside the range goes.
 
-A comment that seems needed marks code to simplify: what it said goes into a name, the structure or a test name. Neither mode prints a line a tool reads, such as a lint or type directive, or a license header.
+What a removed comment said goes into a name, the structure or a test name. Neither mode prints a line a tool reads, such as a lint or type directive, or a license header.
 
 Done when `touched-comments` prints nothing in the mode used and exits 0.
 

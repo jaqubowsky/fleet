@@ -25,7 +25,7 @@ The Plan's slices in order: a failing test first with `tdd`, gate output in `log
 
    Then name the acceptance line most likely to be false and make the check that would catch it the first red of step 4: a suite that only passes is not evidence.
 
-4. **Build at the seam the slice names, else existing public ones.** A failing test first: one seam, one red, one implementation.
+4. **Build at the seam the slice names, else existing public ones.**
 
    Commit the first coherent vertical piece before widening. A slice that still holds a second behaviour once the first works end to end was cut too wide: split it in the Plan, and the rest becomes the next slice.
 

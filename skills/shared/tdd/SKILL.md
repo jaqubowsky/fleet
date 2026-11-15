@@ -34,5 +34,4 @@ A **seam** is the public boundary you test at: the interface where you observe b
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
 - **Every red leaves a log.** Save the right red's output to `logs/tdd-<ticket>/<test-name>.log` where your seat's rules keep outputs, or name it in your reply when they keep none. It is the review's only evidence that the test can fail.
 - **A red test accuses the code, not itself.** [red.md](red.md) is the procedure for every failure in the loop.
-- **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs after green, before the gate, not inside the red → green implementation cycle.
