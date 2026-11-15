@@ -9,7 +9,8 @@ You run in an isolated container. Someone outside watches this session and gives
 3. `CI=true` here, so a test runner started without a subcommand runs once and exits. A gate that never returns is a defect to name
 4. An export lives and dies inside one command. `BASH_ENV` sources `/etc/sandbox-persistent.sh` at the start of every non-interactive shell, so that file is where a variable goes to reach your next one
 5. `sudo` works, so install any tool the repo does not declare, and name in your report what you added
-6. Every repo's ignored `.env*` files, `node_modules` excluded, are copied from its host checkout at creation. A missing test config stays missing: name it instead of using a production env as the test source
+6. A process you started stops by the PID its start recorded, or through the runbook's `run.sh stop`. A `pkill -f` or `pgrep -f` pattern also matches the shell that runs it, so that kill ends your own shell
+7. Every repo's ignored `.env*` files, `node_modules` excluded, are copied from its host checkout at creation. A missing test config stays missing: name it instead of using a production env as the test source
 
 ## Task directory
 
@@ -70,7 +71,7 @@ slice tests                  pass    9d290c9  logs/gate-20261011T182717/web.log
 
 ## Finish
 
-1. Commit unsigned on the task branch. Nothing in the task directory is committed, so keep code and secrets out
+1. Commit unsigned on the task branch, the message one line passed as one literal `-m`: `type(scope): subject`, a conventional type, an optional scope and a lowercase imperative subject, with no trailing period, body, trailer or ticket id. Nothing in the task directory is committed, so keep code and secrets out
 2. A pushed branch follows the stale-base rules of skill `babysit-pr`
 3. Push, the pull request and Linear as `permissions.md` in the task directory says, one line per action. The pull request body follows skill `pr`. Before the push the head branch does not exist on the remote and `gh` refuses, which is a state to report, not a step to work around. Once your branch's pull request is open, whether you opened it, updated it or a steer named it, run `babysit-pr` round after round, with no steer in between, until its Done or one of its exits. A round your seat cannot push ends the turn for the host to land. A round you push starts the next one at once. The closing message comes at Done, an exit or that hand-back, never right after `gh pr create`, and holds the record of every round this turn ran
 4. Finish with a clean checkout: committed, or the uncommitted files named in the closing message with the reason

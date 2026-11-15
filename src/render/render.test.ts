@@ -921,6 +921,8 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 				),
 			);
 			assert.match(rules, /A turn that a project note misled, or that lost a rerun to a fact no note held, runs skill `boy-scout-rule` before its closing message/);
+			assert.match(rules, /1\. Commit unsigned on the task branch, the message one line passed as one literal `-m`: `type\(scope\): subject`/);
+			assert.match(rules, /A process you started stops by the PID its start recorded/);
 			assert.match(rendered(out, "container", "check-feature/references/browser.md"), /Before driving a screen, read its `features\/<screen>\.md`/);
 			assert.match(
 				rules,
