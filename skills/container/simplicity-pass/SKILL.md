@@ -1,44 +1,49 @@
 ---
 name: simplicity-pass
-description: 'The simplicity pass over a branch''s whole diff: dead code, needless layers and the comments it added. Use in every round that wrote code, once its code is written and before its checks run.'
-compatibility: Requires added-comments
+description: 'The pass over a branch''s whole diff before its review: comments, dead code, guards for cases that cannot happen, a rule written twice. Use in every round that wrote code, once its code is written and before its checks run.'
+compatibility: Requires touched-comments
 ---
 
 # Simplicity pass
 
-Code written slice by slice carries more than the finished change needs: a layer an earlier slice wanted, a prop the final caller never passes, a key the last screen stopped reading. The pass reads the finished diff as the person who maintains it next, and every added line that does no work comes out. It runs once per round, before the checks, so the checks and the review run on the code that stays.
+Code written slice by slice carries more than the finished change needs. The pass takes it out before the review, so the review and the checks run once, on the code that stays.
 
 ## 1. The range
 
 The branch's whole diff against the base its pull request targets: `git diff --merge-base origin/<base>` plus the untracked files. That is every commit on the branch, other authors' commits included, and the work not yet committed.
 
-## 2. Comments
+## 2. Tools
 
-Run `added-comments origin/<base>`. It prints each comment line the range adds, as `added` or `changed`, and skips a comment that moved unchanged with its code.
+What a tool finds, the tool finds first.
 
-- An `added` line goes. What it said goes into a name, the structure, a test name or the commit body.
-- A `changed` line goes back to its text on the base, `git show origin/<base>:<file>`, with only a name the branch renamed updated.
+- `touched-comments --added origin/<base>` prints each comment line the range adds, as `added` or `changed`. An `added` line goes. A `changed` line goes back to its text on the base, `git show origin/<base>:<file>`, with only a name the branch renamed updated.
+- `touched-comments --all origin/<base>`, the mode for a repository that keeps no comments, prints each comment line in every file the range touches, and each one goes.
+- The repository's unused-code check, where its scripts declare one, such as `knip`: what it reports inside the range goes.
 
-Done when it prints nothing and exits 0.
+A comment that seems needed marks code to simplify: what it said goes into a name, the structure or a test name. Neither mode prints a line a tool reads, such as a lint or type directive, or a license header.
 
-## 3. Patterns
+Done when `touched-comments` prints nothing in the mode used and exits 0.
 
-Every case of each pattern in the range comes out: code that is dead, including a route or registration that leads nowhere; speculative, a parameter, option or generic no caller uses; a pass-through layer or a one-caller helper with no rule of its own; rebuilt technical code the repository or a dependency already has; hand-rolled data flow the repository's data layer or a computed value already gives; defensive code for a failure no test or run showed; and duplicate, the same rule twice inside one module. Before calling something unused, `git grep` its name across the repository. A module's entry file that declares its public surface is a boundary, not a pass-through.
+## 3. Four reads
 
-Done when every pattern has its cases fixed, and the tests of the changed files pass again.
+Read the range once for each, and take every case out:
+
+1. A guard, fallback, retry or default for a case no caller, test or run reaches.
+2. Dead code, which nothing reads. `git grep` the name across the repository before calling it unused.
+3. The same rule, constant or shape written twice in what the range adds.
+4. Code unlike the rest of its file: another pattern, naming or structure than the code around it uses for the same job.
+
+Done when every read has its cases fixed, and the tests of the changed files pass again.
 
 ## Report
 
-One block in the closing message, a row per pattern, each case found and what replaced it, or `none found`:
+One block in the closing message: the range, the comment mode with what it removed, then one line per case taken out with what replaced it. A pass that took nothing out reports `none found` in one line.
 
 ```text
 simplicity pass  origin/main...HEAD + working tree
-comments         removed 9 lines in 3 migrations; added-comments prints nothing
-dead             59 pl and 47 en translation keys; unused styles in journal.module.scss
-speculative      JournalEntryForm prop onReverse, no caller passes it
-pass-through     api ledger/handlers.ts: the router calls the reads directly
-rebuilt          none found
-hand-rolled data fetchEntries page loop became useInfiniteQuery
-defensive        early return and mpkId check on an already filtered match; trim
-duplicate        none found
+comments         --added: removed 9 lines in 3 migrations; touched-comments prints nothing
+unused           knip: 59 pl and 47 en translation keys
+unreachable      early return and mpkId check on an already filtered match
+twice            VAT rounding in invoice.ts and export.ts became roundVat
+unlike           fetchEntries page loop became useInfiniteQuery, as the other lists do
 ```

@@ -47,11 +47,11 @@ A round that changes one file opens with the first three lines and `Plan: <one l
 
 ## Every round
 
-- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it, so they run once on the code that stays
+- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it, so they run once on the code that stays. Its comment mode is what `## Comments` in `project.md` says, and `--added` where that section is missing
 - When a review round or a red check lands on the pull request, `babysit-pr` answers it; raw output in `logs/pr-round-<k>/`. Every wait on CI, in that skill or outside it, is `ci-wait <owner>/<repo> <pr number>`
 - After a change that follows a passed check, each check covers only the base or the last `@sha` it passed on, up to HEAD: tests of affected packages, typecheck and lint of changed files, and the frames the change alters, picked by diffing the output first
 - A round whose commits change what the code decides, such as a condition, a query, state, an API call or a migration, gets a review of those commits once its checks pass
-- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, `added-comments origin/<base>` prints nothing, so a comment a review fix wrote comes out too
+- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, `touched-comments` prints nothing in that mode, so a comment a review fix wrote comes out too
 - Fixes of review findings close in that review's addendum, as `two-axis-review` says, and never start a review of their own
 - Gates run with no bash timeout
 - Where the two sides of a merge or rebase conflict cannot both stand, keep the side the merge's stated goal names (its pull request, its ticket, the branch it lands on), and write down in the commit or the report which side you dropped and why. A conflict between two product decisions is not resolved in code: it becomes an open question for the host, and under `modernize` it is REWORK as its step 4 says

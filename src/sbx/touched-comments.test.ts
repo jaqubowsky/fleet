@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-const script = new URL("../../sbx/container/added-comments.sh", import.meta.url)
+const script = new URL("../../sbx/container/touched-comments.sh", import.meta.url)
 	.pathname;
 
 function branch(base: Record<string, string>, change: Record<string, string>) {
-	const repo = mkdtempSync(join(tmpdir(), "added-comments-"));
+	const repo = mkdtempSync(join(tmpdir(), "touched-comments-"));
 	const git = (...args: string[]) =>
 		execFileSync("git", ["-C", repo, ...args], { stdio: "pipe" });
 	const write = (files: Record<string, string>) => {
@@ -31,12 +31,15 @@ function branch(base: Record<string, string>, change: Record<string, string>) {
 	return { repo, git };
 }
 
-function addedComments(repo: string) {
-	return spawnSync("bash", [script, "origin/main"], {
+function comments(mode: "--added" | "--all", repo: string) {
+	return spawnSync("bash", [script, mode, "origin/main"], {
 		cwd: repo,
 		encoding: "utf8",
 	});
 }
+
+const addedComments = (repo: string) => comments("--added", repo);
+const allComments = (repo: string) => comments("--all", repo);
 
 test("a comment the branch committed is printed with its file and line", () => {
 	const { repo, git } = branch(
@@ -182,4 +185,74 @@ test("markdown, yaml and lines in untouched code stay out", () => {
 	const run = addedComments(repo);
 
 	assert.equal(run.stdout, "");
+});
+
+test("every comment in a file the branch touched is printed, whoever wrote it", () => {
+	const { repo, git } = branch(
+		{
+			"src/old.ts": "// old note\nexport const A = 1;\n",
+			"src/far.ts": "// far note\nexport const F = 1;\n",
+		},
+		{
+			"src/old.ts": "// old note\nexport const A = 2;\n",
+			"src/new.ts": "export const N = 1; // trailing stays code\n/* fresh */\n",
+		},
+	);
+	git("commit", "-qam", "c");
+
+	const run = allComments(repo);
+
+	assert.equal(run.stdout, "comment src/old.ts:1: // old note\ncomment src/new.ts:2: /* fresh */\n");
+	assert.equal(run.status, 1);
+});
+
+test("a line a tool reads stays out in both modes", () => {
+	const { repo } = branch(
+		{},
+		{
+			"src/a.ts": [
+				"/* eslint-disable no-console */",
+				"// @ts-expect-error the fixture is partial",
+				"export const A: number = load();",
+				"// prettier-ignore",
+				"export const M = [1,0, 0,1];",
+				"",
+			].join("\n"),
+			"tools/x.py": "import os  \n# noqa: E501\n",
+		},
+	);
+
+	assert.equal(allComments(repo).stdout, "");
+	assert.equal(addedComments(repo).stdout, "");
+});
+
+test("a license header stays out as a whole, the comment after it does not", () => {
+	const { repo } = branch(
+		{},
+		{
+			"src/a.ts": [
+				"/*",
+				" * Copyright 2026 Acme",
+				" * Licensed under the MIT License.",
+				" */",
+				"",
+				"// the cache key",
+				"export const A = 1;",
+				"",
+			].join("\n"),
+		},
+	);
+
+	const run = allComments(repo);
+
+	assert.equal(run.stdout, "comment src/a.ts:6: // the cache key\n");
+});
+
+test("a call that names no mode fails with the usage", () => {
+	const { repo } = branch({}, {});
+
+	const run = spawnSync("bash", [script, "origin/main"], { cwd: repo, encoding: "utf8" });
+
+	assert.equal(run.status, 2);
+	assert.match(run.stderr, /usage: touched-comments --added\|--all <base ref>/);
 });

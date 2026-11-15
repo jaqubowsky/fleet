@@ -517,8 +517,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			assert.match(finish, /^\n1\. `simplicity-pass` over the whole branch/);
 			assert.match(delivery, /\| `simplicity-pass` over the whole branch, its edits in their own commit \| after the last slice's commit \| 1 \|/);
 			assert.match(sandbox.split("## Every round\n")[1]!, /^\n- A round that wrote code runs skill `simplicity-pass` once the round's last code is written, before the checks that close it/);
-			assert.match(sandbox, /^- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, `added-comments origin\/<base>` prints nothing/m);
-			assert.match(rendered(out, "container", "simplicity-pass/SKILL.md"), /`added-comments origin\/<base>`/);
+			assert.match(sandbox, /^- Right before the branch leaves the container, at its push or at the closing message that hands it over to be landed, `touched-comments` prints nothing in that mode/m);
+			assert.match(sandbox, /Its comment mode is what `## Comments` in `project\.md` says, and `--added` where that section is missing/);
+			const pass = rendered(out, "container", "simplicity-pass/SKILL.md");
+			for (const mode of ["--added", "--all"]) assert.ok(pass.includes(`\`touched-comments ${mode} origin/<base>\``), mode);
 		});
 	});
 
@@ -831,10 +833,10 @@ for (const name of Object.keys(KINDS) as (keyof typeof KINDS)[]) {
 			);
 			assert.match(
 				rendered(out, "container", "context/Dockerfile"),
-				/container\/added-comments\.sh\s+\/usr\/local\/bin\/added-comments/,
+				/container\/touched-comments\.sh\s+\/usr\/local\/bin\/touched-comments/,
 			);
 			assert.ok(
-				rendered(out, "container", "context/container/added-comments.sh").includes("merge-base"),
+				rendered(out, "container", "context/container/touched-comments.sh").includes("merge-base"),
 			);
 		});
 	});
