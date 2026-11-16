@@ -19,7 +19,7 @@ function ciWait(
 		failedReads?: number;
 		interval?: string;
 		mergeable?: string;
-		summaries?: string;
+		summary?: string;
 		reviews?: string;
 	},
 	...args: string[]
@@ -29,7 +29,7 @@ function ciWait(
 		join(bin, "gh"),
 		`#!/usr/bin/env bash
 case "$*" in
-  *"issues/7/comments"*) printf '${gh.summaries ?? ""}' ;;
+  *"issues/7/comments"*) printf '${gh.summary ?? ""}' ;;
   *"pulls/7/reviews"*) printf '${gh.reviews ?? ""}' ;;
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
   *"pulls/7 --jq .mergeable_state"*) echo '${gh.mergeable ?? "clean"}' ;;
@@ -95,22 +95,35 @@ test("a commit status still pending keeps waiting", () => {
 });
 
 test("coderabbit not done with the head keeps waiting after ci settles", () => {
-	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `none\\n${"b".repeat(40)}\\n`, reviews: `${"b".repeat(40)}\\n` });
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summary: `${"b".repeat(40)} pending`, reviews: `${"b".repeat(40)}\\n` });
 
 	assert.equal(run.status, 1);
 	assert.match(run.out, /read 20\/20: 0 of 2 runs pending, status pending, 0 statuses, coderabbit pending/);
 });
 
+test("a coderabbit review in progress keeps waiting after ci settles", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summary: `${"b".repeat(40)} reviewing` });
+
+	assert.equal(run.status, 1);
+});
+
 test("a coderabbit summary of the head ends the wait", () => {
-	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `none\\n${sha}\\n` });
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summary: `${sha} pending` });
 
 	assert.equal(run.status, 0);
 });
 
 test("a coderabbit review of the head ends the wait while its summary lags", () => {
-	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `${"b".repeat(40)}\\n`, reviews: `${sha}\\n` });
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summary: `${"b".repeat(40)} pending`, reviews: `${sha}\\n` });
 
 	assert.equal(run.status, 0);
+});
+
+test("coderabbit paused ends the wait without its review", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summary: `${"b".repeat(40)} review-paused` });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, new RegExp(`coderabbit review-paused, so this wait ends without its review of ${sha}`));
 });
 
 test("no runs registered yet keeps waiting", () => {
