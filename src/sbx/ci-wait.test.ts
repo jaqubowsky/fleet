@@ -19,6 +19,7 @@ function ciWait(
 		failedReads?: number;
 		interval?: string;
 		mergeable?: string;
+		review?: string;
 	},
 	...args: string[]
 ) {
@@ -27,6 +28,7 @@ function ciWait(
 		join(bin, "gh"),
 		`#!/usr/bin/env bash
 case "$*" in
+  *"issues/7/comments"*) printf '${gh.review ?? ""}' ;;
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
   *"pulls/7 --jq .mergeable_state"*) echo '${gh.mergeable ?? "clean"}' ;;
   *"run list"*"select"*)
@@ -88,6 +90,19 @@ test("a commit status still pending keeps waiting", () => {
 	const run = ciWait({ pending: "0", total: "1", state: "pending", contexts: "1" });
 
 	assert.equal(run.status, 1);
+});
+
+test("a coderabbit review in progress keeps waiting after ci settles", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", review: "false\\ntrue\\n" });
+
+	assert.equal(run.status, 1);
+	assert.match(run.out, /read 20\/20: 0 of 2 runs pending, status pending, 0 statuses, coderabbit reviewing/);
+});
+
+test("a finished coderabbit review ends the wait", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", review: "false\\nfalse\\n" });
+
+	assert.equal(run.status, 0);
 });
 
 test("no runs registered yet keeps waiting", () => {

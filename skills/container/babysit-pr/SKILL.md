@@ -17,12 +17,12 @@ A **round** is one push: wait for the pull request to change, fix everything fix
 ci-wait <owner>/<repo> <number>
 ```
 
-Exit 0 prints the settled runs and commit status of the head. Exit 1, still pending after its last read, exit 2, a failed read, and exit 3, a head that conflicts with its base so no run starts, are findings to report, never a reason for a loop of your own.
+Exit 0 prints the settled runs and commit status of the head, once no CodeRabbit comment says its review is in progress. Exit 1, still pending after its last read, exit 2, a failed read, and exit 3, a head that conflicts with its base so no run starts, are findings to report, never a reason for a loop of your own.
 
 {{ci.wait}}
 The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.
 
-3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Read CI as {{refs.ci}} says, naming the repository in every call. Every bot that posts a commit status, CodeRabbit included, shows in the status of the head beside the Actions runs.
+3. **Read what is fresh**, meaning newer than your last push. Anything older you answered in an earlier round. Read CI as {{refs.ci}} says, naming the repository in every call. A bot that posts a commit status shows in the status of the head beside the Actions runs. CodeRabbit posts none: its findings arrive as review threads and comments.
 
 ```bash
 gh api repos/<owner>/<repo>/pulls/<number> --jq '{number, state, head: .head.sha, draft, mergeable}'

@@ -34,6 +34,7 @@ for (const agent of ["pi", "claude"] as const) {
 			writeFileSync(join(out, "waits"), "");
 			writeFileSync(join(out, "gh"), `#!/bin/sh
 case "$*" in
+  *"issues/7/comments"*) ;;
   *"pulls/7 --jq .head.sha"*) echo '${sha}' ;;
   *"run list"*"select"*) echo '${fixture.pending}' ;;
   *"run list"*"--jq length"*) echo 2 ;;
