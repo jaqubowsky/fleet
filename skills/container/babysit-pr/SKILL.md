@@ -17,7 +17,7 @@ A **round** is one push: wait for the pull request to change, fix everything fix
 ci-wait <owner>/<repo> <number>
 ```
 
-Exit 0 prints the settled runs and commit status of the head, once CodeRabbit, where it comments on the pull request, has reviewed that head. A line saying CodeRabbit is paused, skipped, rate-limited or failed means no review of this head arrives in the round: name it in the round's record. Exit 1, still pending after its last read, exit 2, a failed read, and exit 3, a head that conflicts with its base so no run starts, are findings to report, never a reason for a loop of your own.
+Exit 0 prints the settled runs and commit status of the head, once CodeRabbit, where it comments on the pull request, has reviewed that head. A line saying CodeRabbit is paused, skipped, rate-limited or failed means no review of this head arrives in the round: name it in the round's record. So does a line saying no check ran or no run registered on the head: CI did not check it, and the round's record never calls it green. Exit 1, still pending after its last read, exit 2, a failed read, and exit 3, a head that conflicts with its base so no run starts, are findings to report, never a reason for a loop of your own.
 
 {{ci.wait}}
 The wait ends by recording the settled state: the runs and the commit status it read, or the finding that ended it.

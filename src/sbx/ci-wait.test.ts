@@ -14,6 +14,7 @@ function ciWait(
 		head?: string;
 		pending: string;
 		total: string;
+		ran?: string;
 		state: string;
 		contexts?: string;
 		failedReads?: number;
@@ -33,6 +34,7 @@ case "$*" in
   *"pulls/7/reviews"*) printf '${gh.reviews ?? ""}' ;;
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
   *"pulls/7 --jq .mergeable_state"*) echo '${gh.mergeable ?? "clean"}' ;;
+  *"run list"*"conclusion --jq"*) echo '${gh.ran ?? gh.total}' ;;
   *"run list"*"select"*)
     n=$(( $(cat "${bin}/reads" 2>/dev/null || echo 0) + 1 )); echo "$n" > "${bin}/reads"
     if (( n <= ${gh.failedReads ?? 0} )); then echo 'failed to get runs: EOF' >&2; exit 1; fi
@@ -124,6 +126,28 @@ test("coderabbit paused ends the wait without its review", () => {
 
 	assert.equal(run.status, 0);
 	assert.match(run.out, new RegExp(`coderabbit review-paused, so this wait ends without its review of ${sha}`));
+});
+
+test("every run skipped ends the wait once coderabbit is done, saying no check ran", () => {
+	const run = ciWait({ pending: "0", total: "2", ran: "0", state: "pending", contexts: "0", summary: `${sha} pending` });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, new RegExp(`no check ran on ${sha}: every run was skipped`));
+});
+
+test("every run skipped keeps waiting while coderabbit reviews", () => {
+	const run = ciWait({ pending: "0", total: "2", ran: "0", state: "pending", contexts: "0", summary: `${"b".repeat(40)} reviewing` });
+
+	assert.equal(run.status, 1);
+});
+
+test("no run registered ends the wait on the third read once coderabbit is done", () => {
+	const run = ciWait({ pending: "0", total: "0", state: "pending", contexts: "0", summary: `${sha} pending` });
+
+	assert.equal(run.status, 0);
+	assert.match(run.out, /read 3\/20/);
+	assert.doesNotMatch(run.out, /read 4\//);
+	assert.match(run.out, new RegExp(`no run registered on ${sha}`));
 });
 
 test("no runs registered yet keeps waiting", () => {

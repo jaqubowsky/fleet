@@ -18,7 +18,7 @@ summary_note() {
 main() {
   [[ "$#" == 2 ]] || { echo "$usage"; exit 2; }
   local repo="$1" pr="$2" reads=20 interval="${CI_WAIT_INTERVAL:-60}"
-  local sha pending total state statuses summary reviews assessed note coderabbit skipped i failed=0
+  local sha pending total ran ci state statuses summary reviews assessed note coderabbit skipped i failed=0
   sha="$(gh api "repos/$repo/pulls/$pr" --jq .head.sha)"
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "head read failed: $sha"; exit 2; }
   echo "head $sha"
@@ -26,6 +26,7 @@ main() {
     [[ "$i" == 1 ]] || sleep "$interval"
     pending="$(gh run list --repo "$repo" --commit "$sha" --json status --jq '[.[] | select(.status != "completed")] | length')" || pending=""
     total="$(gh run list --repo "$repo" --commit "$sha" --json status --jq 'length')" || total=""
+    ran="$(gh run list --repo "$repo" --commit "$sha" --json conclusion --jq '[.[].conclusion] - ["skipped"] | length')" || ran=""
     state="$(gh api "repos/$repo/commits/$sha/status" --jq .state)" || state=""
     statuses="$(gh api "repos/$repo/commits/$sha/status" --jq .total_count)" || statuses=""
     summary="$(gh api --paginate "repos/$repo/issues/$pr/comments" --jq '.[] | select(.user.login == "coderabbitai[bot]") | .body | select(test("auto-generated comment: summarize by coderabbit")) | "\(capture("change_assessment_commit:\"(?<sha>[0-9a-f]{40})\"").sha // "none") \(if test("auto-generated comment: review in progress by coderabbit") then "reviewing" else ([scan("auto-generated comment: (review paused|skip review|rate limited|failure) by coderabbit")[0]][0] // "pending" | gsub(" "; "-")) end)"')" || summary="failed"
@@ -41,7 +42,7 @@ main() {
       esac
     fi
     echo "read $i/$reads: $pending of $total runs pending, status $state, $statuses statuses$coderabbit${skipped:+, $note}"
-    if ! { count "$pending" && count "$total" && count "$statuses" && [[ "$state" =~ ^(success|pending|failure|error)$ ]] && summary_note "$summary" && shas "$reviews"; }; then
+    if ! { count "$pending" && count "$total" && count "$ran" && count "$statuses" && [[ "$state" =~ ^(success|pending|failure|error)$ ]] && summary_note "$summary" && shas "$reviews"; }; then
       failed=$((failed + 1))
       [[ "$failed" -lt 3 ]] || { echo "read failed, stop waiting"; exit 2; }
       continue
@@ -51,8 +52,12 @@ main() {
       echo "head $sha conflicts with its base, so no run will start until the conflict is resolved"
       exit 3
     fi
-    if [[ "$pending" == 0 && "$total" != 0&& ( "$state" != pending || "$statuses" == 0 ) && -z "$coderabbit" ]]; then
+    ci=""
+    if [[ "$pending" == 0 && "$total" != 0 && "$ran" == 0 ]]; then ci="no check ran on $sha: every run was skipped"; fi
+    if [[ "$total" == 0 && -n "$summary" && "$i" -ge 3 ]]; then ci="no run registered on $sha"; fi
+    if [[ -z "$coderabbit" ]] && { [[ -n "$ci" ]] || [[ "$pending" == 0 && "$total" != 0 && ( "$state" != pending || "$statuses" == 0 ) ]]; }; then
       [[ -z "$skipped" ]] || echo "$skipped"
+      [[ -z "$ci" ]] || echo "$ci"
       gh run list --repo "$repo" --commit "$sha" --json name,status,conclusion,url
       gh api "repos/$repo/commits/$sha/status" --jq '{state, contexts: [.statuses[] | {context, state}]}'
       exit 0

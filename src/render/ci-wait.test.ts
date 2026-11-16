@@ -36,6 +36,7 @@ for (const agent of ["pi", "claude"] as const) {
 case "$*" in
   *"issues/7/comments"*|*"pulls/7/reviews"*) ;;
   *"pulls/7 --jq .head.sha"*) echo '${sha}' ;;
+  *"run list"*"conclusion --jq"*) echo 2 ;;
   *"run list"*"select"*) echo '${fixture.pending}' ;;
   *"run list"*"--jq length"*) echo 2 ;;
   *"run list"*) echo '[{"name":"tests","status":"completed","conclusion":"${fixture.state}","url":"https://example.invalid/run/1"}]' ;;
