@@ -19,7 +19,8 @@ function ciWait(
 		failedReads?: number;
 		interval?: string;
 		mergeable?: string;
-		review?: string;
+		summaries?: string;
+		reviews?: string;
 	},
 	...args: string[]
 ) {
@@ -28,7 +29,8 @@ function ciWait(
 		join(bin, "gh"),
 		`#!/usr/bin/env bash
 case "$*" in
-  *"issues/7/comments"*) printf '${gh.review ?? ""}' ;;
+  *"issues/7/comments"*) printf '${gh.summaries ?? ""}' ;;
+  *"pulls/7/reviews"*) printf '${gh.reviews ?? ""}' ;;
   *"pulls/7 --jq .head.sha"*) echo '${gh.head ?? sha}' ;;
   *"pulls/7 --jq .mergeable_state"*) echo '${gh.mergeable ?? "clean"}' ;;
   *"run list"*"select"*)
@@ -92,15 +94,21 @@ test("a commit status still pending keeps waiting", () => {
 	assert.equal(run.status, 1);
 });
 
-test("a coderabbit review in progress keeps waiting after ci settles", () => {
-	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", review: "false\\ntrue\\n" });
+test("coderabbit not done with the head keeps waiting after ci settles", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `none\\n${"b".repeat(40)}\\n`, reviews: `${"b".repeat(40)}\\n` });
 
 	assert.equal(run.status, 1);
-	assert.match(run.out, /read 20\/20: 0 of 2 runs pending, status pending, 0 statuses, coderabbit reviewing/);
+	assert.match(run.out, /read 20\/20: 0 of 2 runs pending, status pending, 0 statuses, coderabbit pending/);
 });
 
-test("a finished coderabbit review ends the wait", () => {
-	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", review: "false\\nfalse\\n" });
+test("a coderabbit summary of the head ends the wait", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `none\\n${sha}\\n` });
+
+	assert.equal(run.status, 0);
+});
+
+test("a coderabbit review of the head ends the wait while its summary lags", () => {
+	const run = ciWait({ pending: "0", total: "2", state: "pending", contexts: "0", summaries: `${"b".repeat(40)}\\n`, reviews: `${sha}\\n` });
 
 	assert.equal(run.status, 0);
 });
